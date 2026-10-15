@@ -11,6 +11,9 @@ const startTime = ref<number | null>(null)
 const wpm = ref(0)
 const accuracy = ref(100)
 const isFinished = ref(false)
+const wordHadError = ref(false)
+const { addMistake } = useMistakes()
+const { setProgress } = useProgress()
 
 const words = computed(() => {
   const chapter = (vocabulary as any)[selectedChapter.value]
@@ -35,6 +38,8 @@ function reset() {
   wpm.value = 0
   accuracy.value = 100
   isFinished.value = false
+  wordHadError.value = false
+  setProgress('typing', 0, words.value.length)
   playAudio()
 }
 
@@ -71,8 +76,13 @@ function handleInput(e: Event) {
   // Calculate Accuracy
   let correctChars = 0
   for (let i = 0; i < input.length; i++) {
-    if (input[i] === currentWord.value[i])
+    if (input[i] === currentWord.value[i]) {
       correctChars++
+    }
+    else if (!wordHadError.value) {
+      // 出现过输错：这个词记入错词本候选
+      wordHadError.value = true
+    }
   }
   accuracy.value = input.length > 0 ? Math.round((correctChars / input.length) * 100) : 100
 
@@ -88,13 +98,25 @@ function handleInput(e: Event) {
 }
 
 function nextWord() {
+  // 当前词若输错过，记入错词本
+  if (wordHadError.value && currentWordData.value) {
+    addMistake('typing', {
+      key: `typing:${currentWord.value}`,
+      title: currentWord.value,
+      detail: `${currentWordData.value.pos} ${currentWordData.value.meaning}`,
+      hint: currentWordData.value.example,
+    })
+  }
+  wordHadError.value = false
   if (currentWordIndex.value < words.value.length - 1) {
     currentWordIndex.value++
     userInput.value = ''
     startTime.value = null
+    setProgress('typing', currentWordIndex.value, words.value.length)
     playAudio()
   }
   else {
+    setProgress('typing', words.value.length, words.value.length)
     isFinished.value = true
   }
 }

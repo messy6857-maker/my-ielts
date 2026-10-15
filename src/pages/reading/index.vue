@@ -5,6 +5,11 @@ const ws = reactive(words)
 
 const keyword = ref('')
 
+const { isMastered, toggleMastered, masteredCount } = useMastered('reading_mastered_v1')
+const { setProgress } = useProgress()
+const totalWords = computed(() => ws.reduce((n, cat) => n + cat.words.length, 0))
+watch(masteredCount, () => setProgress('reading', masteredCount.value, totalWords.value), { immediate: true })
+
 let audio = null
 function play(word) {
   if (audio) {
@@ -20,6 +25,13 @@ function play(word) {
 <template>
   <div class="px-4 pt-6 2xl:px-0">
     <div class="border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
+      <div class="mb-4 lg:mb-0">
+        <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+          阅读考点词
+        </h3>
+        <span class="text-base font-normal text-gray-500 dark:text-gray-400">538 考点词同义替换</span>
+        <span class="ml-4 text-sm font-medium text-green-600 dark:text-green-400">已掌握 {{ masteredCount }} / {{ totalWords }}</span>
+      </div>
       <!-- Card header -->
       <template
         v-for="cat in ws"
@@ -77,6 +89,9 @@ function play(word) {
                 <th scope="col" class="px-6 py-3">
                   同义替换
                 </th>
+                <th class="w-0 px-6 py-3">
+                  掌握
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -111,6 +126,15 @@ function play(word) {
                   {{ w[4].join(', ') }}
                   <br>
                   {{ w[5].length > 0 ? w[5] : '' }}
+                </td>
+                <td class="px-6 py-4">
+                  <button
+                    :title="isMastered(w[0]) ? '已掌握，点击取消' : '标记为已掌握'"
+                    class="rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    @click="toggleMastered(w[0])"
+                  >
+                    <i :class="isMastered(w[0]) ? 'i-carbon-checkmark-filled block text-green-600' : 'i-carbon-checkmark block text-gray-300 dark:text-gray-600'" />
+                  </button>
                 </td>
               </tr>
             </tbody>

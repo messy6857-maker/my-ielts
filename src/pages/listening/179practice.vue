@@ -16,6 +16,9 @@ const ws = reactive(words.map((v) => {
   return item
 }))
 
+const { addMistake } = useMistakes()
+const { setProgress } = useProgress()
+
 function onKeydown(e, word) {
   if (e.key === '`') {
     e.preventDefault()
@@ -50,6 +53,16 @@ function next(index) {
   }))
   cw.result.checked = true
   cw.result.errorWords = errorWords
+
+  if (errorWords.length > 0) {
+    // 有错词：记入错词本
+    addMistake('listening', {
+      key: `listening:${cw.word}`,
+      title: cw.word,
+      detail: `${cw.type} ${cw.meaning}；同义替换：${cw.replace.join(' / ')}`,
+    })
+  }
+  setProgress('listening', index + 1, words.length)
 
   // window.console.log(cw)
 

@@ -1,5 +1,10 @@
 <script setup>
 import sentences from './100sentences'
+
+const { isMastered, toggleMastered, masteredCount } = useMastered('writing_mastered_v1')
+const { setProgress } = useProgress()
+const totalSentences = computed(() => sentences.filter(s => s.no != null).length)
+watch(masteredCount, () => setProgress('writing', masteredCount.value, totalSentences.value), { immediate: true })
 </script>
 
 <template>
@@ -29,6 +34,7 @@ import sentences from './100sentences'
             100 句翻译练习
           </h3>
           <span class="text-base font-normal text-gray-500 dark:text-gray-400">能够写出 error-free 的句子</span>
+          <span class="ml-4 text-sm font-medium text-green-600 dark:text-green-400">已掌握 {{ masteredCount }} / {{ totalSentences }}</span>
         </div>
       </div>
       <!-- Table -->
@@ -67,7 +73,16 @@ import sentences from './100sentences'
                           {{ item.no }}
                         </td>
                         <td class="p-4 border-r-1" rowspan="2">
-                          {{ item.sentence }}
+                          <div class="flex items-start justify-between gap-2">
+                            <span>{{ item.sentence }}</span>
+                            <button
+                              :title="isMastered(item.no) ? '已掌握，点击取消' : '标记为已掌握'"
+                              class="flex-shrink-0 rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-700"
+                              @click="toggleMastered(item.no)"
+                            >
+                              <i :class="isMastered(item.no) ? 'i-carbon-checkmark-filled block text-green-600' : 'i-carbon-checkmark block text-gray-300 dark:text-gray-600'" />
+                            </button>
+                          </div>
                         </td>
                         <td class="p-4 border-b-1 flex items-center">
                           <div class="mr-4" title="来自书上标准答案"><i class="i-carbon-book block"></i></div>

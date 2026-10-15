@@ -18,6 +18,8 @@ const category = ref(localStorage.getItem(CHAPTER_KEY) || chapters[0])
 
 const loaded = ref(false)
 const refVocabulary = reactive(vocabulary)
+const { addMistake } = useMistakes()
+const { setProgress } = useProgress()
 const wordList = computed(() => {
   const result = structuredClone(vocabulary) // deep clone
   // const keywordValue = keyword.value.trim().toLowerCase()
@@ -49,6 +51,7 @@ const wordList = computed(() => {
 watch(category, (newVal, oldVal) => {
   // console.log(newVal, oldVal)
   localStorage.setItem(CHAPTER_KEY, newVal)
+  syncProgress()
 })
 
 function calcStats() {
@@ -162,8 +165,34 @@ function onInputFocusOut(e, item) {
   else {
     item.spellValue = spellValue
     item.spellError = !item.word.map(v => v.toLowerCase().trim()).includes(spellValue)
+    if (item.spellError) {
+      // 拼写错误：记入错词本
+      addMistake('vocabulary', {
+        key: `vocabulary:${item.id}`,
+        title: item.word.join(' / '),
+        detail: `${item.pos} ${item.meaning}`,
+        hint: item.example,
+      })
+    }
   }
   trainingStats.value = calcStats()
+  syncProgress()
+}
+
+function syncProgress() {
+  let done = 0
+  let total = 0
+  const cur = refVocabulary[category.value]
+  if (cur) {
+    for (const group of cur.words) {
+      for (const item of group) {
+        total++
+        if (item.spellValue)
+          done++
+      }
+    }
+  }
+  setProgress('vocabulary', done, total)
 }
 
 function getInputStyleClass(item) {
@@ -238,6 +267,12 @@ function copyAllError() {
               />
               <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">练习模式</span>
             </label>
+            <router-link
+              to="/vocabulary/flashcard"
+              class="ml-2 inline-flex items-center rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white hover:bg-amber-600 focus:outline-none focus:ring-4 focus:ring-amber-300"
+            >
+              自测卡片
+            </router-link>
             <label v-if="isTrainingModel" class="ml-2 inline-flex cursor-pointer items-center">
               <input v-model="isShowMeaning" type="checkbox" class="peer sr-only">
               <div

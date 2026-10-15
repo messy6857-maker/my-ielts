@@ -10,13 +10,16 @@ const ws = reactive(words.map((v) => {
     },
     result: {
       checked: false,
-      errorWords: [],
+      errorWords: [] as string[],
     },
   }
   return item
 }))
 
-function onKeydown(e, word) {
+const { addMistake } = useMistakes()
+const { setProgress } = useProgress()
+
+function onKeydown(e: KeyboardEvent, word: string) {
   if (e.key === '`') {
     e.preventDefault()
     play(word)
@@ -41,7 +44,7 @@ function next(index: number) {
   const practiceReplace = cw.form.replaceStr.split(/[,，]/).map(v => v.trim().toLowerCase().replace(/\s+/g, ' '))
   // window.console.log(practiceReplace, practiceWord)
 
-  const errorWords = []
+  const errorWords: string[] = []
   if (practiceWord !== cw.word)
     errorWords.push(cw.word)
 
@@ -50,6 +53,16 @@ function next(index: number) {
   }))
   cw.result.checked = true
   cw.result.errorWords = errorWords
+
+  if (errorWords.length > 0) {
+    // 有错词：记入错词本
+    addMistake('listening', {
+      key: `listening:${cw.word}`,
+      title: cw.word,
+      detail: `${cw.type} ${cw.meaning}；同义替换：${cw.replace.join(' / ')}`,
+    })
+  }
+  setProgress('listening', index + 1, words.length)
 
   // window.console.log(cw)
 

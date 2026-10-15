@@ -5,6 +5,14 @@ defineOptions({
   name: 'IndexPage',
 })
 
+const { modules, hasAnyProgress } = useProgress()
+const { totalCount: mistakeCount } = useMistakes()
+const { currentUser } = useAuth()
+
+function percent(done: number, total: number) {
+  return total > 0 ? Math.round((done / total) * 100) : 0
+}
+
 const menus = reactive([
   {
     label: '词汇',
@@ -65,6 +73,38 @@ const menus = reactive([
           <p class="text-gray-500 sm:text-xl dark:text-gray-400">
             Hello, This is Frank. 这里包含我备考准备的一切，从词汇、语法开始...
           </p>
+        </div>
+        <!-- 学习进度 -->
+        <div v-if="hasAnyProgress || mistakeCount > 0" class="mb-12 rounded-xl border border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-900">
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+              学习进度
+              <span class="ml-2 align-middle text-sm font-normal text-gray-400">
+                {{ currentUser ? `当前账号：${currentUser}` : '游客模式' }}
+              </span>
+            </h3>
+            <RouterLink
+              v-if="mistakeCount > 0"
+              to="/mistakes"
+              class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+            >
+              错词本（{{ mistakeCount }}）→
+            </RouterLink>
+          </div>
+          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div v-for="m in modules" :key="m.module">
+              <div class="mb-1 flex items-center justify-between text-sm">
+                <span class="font-medium text-gray-700 dark:text-gray-300">{{ m.label }}</span>
+                <span class="text-gray-500 dark:text-gray-400">{{ m.done }} / {{ m.total }}</span>
+              </div>
+              <div class="h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+                <div
+                  class="h-2.5 rounded-full bg-blue-600 transition-all"
+                  :style="{ width: `${percent(m.done, m.total)}%` }"
+                />
+              </div>
+            </div>
+          </div>
         </div>
         <div class="md:grid lg:grid-cols-3 md:grid-cols-2 md:gap-12 space-y-8 md:space-y-0">
           <RouterLink

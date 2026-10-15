@@ -35,8 +35,20 @@ const menus = reactive([
     icon: 'i-carbon-edit',
     link: '/writing',
   },
+  {
+    label: '错词本',
+    icon: 'i-carbon-notebook',
+    link: '/mistakes',
+  },
 ])
 const showMobileMenu = ref(false)
+const { totalCount: mistakeCount } = useMistakes()
+const { currentUser, logout } = useAuth()
+
+function onLogout() {
+  logout()
+  showMobileMenu.value = false
+}
 </script>
 
 <template>
@@ -62,12 +74,32 @@ const showMobileMenu = ref(false)
                   :to="m.link"
                 >
                   <i class="mr-1 inline-block" :class="m.icon" /> {{ m.label }}
+                  <span
+                    v-if="m.link === '/mistakes' && mistakeCount > 0"
+                    class="ml-1 rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white"
+                  >{{ mistakeCount }}</span>
                 </router-link>
               </li>
             </ul>
           </div>
         </div>
         <div class="flex items-center justify-between lg:order-2">
+          <template v-if="currentUser">
+            <span class="mr-1 hidden text-sm text-gray-700 sm:inline dark:text-gray-300">{{ currentUser }}</span>
+            <button
+              class="rounded-lg px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-400 hover:text-gray-900 focus:ring-4 focus:ring-gray-300 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-600"
+              @click="onLogout"
+            >
+              退出
+            </button>
+          </template>
+          <router-link
+            v-else
+            to="/login"
+            class="mr-1 rounded-lg bg-blue-700 px-3 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700"
+          >
+            登录
+          </router-link>
           <a
             href="https://github.com/hefengxian/my-ielts"
             target="_blank"
@@ -107,7 +139,29 @@ const showMobileMenu = ref(false)
             @click="showMobileMenu = false"
           >
             <i class="mr-1 inline-block" :class="m.icon" /> {{ m.label }}
+            <span
+              v-if="m.link === '/mistakes' && mistakeCount > 0"
+              class="ml-1 rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white"
+            >{{ mistakeCount }}</span>
           </router-link>
+        </li>
+        <li v-if="!currentUser" class="block border-b dark:border-gray-700">
+          <router-link
+            class="block px-4 py-3 text-gray-900 lg:px-0 lg:py-0 dark:text-white lg:hover:underline"
+            to="/login"
+            @click="showMobileMenu = false"
+          >
+            <i class="mr-1 inline-block i-carbon-login" /> 登录
+          </router-link>
+        </li>
+        <li v-else class="block border-b dark:border-gray-700">
+          <a
+            class="block px-4 py-3 text-gray-900 lg:px-0 lg:py-0 dark:text-white lg:hover:underline"
+            href="javascript:;"
+            @click="onLogout"
+          >
+            <i class="mr-1 inline-block i-carbon-logout" /> 退出（{{ currentUser }}）
+          </a>
         </li>
       </ul>
     </nav>
