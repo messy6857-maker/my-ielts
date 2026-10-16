@@ -17,25 +17,26 @@ interface Card {
 const CHAPTER_KEY = 'vocabulary_flashcard_chapter'
 const chapters = Object.keys(vocabulary)
 const category = ref(localStorage.getItem(CHAPTER_KEY) || chapters[0])
-const GOAL_OPTIONS = [10, 20, 30, 50, 100]
+const { addMistake } = useMistakes()
+const { setProgress } = useProgress()
+const scheduleStore = useWordSchedule()
+const daily = useDailyGoal()
+const { streak: checkinStreak, weekDots: checkinWeekDots, checkin: doCheckin } = useCheckin()
 
-// 每日目标下拉框的双向绑定
+// 每日目标输入框的双向绑定（可自定义数量）
 const goalProxy = computed({
   get: () => daily.goal.value,
   set: (v: string | number) => daily.setGoal(Number(v)),
 })
 
-const { addMistake } = useMistakes()
-const { setProgress } = useProgress()
-const scheduleStore = useWordSchedule()
-const daily = useDailyGoal()
-
 const queue = ref<Card[]>([])
 const initialTotal = ref(0)
+const reviewCount = ref(0) // 本轮复习词数（到期/之前学过的）
+const newCount = ref(0) // 本轮新词数
 const bestGrade = ref<Record<number, number>>({})
 const stats = ref({ known: 0, vague: 0, unknown: 0 })
 const finished = ref(false)
-// 模糊 / 不认识后展开学习的词条
+// 自评后展开学习的词条
 const studying = ref<Card | null>(null)
 const lastGrade = ref<0 | 3 | 5 | null>(null)
 
@@ -95,6 +96,8 @@ function buildQueue() {
     counted: false,
   }))
   initialTotal.value = queue.value.length
+  reviewCount.value = due.length
+  newCount.value = newWords.length
   bestGrade.value = {}
   stats.value = { known: 0, vague: 0, unknown: 0 }
   finished.value = initialTotal.value === 0
@@ -127,28 +130,21 @@ function grade(g: 0 | 3 | 5) {
   card.attempts++
   queue.value.shift()
 
-  if (g === 5) {
-    // 认识：直接下一个
-    lastGrade.value = null
-    if (queue.value.length === 0)
-      finishSession()
-    else
-      playAudio(queue.value[0].word)
-    return
+  if (g !== 5) {
+    // 模糊 / 不认识：记入错词本
+    addMistake('vocabulary', {
+      key: `vocabulary:${card.id}`,
+      title: card.word,
+      detail: `${card.pos} ${card.meaning}`,
+      hint: card.example,
+    })
+    // 本轮内复现：不认识放队尾，模糊插到后面第 5 个（最多复现 3 次）
+    if (card.attempts < 3) {
+      const insertAt = g === 3 ? Math.min(5, queue.value.length) : queue.value.length
+      queue.value.splice(insertAt, 0, card)
+    }
   }
-
-  // 模糊 / 不认识：记入错词本，展开词条学习
-  addMistake('vocabulary', {
-    key: `vocabulary:${card.id}`,
-    title: card.word,
-    detail: `${card.pos} ${card.meaning}`,
-    hint: card.example,
-  })
-  // 本轮内复现：不认识放队尾，模糊插到后面第 5 个（最多复现 3 次）
-  if (card.attempts < 3) {
-    const insertAt = g === 3 ? Math.min(5, queue.value.length) : queue.value.length
-    queue.value.splice(insertAt, 0, card)
-  }
+  // 三种自评都展开完整词条学习
   lastGrade.value = g
   // 多次记错的词自动展开巧记
   showMnemonic.value = (scheduleStore.get(card.id)?.lapses ?? 0) >= 2
@@ -169,6 +165,9 @@ function finishSession() {
   finished.value = true
   const known = Object.values(bestGrade.value).filter(v => v === 5).length
   setProgress('flashcard', known, initialTotal.value)
+  // 完成一轮学习即打卡
+  if (Object.keys(bestGrade.value).length > 0)
+    doCheckin()
 }
 
 function restart() {
@@ -194,25 +193,43 @@ onMounted(() => {
           <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">单词自测</h1>
           <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">看到单词先凭感觉自评，再按需学习词条</p>
         </div>
-        <div class="flex gap-2">
+        <div class="flex items-center gap-2">
           <select
             v-model="category"
             class="block w-36 border border-gray-300 rounded-lg bg-white p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500"
           >
             <option v-for="c in chapters" :key="c" :value="c">{{ c }}</option>
           </select>
-          <select
-            v-model="goalProxy"
-            title="每日学习数量（下轮生效）"
-            class="block w-28 border border-gray-300 rounded-lg bg-white p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500"
+          <input
+            v-model.lazy="goalProxy"
+            type="number"
+            min="1"
+            max="500"
+            title="每日学习数量（可自定义，下轮生效）"
+            class="block w-20 border border-gray-300 rounded-lg bg-white p-2.5 text-sm text-center dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500"
           >
-            <option v-for="n in GOAL_OPTIONS" :key="n" :value="n">{{ n }} / 天</option>
-          </select>
+          <span class="text-sm text-gray-500 dark:text-gray-400">个/天</span>
         </div>
       </div>
-      <p class="mb-4 text-xs text-gray-400">
-        今日新词 {{ daily.dailyCount }} / {{ daily.goal }}（到期复习不占名额，目标调整下轮生效）
-      </p>
+      <!-- 打卡 + 今日计划 -->
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <p class="text-xs text-gray-400">
+          今日计划：复习 {{ reviewCount }}（昨日及到期） · 新词 {{ newCount }} ｜
+          今日新词 {{ daily.dailyCount }} / {{ daily.goal }}
+        </p>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-orange-500">🔥 连续打卡 {{ checkinStreak }} 天</span>
+          <div class="flex gap-1">
+            <span
+              v-for="(d, i) in checkinWeekDots"
+              :key="i"
+              :title="d.label"
+              class="inline-block w-3 h-3 rounded-full"
+              :class="d.checked ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'"
+            />
+          </div>
+        </div>
+      </div>
 
       <!-- Session stats -->
       <div v-if="!finished" class="grid grid-cols-4 gap-3 mb-6 text-center">
@@ -268,6 +285,16 @@ onMounted(() => {
       <!-- 自评卡片：先显示三个选项 -->
       <div v-else-if="current" class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
         <div class="p-8 text-center">
+          <div class="mb-2">
+            <span
+              class="inline-block rounded-full px-3 py-1 text-xs font-bold"
+              :class="current.isNew
+                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'"
+            >
+              {{ current.isNew ? '新词' : '复习' }}
+            </span>
+          </div>
           <div class="flex items-center justify-center gap-3 mb-2">
             <span class="text-4xl sm:text-5xl font-black tracking-tight text-gray-900 dark:text-white">{{ current.word }}</span>
             <button class="p-2 text-gray-400 hover:text-blue-500" title="播放发音" @click="playAudio()">
@@ -304,11 +331,13 @@ onMounted(() => {
           <div class="text-center mb-2">
             <span
               class="inline-block rounded-full px-3 py-1 text-xs font-bold"
-              :class="lastGrade === 0
-                ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300'"
+              :class="lastGrade === 5
+                ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                : lastGrade === 0
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300'"
             >
-              {{ lastGrade === 0 ? '不认识' : '模糊' }} · 记一下
+              {{ lastGrade === 5 ? '认识 · 确认一下' : lastGrade === 0 ? '不认识 · 记一下' : '模糊 · 再看看' }}
             </span>
           </div>
           <div class="flex items-center justify-center gap-3 mb-4">

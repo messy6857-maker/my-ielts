@@ -18,6 +18,12 @@ export type Grade = 0 | 3 | 5
 
 const DAY = 86400000
 
+function todayStr(offset = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() - offset)
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+}
+
 export function gradeSchedule(prev: WordSchedule | undefined, grade: Grade, now = Date.now()): WordSchedule {
   const s: WordSchedule = prev ?? { ease: 2.5, interval: 0, dueAt: 0, reps: 0, lapses: 0 }
   if (grade === 5) {
@@ -55,11 +61,6 @@ export const useDailyGoal = createGlobalState(() => {
   const goal = ref(30)
   const dailyCount = ref(0) // 今天已学的新词数
 
-  function todayStr() {
-    const d = new Date()
-    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
-  }
-
   function load() {
     goal.value = readJson<number>(nsKey('flashcard_daily_goal_v1'), 30)
     const saved = readJson<{ date: string, count: number }>(
@@ -79,8 +80,11 @@ export const useDailyGoal = createGlobalState(() => {
   watch(currentUser, load)
 
   function setGoal(n: number) {
-    goal.value = n
-    writeJson(nsKey('flashcard_daily_goal_v1'), n)
+    if (!Number.isFinite(n))
+      return
+    const v = Math.min(500, Math.max(1, Math.round(n)))
+    goal.value = v
+    writeJson(nsKey('flashcard_daily_goal_v1'), v)
   }
 
   // 学完一个新词时调用（同一词一天内只计一次，由调用方用 counted 标记去重）
@@ -93,6 +97,52 @@ export const useDailyGoal = createGlobalState(() => {
   const remaining = computed(() => Math.max(0, goal.value - dailyCount.value))
 
   return { goal, dailyCount, remaining, setGoal, recordNewWord }
+})
+
+// 每天打卡：完成一轮学习即记一天，按账号隔离
+export const useCheckin = createGlobalState(() => {
+  const { currentUser } = useAuth()
+  const dates = ref<string[]>([])
+
+  function load() {
+    dates.value = readJson<string[]>(nsKey('flashcard_checkin_v1'), [])
+  }
+  load()
+
+  watch(currentUser, load)
+
+  function checkin() {
+    const t = todayStr()
+    if (!dates.value.includes(t)) {
+      dates.value = [...dates.value, t]
+      writeJson(nsKey('flashcard_checkin_v1'), dates.value)
+    }
+  }
+
+  // 连续打卡天数：今天没打就从昨天开始算
+  const streak = computed(() => {
+    let n = 0
+    let offset = dates.value.includes(todayStr(0)) ? 0 : 1
+    while (dates.value.includes(todayStr(offset))) {
+      n++
+      offset++
+    }
+    return n
+  })
+
+  // 最近 7 天打卡点
+  const weekDots = computed(() => {
+    return [6, 5, 4, 3, 2, 1, 0].map((offset) => {
+      const d = new Date()
+      d.setDate(d.getDate() - offset)
+      return {
+        label: offset === 0 ? '今天' : `${d.getMonth() + 1}/${d.getDate()}`,
+        checked: dates.value.includes(todayStr(offset)),
+      }
+    })
+  })
+
+  return { dates, checkin, streak, weekDots }
 })
 
 export const useWordSchedule = createGlobalState(() => {
