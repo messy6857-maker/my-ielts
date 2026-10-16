@@ -49,6 +49,52 @@ export function gradeSchedule(prev: WordSchedule | undefined, grade: Grade, now 
   }
 }
 
+// 每日学习目标：每天学 N 个新词（复习的词不占名额），按账号隔离、按天清零
+export const useDailyGoal = createGlobalState(() => {
+  const { currentUser } = useAuth()
+  const goal = ref(30)
+  const dailyCount = ref(0) // 今天已学的新词数
+
+  function todayStr() {
+    const d = new Date()
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+  }
+
+  function load() {
+    goal.value = readJson<number>(nsKey('flashcard_daily_goal_v1'), 30)
+    const saved = readJson<{ date: string, count: number }>(
+      nsKey('flashcard_daily_new_v1'),
+      { date: '', count: 0 },
+    )
+    if (saved.date === todayStr()) {
+      dailyCount.value = saved.count
+    }
+    else {
+      dailyCount.value = 0
+      writeJson(nsKey('flashcard_daily_new_v1'), { date: todayStr(), count: 0 })
+    }
+  }
+  load()
+
+  watch(currentUser, load)
+
+  function setGoal(n: number) {
+    goal.value = n
+    writeJson(nsKey('flashcard_daily_goal_v1'), n)
+  }
+
+  // 学完一个新词时调用（同一词一天内只计一次，由调用方用 counted 标记去重）
+  function recordNewWord() {
+    dailyCount.value += 1
+    writeJson(nsKey('flashcard_daily_new_v1'), { date: todayStr(), count: dailyCount.value })
+  }
+
+  // 今天还能学几个新词
+  const remaining = computed(() => Math.max(0, goal.value - dailyCount.value))
+
+  return { goal, dailyCount, remaining, setGoal, recordNewWord }
+})
+
 export const useWordSchedule = createGlobalState(() => {
   const { currentUser } = useAuth()
   const schedules = ref<Record<string, WordSchedule>>({})

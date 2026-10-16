@@ -10,36 +10,49 @@ interface Card {
   meaning: string
   example: string
   attempts: number
+  isNew: boolean
+  counted: boolean // 是否已计入今日新词
 }
 
 const CHAPTER_KEY = 'vocabulary_flashcard_chapter'
 const chapters = Object.keys(vocabulary)
 const category = ref(localStorage.getItem(CHAPTER_KEY) || chapters[0])
+const GOAL_OPTIONS = [10, 20, 30, 50, 100]
+
+// 每日目标下拉框的双向绑定
+const goalProxy = computed({
+  get: () => daily.goal.value,
+  set: (v: string | number) => daily.setGoal(Number(v)),
+})
 
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
 const scheduleStore = useWordSchedule()
+const daily = useDailyGoal()
 
 const queue = ref<Card[]>([])
 const initialTotal = ref(0)
-const studied = ref(0)
 const bestGrade = ref<Record<number, number>>({})
 const stats = ref({ known: 0, vague: 0, unknown: 0 })
-const revealed = ref(false)
 const finished = ref(false)
+// 模糊 / 不认识后展开学习的词条
+const studying = ref<Card | null>(null)
+const lastGrade = ref<0 | 3 | 5 | null>(null)
+
+const current = computed(() => (!studying.value ? queue.value[0] ?? null : null))
+const remaining = computed(() => queue.value.length)
+const studyMnemonic = computed(() => (studying.value ? getMnemonic(studying.value.word) : null))
+const studyLapses = computed(() => {
+  if (!studying.value)
+    return 0
+  return scheduleStore.get(studying.value.id)?.lapses ?? 0
+})
 const showMnemonic = ref(false)
 
-const current = computed(() => queue.value[0] ?? null)
-const mnemonic = computed(() => (current.value ? getMnemonic(current.value.word) : null))
-const lapses = computed(() => {
-  if (!current.value)
-    return 0
-  return scheduleStore.get(current.value.id)?.lapses ?? 0
-})
-
 let audio: HTMLAudioElement | null = null
-function playAudio() {
-  if (!current.value)
+function playAudio(word?: string) {
+  const w = word || current.value?.word || studying.value?.word
+  if (!w)
     return
   try {
     if (audio) {
@@ -47,7 +60,7 @@ function playAudio() {
       audio.currentTime = 0
     }
     audio = document.createElement('audio')
-    audio.src = `vocabulary/audio/${category.value}/${current.value.word}.mp3`
+    audio.src = `vocabulary/audio/${category.value}/${w}.mp3`
     audio.play().catch(() => {})
   }
   catch {
@@ -69,39 +82,32 @@ function buildQueue() {
       due.push(w)
   }
   due.sort((a, b) => (scheduleStore.get(a.id)?.dueAt ?? 0) - (scheduleStore.get(b.id)?.dueAt ?? 0))
-  queue.value = [...due, ...fresh].map(w => ({
+  // 到期复习全要，新词按今日剩余名额取
+  const newWords = fresh.slice(0, daily.remaining.value)
+  queue.value = [...due, ...newWords].map(w => ({
     id: w.id,
     word: w.word[0],
     pos: w.pos,
     meaning: w.meaning,
     example: w.example,
     attempts: 0,
+    isNew: !scheduleStore.get(w.id),
+    counted: false,
   }))
   initialTotal.value = queue.value.length
-  studied.value = 0
   bestGrade.value = {}
   stats.value = { known: 0, vague: 0, unknown: 0 }
-  finished.value = false
-  revealed.value = false
-  showMnemonic.value = false
+  finished.value = initialTotal.value === 0
+  studying.value = null
+  lastGrade.value = null
   if (queue.value.length > 0)
-    onNewCard()
+    playAudio(queue.value[0].word)
 }
 
-function onNewCard() {
-  revealed.value = false
-  // 多次记错的词，自动展开巧记提示
-  showMnemonic.value = lapses.value >= 2
-  playAudio()
-}
-
-function reveal() {
-  revealed.value = true
-}
-
+// 先自评：认识 / 不认识 / 模糊
 function grade(g: 0 | 3 | 5) {
   const card = current.value
-  if (!card || !revealed.value)
+  if (!card)
     return
   // 更新间隔重复调度
   scheduleStore.set(card.id, gradeSchedule(scheduleStore.get(card.id), g))
@@ -113,29 +119,50 @@ function grade(g: 0 | 3 | 5) {
   else
     stats.value.unknown++
   bestGrade.value[card.id] = Math.max(bestGrade.value[card.id] ?? -1, g)
-  studied.value++
-  // 模糊 / 不认识：记入错词本（计次）
-  if (g !== 5) {
-    addMistake('vocabulary', {
-      key: `vocabulary:${card.id}`,
-      title: card.word,
-      detail: `${card.pos} ${card.meaning}`,
-      hint: card.example,
-    })
+  // 新词计入今日学习量（一天只计一次）
+  if (card.isNew && !card.counted) {
+    daily.recordNewWord()
+    card.counted = true
   }
-  // 没掌握的词本轮内复现：不认识放队尾，模糊插到后面第 5 个
   card.attempts++
   queue.value.shift()
-  if (g !== 5 && card.attempts < 3) {
+
+  if (g === 5) {
+    // 认识：直接下一个
+    lastGrade.value = null
+    if (queue.value.length === 0)
+      finishSession()
+    else
+      playAudio(queue.value[0].word)
+    return
+  }
+
+  // 模糊 / 不认识：记入错词本，展开词条学习
+  addMistake('vocabulary', {
+    key: `vocabulary:${card.id}`,
+    title: card.word,
+    detail: `${card.pos} ${card.meaning}`,
+    hint: card.example,
+  })
+  // 本轮内复现：不认识放队尾，模糊插到后面第 5 个（最多复现 3 次）
+  if (card.attempts < 3) {
     const insertAt = g === 3 ? Math.min(5, queue.value.length) : queue.value.length
     queue.value.splice(insertAt, 0, card)
   }
-  if (queue.value.length === 0) {
+  lastGrade.value = g
+  // 多次记错的词自动展开巧记
+  showMnemonic.value = (scheduleStore.get(card.id)?.lapses ?? 0) >= 2
+  studying.value = card
+  playAudio(card.word)
+}
+
+function next() {
+  studying.value = null
+  lastGrade.value = null
+  if (queue.value.length === 0)
     finishSession()
-  }
-  else {
-    onNewCard()
-  }
+  else
+    playAudio(queue.value[0].word)
 }
 
 function finishSession() {
@@ -162,49 +189,65 @@ onMounted(() => {
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-2xl mx-auto">
       <!-- Header -->
-      <div class="flex justify-between items-center mb-6">
+      <div class="flex flex-wrap justify-between items-center gap-3 mb-2">
         <div>
           <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">单词自测</h1>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">先回想词义，再翻卡自评：认识 / 模糊 / 不认识</p>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">看到单词先凭感觉自评，再按需学习词条</p>
         </div>
-        <select
-          v-model="category"
-          class="block w-44 border border-gray-300 rounded-lg bg-white p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500"
-        >
-          <option v-for="c in chapters" :key="c" :value="c">{{ c }}</option>
-        </select>
+        <div class="flex gap-2">
+          <select
+            v-model="category"
+            class="block w-36 border border-gray-300 rounded-lg bg-white p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500"
+          >
+            <option v-for="c in chapters" :key="c" :value="c">{{ c }}</option>
+          </select>
+          <select
+            v-model="goalProxy"
+            title="每日学习数量（下轮生效）"
+            class="block w-28 border border-gray-300 rounded-lg bg-white p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500"
+          >
+            <option v-for="n in GOAL_OPTIONS" :key="n" :value="n">{{ n }} / 天</option>
+          </select>
+        </div>
       </div>
+      <p class="mb-4 text-xs text-gray-400">
+        今日新词 {{ daily.dailyCount }} / {{ daily.goal }}（到期复习不占名额，目标调整下轮生效）
+      </p>
 
       <!-- Session stats -->
       <div v-if="!finished" class="grid grid-cols-4 gap-3 mb-6 text-center">
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">本轮进度</div>
-          <div class="text-lg font-bold dark:text-white">{{ studied }} / {{ initialTotal }}</div>
+          <div class="text-xs text-gray-500 mb-1">本轮剩余</div>
+          <div class="text-lg font-bold dark:text-white">{{ remaining }}</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
           <div class="text-xs text-gray-500 mb-1">认识</div>
           <div class="text-lg font-bold text-green-600">{{ stats.known }}</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">模糊</div>
-          <div class="text-lg font-bold text-yellow-600">{{ stats.vague }}</div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
           <div class="text-xs text-gray-500 mb-1">不认识</div>
           <div class="text-lg font-bold text-red-600">{{ stats.unknown }}</div>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
+          <div class="text-xs text-gray-500 mb-1">模糊</div>
+          <div class="text-lg font-bold text-yellow-600">{{ stats.vague }}</div>
         </div>
       </div>
 
       <!-- Finish screen -->
       <div v-if="finished" class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 text-center">
-        <h2 class="text-2xl font-bold mb-4 dark:text-white">本轮完成 🎉</h2>
-        <div class="flex justify-center gap-6 mb-6 text-sm">
+        <h2 class="text-2xl font-bold mb-4 dark:text-white">
+          {{ initialTotal === 0 ? '今日目标已完成 🎉' : '本轮完成 🎉' }}
+        </h2>
+        <div v-if="initialTotal > 0" class="flex justify-center gap-6 mb-6 text-sm">
           <span class="text-green-600 font-bold">认识 {{ stats.known }}</span>
-          <span class="text-yellow-600 font-bold">模糊 {{ stats.vague }}</span>
           <span class="text-red-600 font-bold">不认识 {{ stats.unknown }}</span>
+          <span class="text-yellow-600 font-bold">模糊 {{ stats.vague }}</span>
         </div>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-          没掌握的词已按记忆曲线安排复现，并记入错词本
+          {{ initialTotal === 0
+            ? `今日新词已学完（${daily.dailyCount} / ${daily.goal}），到期复习会按时出现`
+            : '没掌握的词已按记忆曲线安排复现，并记入错词本' }}
         </p>
         <div class="flex justify-center gap-3">
           <button
@@ -222,34 +265,64 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Card -->
+      <!-- 自评卡片：先显示三个选项 -->
       <div v-else-if="current" class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <!-- Word face -->
-        <div class="p-8 text-center border-b border-gray-100 dark:border-gray-700">
+        <div class="p-8 text-center">
           <div class="flex items-center justify-center gap-3 mb-2">
             <span class="text-4xl sm:text-5xl font-black tracking-tight text-gray-900 dark:text-white">{{ current.word }}</span>
-            <button class="p-2 text-gray-400 hover:text-blue-500" title="播放发音" @click="playAudio">
+            <button class="p-2 text-gray-400 hover:text-blue-500" title="播放发音" @click="playAudio()">
               <i class="i-ph-speaker-high-bold text-2xl block" />
             </button>
           </div>
-          <p v-if="!revealed" class="text-sm text-gray-400 mt-4">回想一下它的意思，然后翻开卡片</p>
-          <button
-            v-if="!revealed"
-            class="mt-4 rounded-full bg-blue-600 px-8 py-2.5 text-white text-sm font-medium hover:bg-blue-700"
-            @click="reveal"
-          >
-            显示释义
-          </button>
-        </div>
-
-        <!-- Meaning face -->
-        <div v-if="revealed" class="p-8">
-          <div class="text-center mb-4">
-            <span class="text-sm italic text-gray-400 mr-2" style="font-family: times;">{{ current.pos }}</span>
-            <span class="text-xl font-medium text-gray-800 dark:text-gray-200">{{ current.meaning }}</span>
+          <p class="text-sm text-gray-400 mt-4 mb-6">看到这个词，第一感觉是？</p>
+          <div class="grid grid-cols-3 gap-3">
+            <button
+              class="rounded-xl bg-green-50 border border-green-200 py-4 text-green-700 font-bold hover:bg-green-100 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
+              @click="grade(5)"
+            >
+              认识
+            </button>
+            <button
+              class="rounded-xl bg-red-50 border border-red-200 py-4 text-red-700 font-bold hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300"
+              @click="grade(0)"
+            >
+              不认识
+            </button>
+            <button
+              class="rounded-xl bg-yellow-50 border border-yellow-200 py-4 text-yellow-700 font-bold hover:bg-yellow-100 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300"
+              @click="grade(3)"
+            >
+              模糊
+            </button>
           </div>
-          <p v-if="current.example" class="text-center text-gray-500 dark:text-gray-400 italic text-sm mb-6">
-            {{ current.example }}
+        </div>
+      </div>
+
+      <!-- 词条学习：按选择展示 -->
+      <div v-else-if="studying" class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div class="p-8">
+          <div class="text-center mb-2">
+            <span
+              class="inline-block rounded-full px-3 py-1 text-xs font-bold"
+              :class="lastGrade === 0
+                ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300'"
+            >
+              {{ lastGrade === 0 ? '不认识' : '模糊' }} · 记一下
+            </span>
+          </div>
+          <div class="flex items-center justify-center gap-3 mb-4">
+            <span class="text-3xl font-black text-gray-900 dark:text-white">{{ studying.word }}</span>
+            <button class="p-2 text-gray-400 hover:text-blue-500" title="播放发音" @click="playAudio()">
+              <i class="i-ph-speaker-high-bold text-xl block" />
+            </button>
+          </div>
+          <div class="text-center mb-4">
+            <span class="text-sm italic text-gray-400 mr-2" style="font-family: times;">{{ studying.pos }}</span>
+            <span class="text-xl font-medium text-gray-800 dark:text-gray-200">{{ studying.meaning }}</span>
+          </div>
+          <p v-if="studying.example" class="text-center text-gray-500 dark:text-gray-400 italic text-sm mb-6">
+            {{ studying.example }}
           </p>
 
           <!-- 巧记 -->
@@ -257,49 +330,30 @@ onMounted(() => {
             <button class="flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-300" @click="showMnemonic = !showMnemonic">
               <i class="i-carbon-idea block" />
               巧记提示
-              <span v-if="lapses >= 2" class="text-xs font-normal text-amber-500">（这个词你已记错 {{ lapses }} 次）</span>
+              <span v-if="studyLapses >= 2" class="text-xs font-normal text-amber-500">（这个词你已记错 {{ studyLapses }} 次）</span>
             </button>
             <div v-if="showMnemonic" class="mt-2 text-sm text-amber-800 dark:text-amber-200">
-              <template v-if="mnemonic">
+              <template v-if="studyMnemonic">
                 <div class="flex flex-wrap gap-2 mb-1">
                   <span
-                    v-for="(part, i) in mnemonic.parts"
+                    v-for="(part, i) in studyMnemonic.parts"
                     :key="i"
                     class="rounded bg-amber-100 px-2 py-0.5 dark:bg-amber-900/50"
                   >{{ part.text }}<span class="text-amber-500">（{{ part.gloss }}）</span></span>
                 </div>
-                <p>{{ mnemonic.note }}</p>
+                <p>{{ studyMnemonic.note }}</p>
               </template>
               <p v-else>试试拆音节跟读几遍，再结合上面的例句联想画面，效果会更好。</p>
             </div>
           </div>
 
-          <!-- Grade buttons -->
-          <div class="grid grid-cols-3 gap-3">
-            <button
-              class="rounded-xl bg-red-50 border border-red-200 py-3 text-red-700 font-bold hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300"
-              @click="grade(0)"
-            >
-              不认识
-            </button>
-            <button
-              class="rounded-xl bg-yellow-50 border border-yellow-200 py-3 text-yellow-700 font-bold hover:bg-yellow-100 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300"
-              @click="grade(3)"
-            >
-              模糊
-            </button>
-            <button
-              class="rounded-xl bg-green-50 border border-green-200 py-3 text-green-700 font-bold hover:bg-green-100 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
-              @click="grade(5)"
-            >
-              认识
-            </button>
-          </div>
+          <button
+            class="w-full rounded-xl bg-blue-600 py-3 text-white text-sm font-bold hover:bg-blue-700"
+            @click="next"
+          >
+            下一个
+          </button>
         </div>
-      </div>
-
-      <div v-else class="text-center text-gray-400 py-16">
-        本章暂无单词
       </div>
     </div>
   </div>
