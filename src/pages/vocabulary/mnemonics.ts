@@ -1,14 +1,75 @@
-// 规则版“巧记”：把单词拆成 前缀 + 词根 + 后缀 并给出中文含义
-// 替代视频中 AI 助记的轻量实现；接入大模型 API 后可升级为真正的个性化助记
+// 巧记提示：关于单词的例句或简洁记法
+// 三档策略：手写巧记（谐音/联想小故事）> 拆词微故事（连接词义）> 例句填空
 
 export interface MnemonicPart {
   text: string
   gloss: string
 }
 
+export type MnemonicKind = 'curated' | 'parts' | 'sentence'
+
 export interface MnemonicHint {
-  parts: MnemonicPart[]
-  note: string
+  kind: MnemonicKind
+  title: string
+  body: string
+  // sentence 档：填空的答案（即单词本身）
+  answer?: string
+  // parts 档：拆分展示
+  parts?: MnemonicPart[]
+}
+
+// 手写巧记：谐音梗 / 联想小故事，一句话，紧扣词义
+const CURATED: Record<string, string> = {
+  pest: '谐音"拍死它"：看见害虫，拍死它 → 害虫',
+  oasis: '谐音"哦哎死"：沙漠里看见绿洲：哦，哎，死不了了 → 绿洲',
+  cliff: '谐音"可累服"：爬悬崖可累服了 → 悬崖，峭壁',
+  breeze: '谐音"不累死"：微风吹来，一点不累 → 微风',
+  tide: '谐音"太得"：潮水涨得太得劲了 → 潮汐，潮流',
+  ponder: '谐音"胖的"：胖的爱沉思人生 → 沉思，考虑',
+  ambulance: '谐音"俺不懒死"：病再重俺不懒死，快叫救护车 → 救护车',
+  lava: '谐音"辣哇"：岩浆辣哇，小心烫 → 岩浆',
+  marble: '谐音"妈宝"：妈宝家铺的大理石地面 → 大理石',
+  granite: '谐音"哥拿它"：哥拿它砌墙，真硬 → 花岗岩',
+  quartz: '谐音"阔次"：阔佬戴的次品水晶 → 石英',
+  pebble: '谐音"拍不"：小石子拍不碎 → 鹅卵石',
+  gorge: '谐音"狗日"：狗日的峡谷真深 → 峡谷',
+  strait: '谐音"死追"：两条船在海峡里死追 → 海峡',
+  drought: '谐音"抓特"：干旱把庄稼抓特干了 → 干旱',
+  beach: '谐音"必去"：夏天必去的地方 → 海滩',
+  disaster: 'dis（坏）+ aster（星星）→ 凶星出现 → 灾难',
+  abandon: 'a（一）+ ban（禁）→ 一个人被禁赛 → 被抛弃 → 抛弃，放弃',
+  ambiguous: 'ambi（两）+ igu（走）→ 两头走，骑墙 → 模棱两可的',
+  ambition: '联想：在大城市（big town）出人头地 → 雄心，野心',
+  erupt: 'e（出）+ rupt（断裂）→ 一热就喷出来 → 爆发',
+  flood: 'floo（流）+ d（大）→ 大水流 → 洪水，泛滥',
+  applaud: 'ap（向）+ plaud（拍）→ 向台上拍手 → 鼓掌，赞许',
+  appetite: 'ap（向）+ petite（小蛋糕）→ 向小蛋糕伸手 → 食欲，胃口',
+  ascend: 'a（向上）+ scend（爬）→ 向上爬 → 上升，攀登',
+  aspire: 'a（向）+ spire（尖顶）→ 向着尖顶 → 渴望，立志',
+  assemble: 'as（一）+ semble（相同）→ 把相同的聚一起 → 集合，装配',
+  assert: 'as（向）+ sert（插）→ 把观点插进去 → 断言，坚持',
+  assess: 'as（向）+ sess（坐）→ 坐下来评一评 → 评估',
+  assign: 'as（向）+ sign（记号）→ 做上记号分下去 → 分配，指派',
+  assist: 'as（向）+ sist（站）→ 站到身边 → 帮助',
+  associate: 'as（进）+ soci（社交圈）→ 进入社交圈 → 交往；联想',
+  assume: 'as（向）+ sume（拿）→ 拿来就当真的 → 假定，承担',
+  assure: 'as（向）+ sure（确信）→ 让人确信 → 保证',
+  astonish: 'as（被）+ tonish（雷劈）→ 像被雷劈中 → 震惊',
+  asylum: 'as（向）+ ylum（收容）→ 寻求收容 → 避难所',
+  antique: 'anti（古）+ que → 老古董 → 古董，古老的',
+  artery: 'art（艺术）+ ery → 像艺术品一样精密 → 动脉，干线',
+  articulate: 'art（技巧）+ iculate → 说话有技巧 → 善于表达的',
+  ascribe: 'a（向）+ scribe（写）→ 写上名字 → 归因于',
+  aspect: 'a（向）+ spect（看）→ 朝哪面看 → 方面，外观',
+  horizon: 'hor（≈hour时间）+ izon → 时间尽头 → 地平线',
+  altitude: 'alt（高）+ itude（状态）→ 高的状态 → 海拔，高度',
+  volcano: 'volc（火）+ ano → 喷火的山 → 火山',
+  glacier: 'glac（冰）+ ier → 冰的 → 冰川',
+  peninsula: 'peni（几乎）+ insula（岛）→ 几乎是岛 → 半岛',
+  fertile: 'fer（农夫）+ tile（田）→ 农夫的田 → 肥沃的',
+  summit: 'sum（最高）+ mit（送）→ 送到最高处 → 顶点，峰会',
+  canyon: 'can（刻）+ yon → 刻出来的深沟 → 峡谷',
+  meander: 'me（我）+ ander（漫步）→ 我漫步，河也漫步 → 蜿蜒，漫步',
 }
 
 const PREFIXES: [string, string][] = [
@@ -68,12 +129,13 @@ const ROOTS: Record<string, string> = {
   oper: '工作', ori: '升起', pac: '和平', par: '平等', pater: '父亲',
   pet: '寻求', plac: '平息', popul: '人民', prim: '第一', quer: '问',
   radi: '射线', rap: '抓', rect: '直', reg: '统治', rid: '笑',
-  rog: '问', san: '健康', scop: '看', scrib2: '写', sed: '坐',
-  sol: '单独', somn: '睡', soph: '智慧', spec: '看', spir2: '呼吸',
+  rog: '问', san: '健康', scop: '看', sed: '坐',
+  sol: '单独', somn: '睡', soph: '智慧', spec: '看',
   stell: '星', strict: '拉紧', sum: '取', tact: '触', text: '织',
   the: '神', tom: '切', tort: '扭', tox: '毒', urb: '城市',
   usu: '用', vail: '强', vap: '蒸汽', vari: '变化', vel: '速度',
   vend: '卖', verb: '词', vest: '衣服', vi: '路', vibr: '震动',
+  sphere: '球体', atmo: '蒸汽', hydro: '水', litho: '石头', dic: '说',
 }
 
 function longestMatch(word: string, table: [string, string][], minStem: number): [string, string] | null {
@@ -94,39 +156,62 @@ function longestSuffix(word: string, minStem: number): [string, string] | null {
   return null
 }
 
-export function getMnemonic(word: string): MnemonicHint | null {
+// 把单词从例句中挖空，做成填空
+function blankWord(example: string, word: string): string | null {
+  const idx = example.toLowerCase().indexOf(word.toLowerCase())
+  if (idx === -1)
+    return null
+  return `${example.slice(0, idx)}______${example.slice(idx + word.length)}`
+}
+
+export function getMnemonic(word: string, meaning = '', example = ''): MnemonicHint | null {
   const w = word.toLowerCase().trim()
+
+  // 第一档：手写巧记
+  const tip = CURATED[w]
+  if (tip)
+    return { kind: 'curated', title: '巧记', body: tip }
+
   if (w.length < 4)
     return null
-  const parts: MnemonicPart[] = []
   let stem = w
 
   // 先剥后缀（词尾），再剥前缀（词头），尽量最长匹配
   const suffix = longestSuffix(stem, 3)
-  if (suffix) {
+  if (suffix)
     stem = stem.slice(0, stem.length - suffix[0].length)
-    parts.push({ text: `-${suffix[0]}`, gloss: suffix[1] })
-  }
   const prefix = longestMatch(stem, PREFIXES, 3)
-  if (prefix) {
+  if (prefix)
     stem = stem.slice(prefix[0].length)
-    parts.unshift({ text: `${prefix[0]}-`, gloss: prefix[1] })
-  }
 
+  // 第二档：拆词微故事，落点一定是词义；按单词原顺序排列
   const rootGloss = ROOTS[stem] ?? ROOTS[stem.replace(/[aeiou]$/, '')]
-  if (rootGloss) {
-    parts.unshift({ text: stem, gloss: rootGloss })
+  const hasAffix = !!(prefix || suffix)
+  if (rootGloss || (hasAffix && stem.length >= 3)) {
+    const ordered: MnemonicPart[] = [
+      ...(prefix ? [{ text: `${prefix[0]}-`, gloss: prefix[1] }] : []),
+      { text: stem, gloss: rootGloss ?? '词根' },
+      ...(suffix ? [{ text: `-${suffix[0]}`, gloss: suffix[1] }] : []),
+    ]
+    const tail = meaning ? ` → 也就是「${meaning}」` : ''
     return {
-      parts,
-      note: `巧记：${parts.map(p => `${p.text}（${p.gloss}）`).join(' + ')}，合起来帮助记忆`,
+      kind: 'parts',
+      title: '拆词巧记',
+      parts: ordered,
+      body: `拆词：${ordered.map(p => `${p.text}（${p.gloss}）`).join(' + ')}${tail}`,
     }
   }
-  // 词根不在表里，但拆出了词缀，仍然有提示价值
-  if (parts.length > 0 && stem.length >= 3) {
-    parts.unshift({ text: stem, gloss: '词根' })
-    return {
-      parts,
-      note: `巧记：先记词缀 ${parts.slice(1).map(p => `${p.text}（${p.gloss}）`).join('、')}，再整体跟读几遍`,
+
+  // 第三档：例句填空
+  if (example) {
+    const blanked = blankWord(example, w)
+    if (blanked) {
+      return {
+        kind: 'sentence',
+        title: '例句巧记',
+        body: blanked,
+        answer: word,
+      }
     }
   }
   return null

@@ -42,7 +42,10 @@ const lastGrade = ref<0 | 3 | 5 | null>(null)
 
 const current = computed(() => (!studying.value ? queue.value[0] ?? null : null))
 const remaining = computed(() => queue.value.length)
-const studyMnemonic = computed(() => (studying.value ? getMnemonic(studying.value.word) : null))
+const studyMnemonic = computed(() => (studying.value
+  ? getMnemonic(studying.value.word, studying.value.meaning, studying.value.example)
+  : null))
+const showAnswer = ref(false)
 const studyLapses = computed(() => {
   if (!studying.value)
     return 0
@@ -148,6 +151,7 @@ function grade(g: 0 | 3 | 5) {
   lastGrade.value = g
   // 多次记错的词自动展开巧记
   showMnemonic.value = (scheduleStore.get(card.id)?.lapses ?? 0) >= 2
+  showAnswer.value = false
   studying.value = card
   playAudio(card.word)
 }
@@ -155,6 +159,7 @@ function grade(g: 0 | 3 | 5) {
 function next() {
   studying.value = null
   lastGrade.value = null
+  showAnswer.value = false
   if (queue.value.length === 0)
     finishSession()
   else
@@ -354,23 +359,36 @@ onMounted(() => {
             {{ studying.example }}
           </p>
 
-          <!-- 巧记 -->
+          <!-- 巧记：例句或简洁记法 -->
           <div class="mb-6 rounded-xl bg-amber-50 border border-amber-200 p-4 dark:bg-amber-900/20 dark:border-amber-800">
             <button class="flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-300" @click="showMnemonic = !showMnemonic">
               <i class="i-carbon-idea block" />
-              巧记提示
+              {{ studyMnemonic ? studyMnemonic.title : '巧记提示' }}
               <span v-if="studyLapses >= 2" class="text-xs font-normal text-amber-500">（这个词你已记错 {{ studyLapses }} 次）</span>
             </button>
             <div v-if="showMnemonic" class="mt-2 text-sm text-amber-800 dark:text-amber-200">
               <template v-if="studyMnemonic">
-                <div class="flex flex-wrap gap-2 mb-1">
-                  <span
-                    v-for="(part, i) in studyMnemonic.parts"
-                    :key="i"
-                    class="rounded bg-amber-100 px-2 py-0.5 dark:bg-amber-900/50"
-                  >{{ part.text }}<span class="text-amber-500">（{{ part.gloss }}）</span></span>
-                </div>
-                <p>{{ studyMnemonic.note }}</p>
+                <!-- 手写巧记：一句话 -->
+                <p v-if="studyMnemonic.kind === 'curated'">{{ studyMnemonic.body }}</p>
+                <!-- 拆词巧记：词块 + 连接词义的微故事 -->
+                <template v-else-if="studyMnemonic.kind === 'parts'">
+                  <div class="flex flex-wrap gap-2 mb-1">
+                    <span
+                      v-for="(part, i) in studyMnemonic.parts"
+                      :key="i"
+                      class="rounded bg-amber-100 px-2 py-0.5 dark:bg-amber-900/50"
+                    >{{ part.text }}<span class="text-amber-500">（{{ part.gloss }}）</span></span>
+                  </div>
+                  <p>{{ studyMnemonic.body }}</p>
+                </template>
+                <!-- 例句巧记：填空 + 点看答案 -->
+                <template v-else-if="studyMnemonic.kind === 'sentence'">
+                  <p class="italic mb-2">“{{ studyMnemonic.body }}”</p>
+                  <button v-if="!showAnswer" class="text-xs underline underline-offset-2" @click="showAnswer = true">
+                    想不起来？点我看答案
+                  </button>
+                  <p v-else class="font-bold">答案：{{ studyMnemonic.answer }}</p>
+                </template>
               </template>
               <p v-else>试试拆音节跟读几遍，再结合上面的例句联想画面，效果会更好。</p>
             </div>
