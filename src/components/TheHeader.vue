@@ -79,7 +79,7 @@ async function onManualSync() {
       <div class="mx-auto max-w-screen-2xl flex items-center justify-between">
         <div class="flex items-center justify-start">
           <a href="/" class="mr-14 flex">
-            <span class="hidden self-center whitespace-nowrap text-2xl font-semibold sm:flex dark:text-white">My
+            <span class="self-center whitespace-nowrap text-xl font-semibold sm:text-2xl dark:text-white">My
               <span class="ml-1 text-red-600"> IELTS™</span>
             </span>
 

@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { getMnemonic } from './mnemonics'
+import { parseExtra } from './extraParser'
 import { gradeSchedule } from '../../composables/useSpacedRepetition'
+import { fetchWordInfo } from '../../composables/useWordInfo'
+import type { WordInfo } from '../../composables/useWordInfo'
 import vocabulary from './vocabulary'
 
 interface Card {
-  id: number
+  id: number | string
   word: string
   pos: string
   meaning: string
   example: string
+  extra: string // 拓展字段原文
   attempts: number
   isNew: boolean
   counted: boolean // 是否已计入今日新词
+  hintWords: string[] // 联网找例句时的备选词（派生词等）
 }
 
 const CHAPTER_KEY = 'vocabulary_flashcard_chapter'
@@ -33,18 +38,28 @@ const queue = ref<Card[]>([])
 const initialTotal = ref(0)
 const reviewCount = ref(0) // 本轮复习词数（到期/之前学过的）
 const newCount = ref(0) // 本轮新词数
-const bestGrade = ref<Record<number, number>>({})
+const bestGrade = ref<Record<string, number>>({})
 const stats = ref({ known: 0, vague: 0, unknown: 0 })
 const finished = ref(false)
 // 自评后展开学习的词条
 const studying = ref<Card | null>(null)
 const lastGrade = ref<0 | 3 | 5 | null>(null)
+// 联网例句/同义词（自评前展示的提示）
+const wordInfo = ref<WordInfo | null>(null)
+const wordInfoLoading = ref(false)
+let wordInfoToken = 0
 
 const current = computed(() => (!studying.value ? queue.value[0] ?? null : null))
 const remaining = computed(() => queue.value.length)
 const studyMnemonic = computed(() => (studying.value
   ? getMnemonic(studying.value.word, studying.value.meaning, studying.value.example)
   : null))
+// 自评前的例句巧记提示
+const preMnemonic = computed(() => (current.value
+  ? getMnemonic(current.value.word, current.value.meaning, current.value.example)
+  : null))
+// 学习面板：该词的拓展词汇（跟原词放在一起展示）
+const studyExtras = computed(() => (studying.value ? parseExtra(studying.value.extra) : []))
 const showAnswer = ref(false)
 const studyLapses = computed(() => {
   if (!studying.value)
@@ -72,6 +87,22 @@ function playAudio(word?: string) {
   }
 }
 
+function toCard(w: any, isNew: boolean): Card {
+  const extras = parseExtra(w.extra)
+  return {
+    id: w.id,
+    word: w.word[0],
+    pos: w.pos,
+    meaning: w.meaning,
+    example: w.example,
+    extra: w.extra || '',
+    attempts: 0,
+    isNew,
+    counted: false,
+    hintWords: extras.map(e => e.word).slice(0, 3),
+  }
+}
+
 function buildQueue() {
   const chapter = (vocabulary as any)[category.value]
   const all = chapter ? chapter.words.flat() : []
@@ -88,16 +119,7 @@ function buildQueue() {
   due.sort((a, b) => (scheduleStore.get(a.id)?.dueAt ?? 0) - (scheduleStore.get(b.id)?.dueAt ?? 0))
   // 到期复习全要，新词按今日剩余名额取
   const newWords = fresh.slice(0, daily.remaining.value)
-  queue.value = [...due, ...newWords].map(w => ({
-    id: w.id,
-    word: w.word[0],
-    pos: w.pos,
-    meaning: w.meaning,
-    example: w.example,
-    attempts: 0,
-    isNew: !scheduleStore.get(w.id),
-    counted: false,
-  }))
+  queue.value = [...due.map(w => toCard(w, false)), ...newWords.map(w => toCard(w, true))]
   initialTotal.value = queue.value.length
   reviewCount.value = due.length
   newCount.value = newWords.length
@@ -106,6 +128,7 @@ function buildQueue() {
   finished.value = initialTotal.value === 0
   studying.value = null
   lastGrade.value = null
+  wordInfo.value = null
   if (queue.value.length > 0)
     playAudio(queue.value[0].word)
 }
@@ -166,6 +189,35 @@ function next() {
     playAudio(queue.value[0].word)
 }
 
+/** 自评前加载联网例句/同义词：先试本词，再试派生词（hintWords） */
+async function loadWordInfo(card: Card) {
+  const token = ++wordInfoToken
+  wordInfo.value = null
+  wordInfoLoading.value = true
+  try {
+    const tryWords = [card.word, ...card.hintWords].filter((w, i, a) => w && a.indexOf(w) === i)
+    let fallback: WordInfo | null = null
+    for (const w of tryWords) {
+      if (token !== wordInfoToken)
+        return
+      const info = await fetchWordInfo(w)
+      if (token !== wordInfoToken)
+        return
+      if (info && info.examples.length > 0) {
+        wordInfo.value = info
+        return
+      }
+      if (info && !fallback)
+        fallback = info
+    }
+    wordInfo.value = fallback
+  }
+  finally {
+    if (token === wordInfoToken)
+      wordInfoLoading.value = false
+  }
+}
+
 function finishSession() {
   finished.value = true
   const known = Object.values(bestGrade.value).filter(v => v === 5).length
@@ -184,6 +236,12 @@ watch(category, (newVal) => {
   buildQueue()
 })
 
+// 卡片切换时预加载联网例句/同义词
+watch(current, (c) => {
+  if (c)
+    loadWordInfo(c)
+})
+
 onMounted(() => {
   buildQueue()
 })
@@ -194,9 +252,18 @@ onMounted(() => {
     <div class="max-w-2xl mx-auto">
       <!-- Header -->
       <div class="flex flex-wrap justify-between items-center gap-3 mb-2">
-        <div>
-          <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">单词自测</h1>
-          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">看到单词先凭感觉自评，再按需学习词条</p>
+        <div class="flex items-center gap-3">
+          <router-link
+            to="/vocabulary"
+            title="返回词表"
+            class="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+          >
+            ← 返回
+          </router-link>
+          <div>
+            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">单词自测</h1>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">看到单词先凭感觉自评，再按需学习词条</p>
+          </div>
         </div>
         <div class="flex items-center gap-2">
           <select
@@ -306,6 +373,31 @@ onMounted(() => {
               <i class="i-ph-speaker-high-bold text-2xl block" />
             </button>
           </div>
+
+          <!-- 例句巧记：自评前展示，辅助回忆；无内容时隐藏 -->
+          <div
+            v-if="preMnemonic || wordInfoLoading || (wordInfo && (wordInfo.examples.length > 0 || wordInfo.synonyms.length > 0)) || current.example"
+            class="my-5 rounded-xl bg-sky-50 border border-sky-200 p-4 text-left dark:bg-sky-900/20 dark:border-sky-800"
+          >
+            <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">💡 例句巧记</div>
+            <p v-if="preMnemonic" class="mb-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+              🧠 {{ preMnemonic.body }}
+            </p>
+            <div v-if="wordInfoLoading" class="text-xs text-gray-400 dark:text-gray-500">🔗 正在联网找例句…</div>
+            <template v-else-if="wordInfo && wordInfo.examples.length > 0">
+              <p v-for="(ex, i) in wordInfo.examples.slice(0, 2)" :key="i" class="mb-1 text-sm italic leading-relaxed text-gray-600 dark:text-gray-400">
+                🔗 “{{ ex }}”
+                <span v-if="wordInfo.word !== current.word.toLowerCase()" class="not-italic text-xs text-gray-400">（{{ wordInfo.word }} 的例句）</span>
+              </p>
+            </template>
+            <p v-else-if="current.example" class="text-sm italic leading-relaxed text-gray-600 dark:text-gray-400">
+              🔗 “{{ current.example }}”
+            </p>
+            <p v-if="wordInfo && wordInfo.synonyms.length > 0" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              同义词：{{ wordInfo.synonyms.slice(0, 8).join(' · ') }}
+            </p>
+          </div>
+
           <p class="text-sm text-gray-400 mt-4 mb-6">看到这个词，第一感觉是？</p>
           <div class="grid grid-cols-3 gap-3">
             <button
@@ -358,6 +450,20 @@ onMounted(() => {
           <p v-if="studying.example" class="text-center text-gray-500 dark:text-gray-400 italic text-sm mb-6">
             {{ studying.example }}
           </p>
+
+          <!-- 拓展词汇：跟原词放在一起展示，说明这个词有拓展可学 -->
+          <div v-if="studyExtras.length > 0" class="mb-6 rounded-xl bg-teal-50 border border-teal-200 p-4 dark:bg-teal-900/20 dark:border-teal-800">
+            <div class="mb-2 text-sm font-bold text-teal-700 dark:text-teal-300">
+              📚 拓展词汇 <span class="font-normal text-teal-500">（{{ studyExtras.length }} 个可学）</span>
+            </div>
+            <ul class="space-y-1.5">
+              <li v-for="(ex, i) in studyExtras" :key="i" class="text-sm leading-relaxed">
+                <span class="font-bold text-gray-800 dark:text-gray-200">{{ ex.word }}</span>
+                <span v-if="ex.pos" class="ml-1 text-xs italic text-gray-400" style="font-family: times;">{{ ex.pos }}</span>
+                <span class="ml-2 text-gray-600 dark:text-gray-400">{{ ex.meaning }}</span>
+              </li>
+            </ul>
+          </div>
 
           <!-- 巧记：例句或简洁记法 -->
           <div class="mb-6 rounded-xl bg-amber-50 border border-amber-200 p-4 dark:bg-amber-900/20 dark:border-amber-800">

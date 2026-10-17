@@ -46,7 +46,8 @@ const keyword = ref('')
     </div>
   </div>
   <div class="mt-6">
-    <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
+    <div class="overflow-x-auto rounded-lg">
+    <table class="w-full min-w-[640px] text-left text-sm text-gray-500 dark:text-gray-400">
       <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
         <tr>
           <th class="w-0 px-6 py-3">
@@ -95,5 +96,6 @@ const keyword = ref('')
         </tr>
       </tbody>
     </table>
+    </div>
   </div>
 </template>

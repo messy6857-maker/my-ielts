@@ -347,8 +347,8 @@ function nextPractice() {
           <div class="mt-6 flex flex-col">
             <div class="overflow-x-auto rounded-lg">
               <div class="inline-block min-w-full align-middle">
-                <div class="overflow-hidden shadow sm:rounded-lg">
-                  <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                <div class="shadow sm:rounded-lg">
+                  <table class="min-w-[620px] w-full divide-y divide-gray-200 dark:divide-gray-600">
                     <tbody class="bg-white dark:bg-gray-800 border-b-1">
                       <template v-for="item of sentences" :key="item.no" class="text-sm text-gray-900 dark:text-white">
                         <template v-if="item.no == null">

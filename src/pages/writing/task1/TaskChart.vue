@@ -129,7 +129,8 @@ function pieSlices(data: { label: string, value: number }[]) {
     </div>
 
     <!-- table -->
-    <table v-else-if="prompt.type === 'table'" class="w-full text-sm">
+    <div v-else-if="prompt.type === 'table'" class="overflow-x-auto rounded-lg">
+    <table class="w-full min-w-[560px] text-sm">
       <thead>
         <tr class="border-b border-gray-200">
           <th v-for="h in (prompt.tableHead || [])" :key="h" class="px-3 py-2 text-left font-bold text-gray-700">{{ h }}</th>
@@ -141,6 +142,7 @@ function pieSlices(data: { label: string, value: number }[]) {
         </tr>
       </tbody>
     </table>
+    </div>
 
     <!-- process -->
     <ol v-else-if="prompt.type === 'process'" class="space-y-2">

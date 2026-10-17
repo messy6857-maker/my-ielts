@@ -148,7 +148,7 @@ onMounted(() => {
       </div>
 
       <!-- Stats -->
-      <div class="grid grid-cols-3 gap-4 mb-8">
+      <div class="grid grid-cols-3 gap-2 sm:gap-4 mb-8">
         <div
           class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center"
         >

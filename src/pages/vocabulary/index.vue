@@ -301,8 +301,8 @@ function copyAllError() {
       <div class="mt-6 flex flex-col">
         <div class="overflow-x-auto rounded-lg">
           <div class="inline-block min-w-full align-middle">
-            <div class="overflow-hidden shadow sm:rounded-lg">
-              <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+            <div class="shadow sm:rounded-lg">
+              <table class="min-w-[620px] w-full divide-y divide-gray-200 dark:divide-gray-600">
                 <thead class="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white">
@@ -397,7 +397,7 @@ function copyAllError() {
                       <td style="font-style: italic; font-family: times;">
                         {{ item.pos }}
                       </td>
-                      <td class="p-4">
+                      <td class="whitespace-nowrap p-4">
                         {{ isShowMeaning ? item.meaning : '' }}
                       </td>
                       <td class="p-4">
