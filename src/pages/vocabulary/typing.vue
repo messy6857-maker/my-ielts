@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { resolveAudioUrl } from '../../composables/useAudio'
 import vocabulary from './vocabulary'
 
 const CHAPTER_KEY = 'vocabulary_typing_chapter'
@@ -47,7 +48,7 @@ let audio = null as HTMLAudioElement | null
 function playAudio() {
   const category = selectedChapter.value
   const word = currentWord.value
-  const audioPath = `vocabulary/audio/${category}/${word}.mp3`
+  const audioPath = resolveAudioUrl(`vocabulary/audio/${category}/${word}.mp3`)
   if (audio) {
     audio.pause()
     audio.currentTime = 0

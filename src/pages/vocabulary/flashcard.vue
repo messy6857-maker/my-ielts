@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { resolveAudioUrl } from '../../composables/useAudio'
 import { getMnemonic } from './mnemonics'
 import { parseExtra } from './extraParser'
 import { gradeSchedule } from '../../composables/useSpacedRepetition'
@@ -79,7 +80,7 @@ function playAudio(word?: string) {
       audio.currentTime = 0
     }
     audio = document.createElement('audio')
-    audio.src = `vocabulary/audio/${category.value}/${w}.mp3`
+    audio.src = resolveAudioUrl(`vocabulary/audio/${category.value}/${w}.mp3`)
     audio.play().catch(() => {})
   }
   catch {

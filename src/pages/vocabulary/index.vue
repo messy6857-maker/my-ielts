@@ -1,6 +1,7 @@
 <!-- eslint-disable eslint-comments/no-unlimited-disable -->
 <script setup generic="T extends any, O extends any">
 import vocabulary from './vocabulary'
+import { resolveAudioUrl } from '../../composables/useAudio'
 
 const CHAPTER_KEY = 'vocabulary_chapter'
 
@@ -341,7 +342,7 @@ function copyAllError() {
                         </div>
                         <div class="justify-items-end">
                           <audio controls class="chapter">
-                            <source :src="`vocabulary/audio/${refVocabulary[category].audio}`" type="audio/mpeg">
+                            <source :src="resolveAudioUrl(`vocabulary/audio/${refVocabulary[category].audio}`)" type="audio/mpeg">
                           </audio>
                         </div>
                       </div>
@@ -360,7 +361,7 @@ function copyAllError() {
                       <td>
                         <i
                           class="i-ph-speaker-simple-high-bold inline-block cursor-pointer"
-                          @click="play(`vocabulary/audio/${category}/${item.word[0]}.mp3`)"
+                          @click="play(resolveAudioUrl(`vocabulary/audio/${category}/${item.word[0]}.mp3`))"
                         />
 
                         <template v-if="isTrainingModel">
@@ -372,7 +373,7 @@ function copyAllError() {
                             :id="item.id" autocomplete="off" :class="getInputStyleClass(item)"
                             type="text"
                             @focusout="onInputFocusOut($event, item)" 
-                            @focusin="onInputFocusIn($event, `vocabulary/audio/${category}/${item.word[0]}.mp3`)" 
+                            @focusin="onInputFocusIn($event, resolveAudioUrl(`vocabulary/audio/${category}/${item.word[0]}.mp3`))" 
                             @keydown="onInputKeydown"
                           >
                         </template>
