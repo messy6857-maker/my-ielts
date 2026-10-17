@@ -1,8 +1,10 @@
 /**
- * 联网获取单词的例句与同义词（Free Dictionary API，免 key）。
- * - 结果按单词缓存：内存 + localStorage（成功才落盘，最多 400 条）
- * - 8 秒超时；离线 / 失败 / 无词条时返回 null，调用方用本地例句降级
+ * 单词例句 + 同义词：查内置预抓取数据（构建时由 scripts/fetch-examples.mjs 生成），
+ * 运行时零联网、零等待。查不到时返回 null，调用方用本地例句降级。
  */
+
+import { wordSentences } from '../pages/vocabulary/wordSentences'
+import type { WordSentence } from '../pages/vocabulary/wordSentences'
 
 export interface WordInfo {
   /** 例句实际所属的单词（可能是派生词） */
@@ -11,119 +13,44 @@ export interface WordInfo {
   synonyms: string[]
 }
 
-const API_BASE = 'https://api.dictionaryapi.dev/api/v2/entries/en'
-const LS_KEY = 'myielts_dict_info_v1'
-const LS_CAP = 400
-const TIMEOUT_MS = 8000
-
-const memCache = new Map<string, WordInfo | null>()
-
-function normalizable(word: string): boolean {
-  const w = word.trim()
-  return w.length > 0 && w.length <= 30 && /^[a-zA-Z][a-zA-Z' \-]*$/.test(w)
-}
-
-function pushUnique(arr: string[], v: unknown) {
-  const s = String(v ?? '').trim()
-  if (s && !arr.some(x => x.toLowerCase() === s.toLowerCase()))
-    arr.push(s)
-}
-
-/** 纯函数：从 API 返回的 JSON 里抽例句和同义词，便于单测 */
-export function extractWordInfo(word: string, json: any): WordInfo | null {
-  try {
-    const entry = Array.isArray(json) ? json[0] : json
-    const meanings = entry?.meanings
-    if (!Array.isArray(meanings) || meanings.length === 0)
-      return null
-    const token = word.trim().toLowerCase().split(' ')[0]
-    const examples: string[] = []
-    const synonyms: string[] = []
-    for (const m of meanings) {
-      for (const s of m?.synonyms ?? [])
-        pushUnique(synonyms, s)
-      for (const d of m?.definitions ?? []) {
-        const ex = String(d?.example ?? '').trim()
-        if (ex) {
-          // 包含该词的句子优先（用户要的是“用到这个词的句子”）
-          if (ex.toLowerCase().includes(token))
-            examples.unshift(ex)
-          else
-            examples.push(ex)
-        }
-        for (const s of d?.synonyms ?? [])
-          pushUnique(synonyms, s)
-      }
-    }
-    const examplesClean = [...new Set(examples)].slice(0, 3)
-    const synonymsClean = [...new Set(synonyms)].slice(0, 8)
-    if (examplesClean.length === 0 && synonymsClean.length === 0)
-      return null
-    return { word, examples: examplesClean, synonyms: synonymsClean }
-  }
-  catch {
+/** 纯函数：从内置数据查词（data 参数便于单测注入） */
+export function getWordInfo(
+  rawWord: string,
+  data: Record<string, WordSentence> = wordSentences,
+): WordInfo | null {
+  const key = rawWord.trim().toLowerCase()
+  if (!key)
     return null
+  const hit = data[key]
+  if (!hit || (hit.ex.length === 0 && hit.syn.length === 0))
+    return null
+  return {
+    word: hit.exFrom || key,
+    examples: hit.ex.slice(0, 2),
+    synonyms: hit.syn.slice(0, 8),
   }
 }
 
-function readLS(): Record<string, { info: WordInfo, ts: number }> {
-  try {
-    return JSON.parse(localStorage.getItem(LS_KEY) || '{}')
+/**
+ * 按顺序尝试多个词（本词 → 派生词），返回第一个有例句的；
+ * 都没有例句时返回第一个有同义词的；都没有则返回 null。
+ */
+export function getWordInfoWithFallback(
+  words: string[],
+  data: Record<string, WordSentence> = wordSentences,
+): WordInfo | null {
+  let fallback: WordInfo | null = null
+  const seen = new Set<string>()
+  for (const w of words) {
+    const key = w.trim().toLowerCase()
+    if (!key || seen.has(key))
+      continue
+    seen.add(key)
+    const info = getWordInfo(key, data)
+    if (info && info.examples.length > 0)
+      return info
+    if (info && !fallback)
+      fallback = info
   }
-  catch {
-    return {}
-  }
-}
-
-function writeLS(all: Record<string, { info: WordInfo, ts: number }>) {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(all))
-  }
-  catch {
-    // 配额不足时忽略
-  }
-}
-
-export async function fetchWordInfo(rawWord: string): Promise<WordInfo | null> {
-  const word = rawWord.trim().toLowerCase()
-  if (!normalizable(word))
-    return null
-  if (memCache.has(word))
-    return memCache.get(word) ?? null
-  const cached = readLS()[word]
-  if (cached) {
-    memCache.set(word, cached.info)
-    return cached.info
-  }
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-    memCache.set(word, null)
-    return null
-  }
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS)
-  try {
-    const resp = await fetch(`${API_BASE}/${encodeURIComponent(word)}`, { signal: ctrl.signal })
-    if (!resp.ok) {
-      memCache.set(word, null)
-      return null
-    }
-    const info = extractWordInfo(word, await resp.json())
-    memCache.set(word, info)
-    if (info) {
-      const all = readLS()
-      all[word] = { info, ts: Date.now() }
-      const keys = Object.keys(all).sort((a, b) => all[a].ts - all[b].ts)
-      while (keys.length > LS_CAP)
-        delete all[keys.shift()!]
-      writeLS(all)
-    }
-    return info
-  }
-  catch {
-    memCache.set(word, null)
-    return null
-  }
-  finally {
-    clearTimeout(timer)
-  }
+  return fallback
 }

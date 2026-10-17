@@ -2,7 +2,7 @@
 import { getMnemonic } from './mnemonics'
 import { parseExtra } from './extraParser'
 import { gradeSchedule } from '../../composables/useSpacedRepetition'
-import { fetchWordInfo } from '../../composables/useWordInfo'
+import { getWordInfoWithFallback } from '../../composables/useWordInfo'
 import type { WordInfo } from '../../composables/useWordInfo'
 import vocabulary from './vocabulary'
 
@@ -44,10 +44,8 @@ const finished = ref(false)
 // 自评后展开学习的词条
 const studying = ref<Card | null>(null)
 const lastGrade = ref<0 | 3 | 5 | null>(null)
-// 联网例句/同义词（自评前展示的提示）
+// 联网例句/同义词（自评前展示的提示；数据为构建时预抓取，运行时零等待）
 const wordInfo = ref<WordInfo | null>(null)
-const wordInfoLoading = ref(false)
-let wordInfoToken = 0
 
 const current = computed(() => (!studying.value ? queue.value[0] ?? null : null))
 const remaining = computed(() => queue.value.length)
@@ -189,33 +187,9 @@ function next() {
     playAudio(queue.value[0].word)
 }
 
-/** 自评前加载联网例句/同义词：先试本词，再试派生词（hintWords） */
-async function loadWordInfo(card: Card) {
-  const token = ++wordInfoToken
-  wordInfo.value = null
-  wordInfoLoading.value = true
-  try {
-    const tryWords = [card.word, ...card.hintWords].filter((w, i, a) => w && a.indexOf(w) === i)
-    let fallback: WordInfo | null = null
-    for (const w of tryWords) {
-      if (token !== wordInfoToken)
-        return
-      const info = await fetchWordInfo(w)
-      if (token !== wordInfoToken)
-        return
-      if (info && info.examples.length > 0) {
-        wordInfo.value = info
-        return
-      }
-      if (info && !fallback)
-        fallback = info
-    }
-    wordInfo.value = fallback
-  }
-  finally {
-    if (token === wordInfoToken)
-      wordInfoLoading.value = false
-  }
+/** 自评前加载例句/同义词：查内置预抓取数据（本词 → 派生词），同步返回 */
+function loadWordInfo(card: Card) {
+  wordInfo.value = getWordInfoWithFallback([card.word, ...card.hintWords])
 }
 
 function finishSession() {
@@ -376,20 +350,19 @@ onMounted(() => {
 
           <!-- 例句巧记：自评前展示，辅助回忆；无内容时隐藏 -->
           <div
-            v-if="preMnemonic || wordInfoLoading || (wordInfo && (wordInfo.examples.length > 0 || wordInfo.synonyms.length > 0)) || current.example"
+            v-if="preMnemonic || (wordInfo && (wordInfo.examples.length > 0 || wordInfo.synonyms.length > 0)) || current.example"
             class="my-5 rounded-xl bg-sky-50 border border-sky-200 p-4 text-left dark:bg-sky-900/20 dark:border-sky-800"
           >
             <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">💡 例句巧记</div>
             <p v-if="preMnemonic" class="mb-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
               🧠 {{ preMnemonic.body }}
             </p>
-            <div v-if="wordInfoLoading" class="text-xs text-gray-400 dark:text-gray-500">🔗 正在联网找例句…</div>
-            <template v-else-if="wordInfo && wordInfo.examples.length > 0">
+            <div v-if="wordInfo && wordInfo.examples.length > 0">
               <p v-for="(ex, i) in wordInfo.examples.slice(0, 2)" :key="i" class="mb-1 text-sm italic leading-relaxed text-gray-600 dark:text-gray-400">
                 🔗 “{{ ex }}”
                 <span v-if="wordInfo.word !== current.word.toLowerCase()" class="not-italic text-xs text-gray-400">（{{ wordInfo.word }} 的例句）</span>
               </p>
-            </template>
+            </div>
             <p v-else-if="current.example" class="text-sm italic leading-relaxed text-gray-600 dark:text-gray-400">
               🔗 “{{ current.example }}”
             </p>
