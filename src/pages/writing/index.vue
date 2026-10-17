@@ -1,5 +1,6 @@
 <script setup>
 import sentences from './100sentences'
+import TaskOne from './task1/TaskOne.vue'
 
 const { isMastered, toggleMastered, masteredCount } = useMastered('writing_mastered_v1')
 const { setProgress } = useProgress()
@@ -37,7 +38,7 @@ const activeTab = ref('sentences')
 const TABS = [
   { key: 'sentences', label: '100 句翻译练习' },
   { key: 'essay-big', label: '[WIP]雅思大作文' },
-  { key: 'essay-small', label: '[WIP]雅思小作文' },
+  { key: 'essay-small', label: '雅思小作文' },
 ]
 
 // ---------- 100句翻译练习 · 练习模式 ----------
@@ -404,11 +405,9 @@ function nextPractice() {
         <p class="text-sm text-gray-500 dark:text-gray-400">Task 2 写作模块建设中，敬请期待</p>
       </div>
 
-      <!-- ============ 雅思小作文（WIP） ============ -->
-      <div v-else-if="activeTab === 'essay-small'" class="text-center py-16">
-        <div class="text-5xl mb-4">🚧</div>
-        <h3 class="text-xl font-bold mb-2 dark:text-white">雅思小作文</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Task 1 写作模块建设中，敬请期待</p>
+      <!-- ============ 雅思小作文（Task 1） ============ -->
+      <div v-else-if="activeTab === 'essay-small'">
+        <TaskOne />
       </div>
     </div>
   </div>
