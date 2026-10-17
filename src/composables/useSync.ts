@@ -18,9 +18,16 @@ export const useSync = createGlobalState(() => {
     errorMsg.value = msg
   }
 
+  // 已登录但没有服务器 token（老本地会话）：需要退出重登
+  const needsRelogin = computed(() => syncEnabled && !!currentUser.value && !getToken())
+
   async function pushNow(): Promise<boolean> {
-    if (!syncEnabled || !currentUser.value || !getToken())
+    if (!syncEnabled || !currentUser.value)
       return false
+    if (!getToken()) {
+      setStatus('error', '请先退出登录，再重新登录以启用云同步')
+      return false
+    }
     setStatus('syncing')
     try {
       const data = collectSyncData(currentUser.value)
@@ -86,5 +93,5 @@ export const useSync = createGlobalState(() => {
     }
   })
 
-  return { syncEnabled, status, statusText, errorMsg, lastSyncAt, pushNow, schedulePush, ensureWired }
+  return { syncEnabled, status, statusText, errorMsg, lastSyncAt, needsRelogin, pushNow, schedulePush, ensureWired }
 })

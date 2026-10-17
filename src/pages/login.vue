@@ -134,7 +134,7 @@ async function onSubmit() {
         </form>
 
         <p v-if="syncEnabled" class="mt-4 text-center text-xs text-green-600 dark:text-green-400">
-          ☁️ 已开启云同步：登录后学习数据将在多设备间同步
+          ☁️ 已开启云同步：首次使用请先注册（可用原来的用户名），本机数据会自动上传到云端
         </p>
         <p class="mt-6 text-center text-xs text-gray-400">
           不登录也可以游客身份使用，数据只保存在本浏览器
