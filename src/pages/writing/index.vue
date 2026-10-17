@@ -3,9 +3,34 @@ import sentences from './100sentences'
 
 const { isMastered, toggleMastered, masteredCount } = useMastered('writing_mastered_v1')
 const { setProgress } = useProgress()
-const { addMistake } = useMistakes()
+const { mistakes, addMistake, removeMistake } = useMistakes()
 const totalSentences = computed(() => sentences.filter(s => s.no != null).length)
 watch(masteredCount, () => setProgress('writing', masteredCount.value, totalSentences.value), { immediate: true })
+
+// 从参考译文中提取关键词（去掉停用词），用于提示
+const STOPWORDS = new Set([
+  'a', 'an', 'the', 'and', 'or', 'but', 'of', 'to', 'in', 'on', 'at', 'for', 'with', 'by', 'from',
+  'as', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did',
+  'will', 'would', 'can', 'could', 'should', 'may', 'might', 'must', 'shall', 'it', 'its', 'this',
+  'that', 'these', 'those', 'i', 'you', 'he', 'she', 'we', 'they', 'them', 'his', 'her', 'their',
+  'one', 'ones', 's', 't', 'not', 'no', 'so', 'such', 'than', 'then', 'too', 'very', 'just', 'also',
+  'more', 'most', 'much', 'many', 'some', 'any', 'all', 'both', 'each', 'every', 'other', 'into',
+  'over', 'under', 'between', 'through', 'during', 'about', 'against', 'among', 'up', 'out', 'off',
+])
+function extractKeywords(translation) {
+  const words = (translation || '').toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || []
+  const seen = new Set()
+  const result = []
+  for (const w of words) {
+    if (w.length < 4 || STOPWORDS.has(w) || seen.has(w))
+      continue
+    seen.add(w)
+    result.push(w)
+    if (result.length >= 6)
+      break
+  }
+  return result
+}
 
 // 页签：修复旧版 href="/#/writing" 丢掉 /my-ielts/ 基址导致的 404
 const activeTab = ref('sentences')
@@ -17,7 +42,8 @@ const TABS = [
 
 // ---------- 100句翻译练习 · 练习模式 ----------
 const practicing = ref(false)
-const onlyUnmastered = ref(false)
+const practiceScope = ref('all') // all | unmastered | mistakes
+const practiceOrder = ref('seq') // seq | random
 const practiceQueue = ref([])
 const practiceIndex = ref(0)
 const userAnswer = ref('')
@@ -25,15 +51,43 @@ const revealed = ref(false)
 const graded = ref(null) // null | true | false
 const practiceStats = ref({ correct: 0, wrong: 0 })
 const practiceFinished = ref(false)
+const practiceEmptyMsg = ref('')
+const hintKeywords = ref([]) // 已揭示的关键词
 
 const currentPractice = computed(() => practiceQueue.value[practiceIndex.value] ?? null)
+const allKeywords = computed(() => currentPractice.value ? extractKeywords(currentPractice.value.translationFromBook) : [])
 
 function startPractice() {
   const all = sentences.filter(s => s.no != null)
-  practiceQueue.value = onlyUnmastered.value ? all.filter(s => !isMastered(s.no)) : [...all]
+  let queue
+  if (practiceScope.value === 'unmastered') {
+    queue = all.filter(s => !isMastered(s.no))
+    practiceEmptyMsg.value = '全部句子都已掌握，太棒了！'
+  }
+  else if (practiceScope.value === 'mistakes') {
+    const mistakeNos = new Set(
+      mistakes.value
+        .filter(m => m.module === 'writing')
+        .map(m => Number(String(m.key).split(':')[1]))
+        .filter(n => !Number.isNaN(n)),
+    )
+    queue = all.filter(s => mistakeNos.has(s.no))
+    practiceEmptyMsg.value = '错词本里还没有写作错题，先去练几句吧'
+  }
+  else {
+    queue = [...all]
+    practiceEmptyMsg.value = ''
+  }
+  if (practiceOrder.value === 'random') {
+    for (let i = queue.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1))
+      ;[queue[i], queue[j]] = [queue[j], queue[i]]
+    }
+  }
+  practiceQueue.value = queue
   practiceIndex.value = 0
   practiceStats.value = { correct: 0, wrong: 0 }
-  practiceFinished.value = practiceQueue.value.length === 0
+  practiceFinished.value = queue.length === 0
   practicing.value = true
   resetPracticeCard()
 }
@@ -42,6 +96,13 @@ function resetPracticeCard() {
   userAnswer.value = ''
   revealed.value = false
   graded.value = null
+  hintKeywords.value = []
+}
+
+function showHint() {
+  const kws = allKeywords.value
+  if (hintKeywords.value.length < kws.length)
+    hintKeywords.value = kws.slice(0, hintKeywords.value.length + 1)
 }
 
 function exitPractice() {
@@ -57,6 +118,9 @@ function gradePractice(ok) {
     practiceStats.value.correct++
     if (!isMastered(item.no))
       toggleMastered(item.no)
+    // 错题重练时答对，从错词本移除
+    if (practiceScope.value === 'mistakes')
+      removeMistake(`writing:${item.no}`)
   }
   else {
     practiceStats.value.wrong++
@@ -110,12 +174,16 @@ function nextPractice() {
         <div v-if="practicing" class="max-w-2xl mx-auto">
           <!-- 完成总结 -->
           <div v-if="practiceFinished" class="text-center py-8">
-            <h3 class="text-2xl font-bold mb-4 dark:text-white">本轮练习完成 🎉</h3>
-            <div class="flex justify-center gap-6 mb-6 text-sm">
+            <h3 class="text-2xl font-bold mb-4 dark:text-white">
+              {{ practiceStats.correct + practiceStats.wrong === 0 ? '没有可练的句子' : '本轮练习完成 🎉' }}
+            </h3>
+            <div v-if="practiceStats.correct + practiceStats.wrong > 0" class="flex justify-center gap-6 mb-6 text-sm">
               <span class="text-green-600 font-bold">写对 {{ practiceStats.correct }}</span>
               <span class="text-red-600 font-bold">没写对 {{ practiceStats.wrong }}</span>
             </div>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">没写对的已记入错词本，写对的已标记为掌握</p>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
+              {{ practiceStats.correct + practiceStats.wrong === 0 ? practiceEmptyMsg : (practiceScope === 'mistakes' ? '答对的已从错词本移除，答错的留在错词本里' : '没写对的已记入错词本，写对的已标记为掌握') }}
+            </p>
             <div class="flex justify-center gap-3">
               <button
                 class="rounded-lg bg-blue-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-800 dark:bg-blue-600"
@@ -162,8 +230,26 @@ function nextPractice() {
                 v-model="userAnswer"
                 rows="4"
                 placeholder="在这里写下你的英文翻译…"
-                class="mb-4 block w-full rounded-xl border border-gray-300 bg-white p-3 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                class="mb-3 block w-full rounded-xl border border-gray-300 bg-white p-3 text-sm text-gray-900 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               />
+
+              <!-- 关键词提示：不会写时点，一个一个揭示 -->
+              <div v-if="!revealed && allKeywords.length > 0" class="mb-4 flex flex-wrap items-center gap-2">
+                <button
+                  v-if="hintKeywords.length < allKeywords.length"
+                  class="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-700 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300"
+                  @click="showHint"
+                >
+                  💡 提示关键词（{{ hintKeywords.length }}/{{ allKeywords.length }}）
+                </button>
+                <span
+                  v-for="kw in hintKeywords"
+                  :key="kw"
+                  class="rounded-full bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs text-amber-700 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-300"
+                >
+                  {{ kw }}
+                </span>
+              </div>
 
               <!-- 对照答案 -->
               <div v-if="!revealed">
@@ -230,13 +316,26 @@ function nextPractice() {
               <span class="text-base font-normal text-gray-500 dark:text-gray-400">能够写出 error-free 的句子</span>
               <span class="ml-4 text-sm font-medium text-green-600 dark:text-green-400">已掌握 {{ masteredCount }} / {{ totalSentences }}</span>
             </div>
-            <div class="flex items-center gap-3">
-              <label class="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
-                <input v-model="onlyUnmastered" type="checkbox" class="rounded border-gray-300">
-                只练未掌握
-              </label>
+            <div class="flex flex-wrap items-center gap-2">
+              <label class="text-sm text-gray-500 dark:text-gray-400">练习范围</label>
+              <select
+                v-model="practiceScope"
+                class="rounded-lg border border-gray-300 bg-white p-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="all">全部句子</option>
+                <option value="unmastered">只练未掌握</option>
+                <option value="mistakes">只练错题本</option>
+              </select>
+              <label class="text-sm text-gray-500 dark:text-gray-400">顺序</label>
+              <select
+                v-model="practiceOrder"
+                class="rounded-lg border border-gray-300 bg-white p-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              >
+                <option value="seq">顺序练习</option>
+                <option value="random">随机练习</option>
+              </select>
               <button
-                class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white hover:bg-blue-800 dark:bg-blue-600"
+                class="rounded-lg bg-blue-700 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:bg-blue-600"
                 @click="startPractice"
               >
                 开始练习
