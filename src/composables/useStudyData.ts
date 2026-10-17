@@ -4,8 +4,8 @@
 
 import { readJson, useAuth, writeJson } from './useAuth'
 
-export type MistakeModule = 'vocabulary' | 'typing' | 'listening'
-export type ProgressModule = 'vocabulary' | 'flashcard' | 'typing' | 'listening' | 'reading' | 'writing'
+export type MistakeModule = 'vocabulary' | 'typing' | 'listening' | 'reading'
+export type ProgressModule = 'vocabulary' | 'flashcard' | 'typing' | 'listening' | 'reading' | 'writing' | 'listening_flashcard' | 'reading_flashcard'
 
 export interface MistakeItem {
   key: string // 全站唯一，如 `vocabulary:123`
@@ -28,6 +28,7 @@ export const MISTAKE_MODULE_LABEL: Record<MistakeModule, string> = {
   vocabulary: '词汇拼写',
   typing: '打字练习',
   listening: '听力 179',
+  reading: '阅读 538',
 }
 
 export const PROGRESS_MODULE_LABEL: Record<ProgressModule, string> = {
@@ -37,6 +38,8 @@ export const PROGRESS_MODULE_LABEL: Record<ProgressModule, string> = {
   listening: '听力',
   reading: '阅读',
   writing: '写作',
+  listening_flashcard: '听力自测',
+  reading_flashcard: '阅读自测',
 }
 
 // 按当前账号拼出实际存储 key

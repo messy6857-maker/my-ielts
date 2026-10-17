@@ -2,6 +2,7 @@
 import { getMnemonic } from './mnemonics'
 import { parseExtra } from './extraParser'
 import { gradeSchedule } from '../../composables/useSpacedRepetition'
+import { planQueue } from '../../composables/useDeckStore'
 import { getWordInfoWithFallback } from '../../composables/useWordInfo'
 import type { WordInfo } from '../../composables/useWordInfo'
 import vocabulary from './vocabulary'
@@ -36,7 +37,8 @@ const goalProxy = computed({
 
 const queue = ref<Card[]>([])
 const initialTotal = ref(0)
-const reviewCount = ref(0) // 本轮复习词数（到期/之前学过的）
+const reviewCount = ref(0) // 本轮复习词数（到期 + 补足）
+const dueCount = ref(0) // 其中到期的词数
 const newCount = ref(0) // 本轮新词数
 const bestGrade = ref<Record<string, number>>({})
 const stats = ref({ known: 0, vague: 0, unknown: 0 })
@@ -104,23 +106,13 @@ function toCard(w: any, isNew: boolean): Card {
 function buildQueue() {
   const chapter = (vocabulary as any)[category.value]
   const all = chapter ? chapter.words.flat() : []
-  const now = Date.now()
-  const due: any[] = []
-  const fresh: any[] = []
-  for (const w of all) {
-    const s = scheduleStore.get(w.id)
-    if (!s)
-      fresh.push(w)
-    else if (s.dueAt <= now)
-      due.push(w)
-  }
-  due.sort((a, b) => (scheduleStore.get(a.id)?.dueAt ?? 0) - (scheduleStore.get(b.id)?.dueAt ?? 0))
-  // 到期复习全要，新词按今日剩余名额取
-  const newWords = fresh.slice(0, daily.remaining.value)
-  queue.value = [...due.map(w => toCard(w, false)), ...newWords.map(w => toCard(w, true))]
+  // 复习配额 = 3 × 每日新词目标（1:3）：到期优先，不足时从已学词里补；新词按今日剩余名额取
+  const plan = planQueue(all, id => scheduleStore.get(id), daily.goal.value, daily.remaining.value)
+  queue.value = [...plan.reviews.map(w => toCard(w, false)), ...plan.newWords.map(w => toCard(w, true))]
   initialTotal.value = queue.value.length
-  reviewCount.value = due.length
-  newCount.value = newWords.length
+  reviewCount.value = plan.reviews.length
+  dueCount.value = plan.dueCount
+  newCount.value = plan.newWords.length
   bestGrade.value = {}
   stats.value = { known: 0, vague: 0, unknown: 0 }
   finished.value = initialTotal.value === 0
@@ -260,7 +252,7 @@ onMounted(() => {
       <!-- 打卡 + 今日计划 -->
       <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p class="text-xs text-gray-400">
-          今日计划：复习 {{ reviewCount }}（昨日及到期） · 新词 {{ newCount }} ｜
+          今日计划：复习 {{ reviewCount }}（到期 {{ dueCount }}） · 新词 {{ newCount }} ｜
           今日新词 {{ daily.dailyCount }} / {{ daily.goal }}
         </p>
         <div class="flex items-center gap-2">
@@ -423,6 +415,20 @@ onMounted(() => {
           <p v-if="studying.example" class="text-center text-gray-500 dark:text-gray-400 italic text-sm mb-6">
             {{ studying.example }}
           </p>
+
+          <!-- 例句扩展：预抓取的真实例句 + 同义词 -->
+          <div v-if="wordInfo && (wordInfo.examples.length > 0 || wordInfo.synonyms.length > 0)" class="mb-6 rounded-xl bg-sky-50 border border-sky-200 p-4 text-left dark:bg-sky-900/20 dark:border-sky-800">
+            <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">🔗 例句扩展</div>
+            <div v-if="wordInfo.examples.length > 0">
+              <p v-for="(ex, i) in wordInfo.examples.slice(0, 2)" :key="i" class="mb-1 text-sm italic leading-relaxed text-gray-600 dark:text-gray-400">
+                “{{ ex }}”
+                <span v-if="wordInfo.word !== studying.word.toLowerCase()" class="not-italic text-xs text-gray-400">（{{ wordInfo.word }} 的例句）</span>
+              </p>
+            </div>
+            <p v-if="wordInfo.synonyms.length > 0" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              同义词：{{ wordInfo.synonyms.slice(0, 8).join(' · ') }}
+            </p>
+          </div>
 
           <!-- 拓展词汇：跟原词放在一起展示，说明这个词有拓展可学 -->
           <div v-if="studyExtras.length > 0" class="mb-6 rounded-xl bg-teal-50 border border-teal-200 p-4 dark:bg-teal-900/20 dark:border-teal-800">

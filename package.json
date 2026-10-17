@@ -11,6 +11,9 @@
     "up": "taze major -I"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/core": "^8.5.3",
     "@vueuse/core": "^10.1.2",
     "vue": "^3.3.4",
     "vue-router": "^4.2.2"

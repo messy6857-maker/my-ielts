@@ -31,6 +31,13 @@ function play(word) {
         </h3>
         <span class="text-base font-normal text-gray-500 dark:text-gray-400">538 考点词同义替换</span>
         <span class="ml-4 text-sm font-medium text-green-600 dark:text-green-400">已掌握 {{ masteredCount }} / {{ totalWords }}</span>
+        <button
+          type="button"
+          class="ml-4 rounded-lg bg-green-700 px-4 py-1.5 text-sm font-medium text-white dark:bg-green-600 hover:bg-green-800"
+          @click="$router.push('/reading/flashcard')"
+        >
+          自测卡片
+        </button>
       </div>
       <!-- Card header -->
       <template
@@ -46,7 +53,7 @@ function play(word) {
           </div>
           <div class="items-center sm:flex">
             <div class="flex items-center">
-              <!-- <input type="text" name="email" class="ml-3 block w-full border border-gray-300 rounded-lg bg-gray-50 p-2.5 text-gray-900 dark:border-gray-600 focus:border-primary-500 dark:bg-gray-700 sm:text-sm dark:text-white focus:ring-primary-500 dark:focus:border-primary-500 dark:focus:ring-primary-500 dark:placeholder-gray-400" placeholder="关键词"> -->
+              <!-- <input type="text" name="email" class="ml-3 block w-full border border-gray-300 rounded-lg bg-gray-50 p-2.5 text-gray-900 dark:border-gray-600 focus:border-primary-500 dark:bg-gray-700 sm:text-sm dark:text-white focus:ring-primary-500 dark:focus:ring-primary-500 dark:placeholder-gray-400" placeholder="关键词"> -->
               <div class="relative ml-2 flex-1">
                 <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                   <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">

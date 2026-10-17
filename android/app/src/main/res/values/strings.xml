@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">My IELTS</string>
+    <string name="title_activity_main">My IELTS</string>
+    <string name="package_name">com.myielts.app</string>
+    <string name="custom_url_scheme">com.myielts.app</string>
+</resources>
