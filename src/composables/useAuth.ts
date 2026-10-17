@@ -1,6 +1,7 @@
-// 账号体系：纯前端本地账号
-// 注册/登录/记住我，会话恢复；密码加盐哈希后存 localStorage
-// 注意：这是单机本地实现，用于按账号隔离学习数据，不做服务端校验
+// 账号体系：
+// - 未配置同步服务器时：纯前端本地账号（密码加盐哈希存 localStorage，单机使用）
+// - 配置了 SYNC_API_BASE 时：走服务器注册/登录，学习数据多设备同步
+import { apiLogin, apiPull, apiPush, apiRegister, applySyncData, collectSyncData, getToken, setToken, syncEnabled } from './syncClient'
 
 export interface AccountRecord {
   salt: string
@@ -10,6 +11,14 @@ export interface AccountRecord {
 
 const USERS_KEY = 'myielts_users_v1'
 const SESSION_KEY = 'myielts_session_v1'
+// 服务器托管账号在本地用户表中的标记（仅用于会话恢复，不做本地密码校验）
+const SERVER_MARKER_HASH = 'server-managed'
+
+// 本地写入监听：供云同步标记 dirty
+const writeListeners = new Set<() => void>()
+export function onLocalWrite(cb: () => void) {
+  writeListeners.add(cb)
+}
 
 export function readJson<T>(key: string, fallback: T): T {
   try {
@@ -26,6 +35,7 @@ export function readJson<T>(key: string, fallback: T): T {
 export function writeJson(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value))
+    writeListeners.forEach(cb => cb())
   }
   catch {
     // 配额不足等情况静默失败
@@ -85,7 +95,98 @@ export const useAuth = createGlobalState(() => {
     }
   }
 
-  async function register(username: string, password: string): Promise<AuthResult> {
+  // 服务器托管账号：在本地用户表留标记，保证会话恢复能通过
+  function ensureServerMarker(username: string) {
+    const users = readUsers()
+    if (!users[username] || users[username].hash !== SERVER_MARKER_HASH) {
+      users[username] = { salt: '', hash: SERVER_MARKER_HASH, createdAt: Date.now() }
+      writeJson(USERS_KEY, users)
+    }
+  }
+
+  // ---------- 服务器模式 ----------
+  async function serverRegister(username: string, password: string): Promise<AuthResult> {
+    username = username.trim()
+    if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]{2,20}$/.test(username))
+      return { ok: false, message: '用户名需为 2-20 位字母、数字、下划线或中文' }
+    if (password.length < 4)
+      return { ok: false, message: '密码至少 4 位' }
+    let r: Awaited<ReturnType<typeof apiRegister>>
+    try {
+      r = await apiRegister(username, password)
+    }
+    catch {
+      return { ok: false, message: '无法连接同步服务器，请检查网络' }
+    }
+    if (!r.ok || !r.token)
+      return { ok: false, message: r.message || '注册失败' }
+    setToken(r.token)
+    ensureServerMarker(username)
+    // 新账号：把本机现有数据（如果有）推到云端，完成迁移
+    try {
+      await apiPush(collectSyncData(username))
+    }
+    catch {
+      // 推送失败不阻塞注册，后续自动同步会补
+    }
+    setSession(username, true)
+    currentUser.value = username
+    return { ok: true }
+  }
+
+  async function serverLogin(username: string, password: string, remember: boolean): Promise<AuthResult> {
+    username = username.trim()
+    let r: Awaited<ReturnType<typeof apiLogin>>
+    try {
+      r = await apiLogin(username, password)
+    }
+    catch {
+      return { ok: false, message: '无法连接同步服务器，请检查网络' }
+    }
+    if (!r.ok || !r.token)
+      return { ok: false, message: r.message || '登录失败' }
+    setToken(r.token)
+    ensureServerMarker(username)
+    // 拉取云端数据并与本地合并
+    try {
+      const pull = await apiPull()
+      if (pull.ok && pull.data && Object.keys(pull.data).length > 0) {
+        const localKeys = Object.keys(collectSyncData(username))
+        if (localKeys.length === 0) {
+          // 本机没数据：直接用云端
+          applySyncData(pull.data)
+          setSession(username, remember)
+          currentUser.value = username
+          location.reload()
+          return { ok: true }
+        }
+        // 两边都有数据：让用户选
+        const dt = pull.updatedAt ? new Date(pull.updatedAt).toLocaleString() : '未知时间'
+        const useServer = confirm(`云端已有学习数据（更新于 ${dt}），本机也有数据。\n\n点"确定"用云端数据覆盖本机，点"取消"把本机数据上传到云端。`)
+        if (useServer) {
+          applySyncData(pull.data)
+          setSession(username, remember)
+          currentUser.value = username
+          location.reload()
+          return { ok: true }
+        }
+        await apiPush(collectSyncData(username))
+      }
+      else {
+        // 云端没数据：把本机数据推上去（换设备首次登录的迁移场景）
+        await apiPush(collectSyncData(username))
+      }
+    }
+    catch {
+      return { ok: false, message: '同步数据失败，请重试' }
+    }
+    setSession(username, remember)
+    currentUser.value = username
+    return { ok: true }
+  }
+
+  // ---------- 本地模式（原有逻辑） ----------
+  async function localRegister(username: string, password: string): Promise<AuthResult> {
     username = username.trim()
     if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]{2,20}$/.test(username))
       return { ok: false, message: '用户名需为 2-20 位字母、数字、下划线或中文' }
@@ -103,11 +204,13 @@ export const useAuth = createGlobalState(() => {
     return { ok: true }
   }
 
-  async function login(username: string, password: string, remember: boolean): Promise<AuthResult> {
+  async function localLogin(username: string, password: string, remember: boolean): Promise<AuthResult> {
     username = username.trim()
     const record = readUsers()[username]
     if (!record)
       return { ok: false, message: '用户不存在，请先注册' }
+    if (record.hash === SERVER_MARKER_HASH)
+      return { ok: false, message: '该账号已迁移到云同步，请检查同步服务器配置' }
     const hash = await sha256Hex(record.salt + password)
     if (hash !== record.hash)
       return { ok: false, message: '密码不正确' }
@@ -116,7 +219,29 @@ export const useAuth = createGlobalState(() => {
     return { ok: true }
   }
 
-  function logout() {
+  async function register(username: string, password: string): Promise<AuthResult> {
+    if (syncEnabled)
+      return serverRegister(username, password)
+    return localRegister(username, password)
+  }
+
+  async function login(username: string, password: string, remember: boolean): Promise<AuthResult> {
+    if (syncEnabled)
+      return serverLogin(username, password, remember)
+    return localLogin(username, password, remember)
+  }
+
+  async function logout() {
+    // 退出前尽力把最新数据推到云端
+    if (syncEnabled && currentUser.value && getToken()) {
+      try {
+        await apiPush(collectSyncData(currentUser.value))
+      }
+      catch {
+        // 忽略
+      }
+    }
+    setToken(null)
     try {
       localStorage.removeItem(SESSION_KEY)
       sessionStorage.removeItem(SESSION_KEY)
@@ -127,5 +252,5 @@ export const useAuth = createGlobalState(() => {
     currentUser.value = null
   }
 
-  return { currentUser, register, login, logout }
+  return { currentUser, register, login, logout, syncEnabled }
 })

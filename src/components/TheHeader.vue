@@ -44,10 +44,25 @@ const menus = reactive([
 const showMobileMenu = ref(false)
 const { totalCount: mistakeCount } = useMistakes()
 const { currentUser, logout } = useAuth()
+const { syncEnabled, status, statusText, errorMsg, pushNow, ensureWired } = useSync()
+ensureWired()
 
-function onLogout() {
-  logout()
+const syncDotClass = computed(() => {
+  switch (status.value) {
+    case 'syncing': return 'bg-yellow-500 animate-pulse'
+    case 'ok': return 'bg-green-500'
+    case 'error': return 'bg-red-500'
+    default: return 'bg-gray-400'
+  }
+})
+
+async function onLogout() {
+  await logout()
   showMobileMenu.value = false
+}
+
+async function onManualSync() {
+  await pushNow()
 }
 </script>
 
@@ -85,6 +100,15 @@ function onLogout() {
         </div>
         <div class="flex items-center justify-between lg:order-2">
           <template v-if="currentUser">
+            <button
+              v-if="syncEnabled"
+              class="mr-1 hidden items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-200 sm:inline-flex dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
+              :title="errorMsg || '点击立即同步'"
+              @click="onManualSync"
+            >
+              <span class="inline-block h-2 w-2 rounded-full" :class="syncDotClass" />
+              {{ statusText }}
+            </button>
             <span class="mr-1 hidden text-sm text-gray-700 sm:inline dark:text-gray-300">{{ currentUser }}</span>
             <button
               class="rounded-lg px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-400 hover:text-gray-900 focus:ring-4 focus:ring-gray-300 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-600"

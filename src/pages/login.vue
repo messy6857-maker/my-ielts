@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const router = useRouter()
-const { currentUser, login, register } = useAuth()
+const { currentUser, login, register, syncEnabled } = useAuth()
 
 // 已登录则直接回首页
 if (currentUser.value)
@@ -133,6 +133,9 @@ async function onSubmit() {
           </button>
         </form>
 
+        <p v-if="syncEnabled" class="mt-4 text-center text-xs text-green-600 dark:text-green-400">
+          ☁️ 已开启云同步：登录后学习数据将在多设备间同步
+        </p>
         <p class="mt-6 text-center text-xs text-gray-400">
           不登录也可以游客身份使用，数据只保存在本浏览器
         </p>

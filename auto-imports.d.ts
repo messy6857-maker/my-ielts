@@ -8,8 +8,14 @@ declare global {
   const EffectScope: typeof import('vue')['EffectScope']
   const MISTAKE_MODULE_LABEL: typeof import('./src/composables/useStudyData')['MISTAKE_MODULE_LABEL']
   const PROGRESS_MODULE_LABEL: typeof import('./src/composables/useStudyData')['PROGRESS_MODULE_LABEL']
+  const apiLogin: typeof import('./src/composables/syncClient')['apiLogin']
+  const apiPull: typeof import('./src/composables/syncClient')['apiPull']
+  const apiPush: typeof import('./src/composables/syncClient')['apiPush']
+  const apiRegister: typeof import('./src/composables/syncClient')['apiRegister']
+  const applySyncData: typeof import('./src/composables/syncClient')['applySyncData']
   const asyncComputed: typeof import('@vueuse/core')['asyncComputed']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
+  const collectSyncData: typeof import('./src/composables/syncClient')['collectSyncData']
   const computed: typeof import('vue')['computed']
   const computedAsync: typeof import('@vueuse/core')['computedAsync']
   const computedEager: typeof import('@vueuse/core')['computedEager']
@@ -37,6 +43,7 @@ declare global {
   const formatDate: typeof import('./src/composables/useStudyData')['formatDate']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
+  const getToken: typeof import('./src/composables/syncClient')['getToken']
   const gradeSchedule: typeof import('./src/composables/useSpacedRepetition')['gradeSchedule']
   const h: typeof import('vue')['h']
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
@@ -62,6 +69,7 @@ declare global {
   const onDeactivated: typeof import('vue')['onDeactivated']
   const onErrorCaptured: typeof import('vue')['onErrorCaptured']
   const onKeyStroke: typeof import('@vueuse/core')['onKeyStroke']
+  const onLocalWrite: typeof import('./src/composables/useAuth')['onLocalWrite']
   const onLongPress: typeof import('@vueuse/core')['onLongPress']
   const onMounted: typeof import('vue')['onMounted']
   const onRenderTracked: typeof import('vue')['onRenderTracked']
@@ -92,9 +100,11 @@ declare global {
   const resolveComponent: typeof import('vue')['resolveComponent']
   const resolveRef: typeof import('@vueuse/core')['resolveRef']
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
+  const setToken: typeof import('./src/composables/syncClient')['setToken']
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
+  const syncEnabled: typeof import('./src/composables/syncClient')['syncEnabled']
   const syncRef: typeof import('@vueuse/core')['syncRef']
   const syncRefs: typeof import('@vueuse/core')['syncRefs']
   const templateRef: typeof import('@vueuse/core')['templateRef']
@@ -253,6 +263,7 @@ declare global {
   const useStyleTag: typeof import('@vueuse/core')['useStyleTag']
   const useSupported: typeof import('@vueuse/core')['useSupported']
   const useSwipe: typeof import('@vueuse/core')['useSwipe']
+  const useSync: typeof import('./src/composables/useSync')['useSync']
   const useTemplateRef: typeof import('vue')['useTemplateRef']
   const useTemplateRefsList: typeof import('@vueuse/core')['useTemplateRefsList']
   const useTextDirection: typeof import('@vueuse/core')['useTextDirection']
@@ -316,8 +327,14 @@ declare module 'vue' {
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly MISTAKE_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['MISTAKE_MODULE_LABEL']>
     readonly PROGRESS_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['PROGRESS_MODULE_LABEL']>
+    readonly apiLogin: UnwrapRef<typeof import('./src/composables/syncClient')['apiLogin']>
+    readonly apiPull: UnwrapRef<typeof import('./src/composables/syncClient')['apiPull']>
+    readonly apiPush: UnwrapRef<typeof import('./src/composables/syncClient')['apiPush']>
+    readonly apiRegister: UnwrapRef<typeof import('./src/composables/syncClient')['apiRegister']>
+    readonly applySyncData: UnwrapRef<typeof import('./src/composables/syncClient')['applySyncData']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
+    readonly collectSyncData: UnwrapRef<typeof import('./src/composables/syncClient')['collectSyncData']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -345,6 +362,7 @@ declare module 'vue' {
     readonly formatDate: UnwrapRef<typeof import('./src/composables/useStudyData')['formatDate']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
+    readonly getToken: UnwrapRef<typeof import('./src/composables/syncClient')['getToken']>
     readonly gradeSchedule: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['gradeSchedule']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
@@ -369,6 +387,7 @@ declare module 'vue' {
     readonly onDeactivated: UnwrapRef<typeof import('vue')['onDeactivated']>
     readonly onErrorCaptured: UnwrapRef<typeof import('vue')['onErrorCaptured']>
     readonly onKeyStroke: UnwrapRef<typeof import('@vueuse/core')['onKeyStroke']>
+    readonly onLocalWrite: UnwrapRef<typeof import('./src/composables/useAuth')['onLocalWrite']>
     readonly onLongPress: UnwrapRef<typeof import('@vueuse/core')['onLongPress']>
     readonly onMounted: UnwrapRef<typeof import('vue')['onMounted']>
     readonly onRenderTracked: UnwrapRef<typeof import('vue')['onRenderTracked']>
@@ -397,9 +416,11 @@ declare module 'vue' {
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
+    readonly setToken: UnwrapRef<typeof import('./src/composables/syncClient')['setToken']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly syncEnabled: UnwrapRef<typeof import('./src/composables/syncClient')['syncEnabled']>
     readonly syncRef: UnwrapRef<typeof import('@vueuse/core')['syncRef']>
     readonly syncRefs: UnwrapRef<typeof import('@vueuse/core')['syncRefs']>
     readonly templateRef: UnwrapRef<typeof import('@vueuse/core')['templateRef']>
@@ -555,6 +576,7 @@ declare module 'vue' {
     readonly useStyleTag: UnwrapRef<typeof import('@vueuse/core')['useStyleTag']>
     readonly useSupported: UnwrapRef<typeof import('@vueuse/core')['useSupported']>
     readonly useSwipe: UnwrapRef<typeof import('@vueuse/core')['useSwipe']>
+    readonly useSync: UnwrapRef<typeof import('./src/composables/useSync')['useSync']>
     readonly useTemplateRefsList: UnwrapRef<typeof import('@vueuse/core')['useTemplateRefsList']>
     readonly useTextDirection: UnwrapRef<typeof import('@vueuse/core')['useTextDirection']>
     readonly useTextSelection: UnwrapRef<typeof import('@vueuse/core')['useTextSelection']>
@@ -611,8 +633,14 @@ declare module '@vue/runtime-core' {
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly MISTAKE_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['MISTAKE_MODULE_LABEL']>
     readonly PROGRESS_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['PROGRESS_MODULE_LABEL']>
+    readonly apiLogin: UnwrapRef<typeof import('./src/composables/syncClient')['apiLogin']>
+    readonly apiPull: UnwrapRef<typeof import('./src/composables/syncClient')['apiPull']>
+    readonly apiPush: UnwrapRef<typeof import('./src/composables/syncClient')['apiPush']>
+    readonly apiRegister: UnwrapRef<typeof import('./src/composables/syncClient')['apiRegister']>
+    readonly applySyncData: UnwrapRef<typeof import('./src/composables/syncClient')['applySyncData']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
+    readonly collectSyncData: UnwrapRef<typeof import('./src/composables/syncClient')['collectSyncData']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -640,6 +668,7 @@ declare module '@vue/runtime-core' {
     readonly formatDate: UnwrapRef<typeof import('./src/composables/useStudyData')['formatDate']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
+    readonly getToken: UnwrapRef<typeof import('./src/composables/syncClient')['getToken']>
     readonly gradeSchedule: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['gradeSchedule']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
@@ -664,6 +693,7 @@ declare module '@vue/runtime-core' {
     readonly onDeactivated: UnwrapRef<typeof import('vue')['onDeactivated']>
     readonly onErrorCaptured: UnwrapRef<typeof import('vue')['onErrorCaptured']>
     readonly onKeyStroke: UnwrapRef<typeof import('@vueuse/core')['onKeyStroke']>
+    readonly onLocalWrite: UnwrapRef<typeof import('./src/composables/useAuth')['onLocalWrite']>
     readonly onLongPress: UnwrapRef<typeof import('@vueuse/core')['onLongPress']>
     readonly onMounted: UnwrapRef<typeof import('vue')['onMounted']>
     readonly onRenderTracked: UnwrapRef<typeof import('vue')['onRenderTracked']>
@@ -692,9 +722,11 @@ declare module '@vue/runtime-core' {
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
+    readonly setToken: UnwrapRef<typeof import('./src/composables/syncClient')['setToken']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly syncEnabled: UnwrapRef<typeof import('./src/composables/syncClient')['syncEnabled']>
     readonly syncRef: UnwrapRef<typeof import('@vueuse/core')['syncRef']>
     readonly syncRefs: UnwrapRef<typeof import('@vueuse/core')['syncRefs']>
     readonly templateRef: UnwrapRef<typeof import('@vueuse/core')['templateRef']>
@@ -850,6 +882,7 @@ declare module '@vue/runtime-core' {
     readonly useStyleTag: UnwrapRef<typeof import('@vueuse/core')['useStyleTag']>
     readonly useSupported: UnwrapRef<typeof import('@vueuse/core')['useSupported']>
     readonly useSwipe: UnwrapRef<typeof import('@vueuse/core')['useSwipe']>
+    readonly useSync: UnwrapRef<typeof import('./src/composables/useSync')['useSync']>
     readonly useTemplateRefsList: UnwrapRef<typeof import('@vueuse/core')['useTemplateRefsList']>
     readonly useTextDirection: UnwrapRef<typeof import('@vueuse/core')['useTextDirection']>
     readonly useTextSelection: UnwrapRef<typeof import('@vueuse/core')['useTextSelection']>
