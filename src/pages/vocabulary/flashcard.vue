@@ -7,6 +7,7 @@ import { planQueue } from '../../composables/useDeckStore'
 import { formatClock, formatDuration, useStudyTimer } from '../../composables/useStudyTimer'
 import { getWordInfoWithFallback } from '../../composables/useWordInfo'
 import { synonymPosData } from './synonymPos'
+import { synonymMeanings } from './synonymMeanings'
 import type { WordInfo } from '../../composables/useWordInfo'
 import vocabulary from './vocabulary'
 
@@ -113,6 +114,26 @@ function synonymPos(syn: string): string {
   const key = syn.trim().toLowerCase()
   return wordPosMap.value.get(key) || synonymPosData[key] || ''
 }
+function synonymMeaning(syn: string): string {
+  return synonymMeanings[syn.trim().toLowerCase()] || ''
+}
+// 点击同义词展开/收起中文释义
+const expandedSyns = ref(new Set<string>())
+// 点击拓展词展开/收起中文释义
+const expandedExtras = ref(new Set<number>())
+function toggleExtraMeaning(i: number) {
+  if (expandedExtras.value.has(i))
+    expandedExtras.value.delete(i)
+  else
+    expandedExtras.value.add(i)
+}
+function toggleSynMeaning(syn: string) {
+  const key = syn.trim().toLowerCase()
+  if (expandedSyns.value.has(key))
+    expandedSyns.value.delete(key)
+  else
+    expandedSyns.value.add(key)
+}
 const showAnswer = ref(false)
 const studyLapses = computed(() => {
   if (!studying.value)
@@ -161,7 +182,7 @@ function buildQueue() {
   const all = chapter ? chapter.words.flat() : []
   // 复习配额 = 3 × 每日新词目标（1:3）：到期优先，不足时从已学词里补；新词按今日剩余名额取
   const plan = planQueue(all, id => scheduleStore.get(id), daily.goal.value, daily.remaining.value)
-  queue.value = [...plan.reviews.map(w => toCard(w, false)), ...plan.newWords.map(w => toCard(w, true))]
+  queue.value = [...plan.newWords.map(w => toCard(w, true)), ...plan.reviews.map(w => toCard(w, false))]
   initialTotal.value = queue.value.length
   reviewCount.value = plan.reviews.length
   dueCount.value = plan.dueCount
@@ -493,8 +514,13 @@ onMounted(() => {
               <ul class="space-y-1.5">
                 <li v-for="(syn, i) in wordInfo.synonyms.slice(0, 8)" :key="i" class="text-sm">
                   <span class="mr-1.5 inline-block w-2 h-2 rounded-full" :class="extraDots[i % extraDots.length]" />
-                  <span class="font-bold" :class="extraColors[i % extraColors.length]">{{ syn }}</span>
+                  <button
+                    class="font-bold underline decoration-dotted underline-offset-2"
+                    :class="extraColors[i % extraColors.length]"
+                    @click="toggleSynMeaning(syn)"
+                  >{{ syn }}</button>
                   <span v-if="synonymPos(syn)" class="ml-1 italic text-gray-500 dark:text-gray-400" style="font-family: times;">{{ synonymPos(syn) }}</span>
+                  <span v-if="expandedSyns.has(syn.trim().toLowerCase()) && synonymMeaning(syn)" class="ml-2 text-gray-600 dark:text-gray-400">{{ synonymMeaning(syn) }}</span>
                 </li>
               </ul>
             </div>
@@ -508,9 +534,13 @@ onMounted(() => {
             <ul class="space-y-3">
               <li v-for="(ex, i) in studyExtras" :key="i" class="text-sm leading-relaxed">
                 <span class="mr-1.5 inline-block w-2 h-2 rounded-full" :class="extraDots[i % extraDots.length]" />
-                <span class="font-bold" :class="extraColors[i % extraColors.length]">{{ ex.word }}</span>
+                <button
+                  class="font-bold underline decoration-dotted underline-offset-2"
+                  :class="extraColors[i % extraColors.length]"
+                  @click="toggleExtraMeaning(i)"
+                >{{ ex.word }}</button>
                 <span v-if="ex.pos" class="ml-1 text-sm italic text-gray-500 dark:text-gray-400" style="font-family: times;">{{ ex.pos }}</span>
-                <span class="ml-2 text-gray-600 dark:text-gray-400">{{ ex.meaning }}</span>
+                <span v-if="expandedExtras.has(i)" class="ml-2 text-gray-600 dark:text-gray-400">{{ ex.meaning }}</span>
               </li>
             </ul>
           </div>

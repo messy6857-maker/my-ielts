@@ -101,7 +101,7 @@ function toCard(c: DeckCard, isNew: boolean): Card {
 function buildQueue() {
   // 复习配额 = 3 × 每日新词目标（1:3）：到期优先，不足时从已学词里补；新词按今日剩余名额取
   const plan = planQueue(props.cards, id => deck.getSchedule(id), deck.goal.value, deck.remaining.value)
-  queue.value = [...plan.reviews.map(c => toCard(c, false)), ...plan.newWords.map(c => toCard(c, true))]
+  queue.value = [...plan.newWords.map(c => toCard(c, true)), ...plan.reviews.map(c => toCard(c, false))]
   initialTotal.value = queue.value.length
   reviewCount.value = plan.reviews.length
   dueCount.value = plan.dueCount
