@@ -6,6 +6,7 @@ import { gradeSchedule } from '../../composables/useSpacedRepetition'
 import { planQueue } from '../../composables/useDeckStore'
 import { formatClock, formatDuration, useStudyTimer } from '../../composables/useStudyTimer'
 import { getWordInfoWithFallback } from '../../composables/useWordInfo'
+import { synonymPosData } from './synonymPos'
 import type { WordInfo } from '../../composables/useWordInfo'
 import vocabulary from './vocabulary'
 
@@ -92,6 +93,26 @@ const extraDots = [
   'bg-blue-500', 'bg-purple-500', 'bg-pink-500',
   'bg-orange-500', 'bg-teal-500', 'bg-indigo-500',
 ]
+// 同义词词性：从词库查（短语或生僻词查不到就不显示词性）
+const wordPosMap = computed(() => {
+  const map = new Map<string, string>()
+  for (const ch of Object.keys(vocabulary)) {
+    const chapter = (vocabulary as any)[ch]
+    if (!chapter)
+      continue
+    for (const w of chapter.words.flat()) {
+      const name = w.word?.[0]?.toLowerCase()
+      if (name && w.pos && !map.has(name))
+        map.set(name, w.pos)
+    }
+  }
+  return map
+})
+function synonymPos(syn: string): string {
+  // 先查本站词库，再查联网抓取的词性数据；都查不到就不显示（如实标注）
+  const key = syn.trim().toLowerCase()
+  return wordPosMap.value.get(key) || synonymPosData[key] || ''
+}
 const showAnswer = ref(false)
 const studyLapses = computed(() => {
   if (!studying.value)
@@ -467,9 +488,16 @@ onMounted(() => {
                 <span v-if="wordInfo.word !== studying.word.toLowerCase()" class="not-italic text-xs text-gray-400">（{{ wordInfo.word }} 的例句）</span>
               </p>
             </div>
-            <p v-if="wordInfo.synonyms.length > 0" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              同义词：{{ wordInfo.synonyms.slice(0, 8).join(' · ') }}
-            </p>
+            <div v-if="wordInfo.synonyms.length > 0" class="mt-2">
+              <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">同义词：</p>
+              <ul class="space-y-1.5">
+                <li v-for="(syn, i) in wordInfo.synonyms.slice(0, 8)" :key="i" class="text-sm">
+                  <span class="mr-1.5 inline-block w-2 h-2 rounded-full" :class="extraDots[i % extraDots.length]" />
+                  <span class="font-bold" :class="extraColors[i % extraColors.length]">{{ syn }}</span>
+                  <span v-if="synonymPos(syn)" class="ml-1 italic text-gray-500 dark:text-gray-400" style="font-family: times;">{{ synonymPos(syn) }}</span>
+                </li>
+              </ul>
+            </div>
           </div>
 
           <!-- 拓展词汇：跟原词放在一起展示，说明这个词有拓展可学 -->
