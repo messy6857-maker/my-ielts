@@ -38,6 +38,13 @@ function play(word) {
         >
           自测卡片
         </button>
+        <button
+          type="button"
+          class="ml-2 rounded-lg bg-blue-700 px-4 py-1.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800"
+          @click="$router.push('/reading/daily')"
+        >
+          📅 每日阅读
+        </button>
       </div>
       <!-- Card header -->
       <template
