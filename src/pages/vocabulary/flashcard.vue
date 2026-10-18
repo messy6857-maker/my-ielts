@@ -556,7 +556,7 @@ onMounted(() => {
               <template v-if="studyMnemonic">
                 <!-- 手写巧记：一句话 -->
                 <p v-if="studyMnemonic.kind === 'curated'">{{ studyMnemonic.body }}</p>
-                <!-- 拆词巧记：词块 + 连接词义的微故事 -->
+                <!-- 拆词巧记：词块 + 连接词义的微故事（故事含词义，点击才显示） -->
                 <template v-else-if="studyMnemonic.kind === 'parts'">
                   <div class="flex flex-wrap gap-2 mb-1">
                     <span
@@ -565,7 +565,10 @@ onMounted(() => {
                       class="rounded bg-amber-100 px-2 py-0.5 dark:bg-amber-900/50"
                     >{{ part.text }}<span class="text-amber-500">（{{ part.gloss }}）</span></span>
                   </div>
-                  <p>{{ studyMnemonic.body }}</p>
+                  <button v-if="!showAnswer" class="text-xs underline underline-offset-2" @click="showAnswer = true">
+                    联想一下词义？点我看答案
+                  </button>
+                  <p v-else>{{ studyMnemonic.body }}</p>
                 </template>
                 <!-- 例句巧记：填空 + 点看答案 -->
                 <template v-else-if="studyMnemonic.kind === 'sentence'">
