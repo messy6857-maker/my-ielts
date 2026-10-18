@@ -79,6 +79,19 @@ const preMnemonic = computed(() => (current.value
   : null))
 // 学习面板：该词的拓展词汇（跟原词放在一起展示）
 const studyExtras = computed(() => (studying.value ? parseExtra(studying.value.extra) : []))
+// 拓展词汇配色：循环使用，方便区分不同的词
+const extraColors = [
+  'text-blue-600 dark:text-blue-400',
+  'text-purple-600 dark:text-purple-400',
+  'text-pink-600 dark:text-pink-400',
+  'text-orange-600 dark:text-orange-400',
+  'text-teal-600 dark:text-teal-400',
+  'text-indigo-600 dark:text-indigo-400',
+]
+const extraDots = [
+  'bg-blue-500', 'bg-purple-500', 'bg-pink-500',
+  'bg-orange-500', 'bg-teal-500', 'bg-indigo-500',
+]
 const showAnswer = ref(false)
 const studyLapses = computed(() => {
   if (!studying.value)
@@ -182,7 +195,7 @@ function grade(g: 0 | 3 | 5) {
   // 三种自评都展开完整词条学习
   lastGrade.value = g
   // 多次记错的词自动展开巧记
-  showMnemonic.value = (scheduleStore.get(card.id)?.lapses ?? 0) >= 2
+  showMnemonic.value = true // 自评后直接展开巧记，无需点击
   showAnswer.value = false
   studying.value = card
   playAudio(card.word)
@@ -464,10 +477,11 @@ onMounted(() => {
             <div class="mb-2 text-sm font-bold text-teal-700 dark:text-teal-300">
               📚 拓展词汇 <span class="font-normal text-teal-500">（{{ studyExtras.length }} 个可学）</span>
             </div>
-            <ul class="space-y-1.5">
+            <ul class="space-y-3">
               <li v-for="(ex, i) in studyExtras" :key="i" class="text-sm leading-relaxed">
-                <span class="font-bold text-gray-800 dark:text-gray-200">{{ ex.word }}</span>
-                <span v-if="ex.pos" class="ml-1 text-xs italic text-gray-400" style="font-family: times;">{{ ex.pos }}</span>
+                <span class="mr-1.5 inline-block w-2 h-2 rounded-full" :class="extraDots[i % extraDots.length]" />
+                <span class="font-bold" :class="extraColors[i % extraColors.length]">{{ ex.word }}</span>
+                <span v-if="ex.pos" class="ml-1 text-sm italic text-gray-500 dark:text-gray-400" style="font-family: times;">{{ ex.pos }}</span>
                 <span class="ml-2 text-gray-600 dark:text-gray-400">{{ ex.meaning }}</span>
               </li>
             </ul>
