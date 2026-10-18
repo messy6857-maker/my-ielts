@@ -4,6 +4,7 @@ import { getMnemonic } from './mnemonics'
 import { parseExtra } from './extraParser'
 import { gradeSchedule } from '../../composables/useSpacedRepetition'
 import { planQueue } from '../../composables/useDeckStore'
+import { formatClock, formatDuration, useStudyTimer } from '../../composables/useStudyTimer'
 import { getWordInfoWithFallback } from '../../composables/useWordInfo'
 import type { WordInfo } from '../../composables/useWordInfo'
 import vocabulary from './vocabulary'
@@ -28,6 +29,23 @@ const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
 const scheduleStore = useWordSchedule()
 const daily = useDailyGoal()
+const router = useRouter()
+const timer = useStudyTimer()
+const showExitModal = ref(false)
+const lastSessionSec = ref(0)
+
+function handleBack() {
+  lastSessionSec.value = timer.pause()
+  showExitModal.value = true
+}
+function cancelExit() {
+  showExitModal.value = false
+  timer.resume()
+}
+function confirmExit() {
+  showExitModal.value = false
+  router.push('/vocabulary')
+}
 const { streak: checkinStreak, weekDots: checkinWeekDots, checkin: doCheckin } = useCheckin()
 
 // 每日目标输入框的双向绑定（可自定义数量）
@@ -211,6 +229,7 @@ watch(current, (c) => {
 
 onMounted(() => {
   buildQueue()
+  timer.start()
 })
 </script>
 
@@ -220,13 +239,13 @@ onMounted(() => {
       <!-- Header -->
       <div class="flex flex-wrap justify-between items-center gap-3 mb-2">
         <div class="flex items-center gap-3">
-          <router-link
-            to="/vocabulary"
+          <button
             title="返回词表"
             class="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            @click="handleBack"
           >
             ← 返回
-          </router-link>
+          </button>
           <div>
             <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">单词自测</h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">看到单词先凭感觉自评，再按需学习词条</p>
@@ -257,6 +276,15 @@ onMounted(() => {
           今日新词 {{ daily.dailyCount }} / {{ daily.goal }}
         </p>
         <div class="flex items-center gap-2">
+          <span class="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-xs font-bold text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300" title="本次学习计时">
+            ⏱ {{ formatClock(timer.elapsed.value) }}
+          </span>
+          <span class="text-xs text-gray-400" title="今日累计学习时长（目标 2 小时）">
+            今日 {{ formatDuration(timer.dailySeconds.value) }}
+          </span>
+          <div class="w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden" title="今日目标 2 小时">
+            <div class="h-full bg-green-500 rounded-full transition-all" :style="{ width: Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) + '%' }" />
+          </div>
           <span class="text-xs font-bold text-orange-500">🔥 连续打卡 {{ checkinStreak }} 天</span>
           <div class="flex gap-1">
             <span
@@ -312,12 +340,12 @@ onMounted(() => {
           >
             再来一轮
           </button>
-          <router-link
-            to="/vocabulary"
+          <button
             class="rounded-lg bg-gray-200 px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200"
+            @click="handleBack"
           >
             返回词表
-          </router-link>
+          </button>
         </div>
       </div>
 
@@ -486,6 +514,35 @@ onMounted(() => {
           >
             下一个
           </button>
+        </div>
+      </div>
+
+      <!-- 退出结算弹窗 -->
+      <div v-if="showExitModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="cancelExit">
+        <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl dark:bg-gray-800">
+          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">本次学习结束</h3>
+          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">{{ formatDuration(lastSessionSec) }}</p>
+          <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">今日累计 {{ formatDuration(timer.dailySeconds.value) }}</p>
+          <div class="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+            <div class="h-full rounded-full bg-green-500 transition-all" :style="{ width: Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) + '%' }" />
+          </div>
+          <p class="mb-4 text-xs text-gray-400">
+            {{ timer.dailySeconds.value >= timer.dailyGoal ? '今日目标已达成 🎉' : `距离今日目标 2 小时还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}` }}
+          </p>
+          <div class="flex gap-3">
+            <button
+              class="flex-1 rounded-xl border border-gray-300 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              @click="cancelExit"
+            >
+              继续学习
+            </button>
+            <button
+              class="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+              @click="confirmExit"
+            >
+              退出
+            </button>
+          </div>
         </div>
       </div>
     </div>
