@@ -135,6 +135,8 @@ function toggleSynMeaning(syn: string) {
     expandedSyns.value.add(key)
 }
 const showAnswer = ref(false)
+// 自评前例句巧记：拆词答案的显示开关（每张卡重置）
+const showPreAnswer = ref(false)
 const studyLapses = computed(() => {
   if (!studying.value)
     return 0
@@ -247,6 +249,7 @@ function next() {
   studying.value = null
   lastGrade.value = null
   showAnswer.value = false
+  showPreAnswer.value = false
   if (queue.value.length === 0)
     finishSession()
   else
@@ -430,7 +433,19 @@ onMounted(() => {
             class="my-5 rounded-xl bg-sky-50 border border-sky-200 p-4 text-left dark:bg-sky-900/20 dark:border-sky-800"
           >
             <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">💡 例句巧记</div>
-            <p v-if="preMnemonic" class="mb-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+            <!-- 拆词：先只给词块，答案（词义）点一下才显示 -->
+            <template v-if="preMnemonic && preMnemonic.kind === 'parts'">
+              <p class="mb-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+                🧠 拆词：{{ (preMnemonic.parts ?? []).map(p => `${p.text}（${p.gloss}）`).join(' + ') }}
+                <button v-if="!showPreAnswer" class="ml-1 text-xs text-sky-600 underline underline-offset-2 dark:text-sky-400" @click="showPreAnswer = true">
+                  点击显示答案
+                </button>
+                <span v-else class="font-bold text-sky-700 dark:text-sky-300">
+                  → 也就是「{{ current.meaning }}」
+                </span>
+              </p>
+            </template>
+            <p v-else-if="preMnemonic" class="mb-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
               🧠 {{ preMnemonic.body }}
             </p>
             <div v-if="wordInfo && wordInfo.examples.length > 0">
@@ -556,7 +571,7 @@ onMounted(() => {
               <template v-if="studyMnemonic">
                 <!-- 手写巧记：一句话 -->
                 <p v-if="studyMnemonic.kind === 'curated'">{{ studyMnemonic.body }}</p>
-                <!-- 拆词巧记：词块 + 连接词义的微故事（故事含词义，点击才显示） -->
+                <!-- 拆词巧记：自评后直接显示完整微故事 -->
                 <template v-else-if="studyMnemonic.kind === 'parts'">
                   <div class="flex flex-wrap gap-2 mb-1">
                     <span
@@ -565,10 +580,7 @@ onMounted(() => {
                       class="rounded bg-amber-100 px-2 py-0.5 dark:bg-amber-900/50"
                     >{{ part.text }}<span class="text-amber-500">（{{ part.gloss }}）</span></span>
                   </div>
-                  <button v-if="!showAnswer" class="text-xs underline underline-offset-2" @click="showAnswer = true">
-                    联想一下词义？点我看答案
-                  </button>
-                  <p v-else>{{ studyMnemonic.body }}</p>
+                  <p>{{ studyMnemonic.body }}</p>
                 </template>
                 <!-- 例句巧记：填空 + 点看答案 -->
                 <template v-else-if="studyMnemonic.kind === 'sentence'">

@@ -1,5 +1,10 @@
 <script setup lang="ts">
 import indexData from './daily/index.json'
+import { useAuth } from '../../composables/useAuth'
+import { getToken } from '../../composables/syncClient'
+import { SYNC_API_BASE } from '../../sync-config'
+
+const { currentUser } = useAuth()
 
 interface WordNote {
   word: string
@@ -24,7 +29,6 @@ interface Reading {
 
 interface DailyData {
   date: string
-  vocabReading: Reading
   newsReadings: Reading[]
 }
 
@@ -42,6 +46,32 @@ const daily = computed<DailyData | null>(() => {
     return null
   return modules[`./daily/${selectedDate.value}.json`]?.default ?? null
 })
+
+// 当前账号的词汇阅读：从后端按 JWT 取，只能拿到自己的
+const myVocabReading = ref<Reading | null>(null)
+const vocabLoading = ref(false)
+async function loadMyVocabReading() {
+  myVocabReading.value = null
+  const t = getToken()
+  if (!currentUser.value || !t || !selectedDate.value)
+    return
+  vocabLoading.value = true
+  try {
+    const resp = await fetch(`${SYNC_API_BASE}/daily-reading?date=${selectedDate.value}`, {
+      headers: { Authorization: `Bearer ${t}` },
+    })
+    const data = await resp.json()
+    if (data.ok && data.reading)
+      myVocabReading.value = data.reading
+  }
+  catch {
+    // 忽略网络错误
+  }
+  finally {
+    vocabLoading.value = false
+  }
+}
+watch([selectedDate, currentUser], loadMyVocabReading, { immediate: true })
 
 // 生词注释：点击展开/收起中文（复用自测卡片的彩色样式）
 const dotColors = ['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-orange-500', 'bg-teal-500', 'bg-indigo-500']
@@ -135,19 +165,19 @@ function paragraphs(passage: string): string[] {
       </div>
 
       <template v-if="daily">
-        <!-- 第一部分：词汇阅读 -->
-        <section class="mb-8">
+        <!-- 第一部分：词汇阅读（按账号个性化；游客不显示） -->
+        <section v-if="myVocabReading" class="mb-8">
           <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">
             📖 词汇阅读
-            <span class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">基于你学过的单词</span>
+            <span class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">基于你前天学过的单词</span>
           </h3>
           <article class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <h4 class="mb-3 text-xl font-bold text-gray-900 dark:text-white">
-              {{ daily.vocabReading.title }}
+              {{ myVocabReading.title }}
             </h4>
-            <div v-if="daily.vocabReading.basedOn?.length" class="mb-4 flex flex-wrap gap-2">
+            <div v-if="myVocabReading.basedOn?.length" class="mb-4 flex flex-wrap gap-2">
               <span
-                v-for="w in daily.vocabReading.basedOn"
+                v-for="w in myVocabReading.basedOn"
                 :key="w"
                 class="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
               >
@@ -155,18 +185,18 @@ function paragraphs(passage: string): string[] {
               </span>
             </div>
             <div class="mb-4 space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
-              <p v-for="(p, i) in paragraphs(daily.vocabReading.passage)" :key="i">
+              <p v-for="(p, i) in paragraphs(myVocabReading.passage)" :key="i">
                 {{ p }}
               </p>
             </div>
 
             <!-- 生词注释 -->
-            <div v-if="daily.vocabReading.notes.length" class="mb-4 rounded-xl bg-gray-50 p-4 dark:bg-gray-900/50">
+            <div v-if="myVocabReading.notes.length" class="mb-4 rounded-xl bg-gray-50 p-4 dark:bg-gray-900/50">
               <p class="mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">
                 生词注释 <span class="font-normal text-gray-400">（点击单词查看中文）</span>
               </p>
               <ul class="space-y-1.5">
-                <li v-for="(n, i) in daily.vocabReading.notes" :key="i" class="text-sm">
+                <li v-for="(n, i) in myVocabReading.notes" :key="i" class="text-sm">
                   <span class="mr-1.5 inline-block h-2 w-2 rounded-full" :class="dotColors[i % dotColors.length]" />
                   <button
                     class="font-bold underline decoration-dotted underline-offset-2"
@@ -182,8 +212,8 @@ function paragraphs(passage: string): string[] {
             </div>
 
             <!-- 选择题 -->
-            <div v-if="daily.vocabReading.questions.length" class="space-y-4">
-              <div v-for="(qs, qi) in daily.vocabReading.questions" :key="qi" class="rounded-xl border border-gray-100 p-4 dark:border-gray-700">
+            <div v-if="myVocabReading.questions.length" class="space-y-4">
+              <div v-for="(qs, qi) in myVocabReading.questions" :key="qi" class="rounded-xl border border-gray-100 p-4 dark:border-gray-700">
                 <p class="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200">
                   {{ qi + 1 }}. {{ qs.q }}
                 </p>
@@ -203,6 +233,16 @@ function paragraphs(passage: string): string[] {
               </div>
             </div>
           </article>
+        </section>
+        <!-- 游客提示：登录后可看个性化词汇阅读 -->
+        <section v-else-if="!currentUser" class="mb-8">
+          <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center dark:border-gray-600 dark:bg-gray-800/50">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              📖 词汇阅读是按你的学词记录个性化生成的，
+              <router-link to="/login" class="text-blue-600 underline underline-offset-2 dark:text-blue-400">登录</router-link>
+              后可见
+            </p>
+          </div>
         </section>
 
         <!-- 第二部分：热点阅读 -->
