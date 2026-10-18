@@ -10,10 +10,6 @@
         我尝试过很多语法教程最终都没有学下去，只有这个版本取出了最需要的部分；学完这个就会分析长难句了！
       </div>
       <h3 class="mb-4 text-xl font-semibold dark:text-white">
-        视频
-      </h3>
-      <iframe style="width: 100%; aspect-ratio: 16 / 9;" class="mb-4" src="https://www.youtube.com/embed/bxvyZwACfNk?si=_dXajzpGFCYZ1gOa" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-      <h3 class="mb-4 text-xl font-semibold dark:text-white">
         讲义
       </h3>
       <div class="mb-4">
