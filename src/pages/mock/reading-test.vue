@@ -222,9 +222,21 @@ function handleMarkClick(e: MouseEvent) {
           @mouseup="handleSelect(pi)"
           @touchend="handleSelect(pi)"
         >
-          <h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
-            Passage {{ pi + 1 }}：{{ p.title }}
-          </h3>
+          <div class="mb-4 flex items-center justify-between">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+              Passage {{ pi + 1 }}：{{ p.title }}
+            </h3>
+            <button
+              v-if="(highlights.get(pi) ?? []).length"
+              class="rounded-lg border border-gray-300 px-3 py-1 text-xs text-gray-500 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+              @click="highlights.set(pi, [])"
+            >
+              清除标记
+            </button>
+          </div>
+          <p class="mb-4 text-xs text-gray-400 dark:text-gray-500">
+            💡 选中词组可标记高亮，点击已标记的词可取消
+          </p>
           <div class="space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
             <p v-for="(para, i) in p.passage.split('\n\n')" :key="i" v-html="highlightedPara(para, pi)" @click="handleMarkClick" />
           </div>
