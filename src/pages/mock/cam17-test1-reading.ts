@@ -82,10 +82,10 @@ Freiburg Mage Solar Stadium in Germany is the first of a new wave of stadiums as
 G
 Sporting arenas have always been central to the life and culture of cities. In every era, the stadium has acquired new value and uses: from military fortress to residential village, public space to theatre and most recently a field for experimentation in advanced engineering. The stadium of today now brings together multiple functions, thus helping cities to create a sustainable future.`,
       questions: [
-        { id: 'Q14', type: 'multiple-choice', question: 'a mention of negative attitudes towards stadium building projects', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 0 },
-        { id: 'Q15', type: 'multiple-choice', question: 'figures demonstrating the environmental benefits of a certain stadium', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 5 },
-        { id: 'Q16', type: 'multiple-choice', question: 'examples of the wide range of facilities available at some new stadiums', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 4 },
-        { id: 'Q17', type: 'multiple-choice', question: 'reference to the disadvantages of the stadiums built during a certain era', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 3 },
+        { id: 'Q14', type: 'map-label', question: 'a mention of negative attitudes towards stadium building projects', answer: 'A' },
+        { id: 'Q15', type: 'map-label', question: 'figures demonstrating the environmental benefits of a certain stadium', answer: 'F' },
+        { id: 'Q16', type: 'map-label', question: 'examples of the wide range of facilities available at some new stadiums', answer: 'E' },
+        { id: 'Q17', type: 'map-label', question: 'reference to the disadvantages of the stadiums built during a certain era', answer: 'D' },
         { id: 'Q18', type: 'fill-blank', question: 'The amphitheatre of Arles, for example, was converted first into a ____', answer: 'fortress' },
         { id: 'Q19', type: 'fill-blank', question: 'then into a residential area and finally into an arena where spectators could watch ____', answer: 'bullfights' },
         { id: 'Q20', type: 'fill-blank', question: 'The arena in Verona, one of the oldest Roman amphitheatres, is famous today as a venue where ____ is performed.', answer: 'opera' },

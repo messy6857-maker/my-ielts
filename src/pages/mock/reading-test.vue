@@ -344,9 +344,20 @@ function handleMarkClick(e: MouseEvent) {
             @input="setAnswer(q.id, ($event.target as HTMLInputElement).value)"
           />
 
+          <!-- 地图标注题 -->
+          <input
+            v-if="q.type === 'map-label'"
+            :disabled="submitted"
+            :value="answers[q.id] ?? ''"
+            placeholder="输入字母"
+            maxlength="2"
+            class="w-24 rounded-lg border border-gray-300 px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            @input="setAnswer(q.id, ($event.target as HTMLInputElement).value)"
+          />
+
           <!-- 交卷后显示正确答案 -->
           <p v-if="submitted && questionStatus(q) !== 'correct'" class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            正确答案：{{ q.type === 'fill-blank' ? q.answer : q.options?.[q.answer as number] }}
+            正确答案：{{ q.type === 'fill-blank' || q.type === 'map-label' ? q.answer : q.options?.[q.answer as number] }}
           </p>
         </div>
       </div>

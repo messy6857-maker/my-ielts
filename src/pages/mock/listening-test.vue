@@ -248,8 +248,18 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
             @input="setAnswer(q.id, ($event.target as HTMLInputElement).value)"
           />
 
+          <input
+            v-if="q.type === 'map-label'"
+            :disabled="submitted"
+            :value="answers[q.id] ?? ''"
+            placeholder="输入字母 A-H"
+            maxlength="1"
+            class="w-24 rounded-lg border border-gray-300 px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            @input="setAnswer(q.id, ($event.target as HTMLInputElement).value)"
+          />
+
           <p v-if="submitted && questionStatus(q) !== 'correct'" class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            正确答案：{{ q.type === 'fill-blank' ? q.answer : q.options?.[q.answer as number] }}
+            正确答案：{{ q.type === 'fill-blank' || q.type === 'map-label' ? q.answer : q.options?.[q.answer as number] }}
           </p>
         </div>
       </div>

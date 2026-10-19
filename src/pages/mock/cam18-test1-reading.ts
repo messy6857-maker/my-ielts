@@ -64,11 +64,11 @@ G  Thinnings and dense and dead wood removal for fire prevention also center on 
 
 * Stand – An area covered with trees that have common features (e.g. size)`,
       questions: [
-        { id: 'Q14', type: 'multiple-choice', question: 'Which paragraph contains: bad outcomes for a forest when people focus only on its financial reward', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 1 },
-        { id: 'Q15', type: 'multiple-choice', question: 'Which paragraph contains: reference to the aspects of any tree that contribute to its worth', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 0 },
-        { id: 'Q16', type: 'multiple-choice', question: 'Which paragraph contains: mention of the potential use of wood to help run vehicles', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 2 },
-        { id: 'Q17', type: 'multiple-choice', question: 'Which paragraph contains: examples of insects that attack trees', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 4 },
-        { id: 'Q18', type: 'multiple-choice', question: 'Which paragraph contains: an alternative name for trees that produce low-use wood', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 1 },
+        { id: 'Q14', type: 'map-label', question: 'Which paragraph contains: bad outcomes for a forest when people focus only on its financial reward', answer: 'B' },
+        { id: 'Q15', type: 'map-label', question: 'Which paragraph contains: reference to the aspects of any tree that contribute to its worth', answer: 'A' },
+        { id: 'Q16', type: 'map-label', question: 'Which paragraph contains: mention of the potential use of wood to help run vehicles', answer: 'C' },
+        { id: 'Q17', type: 'map-label', question: 'Which paragraph contains: examples of insects that attack trees', answer: 'E' },
+        { id: 'Q18', type: 'map-label', question: 'Which paragraph contains: an alternative name for trees that produce low-use wood', answer: 'B' },
         { id: 'Q19', type: 'multiple-choice', question: 'Match the purpose with the correct timber cut: to remove trees that are diseased', options: ['a TSI Cut', 'a Salvage Cut', 'a Shelterwood Cut'], answer: 1 },
         { id: 'Q20', type: 'multiple-choice', question: 'Match the purpose with the correct timber cut: to generate income across a number of years', options: ['a TSI Cut', 'a Salvage Cut', 'a Shelterwood Cut'], answer: 2 },
         { id: 'Q21', type: 'multiple-choice', question: 'Match the purpose with the correct timber cut: to create a forest whose trees are close in age', options: ['a TSI Cut', 'a Salvage Cut', 'a Shelterwood Cut'], answer: 2 },
@@ -101,11 +101,11 @@ F  An additional problem is that there is no authoritative catalogue that accura
 
 Jah describes himself as a space environmentalist: 'I want to make space a place that is safe to operate, that is free and useful for generations to come.' Until that happens, he argues, the space community will continue devolving into a tragedy in which all spaceflight operators are polluting a common resource.`,
       questions: [
-        { id: 'Q27', type: 'multiple-choice', question: 'Which section contains: a reference to the cooperation that takes place to try and minimise risk', options: ['A', 'B', 'C', 'D', 'E', 'F'], answer: 2 },
+        { id: 'Q27', type: 'map-label', question: 'Which section contains: a reference to the cooperation that takes place to try and minimise risk', answer: 'C' },
         { id: 'Q28', type: 'multiple-choice', question: "Which section contains: an explanation of a person's aims", options: ['A', 'B', 'C', 'D', 'E', 'F'], answer: 5 },
-        { id: 'Q29', type: 'multiple-choice', question: 'Which section contains: a description of a major collision that occurred in space', options: ['A', 'B', 'C', 'D', 'E', 'F'], answer: 0 },
-        { id: 'Q30', type: 'multiple-choice', question: 'Which section contains: a comparison between tracking objects in space and the efficiency of a transportation system', options: ['A', 'B', 'C', 'D', 'E', 'F'], answer: 4 },
-        { id: 'Q31', type: 'multiple-choice', question: 'Which section contains: a reference to efforts to classify space junk', options: ['A', 'B', 'C', 'D', 'E', 'F'], answer: 1 },
+        { id: 'Q29', type: 'map-label', question: 'Which section contains: a description of a major collision that occurred in space', answer: 'A' },
+        { id: 'Q30', type: 'map-label', question: 'Which section contains: a comparison between tracking objects in space and the efficiency of a transportation system', answer: 'E' },
+        { id: 'Q31', type: 'map-label', question: 'Which section contains: a reference to efforts to classify space junk', answer: 'B' },
         { id: 'Q32', type: 'fill-blank', question: 'Summary: The Inter-Agency Space Debris Coordination Committee — The committee gives advice on how the ____ of space can be achieved.', answer: 'sustainability' },
         { id: 'Q33', type: 'fill-blank', question: 'Summary: The Inter-Agency Space Debris Coordination Committee — The committee advises that when satellites are no longer active, any unused ____ or pressurised material that could cause explosions should be removed.', answer: 'fuel' },
         { id: 'Q34', type: 'fill-blank', question: 'Summary: The Inter-Agency Space Debris Coordination Committee — The committee advises that when satellites are no longer active, any unused fuel or pressurised material that could cause ____ should be removed.', answer: 'explosions' },

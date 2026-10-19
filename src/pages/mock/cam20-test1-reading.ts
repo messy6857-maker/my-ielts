@@ -81,11 +81,11 @@ All of this raises questions of social acceptance, acknowledges Russell. 'If we'
 
 * horticultural analogue: a cultivated plant species that is genetically similar to an existing species`,
       questions: [
-        { id: 'Q14', type: 'multiple-choice', question: 'Which section contains the following information? reference to the research problems that arise from there being only a few surviving large elms', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 2 },
-        { id: 'Q15', type: 'multiple-choice', question: 'Which section contains the following information? details of a difference of opinion about the value of reintroducing elms to Britain', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 6 },
-        { id: 'Q16', type: 'multiple-choice', question: 'Which section contains the following information? reference to how Dutch elm disease was brought into Britain', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 1 },
-        { id: 'Q17', type: 'multiple-choice', question: 'Which section contains the following information? a description of the conditions that have enabled a location in Britain to escape Dutch elm disease', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 4 },
-        { id: 'Q18', type: 'multiple-choice', question: 'Which section contains the following information? reference to the stage at which young elms become vulnerable to Dutch elm disease', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 2 },
+        { id: 'Q14', type: 'map-label', question: 'Which section contains the following information? reference to the research problems that arise from there being only a few surviving large elms', answer: 'C' },
+        { id: 'Q15', type: 'map-label', question: 'Which section contains the following information? details of a difference of opinion about the value of reintroducing elms to Britain', answer: 'G' },
+        { id: 'Q16', type: 'map-label', question: 'Which section contains the following information? reference to how Dutch elm disease was brought into Britain', answer: 'B' },
+        { id: 'Q17', type: 'map-label', question: 'Which section contains the following information? a description of the conditions that have enabled a location in Britain to escape Dutch elm disease', answer: 'E' },
+        { id: 'Q18', type: 'map-label', question: 'Which section contains the following information? reference to the stage at which young elms become vulnerable to Dutch elm disease', answer: 'C' },
         { id: 'Q19', type: 'multiple-choice', question: 'Match each statement with the correct person (A, B or C). If a tree gets infected with Dutch elm disease, the damage rapidly becomes visible.', options: ['A Matt Elliot', 'B Karen Russell', 'C Peter Bourne'], answer: 1 },
         { id: 'Q20', type: 'multiple-choice', question: 'Match each statement with the correct person (A, B or C). It may be better to wait and see if the mature elms that have survived continue to flourish.', options: ['A Matt Elliot', 'B Karen Russell', 'C Peter Bourne'], answer: 0 },
         { id: 'Q21', type: 'multiple-choice', question: 'Match each statement with the correct person (A, B or C). There must be an explanation for the survival of some mature elms.', options: ['A Matt Elliot', 'B Karen Russell', 'C Peter Bourne'], answer: 1 },

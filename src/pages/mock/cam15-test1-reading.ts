@@ -68,11 +68,11 @@ F  There are a number of hurdles to overcome in delivering automated vehicles to
 
 G  It's clear that there are many challenges that need to be addressed but, through robust and targeted research, these can most probably be conquered within the next 10 years. Mobility will change in such potentially significant ways and in association with so many other technological developments, such as telepresence and virtual reality, that it is hard to make concrete predictions about the future. However, one thing is certain: change is coming, and the need to be flexible in response to this will be vital for those involved in manufacturing the vehicles that will deliver future mobility.`,
       questions: [
-        { id: 'Q14', type: 'multiple-choice', question: 'reference to the amount of time when a car is not in use', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 2 },
-        { id: 'Q15', type: 'multiple-choice', question: 'mention of several advantages of driverless vehicles for individual road-users', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 1 },
-        { id: 'Q16', type: 'multiple-choice', question: 'reference to the opportunity of choosing the most appropriate vehicle for each trip', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 4 },
-        { id: 'Q17', type: 'multiple-choice', question: 'an estimate of how long it will take to overcome a number of problems', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 6 },
-        { id: 'Q18', type: 'multiple-choice', question: 'a suggestion that the use of driverless cars may have no effect on the number of vehicles manufactured', options: ['A', 'B', 'C', 'D', 'E', 'F', 'G'], answer: 3 },
+        { id: 'Q14', type: 'map-label', question: 'reference to the amount of time when a car is not in use', answer: 'C' },
+        { id: 'Q15', type: 'map-label', question: 'mention of several advantages of driverless vehicles for individual road-users', answer: 'B' },
+        { id: 'Q16', type: 'map-label', question: 'reference to the opportunity of choosing the most appropriate vehicle for each trip', answer: 'E' },
+        { id: 'Q17', type: 'map-label', question: 'an estimate of how long it will take to overcome a number of problems', answer: 'G' },
+        { id: 'Q18', type: 'map-label', question: 'a suggestion that the use of driverless cars may have no effect on the number of vehicles manufactured', answer: 'D' },
         { id: 'Q19', type: 'fill-blank', question: 'most motor accidents are partly due to ____', answer: 'human error' },
         { id: 'Q20', type: 'fill-blank', question: 'schemes for ____ will be more workable', answer: 'car sharing' },
         { id: 'Q21', type: 'fill-blank', question: 'there could be a 43 percent drop in ____ of cars', answer: 'ownership' },

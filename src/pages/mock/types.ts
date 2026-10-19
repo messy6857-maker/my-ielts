@@ -1,6 +1,6 @@
 // 模考通用类型定义
 
-export type MockQuestionType = 'multiple-choice' | 'multi-select' | 'tfng' | 'fill-blank' | 'matching'
+export type MockQuestionType = 'multiple-choice' | 'multi-select' | 'tfng' | 'fill-blank' | 'matching' | 'map-label'
 
 export interface MockQuestion {
   /** 题号，如 "Q1" */
@@ -70,6 +70,10 @@ export function bandScore(correct: number): number {
 export function isCorrect(q: MockQuestion, userAnswer: string): boolean {
   if (q.type === 'fill-blank') {
     return userAnswer.trim().toLowerCase() === String(q.answer).trim().toLowerCase()
+  }
+  if (q.type === 'map-label') {
+    // 地图标注：字母不区分大小写
+    return userAnswer.trim().toUpperCase() === String(q.answer).trim().toUpperCase()
   }
   if (q.type === 'multi-select' && Array.isArray(q.answer)) {
     const userSet = new Set(userAnswer.split(',').filter(Boolean).map(s => Number(s)))
