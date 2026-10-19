@@ -1,17 +1,36 @@
 <script setup lang="ts">
-import { cam19Test1Listening } from './cam19-test1-listening'
+import { mockTests } from './registry'
 import { bandScore, formatCountdown, isCorrect, multiSelectScore } from './types'
 import type { MockQuestion } from './types'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 
 const router = useRouter()
-const test = cam19Test1Listening
-const timeLeft = ref(test.timeLimit)
+const route = useRoute()
+const testId = computed(() => (route.query.test as string) || 'cam21-test1')
+const testPair = computed(() => mockTests.find(t => t.id === testId.value) ?? mockTests[0])
+const test = computed(() => testPair.value.listening)
+const timeLeft = ref(test.value.timeLimit)
 const answers = ref<Record<string, string>>({})
 const submitted = ref(false)
 const activePart = ref(0)
 const audioEl = ref<HTMLAudioElement | null>(null)
 let timer: ReturnType<typeof setInterval> | null = null
+
+// 切换套题时重置
+watch(testId, () => {
+  if (timer)
+    clearInterval(timer)
+  timeLeft.value = test.value.timeLimit
+  answers.value = {}
+  submitted.value = false
+  activePart.value = 0
+  audioEl.value?.pause()
+  timer = setInterval(() => {
+    timeLeft.value--
+    if (timeLeft.value <= 0)
+      submit()
+  }, 1000)
+})
 
 onMounted(() => {
   timer = setInterval(() => {
@@ -36,7 +55,7 @@ function submit() {
 }
 
 const allQuestions = computed<MockQuestion[]>(() =>
-  test.parts.flatMap(p => p.questions),
+  test.value.parts.flatMap(p => p.questions),
 )
 
 const correctCount = computed(() => {
@@ -87,9 +106,20 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
 <template>
   <div class="mx-auto max-w-5xl px-4 pt-6 2xl:px-0">
     <div class="mb-6 flex items-center justify-between">
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-        🎧 {{ test.title }}
-      </h2>
+      <div class="flex items-center gap-3">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+          🎧 {{ test.title }}
+        </h2>
+        <select
+          :value="testId"
+          class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700"
+          @change="router.push({ path: '/mock/listening-test', query: { test: ($event.target as HTMLSelectElement).value } })"
+        >
+          <option v-for="t in mockTests" :key="t.id" :value="t.id">
+            {{ t.label }}
+          </option>
+        </select>
+      </div>
       <div class="flex items-center gap-4">
         <span
           class="rounded-lg px-4 py-2 font-mono text-xl font-bold"
@@ -139,6 +169,12 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
           controls
           :src="p.audio"
           class="w-full"
+        />
+        <img
+          v-if="p.image"
+          :src="p.image"
+          alt="题目示意图"
+          class="mt-4 w-full max-w-2xl rounded-lg border border-gray-200 dark:border-gray-700"
         />
         <p v-if="submitted && p.transcript" class="mt-4 whitespace-pre-line text-sm text-gray-600 dark:text-gray-400">
           {{ p.transcript }}

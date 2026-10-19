@@ -35,6 +35,8 @@ export interface ListeningPart {
   audio: string
   /** 录音脚本（精听/对答案用，不直接显示） */
   transcript?: string
+  /** 地图/示意图（相对 public/，如地图题） */
+  image?: string
   questions: MockQuestion[]
 }
 

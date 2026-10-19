@@ -31,6 +31,7 @@ export const cam19Test1Listening: ListeningMockTest = {
     {
       title: 'Part 2：Stanthorpe Twinning Association / Farley House',
       audio: 'mock/cam19-test1-listening-part2.mp3',
+      image: 'mock/cam19-test1-part2-map.png',
       questions: [
         { id: 'Q11', type: 'multiple-choice', question: 'During the visit to Malatte, in France, members especially enjoyed', options: ['A going to a theme park.', 'B experiencing a river trip.', 'C visiting a cheese factory.'], answer: 1 },
         { id: 'Q12', type: 'multiple-choice', question: 'What will happen in Stanthorpe to mark the 25th anniversary of the Twinning Association?', options: ['A A tree will be planted.', 'B A garden seat will be bought.', 'C A footbridge will be built.'], answer: 0 },

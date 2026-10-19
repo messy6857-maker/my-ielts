@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { cam19Test1Reading } from './cam19-test1-reading'
+import { mockTests } from './registry'
 import { bandScore, formatCountdown, isCorrect, multiSelectScore } from './types'
 import type { MockQuestion } from './types'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
-const test = cam19Test1Reading
-const timeLeft = ref(test.timeLimit)
+const route = useRoute()
+const testId = computed(() => (route.query.test as string) || 'cam21-test1')
+const testPair = computed(() => mockTests.find(t => t.id === testId.value) ?? mockTests[0])
+const test = computed(() => testPair.value.reading)
+const timeLeft = ref(test.value.timeLimit)
 const answers = ref<Record<string, string>>({})
 const submitted = ref(false)
 const activePassage = ref(0)
@@ -15,6 +18,24 @@ const showPassageModal = ref(false)
 const highlights = ref<Map<number, string[]>>(new Map())
 const selPopup = ref<{ x: number, y: number, text: string } | null>(null)
 let timer: ReturnType<typeof setInterval> | null = null
+
+// 切换套题时重置
+watch(testId, () => {
+  if (timer)
+    clearInterval(timer)
+  timeLeft.value = test.value.timeLimit
+  answers.value = {}
+  submitted.value = false
+  activePassage.value = 0
+  showPassageModal.value = false
+  highlights.value = new Map()
+  selPopup.value = null
+  timer = setInterval(() => {
+    timeLeft.value--
+    if (timeLeft.value <= 0)
+      submit()
+  }, 1000)
+})
 
 onMounted(() => {
   timer = setInterval(() => {
@@ -38,7 +59,7 @@ function submit() {
 }
 
 const allQuestions = computed<MockQuestion[]>(() =>
-  test.passages.flatMap(p => p.questions),
+  test.value.passages.flatMap(p => p.questions),
 )
 
 const correctCount = computed(() => {
@@ -169,9 +190,20 @@ function handleMarkClick(e: MouseEvent) {
   <div class="mx-auto max-w-7xl px-4 pt-6 2xl:px-0">
     <!-- 顶栏：标题 + 计时器 -->
     <div class="mb-6 flex items-center justify-between">
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-        📖 {{ test.title }}
-      </h2>
+      <div class="flex items-center gap-3">
+        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+          📖 {{ test.title }}
+        </h2>
+        <select
+          :value="testId"
+          class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700"
+          @change="router.push({ path: '/mock/reading-test', query: { test: ($event.target as HTMLSelectElement).value } })"
+        >
+          <option v-for="t in mockTests" :key="t.id" :value="t.id">
+            {{ t.label }}
+          </option>
+        </select>
+      </div>
       <div class="flex items-center gap-4">
         <span
           class="rounded-lg px-4 py-2 font-mono text-xl font-bold"

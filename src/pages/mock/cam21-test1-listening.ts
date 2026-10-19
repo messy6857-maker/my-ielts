@@ -1,0 +1,78 @@
+import type { ListeningMockTest } from './types'
+
+/**
+ * 剑桥雅思 21 Test 1 听力（40 题）
+ * 转录自 Cambridge IELTS 21 PDF (p.10–15)，答案来自书后 answer key
+ *
+ * 注意：Q21/Q22、Q23/Q24 为 "Choose TWO letters" 题，合并为单个 multi-select 条目；
+ * Q17–20、Q25–30 为配对题，转为 multiple-choice（options 为配对选项）。
+ */
+export const cam21Test1Listening: ListeningMockTest = {
+  id: 'cam21-test1-listening',
+  title: '剑21 Test 1 听力',
+  timeLimit: 2400,
+  parts: [
+    {
+      title: 'Part 1：Oyster Bay Sailing Club',
+      audio: 'mock/cam21-test1-listening-part1.mp3',
+      questions: [
+        { id: 'Q1', type: 'fill-blank', question: 'Taster day: small groups (max ____ people)', answer: '10' },
+        { id: 'Q2', type: 'fill-blank', question: 'Level 1: basic theory e.g. understanding the ____ and tides', answer: 'weather' },
+        { id: 'Q3', type: 'fill-blank', question: 'Level 1: basic sailing skills including ____ information', answer: 'safety' },
+        { id: 'Q4', type: 'fill-blank', question: 'Level 1: ____ available for club members', answer: 'discount' },
+        { id: 'Q5', type: 'fill-blank', question: 'Level 1: all inclusive (plus a useful ____)', answer: 'dictionary' },
+        { id: 'Q6', type: 'fill-blank', question: 'Level 1: a ____ at the end of the course for all participants', answer: 'certificate' },
+        { id: 'Q7', type: 'fill-blank', question: 'Bring suitable clothing, a ____ and toiletries (e.g. shampoo).', answer: 'towel' },
+        { id: 'Q8', type: 'fill-blank', question: 'There is a ____ at the club.', answer: 'café' },
+        { id: 'Q9', type: 'fill-blank', question: 'Online training ____ are recommended.', answer: 'videos' },
+        { id: 'Q10', type: 'fill-blank', question: '____ are available for course participants.', answer: 'lockers' },
+      ],
+    },
+    {
+      title: 'Part 2：Working as a makeup trainee',
+      audio: 'mock/cam21-test1-listening-part2.mp3',
+      questions: [
+        { id: 'Q11', type: 'multiple-choice', question: 'What should trainees always expect to get when working on low budget short films?', options: ['A travel expenses', 'B a minimum wage', 'C meals'], answer: 0 },
+        { id: 'Q12', type: 'multiple-choice', question: 'According to the speaker, on big budget films trainees may get experience of', options: ['A makeup for special effects.', 'B working with different ethnicities.', 'C creating a variety of hair styles.'], answer: 1 },
+        { id: 'Q13', type: 'multiple-choice', question: 'The speaker says a problem for makeup artists is', options: ['A dealing with difficult directors.', 'B being shouted at by their supervisor.', 'C waiting around for hours doing nothing.'], answer: 0 },
+        { id: 'Q14', type: 'multiple-choice', question: 'How did the speaker feel when she met famous actors for the first time?', options: ['A very shy', 'B very proud', 'C very disappointed'], answer: 0 },
+        { id: 'Q15', type: 'multiple-choice', question: 'What advice does the speaker give about makeup kits?', options: ['A Always carry a basic kit with you.', 'B Only buy the best products for a makeup kit.', 'C Ask other makeup artists to check your kit.'], answer: 0 },
+        { id: 'Q16', type: 'multiple-choice', question: 'What advice does the speaker give about creating a portfolio?', options: ['A Keep print and digital photos.', 'B Only include a small selection of photos.', 'C Get permission to use photos.'], answer: 2 },
+        { id: 'Q17', type: 'multiple-choice', question: 'Prepping an actor — what ability is required?', options: ['A being well-organised', 'B being flexible', 'C working quickly'], answer: 2 },
+        { id: 'Q18', type: 'multiple-choice', question: 'Continuity — what ability is required?', options: ['A being well-organised', 'B being flexible', 'C working quickly'], answer: 0 },
+        { id: 'Q19', type: 'multiple-choice', question: 'General — what ability is required?', options: ['A being well-organised', 'B being flexible', 'C working quickly'], answer: 1 },
+        { id: 'Q20', type: 'multiple-choice', question: 'Applying makeup — what ability is required?', options: ['A being well-organised', 'B being flexible', 'C working quickly'], answer: 2 },
+      ],
+    },
+    {
+      title: 'Part 3：Ocean biodiversity',
+      audio: 'mock/cam21-test1-listening-part3.mp3',
+      questions: [
+        { id: 'Q21-22', type: 'multi-select', question: 'Which TWO features of the lecture on ocean biodiversity had the greatest impact on the students? (Choose TWO letters, A–E)', options: ['A the references to local problems', 'B the broad focus of the examples', 'C the practical suggestions for solutions', 'D the type of issues discussed', 'E the implications for government policy'], answer: [1, 3] },
+        { id: 'Q23-24', type: 'multi-select', question: 'Which TWO details about the research project particularly impressed the students? (Choose TWO letters, A–E)', options: ['A the team\'s previous successes', 'B its wide geographical scale', 'C the use of new technology', 'D the extensive statistical evidence', 'E the large range of specialists involved'], answer: [2, 4] },
+        { id: 'Q25', type: 'multiple-choice', question: 'Article on invasive lionfish', options: ['A This is aimed at a very specialist audience.', 'B This is now rather outdated.', 'C This was an effective description of a new danger.', 'D This suggests possible ways to improve the situation.', 'E This does not give a balanced account.', 'F This is too predictable to be useful.', 'G This gives insufficient evidence for its claims.', 'H This gives a clear explanation of the problems.'], answer: 6 },
+        { id: 'Q26', type: 'multiple-choice', question: 'Documentary on microplastics', options: ['A This is aimed at a very specialist audience.', 'B This is now rather outdated.', 'C This was an effective description of a new danger.', 'D This suggests possible ways to improve the situation.', 'E This does not give a balanced account.', 'F This is too predictable to be useful.', 'G This gives insufficient evidence for its claims.', 'H This gives a clear explanation of the problems.'], answer: 1 },
+        { id: 'Q27', type: 'multiple-choice', question: 'Podcast on ocean pollution', options: ['A This is aimed at a very specialist audience.', 'B This is now rather outdated.', 'C This was an effective description of a new danger.', 'D This suggests possible ways to improve the situation.', 'E This does not give a balanced account.', 'F This is too predictable to be useful.', 'G This gives insufficient evidence for its claims.', 'H This gives a clear explanation of the problems.'], answer: 5 },
+        { id: 'Q28', type: 'multiple-choice', question: 'Book on coastal ecosystems', options: ['A This is aimed at a very specialist audience.', 'B This is now rather outdated.', 'C This was an effective description of a new danger.', 'D This suggests possible ways to improve the situation.', 'E This does not give a balanced account.', 'F This is too predictable to be useful.', 'G This gives insufficient evidence for its claims.', 'H This gives a clear explanation of the problems.'], answer: 7 },
+        { id: 'Q29', type: 'multiple-choice', question: 'Article on metal toxicity', options: ['A This is aimed at a very specialist audience.', 'B This is now rather outdated.', 'C This was an effective description of a new danger.', 'D This suggests possible ways to improve the situation.', 'E This does not give a balanced account.', 'F This is too predictable to be useful.', 'G This gives insufficient evidence for its claims.', 'H This gives a clear explanation of the problems.'], answer: 0 },
+        { id: 'Q30', type: 'multiple-choice', question: 'Podcast on floating marine cities', options: ['A This is aimed at a very specialist audience.', 'B This is now rather outdated.', 'C This was an effective description of a new danger.', 'D This suggests possible ways to improve the situation.', 'E This does not give a balanced account.', 'F This is too predictable to be useful.', 'G This gives insufficient evidence for its claims.', 'H This gives a clear explanation of the problems.'], answer: 4 },
+      ],
+    },
+    {
+      title: 'Part 4：Sources of rubber',
+      audio: 'mock/cam21-test1-listening-part4.mp3',
+      questions: [
+        { id: 'Q31', type: 'fill-blank', question: 'Three resources which are essential for industrial civilisation: ____', answer: 'metal' },
+        { id: 'Q32', type: 'fill-blank', question: 'The supply is limited because the growth of the tree is ____', answer: 'slow' },
+        { id: 'Q33', type: 'fill-blank', question: 'production cannot easily be adjusted because of increasing or decreasing ____', answer: 'demand' },
+        { id: 'Q34', type: 'fill-blank', question: 'the tree only grows near the ____', answer: 'equator' },
+        { id: 'Q35', type: 'fill-blank', question: 'it is very difficult to ____ rubber after production.', answer: 'recycle' },
+        { id: 'Q36', type: 'fill-blank', question: 'lack of genetic diversity, leading to danger of disease caused by a ____', answer: 'fungus' },
+        { id: 'Q37', type: 'fill-blank', question: 'extreme ____ events.', answer: 'weather' },
+        { id: 'Q38', type: 'fill-blank', question: 'Synthetic rubber is less ____ than natural rubber', answer: 'strong' },
+        { id: 'Q39', type: 'fill-blank', question: 'A wild flower (a type of dandelion) has rubber in its ____.', answer: 'roots' },
+        { id: 'Q40', type: 'fill-blank', question: 'It can be grown in many locations and does not require good ____.', answer: 'soil' },
+      ],
+    },
+  ],
+}
