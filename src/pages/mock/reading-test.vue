@@ -105,26 +105,29 @@ function highlightedPara(para: string, pi: number): string {
 }
 
 function handleSelect(pi: number) {
-  const sel = window.getSelection()
-  if (!sel || sel.isCollapsed || !sel.toString().trim()) {
-    selPopup.value = null
-    return
-  }
-  const text = sel.toString().trim()
-  // 只处理文章区内的选中
-  const anchorEl = sel.anchorNode?.parentElement
-  if (!anchorEl?.closest('article[data-passage]')) {
-    selPopup.value = null
-    return
-  }
-  const rect = sel.getRangeAt(0).getBoundingClientRect()
-  selPopup.value = {
-    x: rect.left + rect.width / 2,
-    y: rect.top - 8,
-    text,
-  }
-  // 记住当前 passage
-  ;(selPopup.value as any).pi = pi
+  // 延迟一帧，确保浏览器完成选中
+  setTimeout(() => {
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+      selPopup.value = null
+      return
+    }
+    const text = sel.toString().trim()
+    // 只处理文章区内的选中
+    const anchorEl = sel.anchorNode?.parentElement
+    if (!anchorEl?.closest('[data-passage]')) {
+      selPopup.value = null
+      return
+    }
+    const rect = sel.getRangeAt(0).getBoundingClientRect()
+    selPopup.value = {
+      x: rect.left + rect.width / 2,
+      y: rect.top - 8,
+      text,
+    }
+    // 记住当前 passage
+    ;(selPopup.value as any).pi = pi
+  }, 10)
 }
 
 function addHighlight() {
@@ -217,6 +220,7 @@ function handleMarkClick(e: MouseEvent) {
           data-passage
           class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:min-h-0 lg:overflow-y-auto select-text"
           @mouseup="handleSelect(pi)"
+          @touchend="handleSelect(pi)"
         >
           <h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
             Passage {{ pi + 1 }}：{{ p.title }}
@@ -363,7 +367,7 @@ function handleMarkClick(e: MouseEvent) {
           ✕ 关闭
         </button>
       </div>
-      <div class="flex-1 overflow-y-auto px-4 py-4">
+      <div class="flex-1 overflow-y-auto px-4 py-4" data-passage @mouseup="handleSelect(activePassage)" @touchend="handleSelect(activePassage)">
         <div class="space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
           <p v-for="(para, i) in test.passages[activePassage].passage.split('\n\n')" :key="i" v-html="highlightedPara(para, activePassage)" @click="handleMarkClick" />
         </div>
