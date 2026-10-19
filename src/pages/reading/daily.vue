@@ -169,7 +169,7 @@ function paragraphs(passage: string): string[] {
         <section v-if="myVocabReading" class="mb-8">
           <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">
             📖 词汇阅读
-            <span class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">基于你前天学过的单词</span>
+            <span class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">基于你昨天学过的单词</span>
           </h3>
           <article class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <h4 class="mb-3 text-xl font-bold text-gray-900 dark:text-white">
