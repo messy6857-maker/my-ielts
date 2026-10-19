@@ -1,0 +1,235 @@
+{
+  "date": "2026-10-19",
+  "newsReadings": [
+    {
+      "title": "A Quiet Hall in the Forbidden City",
+      "basedOn": [],
+      "source": "ad-hoc-news.de（故宫博物院公告）",
+      "passage": "The Palace Museum in Beijing announced that Wuying Hall, one of the historic buildings in the Forbidden City, will close to visitors starting October 19, 2026. The museum did not say when the hall will open again.\n\nWuying Hall, which means \"Hall of Military Prowess,\" was built hundreds of years ago during the Ming Dynasty. It is part of the Imperial Palaces of the Ming and Qing Dynasties, a site on UNESCO's World Heritage List since 1987.\n\nThe museum said the closure is for the protection of the old building, the care of its collections, and the improvement of its displays. Workers will repair the wooden structure and update the exhibition inside the hall.\n\nVisitors can still visit other parts of the Forbidden City. The museum advises travelers to check the latest notices before their trip, as some halls may have different opening hours.\n\nThe Forbidden City was built between 1406 and 1420 and was home to 24 emperors. Today it is one of the most visited museums in the world, welcoming millions of visitors every year.",
+      "notes": [
+        {
+          "word": "palace",
+          "pos": "n.",
+          "meaning": "宫殿"
+        },
+        {
+          "word": "dynasty",
+          "pos": "n.",
+          "meaning": "朝代"
+        },
+        {
+          "word": "heritage",
+          "pos": "n.",
+          "meaning": "遗产"
+        },
+        {
+          "word": "emperor",
+          "pos": "n.",
+          "meaning": "皇帝"
+        },
+        {
+          "word": "collection",
+          "pos": "n.",
+          "meaning": "收藏品"
+        },
+        {
+          "word": "exhibition",
+          "pos": "n.",
+          "meaning": "展览"
+        },
+        {
+          "word": "repair",
+          "pos": "v.",
+          "meaning": "修理"
+        },
+        {
+          "word": "structure",
+          "pos": "n.",
+          "meaning": "结构"
+        }
+      ],
+      "questions": [
+        {
+          "q": "Why will Wuying Hall close?",
+          "options": [
+            "To protect the old building and improve its displays",
+            "To build a new shopping mall",
+            "Because few people visit it",
+            "To make a movie"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "When was the Forbidden City built?",
+          "options": [
+            "1406–1420",
+            "1906–1920",
+            "1987–1997",
+            "2008–2018"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "Can visitors still visit the Forbidden City?",
+          "options": [
+            "Yes, other parts remain open",
+            "No, the whole palace is closed",
+            "Only at night",
+            "Only with an emperor"
+          ],
+          "answer": 0
+        }
+      ]
+    },
+    {
+      "title": "Typhoon Season: Staying Safe in Strong Winds",
+      "basedOn": [],
+      "source": "中廣新聞網《10分鐘早報》(YouTube)",
+      "passage": "October is typhoon season in East Asia. This week, a strong typhoon is moving toward Taiwan, bringing heavy rain and powerful winds. Weather experts say people should prepare for the storm during the holiday.\n\nA typhoon is a huge storm that forms over warm ocean water. When it reaches land, it can break trees, damage houses, and cause floods. In the past, strong typhoons have forced schools to close and flights to stop.\n\nTo stay safe, experts give some simple advice. First, keep enough food and drinking water at home for two or three days. Second, stay away from windows during the storm, and do not go outside when the wind is strong. Third, charge your phone and flashlight before the power goes out.\n\nAfter the typhoon passes, be careful of fallen trees and broken electric wires on the road. Do not touch the wires; call the police or the power company instead.\n\nTyphoons are a natural part of life in this region. With good preparation, people can stay safe and return to normal life quickly.",
+      "notes": [
+        {
+          "word": "typhoon",
+          "pos": "n.",
+          "meaning": "台风"
+        },
+        {
+          "word": "expert",
+          "pos": "n.",
+          "meaning": "专家"
+        },
+        {
+          "word": "flood",
+          "pos": "n.",
+          "meaning": "洪水"
+        },
+        {
+          "word": "prepare",
+          "pos": "v.",
+          "meaning": "准备"
+        },
+        {
+          "word": "flashlight",
+          "pos": "n.",
+          "meaning": "手电筒"
+        },
+        {
+          "word": "wire",
+          "pos": "n.",
+          "meaning": "电线；金属丝"
+        },
+        {
+          "word": "region",
+          "pos": "n.",
+          "meaning": "地区"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What should people keep at home before a typhoon?",
+          "options": [
+            "Enough food and drinking water",
+            "Fireworks and candles only",
+            "A new car",
+            "Many books"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "What should you NOT do during the storm?",
+          "options": [
+            "Charge your phone",
+            "Stay away from windows",
+            "Go outside when the wind is strong",
+            "Keep food at home"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "What should you do if you see broken electric wires?",
+          "options": [
+            "Touch them to check",
+            "Do not touch them; call the police or power company",
+            "Take them home",
+            "Ignore them and walk on"
+          ],
+          "answer": 1
+        }
+      ]
+    },
+    {
+      "title": "AI Takes the Stage in Berlin",
+      "basedOn": [],
+      "source": "21经济网《财经日历》",
+      "passage": "This week, the world's attention turns to Berlin, Germany, where chip company NVIDIA holds its GTC technology conference. Company leader Jensen Huang will give an important speech on October 21.\n\nNVIDIA is famous for making the powerful chips that train artificial intelligence (AI). These chips help computers learn languages, recognize pictures, and even drive cars. In recent years, the need for AI chips has grown very fast around the world.\n\nAt the Berlin event, the company is expected to share its newest chip designs and talk about working with German companies on AI computing power. Germany's leader is also expected to meet Huang to discuss how the two sides can work together.\n\nAI technology is changing many jobs and daily life. From hospitals to factories, more places are using AI to work faster and better. But experts also warn that countries need to think carefully about how to use AI safely.\n\nFor students learning English today, AI is not just news — it may become part of their future work.",
+      "notes": [
+        {
+          "word": "conference",
+          "pos": "n.",
+          "meaning": "会议；大会"
+        },
+        {
+          "word": "chip",
+          "pos": "n.",
+          "meaning": "芯片"
+        },
+        {
+          "word": "artificial intelligence",
+          "pos": "n.",
+          "meaning": "人工智能"
+        },
+        {
+          "word": "recognize",
+          "pos": "v.",
+          "meaning": "认出；识别"
+        },
+        {
+          "word": "computing power",
+          "pos": "n.",
+          "meaning": "算力"
+        },
+        {
+          "word": "discuss",
+          "pos": "v.",
+          "meaning": "讨论"
+        },
+        {
+          "word": "warn",
+          "pos": "v.",
+          "meaning": "警告"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What is NVIDIA famous for?",
+          "options": [
+            "Making powerful chips for AI",
+            "Selling clothes",
+            "Building houses",
+            "Growing food"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "When will Jensen Huang give his speech?",
+          "options": [
+            "October 21",
+            "October 1",
+            "November 21",
+            "December 25"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "What do experts warn about?",
+          "options": [
+            "Countries need to use AI carefully and safely",
+            "AI will disappear soon",
+            "Chips are too cheap",
+            "Berlin is too cold"
+          ],
+          "answer": 0
+        }
+      ]
+    }
+  ]
+}
