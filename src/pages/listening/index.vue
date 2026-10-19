@@ -28,6 +28,14 @@ const scoreTable = [
     <div class="mb-4">
       <p>了解雅思听力，以及考试中的一些基本原则、技巧</p>
       <br>
+      <button
+        type="button"
+        class="rounded-lg bg-purple-700 px-4 py-1.5 text-sm font-medium text-white dark:bg-purple-600 hover:bg-purple-800"
+        @click="$router.push('/mock/listening-test')"
+      >
+        ⏱ 限时模考
+      </button>
+      <br><br>
       <p>评分表</p>
       <div class="overflow-x-auto rounded-lg">
       <table class="w-full min-w-[480px] text-center text-sm text-gray-500 dark:text-gray-400">
