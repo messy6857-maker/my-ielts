@@ -128,11 +128,11 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
       </button>
     </div>
 
-    <!-- 题目区：桌面端左右分栏（左文章右题目），手机端上下堆叠 -->
+    <!-- 题目区：桌面端左右分栏各自独立滚动，手机端上下堆叠 -->
     <div v-for="(p, pi) in test.passages" :key="pi" v-show="submitted || activePassage === pi" class="mb-8">
-      <div class="grid gap-6 lg:grid-cols-2">
-        <!-- 左：文章 -->
-        <article class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+      <div class="grid gap-6 lg:grid-cols-2 lg:h-[calc(100vh-12rem)]">
+        <!-- 左：文章（独立滚动） -->
+        <article class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:overflow-y-auto">
           <h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
             Passage {{ pi + 1 }}：{{ p.title }}
           </h3>
@@ -143,8 +143,8 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
           </div>
         </article>
 
-        <!-- 右：题目 -->
-        <div class="space-y-4">
+        <!-- 右：题目（独立滚动） -->
+        <div class="space-y-4 lg:overflow-y-auto lg:pr-2">
         <div
           v-for="q in p.questions"
           :key="q.id"
