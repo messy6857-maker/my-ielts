@@ -1,43 +1,49 @@
 <script setup lang="ts">
-import { mockTests } from './registry'
+import { mockTestList, loadMockTest } from './registry'
+import type { MockTestPair } from './registry'
 import { bandScore, formatCountdown, isCorrect, multiSelectScore } from './types'
 import type { MockQuestion } from './types'
 import { useRouter, useRoute } from 'vue-router'
+import { saveMockRecord } from '~/composables/useMockHistory'
 
 const router = useRouter()
 const route = useRoute()
 const testId = computed(() => (route.query.test as string) || 'cam21-test1')
-const testPair = computed(() => mockTests.find(t => t.id === testId.value) ?? mockTests[0])
-const test = computed(() => testPair.value.listening)
-const timeLeft = ref(test.value.timeLimit)
+const testPair = ref<MockTestPair | null>(null)
+const test = computed(() => testPair.value?.listening)
+const loading = ref(true)
+const timeLeft = ref(0)
 const answers = ref<Record<string, string>>({})
 const submitted = ref(false)
 const activePart = ref(0)
 const audioEl = ref<HTMLAudioElement | null>(null)
 let timer: ReturnType<typeof setInterval> | null = null
 
-// 切换套题时重置
-watch(testId, () => {
+// 异步加载选中的套题（按需加载，不一次全载入）
+async function loadTest() {
+  loading.value = true
   if (timer)
     clearInterval(timer)
-  timeLeft.value = test.value.timeLimit
+  audioEl.value?.pause()
+  testPair.value = await loadMockTest(testId.value)
+  timeLeft.value = testPair.value.listening.timeLimit
   answers.value = {}
   submitted.value = false
   activePart.value = 0
-  audioEl.value?.pause()
+  loading.value = false
   timer = setInterval(() => {
     timeLeft.value--
     if (timeLeft.value <= 0)
       submit()
   }, 1000)
-})
+}
 
-onMounted(() => {
-  timer = setInterval(() => {
-    timeLeft.value--
-    if (timeLeft.value <= 0)
-      submit()
-  }, 1000)
+onMounted(loadTest)
+watch(testId, loadTest)
+
+onUnmounted(() => {
+  if (timer)
+    clearInterval(timer)
 })
 
 onUnmounted(() => {
@@ -52,10 +58,21 @@ function submit() {
   if (timer)
     clearInterval(timer)
   audioEl.value?.pause()
+  // 保存做题记录
+  const qs = allQuestions.value
+  const total = qs.reduce((s, q) => s + (q.type === 'multi-select' && Array.isArray(q.answer) ? q.answer.length : 1), 0)
+  saveMockRecord({
+    id: testId.value,
+    label: testPair.value?.label ?? testId.value,
+    kind: 'listening',
+    score: correctCount.value,
+    total,
+    band: band.value,
+  })
 }
 
 const allQuestions = computed<MockQuestion[]>(() =>
-  test.value.parts.flatMap(p => p.questions),
+  test.value?.parts.flatMap(p => p.questions) ?? [],
 )
 
 const correctCount = computed(() => {
@@ -105,6 +122,10 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
 
 <template>
   <div class="mx-auto max-w-5xl px-4 pt-6 2xl:px-0">
+    <div v-if="loading" class="py-20 text-center text-gray-500">
+      加载中…
+    </div>
+    <template v-else-if="test">
     <div class="mb-6 flex items-center justify-between">
       <div class="flex items-center gap-3">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
@@ -115,7 +136,7 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
           class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700"
           @change="router.push({ path: '/mock/listening-test', query: { test: ($event.target as HTMLSelectElement).value } })"
         >
-          <option v-for="t in mockTests" :key="t.id" :value="t.id">
+          <option v-for="t in mockTestList" :key="t.id" :value="t.id">
             {{ t.label }}
           </option>
         </select>
@@ -259,7 +280,7 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
           />
 
           <p v-if="submitted && questionStatus(q) !== 'correct'" class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            正确答案：{{ q.type === 'fill-blank' || q.type === 'map-label' ? q.answer : q.options?.[q.answer as number] }}
+            正确答案：{{ q.type === 'fill-blank' ? (Array.isArray(q.answer) ? q.answer.join(' / ') : q.answer) : q.type === 'map-label' ? q.answer : q.options?.[q.answer as number] }}
           </p>
         </div>
       </div>
@@ -273,6 +294,14 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
       >
         ← 返回听力
       </button>
+      <button
+        type="button"
+        class="rounded-lg border border-gray-300 px-6 py-2 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+        @click="router.push('/mock/history')"
+      >
+        📊 做题记录
+      </button>
     </div>
+    </template>
   </div>
 </template>

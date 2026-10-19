@@ -1,15 +1,18 @@
 <script setup lang="ts">
-import { mockTests } from './registry'
+import { mockTestList, loadMockTest } from './registry'
+import type { MockTestPair } from './registry'
 import { bandScore, formatCountdown, isCorrect, multiSelectScore } from './types'
 import type { MockQuestion } from './types'
 import { useRouter } from 'vue-router'
+import { saveMockRecord } from '~/composables/useMockHistory'
 
 const router = useRouter()
 const route = useRoute()
 const testId = computed(() => (route.query.test as string) || 'cam21-test1')
-const testPair = computed(() => mockTests.find(t => t.id === testId.value) ?? mockTests[0])
-const test = computed(() => testPair.value.reading)
-const timeLeft = ref(test.value.timeLimit)
+const testPair = ref<MockTestPair | null>(null)
+const test = computed(() => testPair.value?.reading)
+const loading = ref(true)
+const timeLeft = ref(0)
 const answers = ref<Record<string, string>>({})
 const submitted = ref(false)
 const activePassage = ref(0)
@@ -19,47 +22,54 @@ const highlights = ref<Map<number, string[]>>(new Map())
 const selPopup = ref<{ x: number, y: number, text: string } | null>(null)
 let timer: ReturnType<typeof setInterval> | null = null
 
-// 切换套题时重置
-watch(testId, () => {
-  if (timer)
-    clearInterval(timer)
-  timeLeft.value = test.value.timeLimit
-  answers.value = {}
-  submitted.value = false
-  activePassage.value = 0
-  showPassageModal.value = false
-  highlights.value = new Map()
-  selPopup.value = null
-  timer = setInterval(() => {
-    timeLeft.value--
-    if (timeLeft.value <= 0)
-      submit()
-  }, 1000)
-})
-
-onMounted(() => {
-  timer = setInterval(() => {
-    timeLeft.value--
-    if (timeLeft.value <= 0)
-      submit()
-  }, 1000)
-})
-
-onUnmounted(() => {
-  if (timer)
-    clearInterval(timer)
-})
-
 function submit() {
   if (submitted.value)
     return
   submitted.value = true
   if (timer)
     clearInterval(timer)
+  // 保存做题记录
+  const total = allQuestions.value.reduce((s, q) => s + (q.type === 'multi-select' && Array.isArray(q.answer) ? q.answer.length : 1), 0)
+  saveMockRecord({
+    id: testId.value,
+    label: testPair.value?.label ?? testId.value,
+    kind: 'reading',
+    score: correctCount.value,
+    total,
+    band: band.value,
+  })
 }
 
+// 异步加载选中的套题（按需加载）
+async function loadTest() {
+  loading.value = true
+  if (timer)
+    clearInterval(timer)
+  testPair.value = await loadMockTest(testId.value)
+  timeLeft.value = testPair.value.reading.timeLimit
+  answers.value = {}
+  submitted.value = false
+  activePassage.value = 0
+  highlights.value = new Map()
+  selPopup.value = null
+  loading.value = false
+  timer = setInterval(() => {
+    timeLeft.value--
+    if (timeLeft.value <= 0)
+      submit()
+  }, 1000)
+}
+
+onMounted(loadTest)
+watch(testId, loadTest)
+
+onUnmounted(() => {
+  if (timer)
+    clearInterval(timer)
+})
+
 const allQuestions = computed<MockQuestion[]>(() =>
-  test.value.passages.flatMap(p => p.questions),
+  test.value?.passages.flatMap(p => p.questions) ?? [],
 )
 
 const correctCount = computed(() => {
@@ -188,6 +198,10 @@ function handleMarkClick(e: MouseEvent) {
 
 <template>
   <div class="mx-auto max-w-7xl px-4 pt-6 2xl:px-0">
+    <div v-if="loading" class="py-20 text-center text-gray-500">
+      加载中…
+    </div>
+    <template v-else-if="test">
     <!-- 顶栏：标题 + 计时器 -->
     <div class="mb-6 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -199,7 +213,7 @@ function handleMarkClick(e: MouseEvent) {
           class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700"
           @change="router.push({ path: '/mock/reading-test', query: { test: ($event.target as HTMLSelectElement).value } })"
         >
-          <option v-for="t in mockTests" :key="t.id" :value="t.id">
+          <option v-for="t in mockTestList" :key="t.id" :value="t.id">
             {{ t.label }}
           </option>
         </select>
@@ -272,6 +286,12 @@ function handleMarkClick(e: MouseEvent) {
           <div class="space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
             <p v-for="(para, i) in p.passage.split('\n\n')" :key="i" v-html="highlightedPara(para, pi)" @click="handleMarkClick" />
           </div>
+          <img
+            v-if="p.image"
+            :src="p.image"
+            :alt="`${p.title} 示意图`"
+            class="mt-4 max-w-full rounded-lg border border-gray-200 dark:border-gray-700"
+          />
         </article>
 
         <!-- 右：题目（独立滚动） -->
@@ -357,20 +377,27 @@ function handleMarkClick(e: MouseEvent) {
 
           <!-- 交卷后显示正确答案 -->
           <p v-if="submitted && questionStatus(q) !== 'correct'" class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            正确答案：{{ q.type === 'fill-blank' || q.type === 'map-label' ? q.answer : q.options?.[q.answer as number] }}
+            正确答案：{{ q.type === 'fill-blank' ? (Array.isArray(q.answer) ? q.answer.join(' / ') : q.answer) : q.type === 'map-label' ? q.answer : q.options?.[q.answer as number] }}
           </p>
         </div>
       </div>
       </div>
     </div>
 
-    <div class="pb-12 text-center">
+    <div class="space-x-3 pb-12 text-center">
       <button
         type="button"
         class="rounded-lg border border-gray-300 px-6 py-2 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
         @click="router.push('/reading')"
       >
         ← 返回阅读
+      </button>
+      <button
+        type="button"
+        class="rounded-lg border border-gray-300 px-6 py-2 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+        @click="router.push('/mock/history')"
+      >
+        📊 做题记录
       </button>
     </div>
 
@@ -426,8 +453,15 @@ function handleMarkClick(e: MouseEvent) {
         <div class="space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
           <p v-for="(para, i) in test.passages[activePassage].passage.split('\n\n')" :key="i" v-html="highlightedPara(para, activePassage)" @click="handleMarkClick" />
         </div>
+        <img
+          v-if="test.passages[activePassage].image"
+          :src="test.passages[activePassage].image"
+          :alt="`${test.passages[activePassage].title} 示意图`"
+          class="mt-4 max-w-full rounded-lg border border-gray-200 dark:border-gray-700"
+        />
       </div>
     </div>
+    </template>
   </div>
 </template>
 

@@ -1,0 +1,80 @@
+import type { ListeningMockTest } from './types'
+
+/**
+ * 剑桥雅思 21 Test 4 听力（40 题）
+ * 转录自 Cambridge IELTS 21 PDF，答案来自书后 answer key (p.123，高清图逐题核对)
+ *
+ * 注意：Q11/Q12、Q13/Q14 为 "Choose TWO letters" 题，answer 存为下标数组，前端多选计分。
+ * Q15–20（发言人→话题）、Q24–30（发展→观点）为配对题，保持原生"写字母"格式（map-label）。
+ */
+export const cam21Test4Listening: ListeningMockTest = {
+  id: 'cam21-test4-listening',
+  title: '剑21 Test 4 听力',
+  timeLimit: 2400,
+  parts: [
+    {
+      title: 'Part 1：Survey about shopping in Broadbeach',
+      audio: 'mock/cam21-test4-listening-part1.mp3',
+      questions: [
+        { id: 'Q1', type: 'fill-blank', question: 'Name: Martyn 1 ____', answer: 'leigh' },
+        { id: 'Q2', type: 'fill-blank', question: "Today's journey to Broadbeach town centre: used his 2 ____", answer: 'motorbike' },
+        { id: 'Q3', type: 'fill-blank', question: "Purpose of today's trip: has visited the 3 ____", answer: 'hairdresser' },
+        { id: 'Q4', type: 'fill-blank', question: 'looking for a new 4 ____', answer: 'suit' },
+        { id: 'Q5', type: 'fill-blank', question: 'collecting 5 ____ (after repair)', answer: 'laptop' },
+        { id: 'Q6', type: 'fill-blank', question: 'Preferred day for shopping: 6 ____', answer: 'monday' },
+        { id: 'Q7', type: 'fill-blank', question: 'Thinks there are too many places selling 7 ____', answer: 'coffee' },
+        { id: 'Q8', type: 'fill-blank', question: 'Would like more places to buy 8 ____', answer: 'books' },
+        { id: 'Q9', type: 'fill-blank', question: 'Likes the 9 ____ best', answer: 'plants' },
+        { id: 'Q10', type: 'fill-blank', question: 'Believes the 10 ____ is unnecessary', answer: 'cinema' },
+      ],
+    },
+    {
+      title: 'Part 2：Business exhibition',
+      audio: 'mock/cam21-test4-listening-part2.mp3',
+      image: 'mock/cam21-test4-part2-topics.png',
+      questions: [
+        { id: 'Q11-12', type: 'multi-select', question: 'In which TWO areas of the business exhibition did James Craig promote his company last year? (Choose TWO letters, A–E)', options: ['A the Digital Marketing Centre', 'B the TalkCon Zone', 'C the Breakout area', 'D the Business Village', 'E the Business Connections Zone'], answer: [2, 4] },
+        { id: 'Q13-14', type: 'multi-select', question: 'Which TWO facts are given about discounts on popular brands available to exhibitors? (Choose TWO letters, A–E)', options: ['A They are available to all members of exhibiting companies.', 'B They can be used for both food and clothing.', 'C They only apply if people spend at least £400.', 'D They can be used by family members.', 'E The percentage saved is always the same.'], answer: [0, 1] },
+        { id: 'Q15', type: 'map-label', question: 'Jim Clowrie', answer: 'C' },
+        { id: 'Q16', type: 'map-label', question: 'David France', answer: 'G' },
+        { id: 'Q17', type: 'map-label', question: 'Oliver Stanton', answer: 'D' },
+        { id: 'Q18', type: 'map-label', question: 'Francesca Heptonstall', answer: 'A' },
+        { id: 'Q19', type: 'map-label', question: 'Salman Khan', answer: 'F' },
+        { id: 'Q20', type: 'map-label', question: 'Annie Craven', answer: 'B' },
+      ],
+    },
+    {
+      title: 'Part 3：Presentation on houses of the future',
+      audio: 'mock/cam21-test4-listening-part3.mp3',
+      image: 'mock/cam21-test4-part3-opinions.png',
+      questions: [
+        { id: 'Q21', type: 'multiple-choice', question: 'Which aspect of their presentation are Mia and Leo both concerned about?', options: ['A meeting the deadline', 'B finding suitable examples', 'C including original ideas'], answer: 1 },
+        { id: 'Q22', type: 'multiple-choice', question: 'The students decide to focus their assignment on housing for', options: ['A family groups.', 'B old people.', 'C single people.'], answer: 0 },
+        { id: 'Q23', type: 'multiple-choice', question: 'The students agree that demand for accommodation in urban areas should be met by', options: ['A repurposing offices and factories.', 'B constructing tall buildings.', 'C developing creative ideas for smaller homes.'], answer: 1 },
+        { id: 'Q24', type: 'map-label', question: 'use of roof space for gardens', answer: 'B' },
+        { id: 'Q25', type: 'map-label', question: 'shared working spaces', answer: 'E' },
+        { id: 'Q26', type: 'map-label', question: 'moveable internal walls', answer: 'I' },
+        { id: 'Q27', type: 'map-label', question: 'smart mirrors in bathrooms', answer: 'A' },
+        { id: 'Q28', type: 'map-label', question: 'bike sheds with charging points', answer: 'D' },
+        { id: 'Q29', type: 'map-label', question: 'restriction of cars to certain areas', answer: 'H' },
+        { id: 'Q30', type: 'map-label', question: 'communal vegetable plots', answer: 'G' },
+      ],
+    },
+    {
+      title: 'Part 4：Music therapy for surgical patients',
+      audio: 'mock/cam21-test4-listening-part4.mp3',
+      questions: [
+        { id: 'Q31', type: 'fill-blank', question: 'Surgery impacts patients because they may experience discomfort or unwelcome changes to their 31 ____', answer: 'routine' },
+        { id: 'Q32', type: 'fill-blank', question: 'A study reviewed data from about 100 32 ____ and found that listening to music', answer: 'trials' },
+        { id: 'Q33', type: 'fill-blank', question: 'The patients in the study all listened to music with a 33 ____ effect.', answer: 'calming' },
+        { id: 'Q34', type: 'fill-blank', question: 'The music was mostly played through music 34 ____ .', answer: 'pillows' },
+        { id: 'Q35', type: 'fill-blank', question: 'Patients reported an absence or low levels of 35 ____ .', answer: 'anxiety' },
+        { id: 'Q36', type: 'fill-blank', question: "patients who were played music in hospital needed less 36 ____ than those who weren't played music.", answer: 'medication' },
+        { id: 'Q37', type: 'fill-blank', question: 'The best results were achieved when patients were played music while they were 37 ____ .', answer: 'awake' },
+        { id: 'Q38', type: 'fill-blank', question: 'playing music was effective because it served as a 38 ____ .', answer: 'distraction' },
+        { id: 'Q39', type: 'fill-blank', question: 'The researchers recommend playing either music or sounds from 39 ____ to all surgical patients.', answer: 'nature' },
+        { id: 'Q40', type: 'fill-blank', question: 'A future study will investigate the best 40 ____ for the music.', answer: 'volume' },
+      ],
+    },
+  ],
+}

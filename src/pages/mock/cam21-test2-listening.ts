@@ -1,0 +1,81 @@
+import type { ListeningMockTest } from './types'
+
+/**
+ * 剑桥雅思 21 Test 2 听力（40 题）
+ * 转录自 Cambridge IELTS 21 PDF (pp.32-37)，答案来自书后 answer key (p.119，高清图核对)
+ *
+ * 注意：
+ * - Q11-12 / Q13-14 / Q21-22 / Q23-24 / Q25-26 为 "Choose TWO letters, A-E" 题，
+ *   answer 存为下标数组（如 [1,4]），前端多选判分
+ * - Q15-20 为地图标注题（Melby Coal Mine，A-I），Q27-30 为流程图配对题（A-F），
+ *   保持原生"写字母"格式，type: 'map-label'，answer 存字母
+ * - Q27-30 流程图已裁出为 cam21-test2-part3-flowchart.png
+ */
+export const cam21Test2Listening: ListeningMockTest = {
+  id: 'cam21-test2-listening',
+  title: '剑21 Test 2 听力',
+  timeLimit: 2400,
+  parts: [
+    {
+      title: 'Part 1：One-day classes at Steynford College',
+      audio: 'mock/cam21-test2-listening-part1.mp3',
+      questions: [
+        { id: 'Q1', type: 'fill-blank', question: 'Vietnamese food course – Date: 1 .....................', answer: '13 January' },
+        { id: 'Q2', type: 'fill-blank', question: 'Bread making course – Cost: 2 £ .....................', answer: '48' },
+        { id: 'Q3', type: 'fill-blank', question: 'Bread making – Participants make white bread, sourdough and 3 .....................', answer: 'pizza' },
+        { id: 'Q4', type: 'fill-blank', question: 'Face massage – The teacher trained in 4 .....................', answer: 'India' },
+        { id: 'Q5', type: 'fill-blank', question: 'Face massage – Bring a 5 .....................', answer: 'mirror' },
+        { id: 'Q6', type: 'fill-blank', question: 'Candle making course – Date: 6 .....................', answer: '6 April' },
+        { id: 'Q7', type: 'fill-blank', question: 'Candle making – Only 7 ..................... ingredients are used.', answer: 'natural' },
+        { id: 'Q8', type: 'fill-blank', question: 'Silk painting course – Cost: 8 £ .....................', answer: '67.50' },
+        { id: 'Q9', type: 'fill-blank', question: 'Silk painting – Bring an apron or old 9 .....................', answer: 'shirt' },
+        { id: 'Q10', type: 'fill-blank', question: 'DIY for beginners – Learn how to use a drill, saw and 10 .....................', answer: 'hammer' },
+      ],
+    },
+    {
+      title: 'Part 2：Marsden Coastal Walk / Melby Heritage Walk / Melby Coal Mine',
+      audio: 'mock/cam21-test2-listening-part2.mp3',
+      image: 'mock/cam21-test2-part2-map.png',
+      questions: [
+        { id: 'Q11-12', type: 'multi-select', question: 'Which TWO pieces of advice are given about the Marsden Coastal Walk? (Choose TWO letters, A–E)', options: ['A Stop for lunch in an ancient town.', 'B Don\'t miss the ruins of a certain building.', 'C Catch a boat to the start of this walk.', 'D Be careful of the steep and rocky paths.', 'E Don\'t worry about getting lost.'], answer: [1, 4] },
+        { id: 'Q13-14', type: 'multi-select', question: 'Which TWO things are said about the Melby Heritage Walk? (Choose TWO letters, A–E)', options: ['A This walk is mostly downhill.', 'B The paths can get busy during the day.', 'C This is a circular walk.', 'D A tower stands on the site of an older structure.', 'E There are far-reaching views the whole way.'], answer: [2, 3] },
+        { id: 'Q15', type: 'map-label', question: 'Exhibition', answer: 'F' },
+        { id: 'Q16', type: 'map-label', question: 'Baths', answer: 'B' },
+        { id: 'Q17', type: 'map-label', question: 'Tools', answer: 'D' },
+        { id: 'Q18', type: 'map-label', question: 'Vehicles', answer: 'A' },
+        { id: 'Q19', type: 'map-label', question: 'Ponies', answer: 'H' },
+        { id: 'Q20', type: 'map-label', question: 'Education centre', answer: 'E' },
+      ],
+    },
+    {
+      title: 'Part 3：Food safety course discussion',
+      audio: 'mock/cam21-test2-listening-part3.mp3',
+      image: 'mock/cam21-test2-part3-flowchart.png',
+      questions: [
+        { id: 'Q21-22', type: 'multi-select', question: 'Which TWO facts in the sessions on food safety were new information for Nadia and Fergus? (Choose TWO letters, A–E)', options: ['A the amount of plastic in the ocean', 'B the number of diseases caused by contaminated food', 'C the amount of food that is wasted', 'D the number of people who are obese', 'E the result of treating animals with antibiotics'], answer: [1, 4] },
+        { id: 'Q23-24', type: 'multi-select', question: 'Which TWO features of a project aiming to prevent food fraud impressed Fergus? (Choose TWO letters, A–E)', options: ['A the new technology it used', 'B the publicity it received', 'C the use of multiple tests on food items', 'D the variety of dietary requirements included', 'E the way information was made widely accessible'], answer: [2, 3] },
+        { id: 'Q25-26', type: 'multi-select', question: 'Which TWO topics do both students recommend should be included in the course? (Choose TWO letters, A–E)', options: ['A sustainable fishing', 'B targeted nutrition', 'C global differences in consumption', 'D sustainable agriculture', 'E digital technology and food'], answer: [0, 2] },
+        { id: 'Q27', type: 'map-label', question: 'Student project – Initial aim', answer: 'C' },
+        { id: 'Q28', type: 'map-label', question: 'Student project – Literature review', answer: 'D' },
+        { id: 'Q29', type: 'map-label', question: 'Student project – Product development', answer: 'F' },
+        { id: 'Q30', type: 'map-label', question: 'Student project – Product production', answer: 'A' },
+      ],
+    },
+    {
+      title: 'Part 4：Challenges facing the cruise ship industry',
+      audio: 'mock/cam21-test2-listening-part4.mp3',
+      questions: [
+        { id: 'Q31', type: 'fill-blank', question: '31 ..................... is one of the worst problems.', answer: 'Pollution' },
+        { id: 'Q32', type: 'fill-blank', question: 'A tourist 32 ..................... is being introduced in some cities to reduce numbers, e.g. Barcelona.', answer: 'tax' },
+        { id: 'Q33', type: 'fill-blank', question: 'Bruges: many shops were only stocking 33 ..................... and souvenirs.', answer: 'chocolate' },
+        { id: 'Q34', type: 'fill-blank', question: 'Dubrovnik: limits the number of tourists by managing the 34 ..................... of cruise ship arrivals.', answer: 'timing' },
+        { id: 'Q35', type: 'fill-blank', question: 'There is an assumption about the 35 ..................... of cruises.', answer: 'cost' },
+        { id: 'Q36', type: 'fill-blank', question: 'People think there may be too many 36 ..................... .', answer: 'rules' },
+        { id: 'Q37', type: 'fill-blank', question: 'having a wide range of activities e.g. boxing, 37 ..................... and well-being programmes', answer: 'diving' },
+        { id: 'Q38', type: 'fill-blank', question: 'offering a diverse selection of food including 38 ..................... options', answer: 'vegan' },
+        { id: 'Q39', type: 'fill-blank', question: 'providing reliable 39 .....................', answer: 'wifi' },
+        { id: 'Q40', type: 'fill-blank', question: 'improving marketing on social media with high quality 40 .....................', answer: 'videos' },
+      ],
+    },
+  ],
+}

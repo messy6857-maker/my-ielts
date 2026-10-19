@@ -10,8 +10,8 @@ export interface MockQuestion {
   question: string
   /** 选择题选项；TFNG 为 ["True", "False", "Not Given"] */
   options?: string[]
-  /** 答案：单选为选项下标，填空为字符串（小写比较），多选为下标数组 */
-  answer: string | number | number[]
+  /** 答案：单选为选项下标，填空为字符串（小写比较，支持字符串数组多答案），多选为下标数组 */
+  answer: string | string[] | number | number[]
 }
 
 export interface ReadingPassage {
@@ -19,6 +19,8 @@ export interface ReadingPassage {
   /** 段落用 \n\n 分隔 */
   passage: string
   questions: MockQuestion[]
+  /** 可选：题目相关图片（如选项框、示意图） */
+  image?: string
 }
 
 export interface ReadingMockTest {
@@ -69,7 +71,10 @@ export function bandScore(correct: number): number {
 /** 判分：填空题忽略大小写和首尾空格；多选题用户答案为逗号分隔的下标 */
 export function isCorrect(q: MockQuestion, userAnswer: string): boolean {
   if (q.type === 'fill-blank') {
-    return userAnswer.trim().toLowerCase() === String(q.answer).trim().toLowerCase()
+    // 支持多答案：answer 可以是字符串或字符串数组
+    const answers = Array.isArray(q.answer) ? q.answer : [q.answer]
+    const user = userAnswer.trim().toLowerCase()
+    return answers.some(a => user === String(a).trim().toLowerCase())
   }
   if (q.type === 'map-label') {
     // 地图标注：字母不区分大小写
@@ -77,7 +82,7 @@ export function isCorrect(q: MockQuestion, userAnswer: string): boolean {
   }
   if (q.type === 'multi-select' && Array.isArray(q.answer)) {
     const userSet = new Set(userAnswer.split(',').filter(Boolean).map(s => Number(s)))
-    const ansSet = new Set(q.answer)
+    const ansSet = new Set(q.answer as number[])
     return userSet.size === ansSet.size && [...ansSet].every(a => userSet.has(a))
   }
   return userAnswer === String(q.answer)
@@ -88,7 +93,7 @@ export function multiSelectScore(q: MockQuestion, userAnswer: string): number {
   if (q.type !== 'multi-select' || !Array.isArray(q.answer))
     return isCorrect(q, userAnswer) ? 1 : 0
   const userSet = new Set(userAnswer.split(',').filter(Boolean).map(s => Number(s)))
-  const ansSet = new Set(q.answer)
+  const ansSet = new Set(q.answer as number[])
   let score = 0
   for (const a of userSet) {
     if (ansSet.has(a))
