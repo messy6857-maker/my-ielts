@@ -120,6 +120,25 @@ watch(selectedDate, () => {
 function paragraphs(passage: string): string[] {
   return passage.split('\n\n').map(p => p.trim()).filter(Boolean)
 }
+
+// 正文中的生词用注释同色高亮，一眼能看到
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+function highlightedParagraph(text: string, notes: WordNote[]): string {
+  if (!notes.length)
+    return text
+  // 按词长降序，避免短词先匹配长词的一部分
+  const sorted = [...notes].sort((a, b) => b.word.length - a.word.length)
+  let html = text
+  sorted.forEach((n) => {
+    const idx = notes.indexOf(n)
+    const color = textColors[idx % textColors.length]
+    const re = new RegExp(`\\b(${escapeRegExp(n.word)})\\b`, 'gi')
+    html = html.replace(re, `<span class="font-bold ${color}">$1</span>`)
+  })
+  return html
+}
 </script>
 
 <template>
@@ -185,9 +204,7 @@ function paragraphs(passage: string): string[] {
               </span>
             </div>
             <div class="mb-4 space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
-              <p v-for="(p, i) in paragraphs(myVocabReading.passage)" :key="i">
-                {{ p }}
-              </p>
+              <p v-for="(p, i) in paragraphs(myVocabReading.passage)" :key="i" v-html="highlightedParagraph(p, myVocabReading.notes)" />
             </div>
 
             <!-- 生词注释 -->
@@ -263,9 +280,7 @@ function paragraphs(passage: string): string[] {
               来源：{{ art.source }}
             </p>
             <div class="mb-4 space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
-              <p v-for="(p, i) in paragraphs(art.passage)" :key="i">
-                {{ p }}
-              </p>
+              <p v-for="(p, i) in paragraphs(art.passage)" :key="i" v-html="highlightedParagraph(p, art.notes)" />
             </div>
 
             <!-- 生词注释 -->
