@@ -2,13 +2,18 @@
 import { cam19Test1Reading } from './cam19-test1-reading'
 import { bandScore, formatCountdown, isCorrect, multiSelectScore } from './types'
 import type { MockQuestion } from './types'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const test = cam19Test1Reading
 const timeLeft = ref(test.timeLimit)
 const answers = ref<Record<string, string>>({})
 const submitted = ref(false)
 const activePassage = ref(0)
 const showPassageModal = ref(false)
+// 划词高亮：passageIndex -> 高亮词组列表
+const highlights = ref<Map<number, string[]>>(new Map())
+const selPopup = ref<{ x: number, y: number, text: string } | null>(null)
 let timer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
@@ -79,6 +84,82 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
   }
   return isCorrect(q, userAns) ? 'correct' : 'wrong'
 }
+
+// 划词高亮
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function highlightedPara(para: string, pi: number): string {
+  const words = highlights.value.get(pi) ?? []
+  if (!words.length)
+    return para
+  let html = para
+  // 按长度降序，避免短词先匹配
+  const sorted = [...words].sort((a, b) => b.length - a.length)
+  for (const w of sorted) {
+    const re = new RegExp(`(${escapeRegExp(w)})`, 'g')
+    html = html.replace(re, '<mark class="user-mark">$1</mark>')
+  }
+  return html
+}
+
+function handleSelect(pi: number) {
+  const sel = window.getSelection()
+  if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+    selPopup.value = null
+    return
+  }
+  const text = sel.toString().trim()
+  // 只处理文章区内的选中
+  const anchorEl = sel.anchorNode?.parentElement
+  if (!anchorEl?.closest('article[data-passage]')) {
+    selPopup.value = null
+    return
+  }
+  const rect = sel.getRangeAt(0).getBoundingClientRect()
+  selPopup.value = {
+    x: rect.left + rect.width / 2,
+    y: rect.top - 8,
+    text,
+  }
+  // 记住当前 passage
+  ;(selPopup.value as any).pi = pi
+}
+
+function addHighlight() {
+  if (!selPopup.value)
+    return
+  const pi = (selPopup.value as any).pi as number
+  const text = selPopup.value.text
+  const list = highlights.value.get(pi) ?? []
+  if (!list.includes(text)) {
+    list.push(text)
+    highlights.value.set(pi, list)
+  }
+  selPopup.value = null
+  window.getSelection()?.removeAllRanges()
+}
+
+function clearSelection() {
+  selPopup.value = null
+}
+
+// 点击已高亮的词取消高亮
+function handleMarkClick(e: MouseEvent) {
+  const target = e.target as HTMLElement
+  if (target.classList?.contains('user-mark')) {
+    const text = target.textContent ?? ''
+    // 从所有 passage 的高亮里移除（按文本匹配）
+    for (const [pi, list] of highlights.value.entries()) {
+      const idx = list.indexOf(text)
+      if (idx >= 0) {
+        list.splice(idx, 1)
+        highlights.value.set(pi, [...list])
+      }
+    }
+  }
+}
 </script>
 
 <template>
@@ -131,15 +212,17 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
     <!-- 题目区：桌面端左右分栏各自独立滚动，手机端上下堆叠 -->
     <div v-for="(p, pi) in test.passages" :key="pi" v-show="submitted || activePassage === pi" class="mb-8">
       <div class="grid gap-6 lg:grid-cols-2 lg:h-[calc(100vh-12rem)]">
-        <!-- 左：文章（独立滚动） -->
-        <article class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:min-h-0 lg:overflow-y-auto">
+        <!-- 左：文章（独立滚动，支持划词高亮） -->
+        <article
+          data-passage
+          class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:min-h-0 lg:overflow-y-auto select-text"
+          @mouseup="handleSelect(pi)"
+        >
           <h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
             Passage {{ pi + 1 }}：{{ p.title }}
           </h3>
           <div class="space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
-            <p v-for="(para, i) in p.passage.split('\n\n')" :key="i">
-              {{ para }}
-            </p>
+            <p v-for="(para, i) in p.passage.split('\n\n')" :key="i" v-html="highlightedPara(para, pi)" @click="handleMarkClick" />
           </div>
         </article>
 
@@ -226,10 +309,33 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
       <button
         type="button"
         class="rounded-lg border border-gray-300 px-6 py-2 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-        @click="$router.push('/reading')"
+        @click="router.push('/reading')"
       >
         ← 返回阅读
       </button>
+    </div>
+
+    <!-- 划词高亮弹窗 -->
+    <div
+      v-if="selPopup"
+      class="fixed z-50 -translate-x-1/2 -translate-y-full rounded-lg bg-gray-900 px-3 py-2 shadow-xl"
+      :style="{ left: selPopup.x + 'px', top: selPopup.y + 'px' }"
+    >
+      <div class="flex items-center gap-2">
+        <button
+          class="rounded bg-yellow-400 px-3 py-1 text-sm font-bold text-gray-900 hover:bg-yellow-300"
+          @click="addHighlight"
+        >
+          🖍 标记
+        </button>
+        <button
+          class="rounded px-2 py-1 text-sm text-gray-300 hover:text-white"
+          @click="clearSelection"
+        >
+          ✕
+        </button>
+      </div>
+      <div class="absolute left-1/2 top-full h-0 w-0 -translate-x-1/2 border-8 border-transparent border-t-gray-900" />
     </div>
 
     <!-- 手机端悬浮"原文"按钮 -->
@@ -259,11 +365,22 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
       </div>
       <div class="flex-1 overflow-y-auto px-4 py-4">
         <div class="space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
-          <p v-for="(para, i) in test.passages[activePassage].passage.split('\n\n')" :key="i">
-            {{ para }}
-          </p>
+          <p v-for="(para, i) in test.passages[activePassage].passage.split('\n\n')" :key="i" v-html="highlightedPara(para, activePassage)" @click="handleMarkClick" />
         </div>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.user-mark {
+  background-color: #fef08a;
+  border-radius: 2px;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.dark .user-mark {
+  background-color: #a16207;
+  color: #fefce8;
+}
+</style>

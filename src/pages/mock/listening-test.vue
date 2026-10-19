@@ -2,7 +2,9 @@
 import { cam19Test1Listening } from './cam19-test1-listening'
 import { bandScore, formatCountdown, isCorrect, multiSelectScore } from './types'
 import type { MockQuestion } from './types'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const test = cam19Test1Listening
 const timeLeft = ref(test.timeLimit)
 const answers = ref<Record<string, string>>({})
@@ -221,7 +223,7 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
       <button
         type="button"
         class="rounded-lg border border-gray-300 px-6 py-2 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-        @click="$router.push('/listening')"
+        @click="router.push('/listening')"
       >
         ← 返回听力
       </button>
