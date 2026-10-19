@@ -8,6 +8,7 @@ const timeLeft = ref(test.timeLimit)
 const answers = ref<Record<string, string>>({})
 const submitted = ref(false)
 const activePassage = ref(0)
+const showPassageModal = ref(false)
 let timer: ReturnType<typeof setInterval> | null = null
 
 onMounted(() => {
@@ -81,7 +82,7 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl px-4 pt-6 2xl:px-0">
+  <div class="mx-auto max-w-7xl px-4 pt-6 2xl:px-0">
     <!-- 顶栏：标题 + 计时器 -->
     <div class="mb-6 flex items-center justify-between">
       <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
@@ -127,20 +128,23 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
       </button>
     </div>
 
-    <!-- 题目区 -->
+    <!-- 题目区：桌面端左右分栏（左文章右题目），手机端上下堆叠 -->
     <div v-for="(p, pi) in test.passages" :key="pi" v-show="submitted || activePassage === pi" class="mb-8">
-      <article class="mb-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
-          Passage {{ pi + 1 }}：{{ p.title }}
-        </h3>
-        <div class="space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
-          <p v-for="(para, i) in p.passage.split('\n\n')" :key="i">
-            {{ para }}
-          </p>
-        </div>
-      </article>
+      <div class="grid gap-6 lg:grid-cols-2">
+        <!-- 左：文章 -->
+        <article class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+          <h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
+            Passage {{ pi + 1 }}：{{ p.title }}
+          </h3>
+          <div class="space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
+            <p v-for="(para, i) in p.passage.split('\n\n')" :key="i">
+              {{ para }}
+            </p>
+          </div>
+        </article>
 
-      <div class="space-y-4">
+        <!-- 右：题目 -->
+        <div class="space-y-4">
         <div
           v-for="q in p.questions"
           :key="q.id"
@@ -215,6 +219,7 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
           </p>
         </div>
       </div>
+      </div>
     </div>
 
     <div class="pb-12 text-center">
@@ -225,6 +230,40 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
       >
         ← 返回阅读
       </button>
+    </div>
+
+    <!-- 手机端悬浮"原文"按钮 -->
+    <button
+      v-if="!submitted"
+      class="fixed bottom-6 right-6 z-40 rounded-full bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg lg:hidden hover:bg-blue-700"
+      @click="showPassageModal = true"
+    >
+      📖 原文
+    </button>
+
+    <!-- 手机端原文弹窗 -->
+    <div
+      v-if="showPassageModal"
+      class="fixed inset-0 z-50 flex flex-col bg-white dark:bg-gray-900 lg:hidden"
+    >
+      <div class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+        <h3 class="font-bold text-gray-900 dark:text-white">
+          Passage {{ activePassage + 1 }}：{{ test.passages[activePassage].title }}
+        </h3>
+        <button
+          class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-bold dark:bg-gray-700"
+          @click="showPassageModal = false"
+        >
+          ✕ 关闭
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto px-4 py-4">
+        <div class="space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
+          <p v-for="(para, i) in test.passages[activePassage].passage.split('\n\n')" :key="i">
+            {{ para }}
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
