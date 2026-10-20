@@ -13,6 +13,7 @@ const testPair = ref<MockTestPair | null>(null)
 const test = computed(() => testPair.value?.reading)
 const loading = ref(true)
 const loadError = ref(false)
+const started = ref(false) // 点"开始测试"后才计时
 const timeLeft = ref(0)
 const answers = ref<Record<string, string>>({})
 const submitted = ref(false)
@@ -55,17 +56,12 @@ async function loadTest() {
     if (seq !== loadSeq)
       return // 已被更新的加载取代
     testPair.value = pair
-    timeLeft.value = pair.reading.timeLimit
     answers.value = {}
     submitted.value = false
     activePassage.value = 0
     highlights.value = new Map()
     selPopup.value = null
-    timer = setInterval(() => {
-      timeLeft.value--
-      if (timeLeft.value <= 0)
-        submit()
-    }, 1000)
+    started.value = false
   }
   catch {
     if (seq !== loadSeq)
@@ -78,6 +74,26 @@ async function loadTest() {
   }
 }
 
+// 点"开始测试"才重置状态并开始计时
+function startTest() {
+  if (!testPair.value || started.value)
+    return
+  started.value = true
+  timeLeft.value = testPair.value.reading.timeLimit
+  answers.value = {}
+  submitted.value = false
+  activePassage.value = 0
+  highlights.value = new Map()
+  selPopup.value = null
+  if (timer)
+    clearInterval(timer)
+  timer = setInterval(() => {
+    timeLeft.value--
+    if (timeLeft.value <= 0)
+      submit()
+  }, 1000)
+}
+
 onMounted(loadTest)
 watch(testId, loadTest)
 
@@ -88,6 +104,11 @@ onUnmounted(() => {
 
 const allQuestions = computed<MockQuestion[]>(() =>
   test.value?.passages.flatMap(p => p.questions) ?? [],
+)
+
+// 满分题数（多选题按答案个数计）
+const scoredTotal = computed(() =>
+  allQuestions.value.reduce((s, q) => s + (q.type === 'multi-select' && Array.isArray(q.answer) ? q.answer.length : 1), 0),
 )
 
 const correctCount = computed(() => {
@@ -230,6 +251,26 @@ function handleMarkClick(e: MouseEvent) {
       </button>
     </div>
     <template v-else-if="test">
+    <!-- 开始屏：点开始才计时 -->
+    <div v-if="!started" class="mx-auto max-w-2xl py-16 text-center">
+      <p class="mb-4 text-5xl">📖</p>
+      <h2 class="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
+        {{ test.title }}
+      </h2>
+      <p class="mb-2 text-gray-500 dark:text-gray-400">
+        共 {{ test.passages.length }} 篇文章 · {{ scoredTotal }} 道题 · 限时 {{ Math.round(test.timeLimit / 60) }} 分钟
+      </p>
+      <p class="mb-8 text-sm text-gray-400 dark:text-gray-500">
+        点击开始后计时启动，时间到自动交卷
+      </p>
+      <button
+        class="rounded-xl bg-blue-600 px-10 py-3 text-lg font-bold text-white hover:bg-blue-700"
+        @click="startTest"
+      >
+        ▶ 开始测试
+      </button>
+    </div>
+    <div v-else>
     <!-- 顶栏：标题 + 计时器 -->
     <div class="mb-6 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -488,6 +529,7 @@ function handleMarkClick(e: MouseEvent) {
           class="mt-4 max-w-full rounded-lg border border-gray-200 dark:border-gray-700"
         />
       </div>
+    </div>
     </div>
     </template>
   </div>
