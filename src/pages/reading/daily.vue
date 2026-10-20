@@ -3,6 +3,7 @@ import indexData from './daily/index.json'
 import { useAuth } from '../../composables/useAuth'
 import { getToken } from '../../composables/syncClient'
 import { SYNC_API_BASE } from '../../sync-config'
+import { wordPhonetics } from '../vocabulary/wordPhonetics'
 
 const { currentUser } = useAuth()
 
@@ -131,6 +132,24 @@ function jumpTo(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
+// 词汇注释：音标 + 朗读
+function phoneticOf(word: string): string {
+  return wordPhonetics[word.toLowerCase().trim()] ?? ''
+}
+function speak(word: string) {
+  try {
+    const synth = window.speechSynthesis
+    synth.cancel()
+    const u = new SpeechSynthesisUtterance(word)
+    u.lang = 'en-US'
+    u.rate = 0.85
+    synth.speak(u)
+  }
+  catch {
+    // 不支持的浏览器静默忽略
+  }
+}
+
 function paragraphs(passage: string): string[] {
   return passage.split('\n\n').map(p => p.trim()).filter(Boolean)
 }
@@ -235,6 +254,15 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
                     @click="toggleNote(`${selectedDate}-vocab-${i}`)"
                   >
                     {{ n.word }}
+                  </button>
+                  <span v-if="phoneticOf(n.word)" class="ml-1.5 text-xs text-gray-400 dark:text-gray-500">{{ phoneticOf(n.word) }}</span>
+                  <button
+                    type="button"
+                    class="ml-1.5 text-xs opacity-70 hover:opacity-100"
+                    title="朗读发音"
+                    @click="speak(n.word)"
+                  >
+                    🔊
                   </button>
                   <span v-if="n.pos" class="ml-1 italic text-gray-500 dark:text-gray-400" style="font-family: times;">{{ n.pos }}</span>
                   <span v-if="expandedNotes.has(`${selectedDate}-vocab-${i}`)" class="ml-2 text-gray-600 dark:text-gray-400">{{ n.meaning }}</span>

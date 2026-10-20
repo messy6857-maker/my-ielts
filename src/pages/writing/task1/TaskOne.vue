@@ -3,9 +3,30 @@ import { CRITERION_GUIDE, gradeTask1 } from './grader'
 import type { GradeResult } from './grader'
 import { TASK1_INSTRUCTION, TASK1_PROMPTS } from './prompts'
 import type { Task1Prompt } from './prompts'
+import { CAMBRIDGE_WRITING } from '../cambridge'
+import type { CambridgeWritingTask } from '../cambridge'
 import TaskChart from './TaskChart.vue'
 import { nsKey } from '../../../composables/useStudyData'
 import { readJson, writeJson } from '../../../composables/useAuth'
+
+type AnyPrompt = Task1Prompt | CambridgeWritingTask
+const CAM_TASK1 = CAMBRIDGE_WRITING.filter(q => q.task === 1)
+
+function isCam(p: AnyPrompt): p is CambridgeWritingTask {
+  return (p as CambridgeWritingTask).task !== undefined
+}
+function badgeOf(p: AnyPrompt): string {
+  return isCam(p) ? '剑桥真题' : p.typeCn
+}
+function titleOf(p: AnyPrompt): string {
+  return isCam(p) ? p.promptEn : p.title
+}
+function titleCnOf(p: AnyPrompt): string {
+  return isCam(p) ? `${p.book} ${p.testLabel} · ${p.promptCn}` : p.titleCn
+}
+function findPrompt(id: string): AnyPrompt | null {
+  return TASK1_PROMPTS.find(x => x.id === id) ?? CAM_TASK1.find(x => x.id === id) ?? null
+}
 
 interface SavedEssay {
   id: number
@@ -42,7 +63,7 @@ function removeEssay(id: number) {
 }
 
 // ---------- 写作 ----------
-const prompt = ref<Task1Prompt | null>(null)
+const prompt = ref<AnyPrompt | null>(null)
 const essayText = ref('')
 const secondsLeft = ref(TIME_LIMIT)
 const timerOn = ref(false)
@@ -55,7 +76,7 @@ const timeText = computed(() => {
   return `${`${Math.floor(s / 60)}`.padStart(2, '0')}:${`${s % 60}`.padStart(2, '0')}`
 })
 
-function startWrite(p: Task1Prompt) {
+function startWrite(p: AnyPrompt) {
   prompt.value = p
   essayText.value = ''
   secondsLeft.value = TIME_LIMIT
@@ -105,7 +126,7 @@ function backHome() {
 
 // ---------- 批改 ----------
 const result = ref<GradeResult | null>(null)
-const resultPrompt = ref<Task1Prompt | null>(null)
+const resultPrompt = ref<AnyPrompt | null>(null)
 const secondsUsed = ref(0)
 
 function submitEssay() {
@@ -127,7 +148,7 @@ function submitEssay() {
     saveEssay({
       id: Date.now(),
       promptId: prompt.value.id,
-      promptTitleCn: prompt.value.titleCn,
+      promptTitleCn: titleCnOf(prompt.value),
       text: essayText.value,
       overall: result.value.overall,
       criteria: result.value.criteria.map(c => ({ key: c.key, score: c.score })),
@@ -139,7 +160,7 @@ function submitEssay() {
 }
 
 function reviewEssay(e: SavedEssay) {
-  const p = TASK1_PROMPTS.find(x => x.id === e.promptId) || null
+  const p = findPrompt(e.promptId)
   resultPrompt.value = p
   essayText.value = e.text
   result.value = gradeTask1(e.text)
@@ -191,7 +212,25 @@ function formatDuration(s: number): string {
       </div>
 
       <!-- 选题 -->
-      <h3 class="mb-3 text-lg font-bold dark:text-white">选择一道题开始写作</h3>
+      <h3 class="mb-3 text-lg font-bold dark:text-white">📚 剑桥真题 <span class="text-sm font-normal text-gray-400">（剑18–剑21，共 16 题）</span></h3>
+      <div class="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div
+          v-for="p in CAM_TASK1"
+          :key="p.id"
+          class="flex flex-col rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"
+        >
+          <span class="mb-2 w-fit rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{{ p.book }} {{ p.testLabel }}</span>
+          <div class="mb-3 flex-1 text-sm font-medium dark:text-white">{{ p.promptCn }}</div>
+          <button
+            class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:bg-blue-600"
+            @click="startWrite(p)"
+          >
+            开始写作
+          </button>
+        </div>
+      </div>
+
+      <h3 class="mb-3 text-lg font-bold dark:text-white">✏️ 模拟练习</h3>
       <div class="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <div
           v-for="p in TASK1_PROMPTS"
@@ -237,12 +276,13 @@ function formatDuration(s: number): string {
 
       <div class="mb-4 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
         <div class="mb-1 flex items-center gap-2">
-          <span class="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{{ prompt.typeCn }}</span>
+          <span class="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">{{ badgeOf(prompt) }}</span>
           <span class="text-xs text-gray-400">{{ TASK1_INSTRUCTION }}</span>
         </div>
-        <p class="mb-4 font-medium dark:text-white">{{ prompt.title }}</p>
-        <TaskChart :prompt="prompt" />
-        <details class="mt-3 text-sm">
+        <p class="mb-4 font-medium dark:text-white">{{ titleOf(prompt) }}</p>
+        <TaskChart v-if="!isCam(prompt)" :prompt="prompt" />
+        <img v-else-if="prompt.image" :src="prompt.image" :alt="titleCnOf(prompt)" class="mx-auto max-w-full rounded-lg border border-gray-100 dark:border-gray-700" />
+        <details v-if="!isCam(prompt)" class="mt-3 text-sm">
           <summary class="cursor-pointer text-blue-600 dark:text-blue-400">💡 写作提示</summary>
           <ul class="mt-2 space-y-1 text-gray-600 dark:text-gray-300">
             <li v-for="(t, i) in prompt.tips" :key="i">• {{ t }}</li>
@@ -293,7 +333,7 @@ function formatDuration(s: number): string {
       <button class="mb-4 text-sm text-gray-500 hover:text-gray-800 dark:text-gray-400" @click="backHome">← 返回</button>
 
       <div class="mb-6 rounded-xl border border-gray-200 bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-800">
-        <div class="text-sm text-gray-400 mb-1">{{ resultPrompt?.titleCn }} · {{ result.stats.words }} 词 · 用时 {{ formatDuration(secondsUsed) }}</div>
+        <div class="text-sm text-gray-400 mb-1">{{ resultPrompt ? titleCnOf(resultPrompt) : '' }} · {{ result.stats.words }} 词 · 用时 {{ formatDuration(secondsUsed) }}</div>
         <div class="text-6xl font-bold" :class="scoreColor(result.overall)">{{ result.overall.toFixed(1) }}</div>
         <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">预估总分（四项平均）</div>
         <p class="mt-3 text-xs text-gray-400">规则估分，仅供练习参考，不是官方评分</p>

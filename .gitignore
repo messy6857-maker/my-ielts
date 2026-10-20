@@ -8,4 +8,6 @@ node_modules
 .idea/
 *.log
 # git rm --cached auto-imports.d.ts
-auto-imports.d.ts
+
+scripts/.fetch-progress.json
+scripts/.fetch-phonetics-progress.json

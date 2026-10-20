@@ -12,30 +12,57 @@ const testId = computed(() => (route.query.test as string) || 'cam21-test1')
 const testPair = ref<MockTestPair | null>(null)
 const test = computed(() => testPair.value?.listening)
 const loading = ref(true)
+const loadError = ref(false)
 const timeLeft = ref(0)
 const answers = ref<Record<string, string>>({})
 const submitted = ref(false)
 const activePart = ref(0)
 const audioEl = ref<HTMLAudioElement | null>(null)
 let timer: ReturnType<typeof setInterval> | null = null
+let loadSeq = 0
+
+// audio 的 ref 写在 v-for 里，Vue 会收成数组；逐个暂停
+function pauseAllAudio() {
+  const els = audioEl.value as unknown as HTMLAudioElement | HTMLAudioElement[] | null
+  if (Array.isArray(els))
+    els.forEach(el => el?.pause?.())
+  else
+    els?.pause?.()
+}
 
 // 异步加载选中的套题（按需加载，不一次全载入）
+// loadSeq 防止快速切换时旧的加载覆盖新的；try/finally 保证 loading 一定复位
 async function loadTest() {
+  const seq = ++loadSeq
   loading.value = true
+  loadError.value = false
   if (timer)
     clearInterval(timer)
-  audioEl.value?.pause()
-  testPair.value = await loadMockTest(testId.value)
-  timeLeft.value = testPair.value.listening.timeLimit
-  answers.value = {}
-  submitted.value = false
-  activePart.value = 0
-  loading.value = false
-  timer = setInterval(() => {
-    timeLeft.value--
-    if (timeLeft.value <= 0)
-      submit()
-  }, 1000)
+  pauseAllAudio()
+  try {
+    const pair = await loadMockTest(testId.value)
+    if (seq !== loadSeq)
+      return // 已被更新的加载取代
+    testPair.value = pair
+    timeLeft.value = pair.listening.timeLimit
+    answers.value = {}
+    submitted.value = false
+    activePart.value = 0
+    timer = setInterval(() => {
+      timeLeft.value--
+      if (timeLeft.value <= 0)
+        submit()
+    }, 1000)
+  }
+  catch {
+    if (seq !== loadSeq)
+      return
+    loadError.value = true
+  }
+  finally {
+    if (seq === loadSeq)
+      loading.value = false
+  }
 }
 
 onMounted(loadTest)
@@ -44,11 +71,7 @@ watch(testId, loadTest)
 onUnmounted(() => {
   if (timer)
     clearInterval(timer)
-})
-
-onUnmounted(() => {
-  if (timer)
-    clearInterval(timer)
+  pauseAllAudio()
 })
 
 function submit() {
@@ -57,7 +80,7 @@ function submit() {
   submitted.value = true
   if (timer)
     clearInterval(timer)
-  audioEl.value?.pause()
+  pauseAllAudio()
   // 保存做题记录
   const qs = allQuestions.value
   const total = qs.reduce((s, q) => s + (q.type === 'multi-select' && Array.isArray(q.answer) ? q.answer.length : 1), 0)
@@ -124,6 +147,16 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
   <div class="mx-auto max-w-5xl px-4 pt-6 2xl:px-0">
     <div v-if="loading" class="py-20 text-center text-gray-500">
       加载中…
+    </div>
+    <div v-else-if="loadError" class="py-20 text-center">
+      <p class="mb-4 text-4xl">😢</p>
+      <p class="mb-4 text-gray-500 dark:text-gray-400">题目加载失败，可能是网络抖动</p>
+      <button
+        class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
+        @click="loadTest"
+      >
+        🔄 重新加载
+      </button>
     </div>
     <template v-else-if="test">
     <div class="mb-6 flex items-center justify-between">

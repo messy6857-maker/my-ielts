@@ -12,6 +12,7 @@ const testId = computed(() => (route.query.test as string) || 'cam21-test1')
 const testPair = ref<MockTestPair | null>(null)
 const test = computed(() => testPair.value?.reading)
 const loading = ref(true)
+const loadError = ref(false)
 const timeLeft = ref(0)
 const answers = ref<Record<string, string>>({})
 const submitted = ref(false)
@@ -21,6 +22,7 @@ const showPassageModal = ref(false)
 const highlights = ref<Map<number, string[]>>(new Map())
 const selPopup = ref<{ x: number, y: number, text: string } | null>(null)
 let timer: ReturnType<typeof setInterval> | null = null
+let loadSeq = 0
 
 function submit() {
   if (submitted.value)
@@ -41,23 +43,39 @@ function submit() {
 }
 
 // 异步加载选中的套题（按需加载）
+// loadSeq 防止快速切换时旧的加载覆盖新的；try/finally 保证 loading 一定复位
 async function loadTest() {
+  const seq = ++loadSeq
   loading.value = true
+  loadError.value = false
   if (timer)
     clearInterval(timer)
-  testPair.value = await loadMockTest(testId.value)
-  timeLeft.value = testPair.value.reading.timeLimit
-  answers.value = {}
-  submitted.value = false
-  activePassage.value = 0
-  highlights.value = new Map()
-  selPopup.value = null
-  loading.value = false
-  timer = setInterval(() => {
-    timeLeft.value--
-    if (timeLeft.value <= 0)
-      submit()
-  }, 1000)
+  try {
+    const pair = await loadMockTest(testId.value)
+    if (seq !== loadSeq)
+      return // 已被更新的加载取代
+    testPair.value = pair
+    timeLeft.value = pair.reading.timeLimit
+    answers.value = {}
+    submitted.value = false
+    activePassage.value = 0
+    highlights.value = new Map()
+    selPopup.value = null
+    timer = setInterval(() => {
+      timeLeft.value--
+      if (timeLeft.value <= 0)
+        submit()
+    }, 1000)
+  }
+  catch {
+    if (seq !== loadSeq)
+      return
+    loadError.value = true
+  }
+  finally {
+    if (seq === loadSeq)
+      loading.value = false
+  }
 }
 
 onMounted(loadTest)
@@ -200,6 +218,16 @@ function handleMarkClick(e: MouseEvent) {
   <div class="mx-auto max-w-7xl px-4 pt-6 2xl:px-0">
     <div v-if="loading" class="py-20 text-center text-gray-500">
       加载中…
+    </div>
+    <div v-else-if="loadError" class="py-20 text-center">
+      <p class="mb-4 text-4xl">😢</p>
+      <p class="mb-4 text-gray-500 dark:text-gray-400">题目加载失败，可能是网络抖动</p>
+      <button
+        class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
+        @click="loadTest"
+      >
+        🔄 重新加载
+      </button>
     </div>
     <template v-else-if="test">
     <!-- 顶栏：标题 + 计时器 -->

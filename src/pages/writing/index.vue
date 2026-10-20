@@ -1,6 +1,7 @@
 <script setup>
 import sentences from './100sentences'
 import TaskOne from './task1/TaskOne.vue'
+import TaskTwo from './task2/TaskTwo.vue'
 
 const { isMastered, toggleMastered, masteredCount } = useMastered('writing_mastered_v1')
 const { setProgress } = useProgress()
@@ -37,7 +38,7 @@ function extractKeywords(translation) {
 const activeTab = ref('sentences')
 const TABS = [
   { key: 'sentences', label: '100 句翻译练习' },
-  { key: 'essay-big', label: '[WIP]雅思大作文' },
+  { key: 'essay-big', label: '雅思大作文' },
   { key: 'essay-small', label: '雅思小作文' },
 ]
 
@@ -398,11 +399,9 @@ function nextPractice() {
         </div>
       </div>
 
-      <!-- ============ 雅思大作文（WIP） ============ -->
-      <div v-else-if="activeTab === 'essay-big'" class="text-center py-16">
-        <div class="text-5xl mb-4">🚧</div>
-        <h3 class="text-xl font-bold mb-2 dark:text-white">雅思大作文</h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400">Task 2 写作模块建设中，敬请期待</p>
+      <!-- ============ 雅思大作文（Task 2） ============ -->
+      <div v-else-if="activeTab === 'essay-big'">
+        <TaskTwo />
       </div>
 
       <!-- ============ 雅思小作文（Task 1） ============ -->
