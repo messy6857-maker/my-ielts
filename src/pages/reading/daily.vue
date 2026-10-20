@@ -117,6 +117,20 @@ watch(selectedDate, () => {
   answers.value = {}
 })
 
+// 右下角阅读索引：点击直接跳到对应文章（词汇阅读 + 热点阅读按顺序编号）
+const readingIndex = computed(() => {
+  const items: { id: string, label: string }[] = []
+  if (myVocabReading.value)
+    items.push({ id: 'reading-vocab', label: '阅读1' })
+  const n = daily.value?.newsReadings.length ?? 0
+  for (let i = 0; i < n; i++)
+    items.push({ id: `reading-news-${i}`, label: `阅读${items.length + 1}` })
+  return items
+})
+function jumpTo(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 function paragraphs(passage: string): string[] {
   return passage.split('\n\n').map(p => p.trim()).filter(Boolean)
 }
@@ -190,7 +204,7 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
             📖 词汇阅读
             <span class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">基于你昨天学过的单词</span>
           </h3>
-          <article class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <article id="reading-vocab" class="scroll-mt-20 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <h4 class="mb-3 text-xl font-bold text-gray-900 dark:text-white">
               {{ myVocabReading.title }}
             </h4>
@@ -271,7 +285,8 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
           <article
             v-for="(art, ai) in daily.newsReadings"
             :key="ai"
-            class="mb-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+            :id="`reading-news-${ai}`"
+            class="mb-6 scroll-mt-20 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
           >
             <h4 class="mb-1 text-xl font-bold text-gray-900 dark:text-white">
               {{ art.title }}
@@ -329,5 +344,22 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
         </section>
       </template>
     </template>
+
+    <!-- 右下角阅读索引：快速跳转 -->
+    <nav
+      v-if="readingIndex.length > 1"
+      class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2"
+      aria-label="阅读目录"
+    >
+      <button
+        v-for="item in readingIndex"
+        :key="item.id"
+        type="button"
+        class="rounded-full border border-gray-200 bg-white/90 px-3.5 py-1.5 text-xs font-medium text-gray-600 shadow-md backdrop-blur transition-colors hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 dark:border-gray-600 dark:bg-gray-800/90 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/40 dark:hover:text-blue-300"
+        @click="jumpTo(item.id)"
+      >
+        {{ item.label }}
+      </button>
+    </nav>
   </div>
 </template>
