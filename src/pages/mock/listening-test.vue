@@ -190,6 +190,18 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
       <p class="mb-8 text-sm text-gray-400 dark:text-gray-500">
         点击开始后计时启动，时间到自动交卷
       </p>
+      <div class="mb-6 flex items-center justify-center gap-3">
+        <span class="text-sm text-gray-500 dark:text-gray-400">选择套题：</span>
+        <select
+          :value="testId"
+          class="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          @change="router.push({ path: '/mock/listening-test', query: { test: ($event.target as HTMLSelectElement).value } })"
+        >
+          <option v-for="t in mockTestList" :key="t.id" :value="t.id">
+            {{ t.label }}
+          </option>
+        </select>
+      </div>
       <button
         class="rounded-xl bg-blue-600 px-10 py-3 text-lg font-bold text-white hover:bg-blue-700"
         @click="startTest"
