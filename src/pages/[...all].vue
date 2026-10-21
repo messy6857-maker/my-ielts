@@ -1,7 +1,7 @@
 <template>
   <div class="mx-auto h-screen flex flex-col items-center justify-center px-6 dark:bg-gray-900 xl:px-0">
     <div class="block md:max-w-lg">
-      <img src="404.svg" alt="astronaut image">
+      <img :src="'404.svg'" alt="astronaut image">
     </div>
     <div class="text-center xl:max-w-4xl">
       <h1 class="mb-3 text-2xl font-bold leading-tight text-gray-900 lg:text-5xl sm:text-4xl dark:text-white">
