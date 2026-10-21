@@ -86,37 +86,59 @@ onUnmounted(() => {
   if (timer)
     clearInterval(timer)
   pauseAllAudio()
-  window.removeEventListener('scroll', refreshMapStuck)
-  window.removeEventListener('resize', refreshMapStuck)
+  window.removeEventListener('resize', setupMapObserver)
+  if (mapObserver)
+    mapObserver.disconnect()
 })
 
-// ---------- 手机端地图吸顶 ----------
-// App 内容区在窄屏下由 window 滚动（内部容器不滚动），CSS sticky 相对内部容器失效，
-// 用 scroll 监听实现 fixed 吸顶；桌面端走 CSS sticky，此处直接返回。
+// ---------- 地图吸顶 ----------
+// App 内容区滚动容器不稳定（窄屏 window 滚、宽屏有时内部容器滚），CSS sticky 不可靠，
+// 用 IntersectionObserver 实现：图片顶部滚过顶栏即用 fixed 悬浮图固定在原位。
 const mapStuck = ref(false)
+const zoomImage = ref<string | null>(null)
 const activePartImage = computed(() => test.value?.parts[activePart.value]?.image)
+const stuckStyle = ref<Record<string, string>>({})
+let mapObserver: IntersectionObserver | null = null
 
-function refreshMapStuck() {
-  if (window.innerWidth >= 1024) {
-    mapStuck.value = false
-    return
-  }
+function refreshStuckState() {
   const img = document.querySelector(`[data-map-img="${activePart.value}"]`)
   if (!img) {
     mapStuck.value = false
     return
   }
-  mapStuck.value = img.getBoundingClientRect().top < 64
+  const r = img.getBoundingClientRect()
+  const stuck = r.top < 80
+  mapStuck.value = stuck
+  if (stuck) {
+    // 手机端：顶栏下方通栏；桌面端：固定在原位（与原图同宽同左）
+    stuckStyle.value = window.innerWidth >= 1024
+      ? { top: '80px', left: `${r.left}px`, width: `${r.width}px` }
+      : { top: '64px', left: '16px', right: '16px' }
+  }
+}
+
+function setupMapObserver() {
+  if (mapObserver) {
+    mapObserver.disconnect()
+    mapObserver = null
+  }
+  mapStuck.value = false
+  nextTick(() => {
+    const img = document.querySelector(`[data-map-img="${activePart.value}"]`)
+    if (!img)
+      return
+    mapObserver = new IntersectionObserver(([entry]) => {
+      refreshStuckState()
+    }, { rootMargin: '-80px 0px 0px 0px', threshold: 0 })
+    mapObserver.observe(img)
+    refreshStuckState()
+  })
 }
 
 onMounted(() => {
-  window.addEventListener('scroll', refreshMapStuck, { passive: true })
-  window.addEventListener('resize', refreshMapStuck)
+  window.addEventListener('resize', setupMapObserver)
 })
-watch([activePart, test, submitted], () => {
-  mapStuck.value = false
-  nextTick(refreshMapStuck)
-})
+watch([activePart, test], setupMapObserver)
 
 function submit() {
   if (submitted.value)
@@ -312,14 +334,16 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
 
       <!-- 有图的 Part：图片吸顶，滑到题目时一直看得见 -->
       <div :class="p.image ? 'lg:grid lg:grid-cols-5 lg:items-start lg:gap-6' : ''">
-        <div v-if="p.image" class="sticky top-16 z-10 mb-6 lg:top-20 lg:col-span-2 lg:mb-0">
+        <div v-if="p.image" class="mb-6 lg:col-span-2 lg:mb-0 lg:self-start">
           <img
             :src="p.image"
             :data-map-img="pi"
             :class="{ invisible: mapStuck && pi === activePart }"
             alt="题目示意图"
-            class="max-h-[35vh] w-full rounded-lg border border-gray-200 bg-white object-contain dark:border-gray-700 lg:max-h-[75vh]"
+            class="w-full cursor-zoom-in rounded-lg border border-gray-200 bg-white dark:border-gray-700 lg:max-h-[75vh] lg:object-contain"
+            @click="zoomImage = p.image"
           />
+          <p class="mt-1 text-center text-xs text-gray-400 lg:hidden">👆 点击图片可放大查看</p>
         </div>
         <div :class="p.image ? 'lg:col-span-3' : ''">
           <div class="space-y-4">
@@ -428,12 +452,19 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
     </template>
   </div>
 
-  <!-- 手机端地图吸顶悬浮图（桌面端走 CSS sticky） -->
-  <div v-if="mapStuck && activePartImage" class="fixed inset-x-0 top-16 z-20 px-4 lg:hidden">
+  <!-- 地图吸顶悬浮图（固定在原位），点击放大 -->
+  <div v-if="mapStuck && activePartImage" class="fixed z-20" :style="stuckStyle">
     <img
       :src="activePartImage"
       alt="题目示意图"
-      class="max-h-[35vh] w-full rounded-lg border border-gray-200 bg-white object-contain shadow-lg dark:border-gray-700"
+      class="max-h-[60vh] w-full cursor-zoom-in rounded-lg border border-gray-200 bg-white object-contain shadow-lg dark:border-gray-700 lg:max-h-[75vh]"
+      @click="zoomImage = activePartImage"
     />
+  </div>
+
+  <!-- 图片全屏放大 -->
+  <div v-if="zoomImage" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4" @click="zoomImage = null">
+    <img :src="zoomImage" alt="题目示意图" class="max-h-full max-w-full rounded-lg object-contain" />
+    <button class="absolute right-4 top-4 rounded-full bg-white/20 px-3 py-1.5 text-sm text-white">✕ 关闭</button>
   </div>
 </template>
