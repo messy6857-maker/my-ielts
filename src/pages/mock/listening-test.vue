@@ -86,6 +86,36 @@ onUnmounted(() => {
   if (timer)
     clearInterval(timer)
   pauseAllAudio()
+  window.removeEventListener('scroll', refreshMapStuck)
+  window.removeEventListener('resize', refreshMapStuck)
+})
+
+// ---------- 手机端地图吸顶 ----------
+// App 内容区在窄屏下由 window 滚动（内部容器不滚动），CSS sticky 相对内部容器失效，
+// 用 scroll 监听实现 fixed 吸顶；桌面端走 CSS sticky，此处直接返回。
+const mapStuck = ref(false)
+const activePartImage = computed(() => test.value?.parts[activePart.value]?.image)
+
+function refreshMapStuck() {
+  if (window.innerWidth >= 1024) {
+    mapStuck.value = false
+    return
+  }
+  const img = document.querySelector(`[data-map-img="${activePart.value}"]`)
+  if (!img) {
+    mapStuck.value = false
+    return
+  }
+  mapStuck.value = img.getBoundingClientRect().top < 64
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', refreshMapStuck, { passive: true })
+  window.addEventListener('resize', refreshMapStuck)
+})
+watch([activePart, test, submitted], () => {
+  mapStuck.value = false
+  nextTick(refreshMapStuck)
 })
 
 function submit() {
@@ -275,18 +305,24 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
           :src="p.audio"
           class="w-full"
         />
-        <img
-          v-if="p.image"
-          :src="p.image"
-          alt="题目示意图"
-          class="mt-4 w-full max-w-2xl rounded-lg border border-gray-200 dark:border-gray-700"
-        />
         <p v-if="submitted && p.transcript" class="mt-4 whitespace-pre-line text-sm text-gray-600 dark:text-gray-400">
           {{ p.transcript }}
         </p>
       </article>
 
-      <div class="space-y-4">
+      <!-- 有图的 Part：图片吸顶，滑到题目时一直看得见 -->
+      <div :class="p.image ? 'lg:grid lg:grid-cols-5 lg:items-start lg:gap-6' : ''">
+        <div v-if="p.image" class="sticky top-16 z-10 mb-6 lg:top-20 lg:col-span-2 lg:mb-0">
+          <img
+            :src="p.image"
+            :data-map-img="pi"
+            :class="{ invisible: mapStuck && pi === activePart }"
+            alt="题目示意图"
+            class="max-h-[35vh] w-full rounded-lg border border-gray-200 bg-white object-contain dark:border-gray-700 lg:max-h-[75vh]"
+          />
+        </div>
+        <div :class="p.image ? 'lg:col-span-3' : ''">
+          <div class="space-y-4">
         <div
           v-for="q in p.questions"
           :key="q.id"
@@ -367,8 +403,10 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
             正确答案：{{ q.type === 'fill-blank' ? (Array.isArray(q.answer) ? q.answer.join(' / ') : q.answer) : q.type === 'map-label' ? q.answer : q.options?.[q.answer as number] }}
           </p>
         </div>
+        </div>
       </div>
     </div>
+  </div>
 
     <div class="pb-12 text-center">
       <button
@@ -388,5 +426,14 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
     </div>
     </div>
     </template>
+  </div>
+
+  <!-- 手机端地图吸顶悬浮图（桌面端走 CSS sticky） -->
+  <div v-if="mapStuck && activePartImage" class="fixed inset-x-0 top-16 z-20 px-4 lg:hidden">
+    <img
+      :src="activePartImage"
+      alt="题目示意图"
+      class="max-h-[35vh] w-full rounded-lg border border-gray-200 bg-white object-contain shadow-lg dark:border-gray-700"
+    />
   </div>
 </template>
