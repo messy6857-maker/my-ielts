@@ -208,52 +208,58 @@ function formatDuration(s: number): string {
       </div>
     </div>
 
-    <!-- ============ 写作 ============ -->
+    <!-- ============ 写作（左右分栏：左题目右写作） ============ -->
     <div v-else-if="view === 'write' && prompt">
       <button class="mb-4 text-sm text-gray-500 hover:text-gray-800 dark:text-gray-400" @click="backHome">← 返回选题</button>
 
-      <div class="mb-4 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
-        <div class="mb-1 flex items-center gap-2">
-          <span class="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-bold text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">{{ prompt.book }} {{ prompt.testLabel }}</span>
-          <span class="text-xs text-gray-400">{{ TASK2_INSTRUCTION }}</span>
+      <div class="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start">
+        <!-- 左：题目（桌面端吸顶，写的时候一直看得见） -->
+        <div class="mb-4 rounded-xl border border-gray-200 bg-white p-5 lg:mb-0 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto dark:border-gray-700 dark:bg-gray-800">
+          <div class="mb-1 flex items-center gap-2">
+            <span class="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-bold text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">{{ prompt.book }} {{ prompt.testLabel }}</span>
+            <span class="text-xs text-gray-400">{{ TASK2_INSTRUCTION }}</span>
+          </div>
+          <p class="font-medium leading-7 dark:text-white">{{ prompt.promptEn }}</p>
         </div>
-        <p class="font-medium leading-7 dark:text-white">{{ prompt.promptEn }}</p>
-      </div>
 
-      <div class="mb-4 flex flex-wrap items-center gap-3">
-        <div
-          class="flex items-center gap-2 rounded-xl border px-4 py-2 font-mono text-lg font-bold dark:border-gray-700 dark:bg-gray-800"
-          :class="timeUp ? 'border-red-300 text-red-600 dark:text-red-400' : 'border-gray-200 text-gray-800 dark:text-white'"
-        >
-          ⏱ {{ timeText }}
-          <span v-if="timeUp" class="font-sans text-xs font-normal">时间到</span>
+        <!-- 右：写作区 -->
+        <div>
+          <div class="mb-4 flex flex-wrap items-center gap-3">
+            <div
+              class="flex items-center gap-2 rounded-xl border px-4 py-2 font-mono text-lg font-bold dark:border-gray-700 dark:bg-gray-800"
+              :class="timeUp ? 'border-red-300 text-red-600 dark:text-red-400' : 'border-gray-200 text-gray-800 dark:text-white'"
+            >
+              ⏱ {{ timeText }}
+              <span v-if="timeUp" class="font-sans text-xs font-normal">时间到</span>
+            </div>
+            <button class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:text-white" @click="toggleTimer">
+              {{ timerOn ? '⏸ 暂停' : '▶ 开始' }}
+            </button>
+            <button class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:text-white" @click="resetTimer">↺ 重置</button>
+            <div class="ml-auto text-sm" :class="wordCount >= 250 ? 'text-green-600 font-bold' : 'text-gray-500 dark:text-gray-400'">
+              {{ wordCount }} / 250 词
+            </div>
+          </div>
+          <div class="mb-4 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+            <div class="h-full rounded-full transition-all" :class="wordCount >= 250 ? 'bg-green-500' : 'bg-purple-500'" :style="{ width: `${Math.min(100, (wordCount / 250) * 100)}%` }" />
+          </div>
+
+          <textarea
+            v-model="essayText"
+            rows="18"
+            placeholder="在这里写你的大作文（英文，至少 250 词）…&#10;&#10;建议结构：&#10;第1段：改写题目 + 表明立场&#10;第2-3段：分论点 + 论据/例子&#10;最后一段：重申立场"
+            class="mb-4 block w-full rounded-xl border border-gray-300 bg-white p-4 text-sm leading-7 text-gray-900 focus:border-purple-500 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          />
+
+          <div class="flex gap-3">
+            <button
+              class="flex-1 rounded-xl bg-purple-700 px-5 py-3 font-bold text-white hover:bg-purple-800 dark:bg-purple-600"
+              @click="submitEssay"
+            >
+              提交自查
+            </button>
+          </div>
         </div>
-        <button class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:text-white" @click="toggleTimer">
-          {{ timerOn ? '⏸ 暂停' : '▶ 开始' }}
-        </button>
-        <button class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:text-white" @click="resetTimer">↺ 重置</button>
-        <div class="ml-auto text-sm" :class="wordCount >= 250 ? 'text-green-600 font-bold' : 'text-gray-500 dark:text-gray-400'">
-          {{ wordCount }} / 250 词
-        </div>
-      </div>
-      <div class="mb-4 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-        <div class="h-full rounded-full transition-all" :class="wordCount >= 250 ? 'bg-green-500' : 'bg-purple-500'" :style="{ width: `${Math.min(100, (wordCount / 250) * 100)}%` }" />
-      </div>
-
-      <textarea
-        v-model="essayText"
-        rows="16"
-        placeholder="在这里写你的大作文（英文，至少 250 词）…&#10;&#10;建议结构：&#10;第1段：改写题目 + 表明立场&#10;第2-3段：分论点 + 论据/例子&#10;最后一段：重申立场"
-        class="mb-4 block w-full rounded-xl border border-gray-300 bg-white p-4 text-sm leading-7 text-gray-900 focus:border-purple-500 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-      />
-
-      <div class="flex gap-3">
-        <button
-          class="flex-1 rounded-xl bg-purple-700 px-5 py-3 font-bold text-white hover:bg-purple-800 dark:bg-purple-600"
-          @click="submitEssay"
-        >
-          提交自查
-        </button>
       </div>
     </div>
 
