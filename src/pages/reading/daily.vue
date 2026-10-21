@@ -129,7 +129,7 @@ const readingIndex = computed(() => {
   return items
 })
 function jumpTo(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  document.getElementById(id)?.scrollIntoView({ behavior: 'instant', block: 'start' })
 }
 
 // 词汇注释：音标 + 朗读
