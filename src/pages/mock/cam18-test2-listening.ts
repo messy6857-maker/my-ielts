@@ -29,7 +29,7 @@ export const cam18Test2Listening: ListeningMockTest = {
     {
       title: 'Part 2：Housing development',
       audio: 'mock/cam18-test2-listening-part2.mp3',
-      image: '/mock/cam18-test2-part2-map.png',
+      image: 'mock/cam18-test2-part2-map.png',
       questions: [
         { id: 'Q11-12', type: 'multi-select', question: 'What are the TWO main reasons why this site has been chosen for the housing development? (Choose TWO letters, A–E)', options: ['A It has suitable geographical features.', 'B There is easy access to local facilities.', 'C It has good connections with the airport.', 'D The land is of little agricultural value.', 'E It will be convenient for workers.'], answer: [1, 4] },
         { id: 'Q13-14', type: 'multi-select', question: 'Which TWO aspects of the planned housing development have people given positive feedback about? (Choose TWO letters, A–E)', options: ['A the facilities for cyclists', 'B the impact on the environment', 'C the encouragement of good relations between residents', 'D the low cost of all the accommodation', 'E the rural location'], answer: [1, 2] },
@@ -44,7 +44,7 @@ export const cam18Test2Listening: ListeningMockTest = {
     {
       title: 'Part 3：The Laki eruption of 1783',
       audio: 'mock/cam18-test2-listening-part3.mp3',
-      image: '/mock/cam18-test2-part3-comments.png',
+      image: 'mock/cam18-test2-part3-comments.png',
       questions: [
         { id: 'Q21', type: 'multiple-choice', question: 'Why do the students think the Laki eruption of 1783 is so important?', options: ['A It was the most severe eruption in modern times.', 'B It led to the formal study of volcanoes.', 'C It had a profound effect on society.'], answer: 2 },
         { id: 'Q22', type: 'multiple-choice', question: 'What surprised Adam about observations made at the time?', options: ['A the number of places producing them', 'B the contradictions in them', 'C the lack of scientific data to support them'], answer: 0 },

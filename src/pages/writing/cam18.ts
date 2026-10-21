@@ -10,7 +10,7 @@ export const cam18Writing: CambridgeWritingTask[] = [
     task: 1,
     promptEn: 'You should spend about 20 minutes on this task.\n\nThe graph below gives information about the percentage of the population in four Asian countries living in cities from 1970 to 2020, with predictions for 2030 and 2040.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\nWrite at least 150 words.',
     promptCn: '折线图：四个亚洲国家城市人口占比（1970–2040，含预测）',
-    image: '/writing/c18-t1-task1.png',
+    image: 'writing/c18-t1-task1.png',
   },
   {
     id: 'c18-t1-task2',
@@ -27,7 +27,7 @@ export const cam18Writing: CambridgeWritingTask[] = [
     task: 1,
     promptEn: 'You should spend about 20 minutes on this task.\n\nThe chart below shows the number of households in the US by their annual income in 2007, 2011 and 2015.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\nWrite at least 150 words.',
     promptCn: '柱状图：美国家庭按年收入的户数分布（2007/2011/2015）',
-    image: '/writing/c18-t2-task1.png',
+    image: 'writing/c18-t2-task1.png',
   },
   {
     id: 'c18-t2-task2',
@@ -44,7 +44,7 @@ export const cam18Writing: CambridgeWritingTask[] = [
     task: 1,
     promptEn: 'You should spend about 20 minutes on this task.\n\nThe diagram below shows the floor plan of a public library 20 years ago and how it looks now.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\nWrite at least 150 words.',
     promptCn: '平面图：公共图书馆20年前与现在的布局对比',
-    image: '/writing/c18-t3-task1.png',
+    image: 'writing/c18-t3-task1.png',
   },
   {
     id: 'c18-t3-task2',
@@ -61,7 +61,7 @@ export const cam18Writing: CambridgeWritingTask[] = [
     task: 1,
     promptEn: 'You should spend about 20 minutes on this task.\n\nThe graph below shows the average monthly change in the prices of three metals during 2014.\n\nSummarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\nWrite at least 150 words.',
     promptCn: '折线图：铜镍锌三种金属2014年月均价格变化',
-    image: '/writing/c18-t4-task1.png',
+    image: 'writing/c18-t4-task1.png',
   },
   {
     id: 'c18-t4-task2',

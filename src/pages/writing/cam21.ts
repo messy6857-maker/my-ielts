@@ -13,7 +13,7 @@ export const cam21Writing: CambridgeWritingTask[] = [
       + 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\n'
       + 'Write at least 150 words.',
     promptCn: '折线图：1960–2020年美国四个经济部门的就业人数',
-    image: '/writing/c21-t1-task1.png',
+    image: 'writing/c21-t1-task1.png',
   },
   {
     id: 'c21-t1-task2',
@@ -38,7 +38,7 @@ export const cam21Writing: CambridgeWritingTask[] = [
       + 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\n'
       + 'Write at least 150 words.',
     promptCn: '平面图对比：大学咖啡馆重新设计前后的变化',
-    image: '/writing/c21-t2-task1.png',
+    image: 'writing/c21-t2-task1.png',
   },
   {
     id: 'c21-t2-task2',
@@ -63,7 +63,7 @@ export const cam21Writing: CambridgeWritingTask[] = [
       + 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\n'
       + 'Write at least 150 words.',
     promptCn: '流程图：雨影沙漠的形成过程',
-    image: '/writing/c21-t3-task1.png',
+    image: 'writing/c21-t3-task1.png',
   },
   {
     id: 'c21-t3-task2',
@@ -88,7 +88,7 @@ export const cam21Writing: CambridgeWritingTask[] = [
       + 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\n'
       + 'Write at least 150 words.',
     promptCn: '饼图+表格：大学图书馆用户构成与满意度调查',
-    image: '/writing/c21-t4-task1.png',
+    image: 'writing/c21-t4-task1.png',
   },
   {
     id: 'c21-t4-task2',

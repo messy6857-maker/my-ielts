@@ -13,7 +13,7 @@ export const cam19Writing: CambridgeWritingTask[] = [
       + 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\n'
       + 'Write at least 150 words.',
     promptCn: '折线图：墨尔本某社交中心2000–2020年各项活动参与人数',
-    image: '/writing/c19-t1-task1.png',
+    image: 'writing/c19-t1-task1.png',
   },
   {
     id: 'c19-t1-task2',
@@ -38,7 +38,7 @@ export const cam19Writing: CambridgeWritingTask[] = [
       + 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\n'
       + 'Write at least 150 words.',
     promptCn: '地图对比：Porth Harbour 2000年与现在的变化',
-    image: '/writing/c19-t2-task1.png',
+    image: 'writing/c19-t2-task1.png',
   },
   {
     id: 'c19-t2-task2',
@@ -63,7 +63,7 @@ export const cam19Writing: CambridgeWritingTask[] = [
       + 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\n'
       + 'Write at least 150 words.',
     promptCn: '流程图：生物燃料乙醇的生产过程',
-    image: '/writing/c19-t3-task1.png',
+    image: 'writing/c19-t3-task1.png',
   },
   {
     id: 'c19-t3-task2',
@@ -88,7 +88,7 @@ export const cam19Writing: CambridgeWritingTask[] = [
       + 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n\n'
       + 'Write at least 150 words.',
     promptCn: '饼图+条形图：澳洲某镇年轻人舞蹈课的地点与类型',
-    image: '/writing/c19-t4-task1.png',
+    image: 'writing/c19-t4-task1.png',
   },
   {
     id: 'c19-t4-task2',

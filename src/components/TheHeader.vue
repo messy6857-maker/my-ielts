@@ -78,12 +78,12 @@ async function onManualSync() {
     <nav class="fixed z-30 w-full border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
       <div class="mx-auto max-w-screen-2xl flex items-center justify-between">
         <div class="flex items-center justify-start">
-          <a href="/" class="mr-14 flex">
+          <router-link to="/" class="mr-14 flex">
             <span class="self-center whitespace-nowrap text-xl font-semibold sm:text-2xl dark:text-white">My
               <span class="ml-1 text-red-600"> IELTS™</span>
             </span>
 
-          </a>
+          </router-link>
           <!-- Desktop menu -->
           <div class="hidden w-full items-center justify-between lg:order-1 lg:w-auto lg:flex">
             <ul class="mt-4 flex flex-col items-center justify-items-center text-center align-middle text-sm font-medium lg:mt-0 lg:flex-row space-x-6 xl:space-x-8">
@@ -132,7 +132,7 @@ async function onManualSync() {
             登录
           </router-link>
           <a
-            href="https://github.com/hefengxian/my-ielts"
+            href="https://github.com/messy6857-maker/my-ielts"
             target="_blank"
             class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 hover:text-gray-900 focus:ring-4 focus:ring-gray-300 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-600"
           >

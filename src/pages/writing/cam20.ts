@@ -15,7 +15,7 @@ export const cam20Writing: CambridgeWritingTask[] = [
       + 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n'
       + 'Write at least 150 words.',
     promptCn: '表格：1800–2000 年纽约市总人口及曼哈顿与其他四区人口变化',
-    image: '/writing/c20-t1-task1.png',
+    image: 'writing/c20-t1-task1.png',
   },
   {
     id: 'c20-t1-task2',
@@ -41,7 +41,7 @@ export const cam20Writing: CambridgeWritingTask[] = [
       + 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n'
       + 'Write at least 150 words.',
     promptCn: '地图：1950 年与现在的 Beechwood 农场变迁对比',
-    image: '/writing/c20-t2-task1.png',
+    image: 'writing/c20-t2-task1.png',
   },
   {
     id: 'c20-t2-task2',
@@ -67,7 +67,7 @@ export const cam20Writing: CambridgeWritingTask[] = [
       + 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n'
       + 'Write at least 150 words',
     promptCn: '饼图+表格+柱状图：Little Chalfont 公共图书馆会员与借阅情况',
-    image: '/writing/c20-t3-task1.png',
+    image: 'writing/c20-t3-task1.png',
   },
   {
     id: 'c20-t3-task2',
@@ -92,7 +92,7 @@ export const cam20Writing: CambridgeWritingTask[] = [
       + 'Summarise the information by selecting and reporting the main features, and make comparisons where relevant.\n'
       + 'Write at least 150 words.',
     promptCn: '流程图：竹子制成布料的 9 个步骤',
-    image: '/writing/c20-t4-task1.png',
+    image: 'writing/c20-t4-task1.png',
   },
   {
     id: 'c20-t4-task2',

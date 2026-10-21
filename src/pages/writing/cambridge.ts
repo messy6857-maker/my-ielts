@@ -14,7 +14,7 @@ export interface CambridgeWritingTask {
   promptEn: string
   /** 中文简介（一句话，如"柱状图：某国各年龄段上网时长"） */
   promptCn: string
-  /** Task 1 图表图片 public 路径，如 '/writing/c18-t1-task1.png' */
+  /** Task 1 图表图片 public 路径，如 'writing/c18-t1-task1.png' */
   image?: string
 }
 
