@@ -86,59 +86,18 @@ onUnmounted(() => {
   if (timer)
     clearInterval(timer)
   pauseAllAudio()
-  window.removeEventListener('resize', setupMapObserver)
-  if (mapObserver)
-    mapObserver.disconnect()
+  document.body.classList.remove('listening-sticky-page')
 })
 
-// ---------- 地图吸顶 ----------
-// App 内容区滚动容器不稳定（窄屏 window 滚、宽屏有时内部容器滚），CSS sticky 不可靠，
-// 用 IntersectionObserver 实现：图片顶部滚过顶栏即用 fixed 悬浮图固定在原位。
-const mapStuck = ref(false)
+// ---------- 地图图片 sticky ----------
+// App 内容容器默认 overflow-y-auto 会自己滚动，导致 sticky 相对它失效；
+// 本页挂载时强制它 overflow 可见，让 window 成为滚动容器，sticky 即可靠生效。
+// sticky 是文档流内定位，不会像 fixed 那样遮挡 Part 切换按钮。
 const zoomImage = ref<string | null>(null)
-const activePartImage = computed(() => test.value?.parts[activePart.value]?.image)
-const stuckStyle = ref<Record<string, string>>({})
-let mapObserver: IntersectionObserver | null = null
-
-function refreshStuckState() {
-  const img = document.querySelector(`[data-map-img="${activePart.value}"]`)
-  if (!img) {
-    mapStuck.value = false
-    return
-  }
-  const r = img.getBoundingClientRect()
-  const stuck = r.top < 80
-  mapStuck.value = stuck
-  if (stuck) {
-    // 手机端：顶栏下方通栏；桌面端：固定在原位（与原图同宽同左）
-    stuckStyle.value = window.innerWidth >= 1024
-      ? { top: '80px', left: `${r.left}px`, width: `${r.width}px` }
-      : { top: '64px', left: '16px', right: '16px' }
-  }
-}
-
-function setupMapObserver() {
-  if (mapObserver) {
-    mapObserver.disconnect()
-    mapObserver = null
-  }
-  mapStuck.value = false
-  nextTick(() => {
-    const img = document.querySelector(`[data-map-img="${activePart.value}"]`)
-    if (!img)
-      return
-    mapObserver = new IntersectionObserver(([entry]) => {
-      refreshStuckState()
-    }, { rootMargin: '-80px 0px 0px 0px', threshold: 0 })
-    mapObserver.observe(img)
-    refreshStuckState()
-  })
-}
 
 onMounted(() => {
-  window.addEventListener('resize', setupMapObserver)
+  document.body.classList.add('listening-sticky-page')
 })
-watch([activePart, test], setupMapObserver)
 
 function submit() {
   if (submitted.value)
@@ -334,16 +293,21 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
 
       <!-- 有图的 Part：图片吸顶，滑到题目时一直看得见 -->
       <div :class="p.image ? 'lg:grid lg:grid-cols-5 lg:items-start lg:gap-6' : ''">
-        <div v-if="p.image" class="mb-6 lg:col-span-2 lg:mb-0 lg:self-start">
-          <img
-            :src="p.image"
-            :data-map-img="pi"
-            :class="{ invisible: mapStuck && pi === activePart }"
-            alt="题目示意图"
-            class="w-full cursor-zoom-in rounded-lg border border-gray-200 bg-white dark:border-gray-700 lg:max-h-[75vh] lg:object-contain"
-            @click="zoomImage = p.image"
-          />
-          <p class="mt-1 text-center text-xs text-gray-400 lg:hidden">👆 点击图片可放大查看</p>
+        <div v-if="p.image" class="sticky top-20 z-10 mb-6 lg:col-span-2 lg:mb-0 lg:top-24">
+          <div class="rounded-xl border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+            <img
+              :src="p.image"
+              alt="题目示意图"
+              class="w-full cursor-zoom-in rounded-lg lg:max-h-[70vh] lg:object-contain"
+              @click="zoomImage = p.image"
+            />
+            <button
+              class="mt-2 w-full rounded-lg bg-gray-100 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+              @click="zoomImage = p.image"
+            >
+              🔍 点击放大查看
+            </button>
+          </div>
         </div>
         <div :class="p.image ? 'lg:col-span-3' : ''">
           <div class="space-y-4">
@@ -452,19 +416,20 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
     </template>
   </div>
 
-  <!-- 地图吸顶悬浮图（固定在原位），点击放大 -->
-  <div v-if="mapStuck && activePartImage" class="fixed z-20" :style="stuckStyle">
-    <img
-      :src="activePartImage"
-      alt="题目示意图"
-      class="max-h-[60vh] w-full cursor-zoom-in rounded-lg border border-gray-200 bg-white object-contain shadow-lg dark:border-gray-700 lg:max-h-[75vh]"
-      @click="zoomImage = activePartImage"
-    />
-  </div>
-
   <!-- 图片全屏放大 -->
   <div v-if="zoomImage" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4" @click="zoomImage = null">
     <img :src="zoomImage" alt="题目示意图" class="max-h-full max-w-full rounded-lg object-contain" />
     <button class="absolute right-4 top-4 rounded-full bg-white/20 px-3 py-1.5 text-sm text-white">✕ 关闭</button>
   </div>
 </template>
+
+<style>
+/* 听力模考页：App 的两层内容容器改为 overflow 可见，让 window 成为滚动容器，
+   图片的 sticky 定位才能可靠生效（sticky 相对最近的滚动祖先） */
+body.listening-sticky-page #app > div.flex {
+  overflow: visible;
+}
+body.listening-sticky-page #app > div.flex > div.overflow-y-auto {
+  overflow-y: visible;
+}
+</style>
