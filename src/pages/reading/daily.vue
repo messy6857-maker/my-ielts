@@ -4,6 +4,7 @@ import { useAuth } from '../../composables/useAuth'
 import { getToken } from '../../composables/syncClient'
 import { SYNC_API_BASE } from '../../sync-config'
 import { wordPhonetics } from '../vocabulary/wordPhonetics'
+import { stopAllAudio } from '../../composables/useSingleAudio'
 
 const { currentUser } = useAuth()
 
@@ -138,6 +139,7 @@ function phoneticOf(word: string): string {
 }
 function speak(word: string) {
   try {
+    stopAllAudio()
     const synth = window.speechSynthesis
     synth.cancel()
     const u = new SpeechSynthesisUtterance(word)

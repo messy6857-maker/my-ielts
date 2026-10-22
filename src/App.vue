@@ -1,3 +1,10 @@
+<script setup>
+import { initSingleAudio } from './composables/useSingleAudio'
+
+// 全站单音频：同一时间只播放一个音频，点新的自动暂停旧的
+initSingleAudio()
+</script>
+
 <template>
   <TheHeader />
   <!-- <div class="flex flex-1 overflow-hidden bg-gray-50 pt-16 dark:bg-gray-900">

@@ -6,6 +6,8 @@ import type { Task1Prompt } from './prompts'
 import { CAMBRIDGE_WRITING } from '../cambridge'
 import type { CambridgeWritingTask } from '../cambridge'
 import TaskChart from './TaskChart.vue'
+import AIGradePanel from '../AIGradePanel.vue'
+import ModelEssayView from '../ModelEssayView.vue'
 import { nsKey } from '../../../composables/useStudyData'
 import { readJson, writeJson } from '../../../composables/useAuth'
 
@@ -386,6 +388,18 @@ function formatDuration(s: number): string {
         <summary class="cursor-pointer font-bold text-sm dark:text-white">📝 我的原文</summary>
         <div class="mt-3 whitespace-pre-wrap text-sm leading-7 text-gray-700 dark:text-gray-300">{{ essayText }}</div>
       </details>
+
+      <AIGradePanel
+        v-if="resultPrompt"
+        task="task1"
+        :question="titleOf(resultPrompt)"
+        :essay="essayText"
+      />
+
+      <ModelEssayView
+        v-if="resultPrompt"
+        :prompt-id="resultPrompt.id"
+      />
 
       <div class="flex gap-3">
         <button class="flex-1 rounded-xl border border-gray-300 px-5 py-3 text-sm dark:border-gray-600 dark:text-white" @click="backHome">返回列表</button>

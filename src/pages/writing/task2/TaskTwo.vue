@@ -5,6 +5,8 @@ import { CAMBRIDGE_WRITING } from '../cambridge'
 import type { CambridgeWritingTask } from '../cambridge'
 import { nsKey } from '../../../composables/useStudyData'
 import { readJson, writeJson } from '../../../composables/useAuth'
+import AIGradePanel from '../AIGradePanel.vue'
+import ModelEssayView from '../ModelEssayView.vue'
 
 const TASK2_QUESTIONS = CAMBRIDGE_WRITING.filter(q => q.task === 2)
 const TASK2_INSTRUCTION = 'You should spend about 40 minutes on this task. Write at least 250 words.'
@@ -279,10 +281,22 @@ function formatDuration(s: number): string {
         <p class="mt-4 text-xs text-gray-400">这是可量化的写作习惯检查，不是雅思官方评分。大作文的论证逻辑和观点展开，还得对照范文自己复盘。</p>
       </div>
 
-      <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
+      <div class="mb-6 rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
         <h4 class="mb-2 text-sm font-bold text-gray-500 dark:text-gray-400">我的作文</h4>
         <p class="whitespace-pre-wrap text-sm leading-7 text-gray-800 dark:text-gray-200">{{ essayText }}</p>
       </div>
+
+      <AIGradePanel
+        v-if="resultPrompt"
+        task="task2"
+        :question="resultPrompt.promptEn"
+        :essay="essayText"
+      />
+
+      <ModelEssayView
+        v-if="resultPrompt"
+        :prompt-id="resultPrompt.id"
+      />
     </div>
   </div>
 </template>

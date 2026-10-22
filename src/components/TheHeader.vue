@@ -131,6 +131,13 @@ async function onManualSync() {
           >
             登录
           </router-link>
+          <router-link
+            to="/settings"
+            title="设置"
+            class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 hover:text-gray-900 focus:ring-4 focus:ring-gray-300 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-600"
+          >
+            <div i-carbon-settings />
+          </router-link>
           <a
             href="https://github.com/messy6857-maker/my-ielts"
             target="_blank"
