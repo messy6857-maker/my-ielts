@@ -11,8 +11,8 @@ const props = defineProps<{
 }>()
 
 const { currentUser } = useAuth()
-// AI 批改仅限站长账号使用
-const canUseAI = computed(() => currentUser.value === 'messy')
+// AI 批改：所有登录账号可用，每人填自己的 API Key
+const canUseAI = computed(() => !!currentUser.value)
 
 const aiLoading = ref(false)
 const aiResult = ref<AIGradeResult | null>(null)
@@ -24,7 +24,7 @@ const criterionLabels: Record<'ta' | 'cc' | 'lr' | 'gra', string> = props.task =
 
 async function runAIGrade() {
   if (!canUseAI.value) {
-    aiError.value = 'AI 批改仅限站长账号使用'
+    aiError.value = '请先登录账号再使用 AI 批改'
     return
   }
   aiLoading.value = true
@@ -129,7 +129,7 @@ function scoreColor(s: number) {
         AI 会按雅思四项官方标准打分，指出每项的问题，并逐句给出修改建议。需要先在右上角 ⚙️ 设置页填写 API 地址、Key 和模型。
       </template>
       <template v-else>
-        AI 批改为站长专用功能，当前账号不可用。
+        AI 批改需要登录账号（每人填自己的 API Key），游客请先注册/登录。
       </template>
     </p>
   </div>
