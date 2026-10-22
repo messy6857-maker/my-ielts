@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { usePersistentBool } from '../../../composables/usePersistentBool'
 import { analyzeEssay } from '../task1/grader'
 import type { EssayStats } from '../task1/grader'
 import { CAMBRIDGE_WRITING } from '../cambridge'
@@ -51,7 +52,7 @@ const TASK2_GUIDE = [
     ],
   },
 ]
-const showGuide = ref(false)
+const showGuide = usePersistentBool('myielts_task2_guide_open')
 
 interface SavedTask2 {
   id: number

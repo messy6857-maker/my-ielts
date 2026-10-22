@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { usePersistentBool } from '../../../composables/usePersistentBool'
 import { CRITERION_GUIDE, gradeTask1 } from './grader'
 import type { GradeResult } from './grader'
 import { TASK1_INSTRUCTION, TASK1_PROMPTS } from './prompts'
@@ -47,7 +48,7 @@ const TIME_LIMIT = 20 * 60
 
 // ---------- 视图状态 ----------
 const view = ref<'home' | 'write' | 'result'>('home')
-const showGuide = ref(false)
+const showGuide = usePersistentBool('myielts_task1_guide_open')
 
 // ---------- 历史 ----------
 const history = ref<SavedEssay[]>([])
