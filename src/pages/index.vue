@@ -64,7 +64,7 @@ const menus = reactive([
     label: '口语',
     icon: 'i-carbon-microphone',
     link: '/speaking',
-    desc: 'TODO 或许加入逻辑链相关内容',
+    desc: 'Part 1/2/3 真题题库，计时 + 录音自测',
   },
   {
     label: '阅读',

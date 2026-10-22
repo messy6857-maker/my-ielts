@@ -270,6 +270,7 @@ declare global {
   const usePrevious: typeof import('@vueuse/core')['usePrevious']
   const useProgress: typeof import('./src/composables/useStudyData')['useProgress']
   const useRafFn: typeof import('@vueuse/core')['useRafFn']
+  const useRecorder: typeof import('./src/composables/useRecorder')['useRecorder']
   const useRefHistory: typeof import('@vueuse/core')['useRefHistory']
   const useResizeObserver: typeof import('@vueuse/core')['useResizeObserver']
   const useRoute: typeof import('vue-router')['useRoute']
@@ -610,6 +611,7 @@ declare module 'vue' {
     readonly usePrevious: UnwrapRef<typeof import('@vueuse/core')['usePrevious']>
     readonly useProgress: UnwrapRef<typeof import('./src/composables/useStudyData')['useProgress']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
+    readonly useRecorder: UnwrapRef<typeof import('./src/composables/useRecorder')['useRecorder']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>
@@ -943,6 +945,7 @@ declare module '@vue/runtime-core' {
     readonly usePrevious: UnwrapRef<typeof import('@vueuse/core')['usePrevious']>
     readonly useProgress: UnwrapRef<typeof import('./src/composables/useStudyData')['useProgress']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
+    readonly useRecorder: UnwrapRef<typeof import('./src/composables/useRecorder')['useRecorder']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>
