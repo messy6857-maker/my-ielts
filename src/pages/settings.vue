@@ -46,7 +46,7 @@ async function onTest() {
     <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
       <h3 class="mb-1 font-bold dark:text-white">🤖 AI 批改</h3>
       <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">
-        填写后可在大小作文批改页使用 AI 批改。Key 只保存在你本机浏览器，不会上传到任何地方。
+        填写后可在大小作文批改页使用 AI 批改。Key 只保存在你本机浏览器，请求经你的 VPS 中转（浏览器直连会被第三方接口拦截）。
       </p>
 
       <label class="mb-4 block">

@@ -1,18 +1,20 @@
 import { ref} from 'vue'
+import { SYNC_API_BASE } from '../sync-config'
+import { getToken } from './syncClient'
 
 // AI 批改设置：存在浏览器 localStorage（全局，不按账号隔离），key 只留用户自己浏览器
 export interface AISettings {
-baseUrl: string // 如 https://api.deepseek.com/v1（不带 /chat/completions）
+baseUrl: string // 如 https://api-cdn.thehive.ai/api/v3（不带 /chat/completions）
 apiKey: string
-model: string // 如 deepseek-chat
+model: string // 如 deepseek-ai/deepseek-v4.1-flash-1017
 }
 
 const KEY = 'myielts_ai_settings_v1'
 
 const DEFAULTS: AISettings = {
-baseUrl: 'https://api.deepseek.com/v1',
+baseUrl: 'https://api-cdn.thehive.ai/api/v3',
 apiKey: '',
-model: 'deepseek-chat',
+model: 'deepseek-ai/deepseek-v4.1-flash-1017',
 }
 
 export function getAISettings(): AISettings {
@@ -61,16 +63,21 @@ return raw
 }
 
 async function callChatApi(settings: AISettings, system: string, user: string): Promise<string> {
-const url = `${settings.baseUrl.replace(/\/+$/, '')}/chat/completions`
+// 走 VPS 中转：浏览器直连第三方 API 会被 CORS 拦截
+const token = getToken()
+if (!token)
+throw new Error('请先登录（AI 中转需要登录态）')
 let res: Response
 try {
-res = await fetch(url, {
+res = await fetch(`${SYNC_API_BASE}/ai/chat`, {
 method: 'POST',
 headers: {
 'Content-Type': 'application/json',
-'Authorization': `Bearer ${settings.apiKey.trim()}`,
+'Authorization': `Bearer ${token}`,
 },
 body: JSON.stringify({
+baseUrl: settings.baseUrl.trim(),
+apiKey: settings.apiKey.trim(),
 model: settings.model.trim(),
 messages: [
 { role: 'system', content: system},
@@ -81,18 +88,18 @@ temperature: 0.3,
 })
 }
 catch (e) {
-throw new Error('网络请求失败，请检查 API 地址和网络连接')
+throw new Error('中转请求失败，请检查网络连接')
 }
+const body = await res.json().catch(() => null)
 if (res.status === 401)
-throw new Error('API Key 无效（401），请检查设置页中的 Key')
-if (res.status === 429)
-throw new Error('请求过于频繁（429），稍后再试')
-if (!res.ok)
-throw new Error(`请求失败（${res.status}），请检查 API 地址/模型名`)
-const data = await res.json()
-const content = data?.choices?.[0]?.message?.content
+throw new Error('登录已过期，请重新登录')
+if (res.status === 403)
+throw new Error(body?.message || '无权限使用 AI 功能')
+if (!res.ok || !body?.ok)
+throw new Error(body?.message || `请求失败（${res.status}）`)
+const content = body.data?.choices?.[0]?.message?.content
 if (!content)
-throw new Error('API 返回为空，请重试')
+throw new Error('AI 返回为空，请重试')
 return content
 }
 
