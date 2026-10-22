@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { gradeEssayWithAI, hasAISettings } from '~/composables/useAISettings'
 import type { AIGradeResult } from '~/composables/useAISettings'
 import { useAuth } from '~/composables/useAuth'
@@ -17,6 +17,41 @@ const canUseAI = computed(() => !!currentUser.value)
 const aiLoading = ref(false)
 const aiResult = ref<AIGradeResult | null>(null)
 const aiError = ref('')
+const gradeStep = ref('')
+
+// AI 结果按账号 + 作文内容持久化，切走再回来仍保留
+function storageKey(): string {
+  const user = currentUser.value ? `u_${currentUser.value}` : 'guest'
+  const s = `${props.task}|${props.question}|${props.essay}`
+  let h = 0
+  for (let i = 0; i < s.length; i++)
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0
+  return `myielts_${user}_aigrade_v1_${h.toString(36)}`
+}
+
+function loadSaved(): boolean {
+  try {
+    const raw = localStorage.getItem(storageKey())
+    if (raw) {
+      aiResult.value = JSON.parse(raw) as AIGradeResult
+      return true
+    }
+  }
+  catch { /* ignore */ }
+  return false
+}
+
+function saveResult() {
+  try {
+    if (aiResult.value)
+      localStorage.setItem(storageKey(), JSON.stringify(aiResult.value))
+  }
+  catch { /* ignore */ }
+}
+
+onMounted(() => {
+  loadSaved()
+})
 
 const criterionLabels: Record<'ta' | 'cc' | 'lr' | 'gra', string> = props.task === 'task1'
   ? { ta: '任务完成', cc: '连贯衔接', lr: '词汇资源', gra: '语法' }
@@ -30,21 +65,33 @@ async function runAIGrade() {
   aiLoading.value = true
   aiError.value = ''
   aiResult.value = null
+  // 批改过程分阶段提示
+  const steps = ['正在连接 AI…', '正在分析作文…', '正在按四项标准评分…', '正在生成修改建议…']
+  let stepIdx = 0
+  gradeStep.value = steps[0]
+  const stepTimer = setInterval(() => {
+    stepIdx = Math.min(stepIdx + 1, steps.length - 1)
+    gradeStep.value = steps[stepIdx]
+  }, 4000)
   try {
     aiResult.value = await gradeEssayWithAI(props.task, props.question, props.essay)
+    saveResult()
   }
   catch (e) {
     aiError.value = e instanceof Error ? e.message : '批改失败，请重试'
   }
   finally {
+    clearInterval(stepTimer)
+    gradeStep.value = ''
     aiLoading.value = false
   }
 }
 
-// 换一篇作文时清空旧结果
+// 换一篇作文时清空旧结果（能从本地恢复的则恢复）
 watch(() => props.essay, () => {
-  aiResult.value = null
   aiError.value = ''
+  if (!loadSaved())
+    aiResult.value = null
 })
 
 function scoreColor(s: number) {
@@ -77,6 +124,11 @@ function scoreColor(s: number) {
     </div>
 
     <p v-if="aiError" class="text-sm text-red-500">{{ aiError }}</p>
+
+    <div v-if="aiLoading" class="flex items-center gap-3 rounded-lg bg-purple-50 p-4 dark:bg-purple-900/20">
+      <span class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-purple-300 border-t-purple-700" />
+      <span class="text-sm text-purple-700 dark:text-purple-300">{{ gradeStep || '正在批改…' }}</span>
+    </div>
 
     <div v-if="aiResult">
       <div class="mb-4 text-center">

@@ -201,6 +201,19 @@ throw new Error('AI 返回格式异常，请重试')
 }
 if (!parsed?.scores || typeof parsed.scores.overall!== 'number')
 throw new Error('AI 返回格式异常，请重试')
+// Task 2 第一项 key 为 tr，归一化为 ta，方便面板统一渲染
+if (task === 'task2') {
+const s = parsed.scores as unknown as Record<string, number>
+const c = parsed.comments as unknown as Record<string, string>
+if (s.tr !== undefined && s.ta === undefined) {
+s.ta = s.tr
+delete s.tr
+}
+if (c.tr !== undefined && c.ta === undefined) {
+c.ta = c.tr
+delete c.tr
+}
+}
 return parsed
 }
 
