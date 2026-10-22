@@ -3,6 +3,7 @@ import { analyzeEssay } from '../task1/grader'
 import type { EssayStats } from '../task1/grader'
 import { CAMBRIDGE_WRITING } from '../cambridge'
 import type { CambridgeWritingTask } from '../cambridge'
+import { EXTRA_TASK2 } from '../cambridge-extra'
 import { nsKey } from '../../../composables/useStudyData'
 import { readJson, writeJson } from '../../../composables/useAuth'
 import AIGradePanel from '../AIGradePanel.vue'
@@ -10,6 +11,47 @@ import ModelEssayView from '../ModelEssayView.vue'
 
 const TASK2_QUESTIONS = CAMBRIDGE_WRITING.filter(q => q.task === 2)
 const TASK2_INSTRUCTION = 'You should spend about 40 minutes on this task. Write at least 250 words.'
+
+// 大作文四项评分标准（实用要点版）
+const TASK2_GUIDE = [
+  {
+    title: '任务回应 Task Response',
+    points: [
+      '不少于 250 词（40 分钟），字数不够直接扣分',
+      '完整回应题目所有部分：题干问什么就答什么',
+      '立场清晰明确，全文保持一致',
+      '每个主要观点都要展开 + 举例/论证支撑，不要只摆观点',
+    ],
+  },
+  {
+    title: '连贯与衔接 Coherence & Cohesion',
+    points: [
+      '经典结构：引言改写 → 2-3 个主体段 → 结尾总结',
+      '每段一个中心思想，段首句点明本段主旨',
+      '衔接词多样自然：however / moreover / consequently / in contrast',
+      '代词指代明确，逻辑层层推进',
+    ],
+  },
+  {
+    title: '词汇资源 Lexical Resource',
+    points: [
+      '话题词汇准确丰富，少用重复的简单词',
+      '同义替换：important → crucial / vital / essential',
+      '固定搭配要自然：pose a threat / raise awareness / take measures',
+      '注意拼写；不确定的"高级词"宁可不用',
+    ],
+  },
+  {
+    title: '语法多样性与准确性 Grammatical Range & Accuracy',
+    points: [
+      '长短句结合：复合句、定语从句、状语从句、条件句',
+      '适当使用被动语态、非谓语动词',
+      '时态语态准确，标点规范',
+      '宁可写对的简单句，不写错的复杂句',
+    ],
+  },
+]
+const showGuide = ref(false)
 
 interface SavedTask2 {
   id: number
@@ -169,6 +211,24 @@ function formatDuration(s: number): string {
   <div>
     <!-- ============ 首页：选题 + 历史 ============ -->
     <div v-if="view === 'home'">
+      <!-- 评分标准 -->
+      <div class="mb-6 rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+        <button class="flex w-full items-center justify-between px-5 py-4" @click="showGuide = !showGuide">
+          <span class="font-bold dark:text-white">📏 雅思大作文四项评分标准 <span class="text-xs font-normal text-gray-400">（了解规则才能拿分）</span></span>
+          <span class="text-gray-400">{{ showGuide ? '▲' : '▼' }}</span>
+        </button>
+        <div v-if="showGuide" class="grid gap-4 px-5 pb-5 md:grid-cols-2">
+          <div v-for="g in TASK2_GUIDE" :key="g.title" class="rounded-lg bg-gray-50 p-4 dark:bg-gray-700/50">
+            <div class="mb-2 font-bold text-sm dark:text-white">{{ g.title }}</div>
+            <ul class="space-y-1 text-xs text-gray-600 dark:text-gray-300">
+              <li v-for="(pt, i) in g.points" :key="i" class="flex gap-1.5">
+                <span class="text-blue-500">•</span><span>{{ pt }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
         📚 剑桥真题（剑18–剑21，共 16 题）· 建议 40 分钟、250+ 词
       </p>
@@ -183,6 +243,24 @@ function formatDuration(s: number): string {
           <div class="mb-3 flex-1 text-sm font-medium dark:text-white">{{ p.promptCn }}</div>
           <button
             class="rounded-lg bg-purple-700 px-4 py-2 text-sm font-medium text-white hover:bg-purple-800 dark:bg-purple-600"
+            @click="startWrite(p)"
+          >
+            开始写作
+          </button>
+        </div>
+      </div>
+
+      <h3 class="mb-3 text-lg font-bold dark:text-white">📝 更多真题 <span class="text-sm font-normal text-gray-400">（剑14/15/17，共 12 题）</span></h3>
+      <div class="mb-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div
+          v-for="p in EXTRA_TASK2"
+          :key="p.id"
+          class="flex flex-col rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"
+        >
+          <span class="mb-2 w-fit rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-bold text-teal-700 dark:bg-teal-900/40 dark:text-teal-300">{{ p.book }} {{ p.testLabel }}</span>
+          <div class="mb-3 flex-1 text-sm font-medium dark:text-white">{{ p.promptCn }}</div>
+          <button
+            class="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 dark:bg-teal-600"
             @click="startWrite(p)"
           >
             开始写作
