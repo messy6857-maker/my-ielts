@@ -52,9 +52,11 @@ suggestion: string
 }
 
 function extractJson(text: string): string {
+// 去掉模型可能输出的特殊 token（如 <endoftext>）和 think 标签
+const clean = text.replace(/<\|?endoftext\|?>/gi, '').replace(/<\/?think>/gi, '').trim()
 // 兼容模型把 JSON 包在 markdown 代码块里的情况
-const m = text.match(/```(?:json)?\s*([\s\S]*?)```/)
-const raw = (m? m[1]: text).trim()
+const m = clean.match(/```(?:json)?\s*([\s\S]*?)```/)
+const raw = (m? m[1]: clean).trim()
 const start = raw.indexOf('{')
 const end = raw.lastIndexOf('}')
 if (start >= 0 && end > start)
@@ -208,10 +210,15 @@ const settings = getAISettings()
 if (!hasAISettings())
 throw new Error('请先填写 API 地址、Key 和模型')
 const content = await callChatApi(settings, '只回复 {"ok":true}', 'ping')
+// 能拿到模型回复即算连通，不强求标准 JSON
+try {
 const parsed = JSON.parse(extractJson(content))
 if (parsed?.ok)
 return '连接成功'
+} catch { /* 忽略解析失败 */ }
+if (content && content.trim().length > 0)
 return '连接成功（模型有响应）'
+throw new Error('API 返回为空，请重试')
 }
 
 export const aiSettingsState = ref<AISettings>(getAISettings())
