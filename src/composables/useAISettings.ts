@@ -49,6 +49,10 @@ scores: { ta: number, cc: number, lr: number, gra: number, overall: number}
 comments: { ta: string, cc: string, lr: string, gra: string}
 corrections: AICorrection[]
 suggestion: string
+/** 四项标准各自的详细修改建议（新版才有，老存档可能缺失） */
+advice?: { ta: string, cc: string, lr: string, gra: string}
+/** 改写后的文章全文（新版才有） */
+rewritten?: string
 }
 
 function extractJson(text: string): string {
@@ -170,9 +174,16 @@ ${descriptors}
 "scores": { "${criterion1}": 6.5, "cc": 6.0, "lr": 6.5, "gra": 6.0, "overall": 6.5},
 "comments": { "${criterion1}": "先说依据官方标准的哪条给分，再给1-2句下一步建议", "cc": "...", "lr": "...", "gra": "..."},
 "corrections": [ { "original": "原文句子", "fixed": "修改后的句子", "reason": "中文说明，指出违反了哪项标准"}],
-"suggestion": "整体提分建议（中文，2-3句，指出最该优先改的一项）"
+"suggestion": "整体提分建议（中文，2-3句，指出最该优先改的一项）",
+"advice": {
+"${criterion1}": "针对${c1name}的详细修改建议（中文，3-5句，具体指出哪里没做好、应该怎么改，最好给1个改写示例）",
+"cc": "针对连贯与衔接的详细修改建议（同上）",
+"lr": "针对词汇资源的详细修改建议（同上，给出可替换的高级表达）",
+"gra": "针对语法的详细修改建议（同上，指出典型句式问题）"
+},
+"rewritten": "把整篇文章按你的建议改写一遍（英文全文，保持原意和段落结构，应用所有改进；不要加中文）"
 }
-其中 ${criterion1} 对应${c1name}，cc=连贯与衔接，lr=词汇资源，gra=语法多样性与准确性。corrections 挑 3-6 个最值得改的句子。全部用中文（original/fixed 保留英文原文）。`
+其中 ${criterion1} 对应${c1name}，cc=连贯与衔接，lr=词汇资源，gra=语法多样性与准确性。corrections 挑 3-6 个最值得改的句子。全部用中文（original/fixed/rewritten 保留英文原文）。`
 const user = `【题目】\n${question}\n\n【考生作文】\n${essay}`
 return { system, user}
 }

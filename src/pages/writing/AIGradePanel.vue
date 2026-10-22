@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { gradeEssayWithAI, hasAISettings } from '~/composables/useAISettings'
 import type { AIGradeResult } from '~/composables/useAISettings'
 import { useAuth } from '~/composables/useAuth'
+import { diffWords } from '~/composables/useWordDiff'
 
 const props = defineProps<{
   task: 'task1' | 'task2'
@@ -100,6 +101,14 @@ function scoreColor(s: number) {
   if (s >= 5) return 'text-amber-600 dark:text-amber-400'
   return 'text-red-500'
 }
+
+// 改写全文与原文的单词级 diff，用于颜色标注改动处
+const showDiff = ref(false)
+const rewrittenTokens = computed(() => {
+  if (!aiResult.value?.rewritten)
+    return []
+  return diffWords(props.essay, aiResult.value.rewritten)
+})
 </script>
 
 <template>
@@ -155,6 +164,20 @@ function scoreColor(s: number) {
         </div>
       </div>
 
+      <div v-if="aiResult.advice" class="mb-5">
+        <div class="mb-2 text-sm font-bold dark:text-white">📋 四项标准详细修改建议</div>
+        <div class="space-y-2">
+          <div
+            v-for="(label, key) in criterionLabels"
+            :key="key"
+            class="rounded-lg border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-900/10"
+          >
+            <div class="mb-1 text-xs font-bold text-blue-700 dark:text-blue-300">{{ label }} · {{ aiResult.scores[key].toFixed(1) }}分</div>
+            <p class="text-sm leading-6 text-gray-700 dark:text-gray-200">{{ aiResult.advice[key] }}</p>
+          </div>
+        </div>
+      </div>
+
       <div v-if="aiResult.corrections.length" class="mb-5">
         <div class="mb-2 text-sm font-bold dark:text-white">✏️ 逐句修改</div>
         <div class="space-y-2">
@@ -168,6 +191,41 @@ function scoreColor(s: number) {
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">💡 {{ c.reason }}</p>
           </div>
         </div>
+      </div>
+
+      <div v-if="aiResult.rewritten" class="mb-5">
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <span class="text-sm font-bold dark:text-white">📄 改写后全文</span>
+          <button
+            class="text-xs text-blue-600 hover:underline dark:text-blue-400"
+            @click="showDiff = !showDiff"
+          >
+            {{ showDiff ? '只看改写后' : '对照查看改动' }}
+          </button>
+        </div>
+        <div class="rounded-lg bg-gray-50 p-4 text-sm leading-7 dark:bg-gray-700/50 dark:text-gray-200">
+          <template v-if="!showDiff">
+            <span
+              v-for="(t, i) in rewrittenTokens"
+              :key="i"
+              :class="t.type === 'ins' ? 'rounded bg-green-200 px-0.5 dark:bg-green-900/60 dark:text-green-200' : ''"
+            >{{ t.text }} </span>
+          </template>
+          <template v-else>
+            <span
+              v-for="(t, i) in rewrittenTokens"
+              :key="i"
+              :class="t.type === 'del'
+                ? 'rounded bg-red-200 px-0.5 text-red-700 line-through dark:bg-red-900/50 dark:text-red-300'
+                : t.type === 'ins'
+                  ? 'rounded bg-green-200 px-0.5 text-green-800 dark:bg-green-900/60 dark:text-green-200'
+                  : ''"
+            >{{ t.text }} </span>
+          </template>
+        </div>
+        <p class="mt-1 text-xs text-gray-400">
+          <span class="rounded bg-green-200 px-1 dark:bg-green-900/60">绿色</span> 为改写新增/修改的词<span v-if="showDiff">，<span class="rounded bg-red-200 px-1 line-through dark:bg-red-900/50">红色删除线</span> 为原文删掉的词</span>
+        </p>
       </div>
 
       <div class="rounded-lg bg-purple-50 p-4 text-sm leading-6 dark:bg-purple-900/20 dark:text-gray-200">
