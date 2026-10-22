@@ -93,11 +93,87 @@ onUnmounted(() => {
 // App 内容容器默认 overflow-y-auto 会自己滚动，导致 sticky 相对它失效；
 // 本页挂载时强制它 overflow 可见，让 window 成为滚动容器，sticky 即可靠生效。
 // sticky 是文档流内定位，不会像 fixed 那样遮挡 Part 切换按钮。
-const zoomImage = ref<string | null>(null)
-
 onMounted(() => {
   document.body.classList.add('listening-sticky-page')
 })
+
+// ---------- 图片全屏查看器（双指缩放 / 拖动 / 双击切换） ----------
+const zoomImage = ref<string | null>(null)
+const zoomScale = ref(1)
+const zoomPos = ref({ x: 0, y: 0 })
+
+function openZoom(src: string) {
+  zoomImage.value = src
+  zoomScale.value = 1
+  zoomPos.value = { x: 0, y: 0 }
+}
+
+function closeZoom() {
+  zoomImage.value = null
+}
+
+function adjustZoom(delta: number) {
+  zoomScale.value = Math.min(4, Math.max(1, +(zoomScale.value + delta).toFixed(2)))
+  if (zoomScale.value === 1)
+    zoomPos.value = { x: 0, y: 0 }
+}
+
+function toggleZoom() {
+  if (zoomScale.value > 1.5) {
+    zoomScale.value = 1
+    zoomPos.value = { x: 0, y: 0 }
+  }
+  else {
+    zoomScale.value = 2.5
+  }
+}
+
+let pinchBase = 0
+let pinchScale = 1
+let panBase: { x: number, y: number } | null = null
+
+function onZoomTouchStart(e: TouchEvent) {
+  if (e.touches.length === 2) {
+    const t1 = e.touches[0]
+    const t2 = e.touches[1]
+    pinchBase = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
+    pinchScale = zoomScale.value
+    panBase = null
+  }
+  else if (e.touches.length === 1 && zoomScale.value > 1) {
+    const t = e.touches[0]
+    panBase = { x: t.clientX - zoomPos.value.x, y: t.clientY - zoomPos.value.y }
+  }
+}
+
+function onZoomTouchMove(e: TouchEvent) {
+  if (e.touches.length === 2 && pinchBase > 0) {
+    e.preventDefault()
+    const t1 = e.touches[0]
+    const t2 = e.touches[1]
+    const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
+    zoomScale.value = Math.min(4, Math.max(1, +(pinchScale * dist / pinchBase).toFixed(2)))
+    if (zoomScale.value === 1)
+      zoomPos.value = { x: 0, y: 0 }
+  }
+  else if (e.touches.length === 1 && panBase && zoomScale.value > 1) {
+    e.preventDefault()
+    const t = e.touches[0]
+    zoomPos.value = { x: t.clientX - panBase.x, y: t.clientY - panBase.y }
+  }
+}
+
+function onZoomTouchEnd(e: TouchEvent) {
+  if (e.touches.length < 2)
+    pinchBase = 0
+  if (e.touches.length === 0)
+    panBase = null
+}
+
+function onZoomWheel(e: WheelEvent) {
+  e.preventDefault()
+  adjustZoom(e.deltaY < 0 ? 0.25 : -0.25)
+}
 
 function submit() {
   if (submitted.value)
@@ -292,24 +368,24 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
       </article>
 
       <!-- 有图的 Part：图片吸顶，滑到题目时一直看得见 -->
-      <div :class="p.image ? 'lg:grid lg:grid-cols-5 lg:items-start lg:gap-6' : ''">
-        <div v-if="p.image" class="sticky top-20 z-10 mb-6 lg:col-span-2 lg:mb-0 lg:top-24">
+      <div :class="p.image ? 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-6' : ''">
+        <div v-if="p.image" class="sticky top-20 z-10 mb-6 lg:mb-0 lg:top-24">
           <div class="rounded-xl border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-800">
             <img
               :src="p.image"
               alt="题目示意图"
               class="w-full cursor-zoom-in rounded-lg lg:max-h-[70vh] lg:object-contain"
-              @click="zoomImage = p.image"
+              @click="openZoom(p.image)"
             />
             <button
               class="mt-2 w-full rounded-lg bg-gray-100 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-              @click="zoomImage = p.image"
+              @click="openZoom(p.image)"
             >
               🔍 点击放大查看
             </button>
           </div>
         </div>
-        <div :class="p.image ? 'lg:col-span-3' : ''">
+        <div>
           <div class="space-y-4">
         <div
           v-for="q in p.questions"
@@ -416,10 +492,42 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
     </template>
   </div>
 
-  <!-- 图片全屏放大 -->
-  <div v-if="zoomImage" class="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4" @click="zoomImage = null">
-    <img :src="zoomImage" alt="题目示意图" class="max-h-full max-w-full rounded-lg object-contain" />
-    <button class="absolute right-4 top-4 rounded-full bg-white/20 px-3 py-1.5 text-sm text-white">✕ 关闭</button>
+  <!-- 图片全屏查看器：双指缩放 / 单指拖动 / 双击切换 / 滚轮缩放 -->
+  <div v-if="zoomImage" class="fixed inset-0 z-50 flex flex-col bg-black/95">
+    <div class="flex items-center justify-between gap-2 p-3">
+      <div class="flex items-center gap-2">
+        <button
+          class="h-9 w-9 rounded-full bg-white/15 text-xl font-bold text-white active:bg-white/30"
+          @click="adjustZoom(-0.5)"
+        >−</button>
+        <span class="w-14 text-center text-sm text-white/80">{{ Math.round(zoomScale * 100) }}%</span>
+        <button
+          class="h-9 w-9 rounded-full bg-white/15 text-xl font-bold text-white active:bg-white/30"
+          @click="adjustZoom(0.5)"
+        >＋</button>
+      </div>
+      <span class="hidden text-xs text-white/50 sm:inline">双指缩放 · 拖动平移 · 双击放大/还原</span>
+      <button
+        class="rounded-full bg-white/15 px-4 py-2 text-sm text-white active:bg-white/30"
+        @click="closeZoom"
+      >✕ 关闭</button>
+    </div>
+    <div
+      class="flex flex-1 touch-none items-center justify-center overflow-hidden"
+      @touchstart="onZoomTouchStart"
+      @touchmove="onZoomTouchMove"
+      @touchend="onZoomTouchEnd"
+      @wheel="onZoomWheel"
+      @dblclick="toggleZoom"
+    >
+      <img
+        :src="zoomImage"
+        alt="题目示意图"
+        class="max-h-full max-w-full rounded-lg"
+        :style="{ transform: `translate(${zoomPos.x}px, ${zoomPos.y}px) scale(${zoomScale})` }"
+        draggable="false"
+      />
+    </div>
   </div>
 </template>
 
