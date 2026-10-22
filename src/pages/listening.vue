@@ -21,9 +21,17 @@
         <li class="w-full">
           <router-link
             to="/listening/corpus"
-            class="inline-block w-full rounded-r-lg bg-gray-100 p-4 text-gray-900 dark:bg-gray-700 dark:text-white"
+            class="inline-block w-full bg-gray-100 p-4 text-gray-900 dark:bg-gray-700 dark:text-white"
           >
             雅思听力王语料库
+          </router-link>
+        </li>
+        <li class="w-full">
+          <router-link
+            to="/mock/listening-test"
+            class="inline-block w-full rounded-r-lg bg-gray-100 p-4 text-gray-900 dark:bg-gray-700 dark:text-white"
+          >
+            ⏱ 限时模考
           </router-link>
         </li>
       </ul>
