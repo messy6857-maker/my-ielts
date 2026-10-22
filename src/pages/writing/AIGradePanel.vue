@@ -203,13 +203,13 @@ const rewrittenTokens = computed(() => {
             {{ showDiff ? '只看改写后' : '对照查看改动' }}
           </button>
         </div>
-        <div class="rounded-lg bg-gray-50 p-4 text-sm leading-7 dark:bg-gray-700/50 dark:text-gray-200">
+        <div class="rounded-lg bg-gray-50 p-4 text-sm leading-7 break-words whitespace-pre-wrap dark:bg-gray-700/50 dark:text-gray-200">
           <template v-if="!showDiff">
             <span
               v-for="(t, i) in rewrittenTokens"
               :key="i"
               :class="t.type === 'ins' ? 'rounded bg-green-200 px-0.5 dark:bg-green-900/60 dark:text-green-200' : ''"
-            >{{ t.text }} </span>
+            >{{ t.text }}</span>
           </template>
           <template v-else>
             <span
@@ -220,7 +220,7 @@ const rewrittenTokens = computed(() => {
                 : t.type === 'ins'
                   ? 'rounded bg-green-200 px-0.5 text-green-800 dark:bg-green-900/60 dark:text-green-200'
                   : ''"
-            >{{ t.text }} </span>
+            >{{ t.text }}</span>
           </template>
         </div>
         <p class="mt-1 text-xs text-gray-400">

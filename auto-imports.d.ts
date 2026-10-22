@@ -43,12 +43,11 @@ declare global {
   const defineAsyncComponent: typeof import('vue')['defineAsyncComponent']
   const defineComponent: typeof import('vue')['defineComponent']
   const deviceTimerKey: typeof import('./src/composables/useStudyTimer')['deviceTimerKey']
+  const diffWords: typeof import('./src/composables/useWordDiff')['diffWords']
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
   const exportBackup: typeof import('./src/composables/useBackup')['exportBackup']
   const extendRef: typeof import('@vueuse/core')['extendRef']
-  const extractWordInfo: typeof import('./src/composables/useWordInfo')['extractWordInfo']
-  const fetchWordInfo: typeof import('./src/composables/useWordInfo')['fetchWordInfo']
   const formatClock: typeof import('./src/composables/useStudyTimer')['formatClock']
   const formatDate: typeof import('./src/composables/useStudyData')['formatDate']
   const formatDuration: typeof import('./src/composables/useStudyTimer')['formatDuration']
@@ -69,7 +68,6 @@ declare global {
   const importBackup: typeof import('./src/composables/useBackup')['importBackup']
   const initSingleAudio: typeof import('./src/composables/useSingleAudio')['initSingleAudio']
   const inject: typeof import('vue')['inject']
-  const injectLocal: typeof import('@vueuse/core')['injectLocal']
   const isDark: typeof import('./src/composables/dark')['isDark']
   const isDefined: typeof import('@vueuse/core')['isDefined']
   const isProxy: typeof import('vue')['isProxy']
@@ -100,11 +98,9 @@ declare global {
   const onStartTyping: typeof import('@vueuse/core')['onStartTyping']
   const onUnmounted: typeof import('vue')['onUnmounted']
   const onUpdated: typeof import('vue')['onUpdated']
-  const onWatcherCleanup: typeof import('vue')['onWatcherCleanup']
   const pausableWatch: typeof import('@vueuse/core')['pausableWatch']
   const planQueue: typeof import('./src/composables/useDeckStore')['planQueue']
   const provide: typeof import('vue')['provide']
-  const provideLocal: typeof import('@vueuse/core')['provideLocal']
   const reactify: typeof import('@vueuse/core')['reactify']
   const reactifyObject: typeof import('@vueuse/core')['reactifyObject']
   const reactive: typeof import('vue')['reactive']
@@ -180,7 +176,6 @@ declare global {
   const useCached: typeof import('@vueuse/core')['useCached']
   const useCheckin: typeof import('./src/composables/useSpacedRepetition')['useCheckin']
   const useClipboard: typeof import('@vueuse/core')['useClipboard']
-  const useClipboardItems: typeof import('@vueuse/core')['useClipboardItems']
   const useCloned: typeof import('@vueuse/core')['useCloned']
   const useColorMode: typeof import('@vueuse/core')['useColorMode']
   const useConfirmDialog: typeof import('@vueuse/core')['useConfirmDialog']
@@ -224,7 +219,6 @@ declare global {
   const useFullscreen: typeof import('@vueuse/core')['useFullscreen']
   const useGamepad: typeof import('@vueuse/core')['useGamepad']
   const useGeolocation: typeof import('@vueuse/core')['useGeolocation']
-  const useId: typeof import('vue')['useId']
   const useIdle: typeof import('@vueuse/core')['useIdle']
   const useImage: typeof import('@vueuse/core')['useImage']
   const useInfiniteScroll: typeof import('@vueuse/core')['useInfiniteScroll']
@@ -243,7 +237,6 @@ declare global {
   const useMemoize: typeof import('@vueuse/core')['useMemoize']
   const useMemory: typeof import('@vueuse/core')['useMemory']
   const useMistakes: typeof import('./src/composables/useStudyData')['useMistakes']
-  const useModel: typeof import('vue')['useModel']
   const useMounted: typeof import('@vueuse/core')['useMounted']
   const useMouse: typeof import('@vueuse/core')['useMouse']
   const useMouseInElement: typeof import('@vueuse/core')['useMouseInElement']
@@ -296,7 +289,6 @@ declare global {
   const useSupported: typeof import('@vueuse/core')['useSupported']
   const useSwipe: typeof import('@vueuse/core')['useSwipe']
   const useSync: typeof import('./src/composables/useSync')['useSync']
-  const useTemplateRef: typeof import('vue')['useTemplateRef']
   const useTemplateRefsList: typeof import('@vueuse/core')['useTemplateRefsList']
   const useTextDirection: typeof import('@vueuse/core')['useTextDirection']
   const useTextSelection: typeof import('@vueuse/core')['useTextSelection']
@@ -394,6 +386,7 @@ declare module 'vue' {
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly deviceTimerKey: UnwrapRef<typeof import('./src/composables/useStudyTimer')['deviceTimerKey']>
+    readonly diffWords: UnwrapRef<typeof import('./src/composables/useWordDiff')['diffWords']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly exportBackup: UnwrapRef<typeof import('./src/composables/useBackup')['exportBackup']>
@@ -730,6 +723,7 @@ declare module '@vue/runtime-core' {
     readonly defineAsyncComponent: UnwrapRef<typeof import('vue')['defineAsyncComponent']>
     readonly defineComponent: UnwrapRef<typeof import('vue')['defineComponent']>
     readonly deviceTimerKey: UnwrapRef<typeof import('./src/composables/useStudyTimer')['deviceTimerKey']>
+    readonly diffWords: UnwrapRef<typeof import('./src/composables/useWordDiff')['diffWords']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly exportBackup: UnwrapRef<typeof import('./src/composables/useBackup')['exportBackup']>
