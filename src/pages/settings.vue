@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { aiSettingsState, getAISettings, saveAISettings, testAIConnection } from '../composables/useAISettings'
+
+const router = useRouter()
+function goBack() {
+  if (window.history.length > 1)
+    router.back()
+  else
+    router.push('/')
+}
 
 const form = ref({ ...getAISettings() })
 const saved = ref(false)
@@ -41,6 +50,7 @@ async function onTest() {
 
 <template>
   <div class="mx-auto max-w-2xl px-4 pt-6 2xl:px-0">
+    <button class="mb-4 text-sm text-gray-500 hover:text-gray-800 dark:text-gray-400" @click="goBack">← 返回</button>
     <h2 class="mb-6 text-xl font-bold dark:text-white">⚙️ 设置</h2>
 
     <div class="rounded-xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
