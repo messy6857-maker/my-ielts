@@ -4,6 +4,7 @@ import { gradeEssayWithAI, hasAISettings } from '~/composables/useAISettings'
 import type { AIGradeResult } from '~/composables/useAISettings'
 import { useAuth } from '~/composables/useAuth'
 import { diffWords } from '~/composables/useWordDiff'
+import type { DiffToken } from '~/composables/useWordDiff'
 
 const props = defineProps<{
   task: 'task1' | 'task2'
@@ -109,6 +110,38 @@ const rewrittenTokens = computed(() => {
     return []
   return diffWords(props.essay, aiResult.value.rewritten)
 })
+
+// 按换行切分成段落，每段独立 <p> 显示，段落感分明
+const rewrittenParagraphs = computed(() => {
+  const paras: DiffToken[][] = [[]]
+  for (const t of rewrittenTokens.value) {
+    if (/^\s+$/.test(t.text) && t.text.includes('\n')) {
+      if (paras[paras.length - 1].length > 0)
+        paras.push([])
+    }
+    else {
+      paras[paras.length - 1].push(t)
+    }
+  }
+  return paras.filter(p => p.length > 0)
+})
+
+// 非对照模式下过滤掉被删的词（只看改写后）
+const visibleParagraphs = computed(() =>
+  rewrittenParagraphs.value
+    .map(para => showDiff.value ? para : para.filter(t => t.type !== 'del'))
+    .filter(p => p.length > 0),
+)
+
+function tokenClass(t: DiffToken): string {
+  if (t.type === 'del')
+    return 'rounded bg-red-200 px-0.5 text-red-700 line-through dark:bg-red-900/50 dark:text-red-300'
+  if (t.type === 'ins')
+    return showDiff.value
+      ? 'rounded bg-green-200 px-0.5 text-green-800 dark:bg-green-900/60 dark:text-green-200'
+      : 'rounded bg-green-200 px-0.5 dark:bg-green-900/60 dark:text-green-200'
+  return ''
+}
 </script>
 
 <template>
@@ -203,25 +236,18 @@ const rewrittenTokens = computed(() => {
             {{ showDiff ? '只看改写后' : '对照查看改动' }}
           </button>
         </div>
-        <div class="rounded-lg bg-gray-50 p-4 text-sm leading-7 break-words whitespace-pre-wrap dark:bg-gray-700/50 dark:text-gray-200">
-          <template v-if="!showDiff">
+        <div class="rounded-lg bg-gray-50 p-4 text-sm leading-7 break-words dark:bg-gray-700/50 dark:text-gray-200">
+          <p
+            v-for="(para, pi) in visibleParagraphs"
+            :key="pi"
+            class="mb-3 last:mb-0"
+          >
             <span
-              v-for="(t, i) in rewrittenTokens"
+              v-for="(t, i) in para"
               :key="i"
-              :class="t.type === 'ins' ? 'rounded bg-green-200 px-0.5 dark:bg-green-900/60 dark:text-green-200' : ''"
+              :class="tokenClass(t)"
             >{{ t.text }}</span>
-          </template>
-          <template v-else>
-            <span
-              v-for="(t, i) in rewrittenTokens"
-              :key="i"
-              :class="t.type === 'del'
-                ? 'rounded bg-red-200 px-0.5 text-red-700 line-through dark:bg-red-900/50 dark:text-red-300'
-                : t.type === 'ins'
-                  ? 'rounded bg-green-200 px-0.5 text-green-800 dark:bg-green-900/60 dark:text-green-200'
-                  : ''"
-            >{{ t.text }}</span>
-          </template>
+          </p>
         </div>
         <p class="mt-1 text-xs text-gray-400">
           <span class="rounded bg-green-200 px-1 dark:bg-green-900/60">绿色</span> 为改写新增/修改的词<span v-if="showDiff">，<span class="rounded bg-red-200 px-1 line-through dark:bg-red-900/50">红色删除线</span> 为原文删掉的词</span>
