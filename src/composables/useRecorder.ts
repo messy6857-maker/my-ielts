@@ -10,11 +10,65 @@ export function useRecorder() {
   const audioUrl = ref<string | null>(null)
   const error = ref('')
   const elapsed = ref(0)
+  // 语音转写（Web Speech API，仅 Chrome/Edge 等支持）
+  const transcript = ref('')
+  const transcriptionSupported = typeof window !== 'undefined'
+    && !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
 
   let mediaRecorder: MediaRecorder | null = null
   let stream: MediaStream | null = null
   let chunks: Blob[] = []
   let timer: ReturnType<typeof setInterval> | null = null
+  let recognition: any = null
+  let finalText = ''
+
+  function startTranscription() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SR)
+      return
+    finalText = ''
+    transcript.value = ''
+    recognition = new SR()
+    recognition.lang = 'en-US'
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.onresult = (e: any) => {
+      let interim = ''
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t: string = e.results[i][0].transcript
+        if (e.results[i].isFinal)
+          finalText += `${t.trim()} `
+        else
+          interim += t
+      }
+      transcript.value = (finalText + interim).trim()
+    }
+    recognition.onerror = () => { /* 忽略，转写失败不影响录音 */ }
+    recognition.onend = () => {
+      // 录音中途识别中断则自动重启
+      if (isRecording.value && recognition) {
+        try {
+          recognition.start()
+        }
+        catch { /* ignore */ }
+      }
+    }
+    try {
+      recognition.start()
+    }
+    catch { /* ignore */ }
+  }
+
+  function stopTranscription() {
+    if (recognition) {
+      recognition.onend = null
+      try {
+        recognition.stop()
+      }
+      catch { /* ignore */ }
+      recognition = null
+    }
+  }
 
   function cleanupTimer() {
     if (timer) {
@@ -65,6 +119,8 @@ export function useRecorder() {
     elapsed.value = 0
     cleanupTimer()
     timer = setInterval(() => { elapsed.value++ }, 1000)
+    // 同步启动语音转写（支持的浏览器）
+    startTranscription()
     return true
   }
 
@@ -76,6 +132,7 @@ export function useRecorder() {
       catch { /* ignore */ }
       isRecording.value = false
       cleanupTimer()
+      stopTranscription()
     }
   }
 
@@ -86,9 +143,10 @@ export function useRecorder() {
     audioUrl.value = null
     elapsed.value = 0
     error.value = ''
+    transcript.value = ''
   }
 
-  return { isRecording, audioUrl, error, elapsed, start, stop, clear }
+  return { isRecording, audioUrl, error, elapsed, transcript, transcriptionSupported, start, stop, clear }
 }
 
 export function formatClock(totalSeconds: number): string {

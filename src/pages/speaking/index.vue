@@ -82,7 +82,7 @@ const tabBtn = (t: Tab) =>
           <div v-if="p1Expanded === t.id" class="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
             <div v-for="(q, i) in t.questions" :key="i" class="border-b border-gray-50 py-3 last:border-0 dark:border-gray-700/50">
               <p class="text-sm leading-6 dark:text-gray-200">{{ q }}</p>
-              <QuestionRecorder />
+              <QuestionRecorder :question="q" />
             </div>
           </div>
         </div>
@@ -138,7 +138,7 @@ const tabBtn = (t: Tab) =>
           <div v-if="p3Expanded === t.id" class="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
             <div v-for="(q, i) in t.questions" :key="i" class="border-b border-gray-50 py-3 last:border-0 dark:border-gray-700/50">
               <p class="text-sm leading-6 dark:text-gray-200">{{ q }}</p>
-              <QuestionRecorder />
+              <QuestionRecorder :question="q" />
             </div>
           </div>
         </div>

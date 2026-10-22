@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
+import AIGradeSpeaking from './AIGradeSpeaking.vue'
 import { formatClock, useRecorder } from '~/composables/useRecorder'
 import type { Part2Card } from './part2'
 
@@ -150,6 +151,15 @@ onUnmounted(() => {
         <p class="text-sm text-gray-500 dark:text-gray-400">回放你的陈述，检查：有没有说满时间？四个要点都覆盖了吗？有没有长时间卡壳？</p>
         <audio v-if="recorder.audioUrl.value" :src="recorder.audioUrl.value" controls class="w-full" />
         <p v-if="recorder.error.value" class="text-sm text-red-500">{{ recorder.error.value }}</p>
+        <div v-if="recorder.transcript.value" class="rounded-lg bg-gray-50 p-3 text-xs leading-5 dark:bg-gray-700/50">
+          <div class="mb-1 font-bold text-gray-500 dark:text-gray-400">📝 语音转写</div>
+          <p class="text-gray-700 dark:text-gray-200">{{ recorder.transcript.value }}</p>
+        </div>
+        <AIGradeSpeaking
+          v-if="recorder.transcript.value.trim()"
+          :question="card.title"
+          :transcript="recorder.transcript.value"
+        />
         <div class="flex gap-2">
           <button
             class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700"

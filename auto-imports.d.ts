@@ -62,6 +62,7 @@ declare global {
   const getWordInfoWithFallback: typeof import('./src/composables/useWordInfo')['getWordInfoWithFallback']
   const gradeEssayWithAI: typeof import('./src/composables/useAISettings')['gradeEssayWithAI']
   const gradeSchedule: typeof import('./src/composables/useSpacedRepetition')['gradeSchedule']
+  const gradeSpeakingWithAI: typeof import('./src/composables/useAISettings')['gradeSpeakingWithAI']
   const h: typeof import('vue')['h']
   const hasAISettings: typeof import('./src/composables/useAISettings')['hasAISettings']
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
@@ -409,6 +410,7 @@ declare module 'vue' {
     readonly getWordInfoWithFallback: UnwrapRef<typeof import('./src/composables/useWordInfo')['getWordInfoWithFallback']>
     readonly gradeEssayWithAI: UnwrapRef<typeof import('./src/composables/useAISettings')['gradeEssayWithAI']>
     readonly gradeSchedule: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['gradeSchedule']>
+    readonly gradeSpeakingWithAI: UnwrapRef<typeof import('./src/composables/useAISettings')['gradeSpeakingWithAI']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly hasAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['hasAISettings']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
@@ -743,6 +745,7 @@ declare module '@vue/runtime-core' {
     readonly getWordInfoWithFallback: UnwrapRef<typeof import('./src/composables/useWordInfo')['getWordInfoWithFallback']>
     readonly gradeEssayWithAI: UnwrapRef<typeof import('./src/composables/useAISettings')['gradeEssayWithAI']>
     readonly gradeSchedule: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['gradeSchedule']>
+    readonly gradeSpeakingWithAI: UnwrapRef<typeof import('./src/composables/useAISettings')['gradeSpeakingWithAI']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly hasAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['hasAISettings']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>

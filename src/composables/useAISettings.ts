@@ -204,9 +204,77 @@ throw new Error('AI 返回格式异常，请重试')
 return parsed
 }
 
+export interface AISpeakingResult {
+  scores: { fluency: number, lexical: number, grammar: number, overall: number }
+  comments: { fluency: string, lexical: string, grammar: string }
+  suggestion: string
+}
+
+// 口语评分标准 condensed（IELTS Speaking Band Descriptors）
+// 注意：发音(Pronunciation)无法从文字转写评估，不纳入 AI 打分
+const SPEAKING_DESCRIPTORS = `【Fluency and Coherence 流利度与连贯性】
+9分: 自然流利，极少重复/自我纠正；连贯衔接自然；话题展开充分。
+8分: 流利，偶有重复/纠正；衔接恰当；话题展开充分。
+7分: 有一定流利度；偶有重复/纠正/犹豫；能使用多种衔接手段；能展开话题。
+6分: 能保持较长发言但有重复/纠正；衔接手段有限但大体有效；能展开但不够充分。
+5分: 能保持发言但明显不流利；重复纠正多；衔接手段少；展开有限。
+【Lexical Resource 词汇资源】
+9分: 词汇丰富精确，搭配自然；习语运用自如。
+8分: 词汇丰富灵活，搭配多准确；偶有小错。
+7分: 词汇量够，能谈多话题；搭配意识强；偶有用词不当。
+6分: 词汇够谈熟悉话题；能改述但不总成功；有搭配错误。
+5分: 词汇有限；简单话题可应付；错误多但大意可懂。
+【Grammatical Range and Accuracy 语法多样性与准确性】
+9分: 句式丰富灵活，全程准确。
+8分: 句式多样，多数准确，偶有小错。
+7分: 复杂句多样，有一定准确度；错误不影响理解。
+6分: 简单复杂句混用；复杂句错误多于简单句。
+5分: 句式有限重复；错误多但大意可懂。`
+
+const SPEAKING_SYSTEM_PROMPT = `你是雅思口语考官。考生用英语回答了口语题目，下面给你的是【语音转写的文字稿】（转写可能有小错，请宽容）。
+必须严格依据以下官方口语评分标准（IELTS Speaking Band Descriptors）打分：
+
+${SPEAKING_DESCRIPTORS}
+
+重要说明：
+- 发音(Pronunciation)无法从文字评估，不要打分，overall 按三项综合估算。
+- 转写文本没有标点/大小写问题，不要因此扣分；关注内容、词汇、句式。
+- 每项按0.5分制（4.0-9.0）。
+
+严格按以下 JSON 格式返回（不要输出其他内容）：
+{
+"scores": { "fluency": 6.5, "lexical": 6.0, "grammar": 6.0, "overall": 6.0 },
+"comments": { "fluency": "依据标准的哪条给分+1-2句建议", "lexical": "...", "grammar": "..." },
+"suggestion": "整体提分建议（中文，2-3句，指出最该优先改的一项）"
+}
+其中 fluency=流利度与连贯性，lexical=词汇资源，grammar=语法多样性与准确性。全部用中文（引用考生原话时保留英文）。`
+
+export async function gradeSpeakingWithAI(
+  question: string,
+  transcript: string,
+): Promise<AISpeakingResult> {
+  const settings = getAISettings()
+  if (!hasAISettings())
+    throw new Error('请先在设置页填写 API 地址、Key 和模型')
+  const words = transcript.trim().split(/\s+/).filter(Boolean).length
+  if (words < 10)
+    throw new Error('转写文字太少，无法评分（请说几句完整的英语再试）')
+  const user = `【题目】\n${question}\n\n【考生回答（语音转写）】\n${transcript}`
+  const raw = await callChatApi(settings, SPEAKING_SYSTEM_PROMPT, user)
+  let parsed: AISpeakingResult
+  try {
+    parsed = JSON.parse(extractJson(raw))
+  }
+  catch {
+    throw new Error('AI 返回格式异常，请重试')
+  }
+  if (!parsed?.scores || typeof parsed.scores.overall !== 'number')
+    throw new Error('AI 返回格式异常，请重试')
+  return parsed
+}
+
 // 测试连接：发一个极短请求验证 Key/地址/模型可用
-export async function testAIConnection(): Promise<string> {
-const settings = getAISettings()
+export async function testAIConnection(): Promise<string> {const settings = getAISettings()
 if (!hasAISettings())
 throw new Error('请先填写 API 地址、Key 和模型')
 const content = await callChatApi(settings, '只回复 {"ok":true}', 'ping')
