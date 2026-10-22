@@ -149,6 +149,7 @@ function backHome() {
 
 const stats = ref<EssayStats | null>(null)
 const resultPrompt = ref<CambridgeWritingTask | null>(null)
+const resultQuestion = ref('')
 const secondsUsed = ref(0)
 
 function checklist(s: EssayStats): { ok: boolean, text: string }[] {
@@ -175,6 +176,7 @@ function submitEssay() {
   secondsUsed.value = TIME_LIMIT - secondsLeft.value
   stats.value = analyzeEssay(essayText.value)
   resultPrompt.value = prompt.value
+  resultQuestion.value = prompt.value ? prompt.value.promptEn : ''
   view.value = 'result'
   if (prompt.value && stats.value) {
     saveEssay({
@@ -190,8 +192,10 @@ function submitEssay() {
 }
 
 function reviewEssay(e: SavedTask2) {
-  const p = TASK2_QUESTIONS.find(x => x.id === e.promptId) || null
+  const p = TASK2_QUESTIONS.find(x => x.id === e.promptId)
+    ?? EXTRA_TASK2.find(x => x.id === e.promptId) ?? null
   resultPrompt.value = p
+  resultQuestion.value = p ? p.promptEn : e.promptTitleCn
   essayText.value = e.text
   stats.value = analyzeEssay(e.text)
   secondsUsed.value = e.secondsUsed
@@ -366,9 +370,9 @@ function formatDuration(s: number): string {
       </div>
 
       <AIGradePanel
-        v-if="resultPrompt"
+        v-if="resultQuestion"
         task="task2"
-        :question="resultPrompt.promptEn"
+        :question="resultQuestion"
         :essay="essayText"
       />
 

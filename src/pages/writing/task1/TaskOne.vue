@@ -130,6 +130,7 @@ function backHome() {
 // ---------- 批改 ----------
 const result = ref<GradeResult | null>(null)
 const resultPrompt = ref<AnyPrompt | null>(null)
+const resultQuestion = ref('')
 const secondsUsed = ref(0)
 
 function submitEssay() {
@@ -145,6 +146,7 @@ function submitEssay() {
   secondsUsed.value = TIME_LIMIT - secondsLeft.value
   result.value = gradeTask1(essayText.value)
   resultPrompt.value = prompt.value
+  resultQuestion.value = prompt.value ? titleOf(prompt.value) : ''
   view.value = 'result'
   // 自动存档
   if (prompt.value && result.value) {
@@ -165,6 +167,7 @@ function submitEssay() {
 function reviewEssay(e: SavedEssay) {
   const p = findPrompt(e.promptId)
   resultPrompt.value = p
+  resultQuestion.value = p ? titleOf(p) : e.promptTitleCn
   essayText.value = e.text
   result.value = gradeTask1(e.text)
   secondsUsed.value = e.secondsUsed
@@ -391,9 +394,9 @@ function formatDuration(s: number): string {
       </details>
 
       <AIGradePanel
-        v-if="resultPrompt"
+        v-if="resultQuestion"
         task="task1"
-        :question="titleOf(resultPrompt)"
+        :question="resultQuestion"
         :essay="essayText"
       />
 
