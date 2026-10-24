@@ -1,0 +1,442 @@
+{
+  "date": "2026-10-24",
+  "newsReadings": [
+    {
+      "title": "A Vaccine Made for One: The Personalised mRNA Shot Redefining Cancer Care",
+      "source": "AAP News, 23 October 2026",
+      "passage": "For decades, the pharmacological paradigm governing oncology has rested on a disquieting compromise: drugs calibrated to statistical averages rather than to individuals. Conventional chemotherapeutics and even the more recent generations of targeted agents are, by design, administered uniformly to patients whose tumours may differ radically at the molecular level. Against this backdrop, results announced this week from a world-first clinical trial led by Professor Georgina Long, the former Australian of the Year and medical director of the Melanoma Institute Australia, acquire a genuinely epochal significance. The trial evaluated an mRNA-based vaccine intended not to prevent melanoma in the first instance, but to attenuate the probability that the disease will recur after surgical excision.\n\nThe cohort was formidable in both scale and stringency of selection. A total of 1,137 participants, each diagnosed with very high-risk melanoma and each of whom had never previously received any form of cancer drug treatment, were enrolled across the study's sites. By restricting entry to treatment-naive patients, the investigators sought to eliminate a potent confounding variable, thereby isolating the vaccine's effect with unusual methodological rigour. Those randomised to receive the experimental preparation experienced a 42 per cent reduction in the risk of death or recurrence relative to the control arm — a magnitude of benefit that, in the circumspect vocabulary of oncology, borders on the extraordinary.\n\nThe conceptual novelty of the intervention lies in its radical individualisation. Messenger RNA technology, vaulted into public consciousness by its deployment against COVID-19, is here repurposed in a markedly more ambitious guise: each patient's tumour is subjected to detailed genomic sequencing, whereupon a bespoke vaccine encoding tumour-specific antigens is synthesised to train that same patient's immune system to recognise and eliminate residual malignant cells. Associate Professor Seth Cheetham, director of the Australian mRNA Cancer Vaccine Hub, described the outcomes as \"pretty remarkable\" and \"the first of their kind\". The advance, he suggested, is \"a pretty substantial breakthrough in treatment of melanoma, and hopefully will be able to be used for other kinds of cancer\". What distinguishes the approach, in his assessment, is that it constitutes \"the first really individualised medicine like this, where they're making a unique drug for each patient\" — a deliberate departure from the one-size-fits-all regimens that have historically dominated cancer therapeutics.\n\nProfessor Long's own characterisation was still more sweeping. She contended that the findings mark \"a foundational shift in how cancer can be treated\", something \"not achieved before in the history of cancer drug development\". Such a shift, she elaborated, reflects the convergence of three hitherto distinct trajectories: the maturation of mRNA technology, a progressively deeper biological understanding of cancer and the immune system, and what she termed \"clinical courage\" — the willingness of researchers to subject an unprecedented therapeutic concept to the most demanding of all evidentiary tests, the randomised clinical trial.\n\nThe significance of the result is amplified by the epidemiology of the disease it confronts. Melanoma ranks among the most common cancers in Australia, with one person receiving a diagnosis every thirty minutes and one death occurring approximately every six hours. It is, moreover, the most common cancer diagnosed among Australians between the ages of twenty and thirty-nine, an age distribution that renders its human toll particularly grievous. The disease remains substantially preventable through sun-safe behaviour — a fact that public health authorities reiterate with wearying regularity — yet incidence rates in Australia remain among the highest in the world, a grim testament to the nation's intense ultraviolet exposure and predominantly fair-skinned population.\n\nIt is important to temper enthusiasm with the caveats that any single trial, however meticulously conducted, necessarily entails. The vaccine was assessed exclusively in the adjuvant context — that is, after surgical removal of the primary tumour — and its efficacy against unresectable or metastatic disease remains undetermined. Nor have regulators yet granted the product marketing authorisation; further confirmatory studies and protracted regulatory scrutiny will precede any clinical availability. Manufacturing logistics present an additional hurdle: producing a unique formulation for every patient within the narrow therapeutic window following surgery will demand a supply chain of unprecedented sophistication, and the attendant costs could place severe constraints on equitable access, particularly in resource-limited health systems.\n\nNevertheless, the trajectory now discernible is difficult to dismiss. If a personalised mRNA vaccine can demonstrably reduce recurrence in melanoma — among the most immunologically volatile of malignancies — the underlying platform is, in principle, transferable to other tumour types sharing recognisable antigenic signatures. Researchers have already signalled their intention to adapt the methodology to a wider oncological repertoire. What the trial has demonstrated, in the final analysis, is not merely a new treatment but a new therapeutic logic: that medicine can be made for one person at a time, and that such singularity of purpose may be precisely what cancer care has been missing.",
+      "notes": [
+        {
+          "word": "paradigm",
+          "pos": "n.",
+          "meaning": "范式，思维模式"
+        },
+        {
+          "word": "attenuate",
+          "pos": "v.",
+          "meaning": "减轻，减弱"
+        },
+        {
+          "word": "excision",
+          "pos": "n.",
+          "meaning": "切除"
+        },
+        {
+          "word": "stringency",
+          "pos": "n.",
+          "meaning": "严格，严密"
+        },
+        {
+          "word": "confounding variable",
+          "pos": "n.",
+          "meaning": "混杂变量（干扰因素）"
+        },
+        {
+          "word": "methodological rigour",
+          "pos": "n.",
+          "meaning": "方法论上的严谨性"
+        },
+        {
+          "word": "circumspect",
+          "pos": "adj.",
+          "meaning": "谨慎的，慎重的"
+        },
+        {
+          "word": "genomic sequencing",
+          "pos": "n.",
+          "meaning": "基因组测序"
+        },
+        {
+          "word": "bespoke",
+          "pos": "adj.",
+          "meaning": "定制的，专门制作的"
+        },
+        {
+          "word": "antigen",
+          "pos": "n.",
+          "meaning": "抗原"
+        },
+        {
+          "word": "malignant",
+          "pos": "adj.",
+          "meaning": "恶性的"
+        },
+        {
+          "word": "epidemiology",
+          "pos": "n.",
+          "meaning": "流行病学"
+        },
+        {
+          "word": "grievous",
+          "pos": "adj.",
+          "meaning": "严重的，令人悲痛的"
+        },
+        {
+          "word": "adjuvant",
+          "pos": "adj.",
+          "meaning": "辅助的（辅助治疗）"
+        }
+      ],
+      "questions": [
+        {
+          "q": "According to the passage, what was the primary purpose of the mRNA vaccine tested in the trial?",
+          "options": [
+            "To prevent melanoma from developing in healthy people",
+            "To reduce the risk of melanoma returning after surgical removal",
+            "To replace surgery as the main treatment for tumours",
+            "To treat metastatic disease that cannot be removed by surgery"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Why did the researchers restrict enrolment to patients who had never received any cancer drug treatment?",
+          "options": [
+            "Because such patients generally respond better to mRNA vaccines",
+            "Because previous treatments are ineffective against melanoma",
+            "Because this would reduce the overall cost of the trial",
+            "To eliminate a confounding variable and isolate the vaccine's effect"
+          ],
+          "answer": 3
+        },
+        {
+          "q": "According to Associate Professor Cheetham, what makes this treatment \"the first really individualised medicine\"?",
+          "options": [
+            "It uses the same mRNA technology as COVID-19 vaccines",
+            "A unique drug is produced for each patient based on their own tumour",
+            "It is equally effective against all types of cancer",
+            "It was tested on the largest patient cohort in history"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The vaccine reduced the risk of death or recurrence by more than half.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The vaccine has already been granted marketing authorisation by regulators.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Melanoma is the most common cancer diagnosed among Australians between the ages of 20 and 39.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "Researchers believe the underlying vaccine platform could potentially be adapted to treat other types of cancer.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        }
+      ]
+    },
+    {
+      "title": "The Oxygen Within Stone: How Magma May Have Breathed Air into Earth's Atmosphere",
+      "source": "SciTechDaily, 23 October 2026 (study published in National Science Review)",
+      "passage": "In the conventional narrative of Earth's history, the oxygenation of the atmosphere is attributed overwhelmingly to photosynthetic cyanobacteria, whose metabolism gradually saturated the oceans before venting surplus oxygen into the air during the Great Oxidation Event some 2.4 billion years ago. A laboratory study reported in National Science Review, however, has introduced a rival, albeit complementary, mechanism - one in which the planet's own molten interior, rather than its surface biosphere, acts as a reservoir and conveyor of excess oxygen, potentially accelerating one of the most consequential transitions in the history of life.\n\nLed by Dr Yanhao Lin and Dr Ho-kwang Mao of the Center for High Pressure Science and Technology Advanced Research (HPSTAR), together with collaborators at Northwestern Polytechnical University and Vrije Universiteit Amsterdam, the team sought to determine whether magma - molten rock ascending from the mantle - could store oxygen in quantities beyond those dictated by its stoichiometric composition, that is, the fixed ratios of oxygen to other elements prescribed by its chemical formulae. Conventional geochemical models assume that such 'excess oxygen', if it existed at all, would be negligible; oxygen in silicate melts was thought to be locked exclusively within the lattice of minerals and oxides. To test this assumption, the researchers synthesised a batch of mid-ocean ridge basalt, doped with platinum oxide (PtO2) as a supplementary oxygen source, and melted it at temperatures of 1,200-1,800 degrees Celsius across a pressure range spanning atmospheric conditions to 7 gigapascals - roughly one million pounds per square inch, equivalent to pressures some 200 kilometres beneath the surface.\n\nThe results, the team reports, were striking in their pressure dependence. At one atmosphere, the quantity of excess oxygen retained in the quenched glass was effectively zero; at 7 gigapascals, by contrast, it exceeded 5 per cent of the sample's total weight. Control experiments, in which no platinum oxide had been added, yielded only 0.2-0.5 per cent, confirming that the excess could not be dismissed as an artefact of the apparatus. Intriguingly, the authors caution that even these figures are likely to underestimate the true values, since a fraction of the absorbed oxygen almost certainly escapes during the rapid cooling, or quenching, of the sample.\n\nNor, it appears, was the additional oxygen merely trapped as microscopic gas bubbles. Raman spectroscopy of the resulting glass revealed no signature of free molecular oxygen, implying instead that the extra atoms had been incorporated into the glass network itself. Deep neural network simulations of interatomic potentials, led by Professor Haiyang Niu, reproduced the observed pressure dependence with remarkable fidelity: within the virtual melt, oxygen atoms formed peroxide-like bonds, dissolving into the structure in much the same way that water and carbon dioxide dissolve more readily in magma under high pressure.\n\nThe implications, if the mechanism operates in nature as it does in the press, are profound. Magma generated within relatively oxidised domains of the deep mantle, the team proposes, would accumulate surplus oxygen while still under immense lithostatic pressure; as the melt ascends towards the surface, the progressive decline in pressure would gradually liberate that stored oxygen, thereby oxidising the shallow mantle, the crust, and ultimately the atmosphere itself. Crucially, this chronology resonates with a long-standing puzzle: the most dramatic increases in atmospheric oxygen, between roughly 2.5 and 2.0 billion years ago, coincided with the emplacement of the largest known large igneous provinces (LIPs) - continental-scale eruptions that disgorged millions of cubic kilometres of basalt. The authors calculate that if the magma feeding such provinces had released as little as 0.27 per cent of its weight as excess oxygen, it could have supplied as much oxygen as the modern atmosphere currently contains.\n\nWhether this deep-Earth oxygen pump operated on a planetary scale remains to be demonstrated, and the authors acknowledge that extrapolating from centimetre-scale experiments to the mantle's vast heterogeneity involves considerable uncertainty. Nevertheless, the study reframes a fundamental question: oxygenation may not have been solely the triumph of biology over geology, but rather a partnership in which the planet's interior silently pre-loaded the atmosphere with breathable air - long before cyanobacteria claimed the credit.",
+      "notes": [
+        {
+          "word": "oxygenation",
+          "pos": "n.",
+          "meaning": "氧气化；充氧作用"
+        },
+        {
+          "word": "stoichiometric",
+          "pos": "adj.",
+          "meaning": "化学计量学的；按化学式固定配比的"
+        },
+        {
+          "word": "lithostatic",
+          "pos": "adj.",
+          "meaning": "静岩压力的；岩石静压力的"
+        },
+        {
+          "word": "quenching",
+          "pos": "n.",
+          "meaning": "（实验中）快速冷却，淬火"
+        },
+        {
+          "word": "artefact",
+          "pos": "n.",
+          "meaning": "人为假象；实验误差产物"
+        },
+        {
+          "word": "spectroscopy",
+          "pos": "n.",
+          "meaning": "光谱分析"
+        },
+        {
+          "word": "interatomic",
+          "pos": "adj.",
+          "meaning": "原子间的"
+        },
+        {
+          "word": "peroxide",
+          "pos": "n./adj.",
+          "meaning": "过氧化物；过氧化物的"
+        },
+        {
+          "word": "fidelity",
+          "pos": "n.",
+          "meaning": "保真度；准确性"
+        },
+        {
+          "word": "resonate",
+          "pos": "v.",
+          "meaning": "引起共鸣；与……相呼应"
+        },
+        {
+          "word": "emplacement",
+          "pos": "n.",
+          "meaning": "（地质）侵入就位；岩体形成"
+        },
+        {
+          "word": "disgorge",
+          "pos": "v.",
+          "meaning": "喷出；倾泻而出"
+        },
+        {
+          "word": "extrapolate",
+          "pos": "v.",
+          "meaning": "推断；外推（由已知推未知）"
+        },
+        {
+          "word": "heterogeneity",
+          "pos": "n.",
+          "meaning": "非均质性；成分不均一"
+        }
+      ],
+      "questions": [
+        {
+          "q": "According to the passage, the conventional explanation attributes the oxygenation of Earth's atmosphere primarily to",
+          "options": [
+            "volcanic degassing from deep mantle plumes",
+            "photosynthetic cyanobacteria",
+            "oxidation of the shallow crust by magma",
+            "the subduction of oxygen-rich sediments"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "In the laboratory experiments, platinum oxide (PtO2) was added to the basalt in order to",
+          "options": [
+            "raise the melting temperature of the sample",
+            "reproduce the pressure found 200 kilometres below the surface",
+            "provide a supplementary source of oxygen",
+            "prevent oxygen from escaping during quenching"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "What did the Raman spectroscopy results indicate about the excess oxygen in the glass?",
+          "options": [
+            "It had formed free molecular oxygen bubbles.",
+            "It had been incorporated into the glass network.",
+            "It had entirely escaped during rapid cooling.",
+            "It was found only in the control samples."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The authors' calculation concerning large igneous provinces implies that",
+          "options": [
+            "LIPs released exactly 5 per cent of their weight as oxygen",
+            "all of the modern atmosphere's oxygen came from magma",
+            "releasing 0.27 per cent of magma weight as oxygen could supply as much oxygen as the modern atmosphere contains",
+            "the LIPs occurred 2.5 billion years before the Great Oxidation Event"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "The quantity of excess oxygen retained in the samples increased with increasing pressure.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The control experiments yielded higher excess-oxygen levels than the samples doped with platinum oxide.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The study proves that the release of excess oxygen from rising magma caused the Great Oxidation Event.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        }
+      ]
+    },
+    {
+      "title": "A Behemoth in the Pacific: What a Record-Strong El Niño Could Mean for the Winter Ahead",
+      "source": "USA Today / AccuWeather / NOAA, October 2026",
+      "passage": "Deep in the tropical Pacific Ocean, a climate pattern of extraordinary magnitude is taking shape. Oceanographers and forecasters report that sea surface temperatures across the central and eastern regions have remained persistently above their long-term averages — the classic signature of El Niño. Yet this is no ordinary event. The emerging episode has been described as a \"behemoth\"; if current forecasts verify, it could rank among the strongest El Niño events observed in decades — possibly the most powerful since systematic records began in 1950. According to the National Weather Service's Climate Prediction Center, operated by the National Oceanic and Atmospheric Administration (NOAA), a strong to very strong El Niño is likely to persist through early 2027, setting the stage for a winter season shaped by far-reaching atmospheric consequences.\n\nTo understand why a warming of a remote ocean surface should command such attention, it is necessary to consider the intricate coupling between ocean and atmosphere. El Niño develops when equatorial trade winds slacken, allowing the warm pool of water that normally accumulates in the western Pacific to migrate eastward. This redistribution of heat does not remain confined to the ocean; it alters the Walker circulation, shifts the subtropical jet stream, and reroutes storm tracks across vast distances. Because the atmosphere operates as a globally interconnected system, a temperature anomaly in the tropical Pacific can cascade into altered weather patterns on every continent. It is this capacity for teleconnection — the transmission of climatic influence across thousands of kilometres — that elevates El Niño from a regional curiosity to a phenomenon of planetary significance.\n\nThe anticipated impacts of this particular event are already being reflected in seasonal forecasts. NOAA's 2026-27 Winter Outlook, informed in large part by the evolving El Niño, projects warmer-than-average temperatures for much of the United States. In the Washington DC area, for instance, forecasters assign a 40 to 50 percent probability of above-normal temperatures and roughly a 50 percent chance of above-normal precipitation. The familiar north-south contrast is also evident: southern states tend toward wetter-than-average conditions, while the northern tier is expected to remain milder. AccuWeather meteorologists add that a very strong El Niño typically displaces the jet stream southward and eastward across the continental United States, tilting the odds toward stormier weather across the South. The physical logic is straightforward: warmer Pacific waters energise the subtropical jet, steering moisture-laden storms along a more southerly path.\n\nYet seasonal outlooks of this kind are inherently probabilistic, and forecasters have been careful to qualify their projections. The term \"behemoth\" is a descriptive flourish rather than an official classification; it conveys expected strength, not a new category of event. More importantly, El Niño establishes the background conditions of the climate system — it tilts the odds, so to speak — but it does not dictate the trajectory of any individual storm. A warmer-than-average winter does not preclude episodes of intense cold; brief frigid outbreaks and even a significant snowstorm remain entirely possible, particularly if transient Arctic air masses intrude southward. Furthermore, the effects of El Niño across the Mid-Atlantic region have historically been inconsistent, and researchers emphasise that no two El Niño events are alike. Regional impacts can vary considerably from one episode to the next, depending on how the anomaly interacts with other oscillations in the atmosphere and oceans.\n\nThe global ramifications extend well beyond North America. A vigorous El Niño tends to suppress the Atlantic hurricane season by enhancing vertical wind shear, while simultaneously shifting tropical cyclone activity within the Pacific basin. In South America, the western seaboard often experiences deluge-like rainfall and flooding, whereas parts of Australia and Southeast Asia may face drought and an elevated risk of wildfires. These opposing responses explain why the phenomenon commands the attention of governments, insurers, and agricultural planners: commodity markets, disaster preparedness budgets, and water management strategies are all calibrated, in part, against El Niño's expected signature.\n\nSceptics might ask why confidence in seasonal prediction remains comparatively modest when the underlying mechanism is so well documented. Part of the answer lies in the \"spring predictability barrier\", a well-known limitation in which spring-issued forecasts exhibit markedly lower skill, owing to the inherent instability of the coupled ocean-atmosphere system at that season. By autumn, however, when an event has consolidated, predictive skill improves substantially. The current forecast, emerging from mature ocean observations and ensemble climate models, thus carries considerably more weight than a spring projection would.\n\nWhether this behemoth ultimately surpasses the benchmarks of past events — the record-setting episodes that climatologists still reference — remains to be seen. What is certain is that the winter ahead will unfold against an unusually powerful climatic backdrop, one whose ripples will be felt in fields, cities, and coastlines far from the warm waters where it began.",
+      "notes": [
+        {
+          "word": "behemoth",
+          "pos": "n.",
+          "meaning": "庞然大物；巨兽"
+        },
+        {
+          "word": "verify",
+          "pos": "v.",
+          "meaning": "证实；核实"
+        },
+        {
+          "word": "persist",
+          "pos": "v.",
+          "meaning": "持续；存续"
+        },
+        {
+          "word": "far-reaching",
+          "pos": "adj.",
+          "meaning": "深远的；影响广泛的"
+        },
+        {
+          "word": "slacken",
+          "pos": "v.",
+          "meaning": "放松；减弱"
+        },
+        {
+          "word": "redistribute",
+          "pos": "v.",
+          "meaning": "重新分配"
+        },
+        {
+          "word": "cascade",
+          "pos": "v.",
+          "meaning": "级联蔓延；连锁式扩散"
+        },
+        {
+          "word": "teleconnection",
+          "pos": "n.",
+          "meaning": "遥相关（远距离气候联系）"
+        },
+        {
+          "word": "displace",
+          "pos": "v.",
+          "meaning": "使移位；取代"
+        },
+        {
+          "word": "preclude",
+          "pos": "v.",
+          "meaning": "排除；阻止…发生"
+        },
+        {
+          "word": "frigid",
+          "pos": "adj.",
+          "meaning": "严寒的"
+        },
+        {
+          "word": "intrude",
+          "pos": "v.",
+          "meaning": "侵入；闯入"
+        },
+        {
+          "word": "deluge",
+          "pos": "n.",
+          "meaning": "倾盆大雨；洪水泛滥"
+        },
+        {
+          "word": "calibrate",
+          "pos": "v.",
+          "meaning": "校准；调整"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What is the main function of the second paragraph?",
+          "options": [
+            "To explain why warming in a remote ocean can affect weather worldwide",
+            "To describe how NOAA measures sea surface temperatures",
+            "To compare this El Niño with previous record-setting events",
+            "To argue that El Niño has little impact outside the Pacific"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "According to NOAA's Winter Outlook, what is forecast for the Washington DC area?",
+          "options": [
+            "A 40-50% chance of below-normal temperatures and drought",
+            "A 40-50% chance of above-normal temperatures and about a 50% chance of above-normal precipitation",
+            "Certain above-normal temperatures with no precipitation change",
+            "A 50% chance of colder weather and a 40-50% chance of heavy snow"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "According to the passage, what do AccuWeather meteorologists associate with a very strong El Niño?",
+          "options": [
+            "The jet stream shifting southward and eastward, favouring stormier weather across the South",
+            "A weaker subtropical jet that reduces rainfall in the southern U.S.",
+            "The jet stream moving northward, bringing drier conditions to the South",
+            "No significant change to the jet stream over the continental United States"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "Why does confidence in seasonal prediction remain modest despite a well-documented mechanism?",
+          "options": [
+            "Because El Niño has never been observed before",
+            "Because the \"spring predictability barrier\" limits the skill of forecasts issued in spring",
+            "Because ensemble climate models cannot process ocean data",
+            "Because El Niño only affects the ocean, not the atmosphere"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "El Niño sets the background conditions of the climate system but does not determine the path of any individual storm.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "\"Behemoth\" is an official NOAA classification for El Niño events.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The article states that this El Niño has already become the strongest on record since 1950.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        }
+      ]
+    }
+  ]
+}
