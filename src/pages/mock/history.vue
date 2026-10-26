@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch } from 'vue'
 import { getMockHistory, clearMockHistory } from '~/composables/useMockHistory'
 import type { MockRecord } from '~/composables/useMockHistory'
 
 const records = ref<MockRecord[]>([])
+const { currentUser } = useAuth()
 
-onMounted(() => {
+watch(currentUser, () => {
   records.value = getMockHistory()
-})
+}, { immediate: true })
 
 function formatDate(iso: string): string {
   const d = new Date(iso)

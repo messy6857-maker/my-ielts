@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onScopeDispose, ref, watch } from 'vue'
 import { gradeEssayWithAI, hasAISettings } from '~/composables/useAISettings'
 import type { AIGradeResult } from '~/composables/useAISettings'
 import { useAuth } from '~/composables/useAuth'
 import { diffWords } from '~/composables/useWordDiff'
 import type { DiffToken } from '~/composables/useWordDiff'
+import { parseAIGradeResult } from '~/utils/aiSchema'
+import { nsKey } from '~/composables/useStudyData'
+import { writeJson } from '~/composables/useAuth'
 
 const props = defineProps<{
   task: 'task1' | 'task2'
@@ -23,19 +26,18 @@ const gradeStep = ref('')
 
 // AI 结果按账号 + 作文内容持久化，切走再回来仍保留
 function storageKey(): string {
-  const user = currentUser.value ? `u_${currentUser.value}` : 'guest'
   const s = `${props.task}|${props.question}|${props.essay}`
   let h = 0
   for (let i = 0; i < s.length; i++)
     h = ((h << 5) - h + s.charCodeAt(i)) | 0
-  return `myielts_${user}_aigrade_v1_${h.toString(36)}`
+  return nsKey(`aigrade_v1_${h.toString(36)}`)
 }
 
 function loadSaved(): boolean {
   try {
     const raw = localStorage.getItem(storageKey())
     if (raw) {
-      aiResult.value = JSON.parse(raw) as AIGradeResult
+      aiResult.value = parseAIGradeResult(JSON.parse(raw), props.task)
       return true
     }
   }
@@ -43,16 +45,21 @@ function loadSaved(): boolean {
   return false
 }
 
-function saveResult() {
-  try {
-    if (aiResult.value)
-      localStorage.setItem(storageKey(), JSON.stringify(aiResult.value))
-  }
-  catch { /* ignore */ }
-}
-
-onMounted(() => {
+let controller: AbortController | null = null
+let requestId = 0
+function resetResult() {
+  requestId++
+  controller?.abort()
+  aiLoading.value = false
+  gradeStep.value = ''
+  aiError.value = ''
+  aiResult.value = null
   loadSaved()
+}
+watch(storageKey, resetResult, { immediate: true })
+onScopeDispose(() => {
+  requestId++
+  controller?.abort()
 })
 
 const criterionLabels: Record<'ta' | 'cc' | 'lr' | 'gra', string> = props.task === 'task1'
@@ -64,6 +71,9 @@ async function runAIGrade() {
     aiError.value = '请先登录账号再使用 AI 批改'
     return
   }
+  const seq = ++requestId
+  const key = storageKey()
+  controller = new AbortController()
   aiLoading.value = true
   aiError.value = ''
   aiResult.value = null
@@ -73,28 +83,28 @@ async function runAIGrade() {
   gradeStep.value = steps[0]
   const stepTimer = setInterval(() => {
     stepIdx = Math.min(stepIdx + 1, steps.length - 1)
-    gradeStep.value = steps[stepIdx]
+    if (seq === requestId)
+      gradeStep.value = steps[stepIdx]
   }, 4000)
   try {
-    aiResult.value = await gradeEssayWithAI(props.task, props.question, props.essay)
-    saveResult()
+    const result = await gradeEssayWithAI(props.task, props.question, props.essay, controller.signal)
+    if (seq === requestId) {
+      aiResult.value = result
+      writeJson(key, result)
+    }
   }
   catch (e) {
-    aiError.value = e instanceof Error ? e.message : '批改失败，请重试'
+    if (seq === requestId)
+      aiError.value = e instanceof Error ? e.message : '批改失败，请重试'
   }
   finally {
     clearInterval(stepTimer)
-    gradeStep.value = ''
-    aiLoading.value = false
+    if (seq === requestId) {
+      gradeStep.value = ''
+      aiLoading.value = false
+    }
   }
 }
-
-// 换一篇作文时清空旧结果（能从本地恢复的则恢复）
-watch(() => props.essay, () => {
-  aiError.value = ''
-  if (!loadSaved())
-    aiResult.value = null
-})
 
 function scoreColor(s: number) {
   if (s >= 7) return 'text-green-600 dark:text-green-400'

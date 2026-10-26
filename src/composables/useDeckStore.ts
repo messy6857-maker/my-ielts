@@ -2,6 +2,7 @@
 // 数据按账号隔离（经 nsKey），同一 ns 返回同一实例
 // 供听力 179 / 阅读 538 等独立卡片使用（词汇卡片沿用 useSpacedRepetition 的单例）
 
+import { effectScope } from 'vue'
 import { readJson, useAuth, writeJson } from './useAuth'
 import { nsKey } from './useStudyData'
 import type { WordSchedule } from './useSpacedRepetition'
@@ -28,6 +29,13 @@ export function useDeckStore(ns: string): DeckStores {
   if (hit)
     return hit
 
+  // The cache outlives a page. Its watchers must have the same lifetime.
+  const stores = effectScope(true).run(() => createDeckStore(ns))!
+  cache.set(ns, stores)
+  return stores
+}
+
+function createDeckStore(ns: string): DeckStores {
   const { currentUser } = useAuth()
   const schedules = ref<Record<string, WordSchedule>>({})
   const goal = ref(30)
@@ -40,7 +48,7 @@ export function useDeckStore(ns: string): DeckStores {
   function load() {
     schedules.value = readJson<Record<string, WordSchedule>>(nsKey(SKEY), {})
     goal.value = readJson<number>(nsKey(GKEY), 30)
-    const saved = readJson<{ date: string, count: number }>(nsKey(NKEY), { date: '', count: 0 })
+    const saved = readJson<{ date: string; count: number }>(nsKey(NKEY), { date: '', count: 0 })
     if (saved.date === todayStr()) {
       dailyCount.value = saved.count
     }
@@ -51,8 +59,8 @@ export function useDeckStore(ns: string): DeckStores {
   }
   load()
 
-  watch(currentUser, load)
-  watch(schedules, v => writeJson(nsKey(SKEY), v), { deep: true })
+  watch(currentUser, load, { flush: 'sync' })
+  watch(schedules, v => writeJson(nsKey(SKEY), v), { deep: true, flush: 'sync' })
 
   function keyOf(id: string | number) {
     return `${ns}:${id}`
@@ -80,7 +88,6 @@ export function useDeckStore(ns: string): DeckStores {
       writeJson(nsKey(NKEY), { date: todayStr(), count: dailyCount.value })
     },
   }
-  cache.set(ns, stores)
   return stores
 }
 

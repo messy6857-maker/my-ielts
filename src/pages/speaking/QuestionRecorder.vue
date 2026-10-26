@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import AIGradeSpeaking from './AIGradeSpeaking.vue'
-import { formatClock, useRecorder } from '~/composables/useRecorder'
+import { formatRecordingClock, useRecorder } from '~/composables/useRecorder'
 
 defineProps<{ question: string }>()
 
@@ -22,7 +22,7 @@ async function toggle() {
         :class="isRecording ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'"
         @click="toggle"
       >
-        <span v-if="isRecording">⏹ 停止（{{ formatClock(elapsed) }}）</span>
+        <span v-if="isRecording">⏹ 停止（{{ formatRecordingClock(elapsed) }}）</span>
         <span v-else>🎤 录音回答</span>
       </button>
       <span v-if="isRecording" class="flex items-center gap-1 text-xs text-red-500">

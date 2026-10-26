@@ -10,16 +10,11 @@ const { setProgress } = useProgress()
 const totalWords = computed(() => ws.reduce((n, cat) => n + cat.words.length, 0))
 watch(masteredCount, () => setProgress('reading', masteredCount.value, totalWords.value), { immediate: true })
 
-let audio = null
+const audioPlayer = useAudioPlayer()
 function play(word) {
-  if (audio) {
-    audio.pause()
-    audio.currentTime = 0
-  }
-  audio = document.createElement('audio')
-  audio.src = `https://dict.youdao.com/dictvoice?audio=${word}&type=1`
-  audio.play()
+  audioPlayer.play(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=1`)
 }
+
 </script>
 
 <template>

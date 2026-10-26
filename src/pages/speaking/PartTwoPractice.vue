@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
 import AIGradeSpeaking from './AIGradeSpeaking.vue'
-import { formatClock, useRecorder } from '~/composables/useRecorder'
+import { formatRecordingClock, useRecorder } from '~/composables/useRecorder'
 import type { Part2Card } from './part2'
 
 defineProps<{ card: Part2Card }>()
@@ -49,7 +49,15 @@ async function startTalk() {
   phase.value = 'talk'
   countdown.value = TALK_SECONDS
   // 陈述开始自动录音
-  await recorder.start()
+  const started = await recorder.start()
+  if (!started) {
+    phase.value = 'done'
+    return
+  }
+  if (phase.value !== 'talk') {
+    recorder.stop()
+    return
+  }
   timer = setInterval(() => {
     countdown.value--
     if (countdown.value <= 0)
@@ -108,7 +116,7 @@ onUnmounted(() => {
           class="text-3xl font-bold tabular-nums"
           :class="countdown <= 10 ? 'text-red-500' : 'text-blue-600 dark:text-blue-400'"
         >
-          {{ formatClock(countdown) }}
+          {{ formatRecordingClock(countdown) }}
         </span>
       </div>
 

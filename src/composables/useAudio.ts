@@ -6,7 +6,13 @@ import { Capacitor } from '@capacitor/core'
 const SITE_BASE = 'https://messy6857-maker.github.io/my-ielts'
 
 export function resolveAudioUrl(path: string): string {
+  if (/^(?:https?:|blob:|data:|\/\/)/i.test(path))
+    return path
+  const relative = path.replace(/^\/+/, '')
   if (Capacitor.isNativePlatform())
-    return `${SITE_BASE}/${path}`
-  return path
+    return `${SITE_BASE}/${relative}`
+  if (typeof document === 'undefined')
+    return relative
+  const base = new URL(import.meta.env.BASE_URL || './', document.baseURI)
+  return new URL(relative, base).href
 }

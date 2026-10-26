@@ -1,112 +1,122 @@
-import { ref} from 'vue'
+import { ref } from 'vue'
 import { SYNC_API_BASE } from '../sync-config'
+import { parseAIGradeResult, parseAISpeakingResult } from '../utils/aiSchema'
 import { getToken } from './syncClient'
 
 // AI 批改设置：存在浏览器 localStorage（全局，不按账号隔离），key 只留用户自己浏览器
 export interface AISettings {
-baseUrl: string // 如 https://api-cdn.thehive.ai/api/v3（不带 /chat/completions）
-apiKey: string
-model: string // 如 deepseek-ai/deepseek-v4.1-flash-1017
+  baseUrl: string // 如 https://api-cdn.thehive.ai/api/v3（不带 /chat/completions）
+  apiKey: string
+  model: string // 如 deepseek-ai/deepseek-v4.1-flash-1017
 }
 
 const KEY = 'myielts_ai_settings_v1'
 
 const DEFAULTS: AISettings = {
-baseUrl: 'https://api-cdn.thehive.ai/api/v3',
-apiKey: '',
-model: 'deepseek-ai/deepseek-v4.1-flash-1017',
+  baseUrl: 'https://api-cdn.thehive.ai/api/v3',
+  apiKey: '',
+  model: 'deepseek-ai/deepseek-v4.1-flash-1017',
 }
 
 export function getAISettings(): AISettings {
-try {
-const raw = localStorage.getItem(KEY)
-if (raw)
-return {...DEFAULTS,...JSON.parse(raw)}
-}
-catch { /* 忽略 */}
-return {...DEFAULTS}
+  try {
+    const raw = localStorage.getItem(KEY)
+    if (raw) {
+      const saved = JSON.parse(raw)
+      return {
+        baseUrl: typeof saved?.baseUrl === 'string' ? saved.baseUrl : DEFAULTS.baseUrl,
+        apiKey: typeof saved?.apiKey === 'string' ? saved.apiKey : DEFAULTS.apiKey,
+        model: typeof saved?.model === 'string' ? saved.model : DEFAULTS.model,
+      }
+    }
+  }
+  catch { /* 忽略 */ }
+  return { ...DEFAULTS }
 }
 
 export function saveAISettings(s: AISettings) {
-localStorage.setItem(KEY, JSON.stringify(s))
+  localStorage.setItem(KEY, JSON.stringify(s))
 }
 
 export function hasAISettings(): boolean {
-const s = getAISettings()
-return!!(s.apiKey.trim() && s.baseUrl.trim() && s.model.trim())
+  const s = getAISettings()
+  return !!(s.apiKey.trim() && s.baseUrl.trim() && s.model.trim())
 }
 
 // ---------- AI 批改调用（OpenAI 兼容接口） ----------
 
 export interface AICorrection {
-original: string
-fixed: string
-reason: string
+  original: string
+  fixed: string
+  reason: string
 }
 
 export interface AIGradeResult {
-scores: { ta: number, cc: number, lr: number, gra: number, overall: number}
-comments: { ta: string, cc: string, lr: string, gra: string}
-corrections: AICorrection[]
-suggestion: string
-/** 四项标准各自的详细修改建议（新版才有，老存档可能缺失） */
-advice?: { ta: string, cc: string, lr: string, gra: string}
-/** 改写后的文章全文（新版才有） */
-rewritten?: string
+  scores: { ta: number; cc: number; lr: number; gra: number; overall: number }
+  comments: { ta: string; cc: string; lr: string; gra: string }
+  corrections: AICorrection[]
+  suggestion: string
+  /** 四项标准各自的详细修改建议（新版才有，老存档可能缺失） */
+  advice?: { ta: string; cc: string; lr: string; gra: string }
+  /** 改写后的文章全文（新版才有） */
+  rewritten?: string
 }
 
 function extractJson(text: string): string {
 // 去掉模型可能输出的特殊 token（如 <endoftext>）和 think 标签
-const clean = text.replace(/<\|?endoftext\|?>/gi, '').replace(/<\/?think>/gi, '').trim()
-// 兼容模型把 JSON 包在 markdown 代码块里的情况
-const m = clean.match(/```(?:json)?\s*([\s\S]*?)```/)
-const raw = (m? m[1]: clean).trim()
-const start = raw.indexOf('{')
-const end = raw.lastIndexOf('}')
-if (start >= 0 && end > start)
-return raw.slice(start, end + 1)
-return raw
+  const clean = text.replace(/<\|?endoftext\|?>/gi, '').replace(/<\/?think>/gi, '').trim()
+  // 兼容模型把 JSON 包在 markdown 代码块里的情况
+  const m = clean.match(/```(?:json)?\s*([\s\S]*?)```/)
+  const raw = (m ? m[1] : clean).trim()
+  const start = raw.indexOf('{')
+  const end = raw.lastIndexOf('}')
+  if (start >= 0 && end > start)
+    return raw.slice(start, end + 1)
+  return raw
 }
 
-async function callChatApi(settings: AISettings, system: string, user: string): Promise<string> {
-// 走 VPS 中转：浏览器直连第三方 API 会被 CORS 拦截
-const token = getToken()
-if (!token)
-throw new Error('请先登录（AI 中转需要登录态）')
-let res: Response
-try {
-res = await fetch(`${SYNC_API_BASE}/ai/chat`, {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-'Authorization': `Bearer ${token}`,
-},
-body: JSON.stringify({
-baseUrl: settings.baseUrl.trim(),
-apiKey: settings.apiKey.trim(),
-model: settings.model.trim(),
-messages: [
-{ role: 'system', content: system},
-{ role: 'user', content: user},
-],
-temperature: 0.3,
-}),
-})
-}
-catch (e) {
-throw new Error('中转请求失败，请检查网络连接')
-}
-const body = await res.json().catch(() => null)
-if (res.status === 401)
-throw new Error('登录已过期，请重新登录')
-if (res.status === 403)
-throw new Error(body?.message || '无权限使用 AI 功能')
-if (!res.ok || !body?.ok)
-throw new Error(body?.message || `请求失败（${res.status}）`)
-const content = body.data?.choices?.[0]?.message?.content
-if (!content)
-throw new Error('AI 返回为空，请重试')
-return content
+async function callChatApi(settings: AISettings, system: string, user: string, signal?: AbortSignal): Promise<string> {
+  const token = getToken()
+  if (!token)
+    throw new Error('请先登录（AI 中转需要登录态）')
+  const controller = new AbortController()
+  const abort = () => controller.abort()
+  if (signal?.aborted)
+    abort()
+  signal?.addEventListener('abort', abort, { once: true })
+  const timeout = setTimeout(abort, 90000)
+  try {
+    const res = await fetch(`${SYNC_API_BASE}/ai/chat`, {
+      method: 'POST',
+      signal: controller.signal,
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({
+        baseUrl: settings.baseUrl.trim(),
+        apiKey: settings.apiKey.trim(),
+        model: settings.model.trim(),
+        messages: [{ role: 'system', content: system }, { role: 'user', content: user }],
+        temperature: 0.3,
+      }),
+    })
+    const body = await res.json().catch(() => null)
+    if (res.status === 401)
+      throw new Error('登录已过期，请重新登录')
+    if (!res.ok || !body?.ok)
+      throw new Error(body?.message || `请求失败（${res.status}）`)
+    const content = body.data?.choices?.[0]?.message?.content
+    if (typeof content !== 'string' || !content.trim())
+      throw new Error('AI 返回为空，请重试')
+    return content
+  }
+  catch (e) {
+    if (controller.signal.aborted)
+      throw new Error(signal?.aborted ? '已取消批改' : 'AI 请求超时，请重试')
+    throw e instanceof Error ? e : new Error('中转请求失败，请检查网络连接')
+  }
+  finally {
+    clearTimeout(timeout)
+    signal?.removeEventListener('abort', abort)
+  }
 }
 
 // 官方评分标准（IELTS Writing Band Descriptors, May 2023 更新版）condensed
@@ -160,10 +170,10 @@ const TASK2_DESCRIPTORS = `【Task Response】
 6分: 简单复杂句混用但灵活性有限；复杂句准确度不如简单句；有错但少影响理解。
 5分: 句式有限重复；复杂句多有错误；简单句最准；语法错误多。`
 
-function buildPrompt(taskLabel: string, criterion1: string, question: string, essay: string): { system: string, user: string} {
-const descriptors = taskLabel === 'Task 1' ? TASK1_DESCRIPTORS : TASK2_DESCRIPTORS
-const c1name = taskLabel === 'Task 1' ? '任务完成情况(Task Achievement)' : '任务回应(Task Response)'
-const system = `你是雅思写作${taskLabel}考官，必须严格依据以下官方评分标准（IELTS Writing Band Descriptors）打分：
+function buildPrompt(taskLabel: string, criterion1: string, question: string, essay: string): { system: string; user: string } {
+  const descriptors = taskLabel === 'Task 1' ? TASK1_DESCRIPTORS : TASK2_DESCRIPTORS
+  const c1name = taskLabel === 'Task 1' ? '任务完成情况(Task Achievement)' : '任务回应(Task Response)'
+  const system = `你是雅思写作${taskLabel}考官，必须严格依据以下官方评分标准（IELTS Writing Band Descriptors）打分：
 
 ${descriptors}
 
@@ -184,53 +194,37 @@ ${descriptors}
 "rewritten": "把整篇文章按你的建议改写一遍（英文全文，保持原意和段落结构，应用所有改进；不要加中文）"
 }
 其中 ${criterion1} 对应${c1name}，cc=连贯与衔接，lr=词汇资源，gra=语法多样性与准确性。corrections 挑 3-6 个最值得改的句子。全部用中文（original/fixed/rewritten 保留英文原文）。`
-const user = `【题目】\n${question}\n\n【考生作文】\n${essay}`
-return { system, user}
+  const user = `【题目】\n${question}\n\n【考生作文】\n${essay}`
+  return { system, user }
 }
 
 export async function gradeEssayWithAI(
-task: 'task1' | 'task2',
-question: string,
-essay: string,
+  task: 'task1' | 'task2',
+  question: string,
+  essay: string,
+  signal?: AbortSignal,
 ): Promise<AIGradeResult> {
-const settings = getAISettings()
-if (!hasAISettings())
-throw new Error('请先在设置页填写 API 地址、Key 和模型')
-const words = essay.trim().split(/\s+/).filter(Boolean).length
-if (words < 20)
-throw new Error('作文太短，无法批改')
-const { system, user} = task === 'task1'
-? buildPrompt('Task 1', 'ta', question, essay)
-: buildPrompt('Task 2', 'tr', question, essay)
-const raw = await callChatApi(settings, system, user)
-let parsed: AIGradeResult
-try {
-parsed = JSON.parse(extractJson(raw))
-}
-catch {
-throw new Error('AI 返回格式异常，请重试')
-}
-if (!parsed?.scores || typeof parsed.scores.overall!== 'number')
-throw new Error('AI 返回格式异常，请重试')
-// Task 2 第一项 key 为 tr，归一化为 ta，方便面板统一渲染
-if (task === 'task2') {
-const s = parsed.scores as unknown as Record<string, number>
-const c = parsed.comments as unknown as Record<string, string>
-if (s.tr !== undefined && s.ta === undefined) {
-s.ta = s.tr
-delete s.tr
-}
-if (c.tr !== undefined && c.ta === undefined) {
-c.ta = c.tr
-delete c.tr
-}
-}
-return parsed
+  const settings = getAISettings()
+  if (!hasAISettings())
+    throw new Error('请先在设置页填写 API 地址、Key 和模型')
+  const words = essay.trim().split(/\s+/).filter(Boolean).length
+  if (words < 20)
+    throw new Error('作文太短，无法批改')
+  const { system, user } = task === 'task1'
+    ? buildPrompt('Task 1', 'ta', question, essay)
+    : buildPrompt('Task 2', 'tr', question, essay)
+  const raw = await callChatApi(settings, system, user, signal)
+  try {
+    return parseAIGradeResult(JSON.parse(extractJson(raw)), task)
+  }
+  catch {
+    throw new Error('AI 返回格式异常，请重试')
+  }
 }
 
 export interface AISpeakingResult {
-  scores: { fluency: number, lexical: number, grammar: number, overall: number }
-  comments: { fluency: string, lexical: string, grammar: string }
+  scores: { fluency: number; lexical: number; grammar: number; overall: number }
+  comments: { fluency: string; lexical: string; grammar: string }
   suggestion: string
 }
 
@@ -276,6 +270,7 @@ ${SPEAKING_DESCRIPTORS}
 export async function gradeSpeakingWithAI(
   question: string,
   transcript: string,
+  signal?: AbortSignal,
 ): Promise<AISpeakingResult> {
   const settings = getAISettings()
   if (!hasAISettings())
@@ -284,33 +279,31 @@ export async function gradeSpeakingWithAI(
   if (words < 10)
     throw new Error('转写文字太少，无法评分（请说几句完整的英语再试）')
   const user = `【题目】\n${question}\n\n【考生回答（语音转写）】\n${transcript}`
-  const raw = await callChatApi(settings, SPEAKING_SYSTEM_PROMPT, user)
-  let parsed: AISpeakingResult
+  const raw = await callChatApi(settings, SPEAKING_SYSTEM_PROMPT, user, signal)
   try {
-    parsed = JSON.parse(extractJson(raw))
+    return parseAISpeakingResult(JSON.parse(extractJson(raw)))
   }
   catch {
     throw new Error('AI 返回格式异常，请重试')
   }
-  if (!parsed?.scores || typeof parsed.scores.overall !== 'number')
-    throw new Error('AI 返回格式异常，请重试')
-  return parsed
 }
 
 // 测试连接：发一个极短请求验证 Key/地址/模型可用
-export async function testAIConnection(): Promise<string> {const settings = getAISettings()
-if (!hasAISettings())
-throw new Error('请先填写 API 地址、Key 和模型')
-const content = await callChatApi(settings, '只回复 {"ok":true}', 'ping')
-// 能拿到模型回复即算连通，不强求标准 JSON
-try {
-const parsed = JSON.parse(extractJson(content))
-if (parsed?.ok)
-return '连接成功'
-} catch { /* 忽略解析失败 */ }
-if (content && content.trim().length > 0)
-return '连接成功（模型有响应）'
-throw new Error('API 返回为空，请重试')
+export async function testAIConnection(): Promise<string> {
+  const settings = getAISettings()
+  if (!hasAISettings())
+    throw new Error('请先填写 API 地址、Key 和模型')
+  const content = await callChatApi(settings, '只回复 {"ok":true}', 'ping')
+  // 能拿到模型回复即算连通，不强求标准 JSON
+  try {
+    const parsed = JSON.parse(extractJson(content))
+    if (parsed?.ok)
+      return '连接成功'
+  }
+  catch { /* 忽略解析失败 */ }
+  if (content && content.trim().length > 0)
+    return '连接成功（模型有响应）'
+  throw new Error('API 返回为空，请重试')
 }
 
 export const aiSettingsState = ref<AISettings>(getAISettings())

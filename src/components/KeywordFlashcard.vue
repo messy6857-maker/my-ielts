@@ -75,23 +75,11 @@ const lastGrade = ref<0 | 3 | 5 | null>(null)
 const current = computed(() => (!studying.value ? queue.value[0] ?? null : null))
 const remaining = computed(() => queue.value.length)
 
-let audio: HTMLAudioElement | null = null
+const audioPlayer = useAudioPlayer()
 function playAudio(word?: string) {
   const w = word || current.value?.word || studying.value?.word
-  if (!w)
-    return
-  try {
-    if (audio) {
-      audio.pause()
-      audio.currentTime = 0
-    }
-    audio = document.createElement('audio')
-    audio.src = props.audioFor(w)
-    audio.play().catch(() => {})
-  }
-  catch {
-    // 忽略音频异常
-  }
+  if (w)
+    audioPlayer.play(props.audioFor(w))
 }
 
 function toCard(c: DeckCard, isNew: boolean): Card {

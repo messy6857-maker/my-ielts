@@ -1,5 +1,6 @@
 <script setup lang="ts" generic="T extends any, O extends any">
 import { RouterLink } from 'vue-router'
+import { exportBackup, importBackup } from '../composables/useBackup'
 
 defineOptions({
   name: 'IndexPage',
@@ -19,9 +20,15 @@ const backupOk = ref(true)
 const fileInput = ref<HTMLInputElement | null>(null)
 
 function onExportBackup() {
-  const count = exportBackup()
-  backupOk.value = true
-  backupMsg.value = count > 0 ? `已导出 ${count} 项数据为备份文件` : '当前没有可备份的数据'
+  try {
+    const count = exportBackup()
+    backupOk.value = true
+    backupMsg.value = count > 0 ? `已导出 ${count} 项数据为备份文件` : '当前没有可备份的数据'
+  }
+  catch {
+    backupOk.value = false
+    backupMsg.value = '导出失败，请检查浏览器存储和下载权限'
+  }
 }
 
 function onPickBackupFile() {

@@ -1,35 +1,67 @@
-// 全站单音频协调：同一时间只允许一个声音在播放
-// - 任意 <audio> 开始播放时，自动暂停页面上其他所有 <audio>，并停止 TTS 朗读
-// - TTS 朗读前调用 stopAllAudio()，先暂停所有 <audio>
-// 用法：在 App.vue 的 setup 中调用一次 initSingleAudio()
+import { getCurrentScope, onScopeDispose } from 'vue'
+import { resolveAudioUrl } from './useAudio'
 
-export function stopAllAudio() {
-  if (typeof document !== 'undefined') {
-    document.querySelectorAll('audio').forEach((a) => {
-      if (!a.paused)
-        a.pause()
-    })
-  }
+// Detached audio does not send events through document; register it explicitly.
+const managed = new Set<HTMLAudioElement>()
+let inited = false
+
+function stopOthers(except?: HTMLAudioElement) {
+  const all = new Set(managed)
+  if (typeof document !== 'undefined')
+    document.querySelectorAll('audio').forEach(audio => all.add(audio))
+  all.forEach((audio) => {
+    if (audio !== except && !audio.paused)
+      audio.pause()
+  })
   if (typeof window !== 'undefined' && 'speechSynthesis' in window)
     window.speechSynthesis.cancel()
 }
 
-let inited = false
+export function stopAllAudio() {
+  stopOthers()
+}
 
 export function initSingleAudio() {
   if (inited || typeof document === 'undefined')
     return
   inited = true
-  // play 事件不冒泡，用捕获阶段在 document 上统一拦截
   document.addEventListener('play', (e) => {
-    const target = e.target as HTMLElement
-    if (!target || target.tagName !== 'AUDIO')
-      return
-    document.querySelectorAll('audio').forEach((a) => {
-      if (a !== target && !a.paused)
-        a.pause()
-    })
-    if ('speechSynthesis' in window)
-      window.speechSynthesis.cancel()
+    const audio = e.target
+    if (audio instanceof HTMLAudioElement)
+      stopOthers(audio)
   }, true)
+}
+
+export function createManagedAudio(): HTMLAudioElement {
+  initSingleAudio()
+  const audio = document.createElement('audio')
+  managed.add(audio)
+  audio.addEventListener('play', () => stopOthers(audio))
+  return audio
+}
+
+export function useAudioPlayer() {
+  let audio: HTMLAudioElement | null = null
+  function stop() {
+    audio?.pause()
+  }
+  function dispose() {
+    stop()
+    if (audio) {
+      managed.delete(audio)
+      audio.removeAttribute('src')
+      audio = null
+    }
+  }
+  function play(path: string) {
+    audio ??= createManagedAudio()
+    stopOthers(audio)
+    audio.pause()
+    audio.src = resolveAudioUrl(path)
+    audio.currentTime = 0
+    return audio.play().catch(() => {})
+  }
+  if (getCurrentScope())
+    onScopeDispose(dispose)
+  return { play, stop, dispose }
 }

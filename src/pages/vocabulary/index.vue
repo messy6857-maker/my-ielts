@@ -22,7 +22,7 @@ const refVocabulary = reactive(vocabulary)
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
 const wordList = computed(() => {
-  const result = structuredClone(vocabulary) // deep clone
+  const result = vocabulary // Copy only the selected chapter below.
   // const keywordValue = keyword.value.trim().toLowerCase()
   const categoryValue = category.value
 
@@ -31,7 +31,7 @@ const wordList = computed(() => {
     //   if (key !== categoryValue)
     //     delete result[key]
     // }
-    return { [categoryValue]: result[categoryValue] }
+    return { [categoryValue]: structuredClone(result[categoryValue]) }
   }
 
   /* if (keywordValue !== '') {
@@ -125,15 +125,9 @@ document.addEventListener('keydown', (ev) => {
   }
 })
 
-let audio = null
+const audioPlayer = useAudioPlayer()
 function play(audioPath) {
-  if (audio) {
-    audio.pause()
-    audio.currentTime = 0
-  }
-  audio = document.createElement('audio')
-  audio.src = audioPath
-  audio.play()
+  audioPlayer.play(audioPath)
 }
 
 function copyText(item) {

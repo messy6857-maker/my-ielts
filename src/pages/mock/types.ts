@@ -94,12 +94,14 @@ export function multiSelectScore(q: MockQuestion, userAnswer: string): number {
     return isCorrect(q, userAnswer) ? 1 : 0
   const userSet = new Set(userAnswer.split(',').filter(Boolean).map(s => Number(s)))
   const ansSet = new Set(q.answer as number[])
+  if (userSet.size > ansSet.size || [...userSet].some(a => !Number.isInteger(a) || a < 0 || a >= (q.options?.length ?? 0)))
+    return 0
   let score = 0
   for (const a of userSet) {
     if (ansSet.has(a))
       score++
   }
-  // 多选了错误选项则该题 0 分（雅思规则：多选不扣分但错选不得分，这里按选对计分）
+  // 合法选择数量内按命中数给分；超选已在上面判为无效。
   return score
 }
 

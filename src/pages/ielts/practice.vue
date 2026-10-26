@@ -26,15 +26,12 @@ function onKeydown(e: KeyboardEvent, word: string) {
   }
 }
 
+const audioPlayer = useAudioPlayer()
 function play(word: string) {
-  const audio = document.createElement('audio')
-  audio.src = `/179_audios/${word}.mp3`
-  audio.play()
+  audioPlayer.play(`179_audios/${word}.mp3`)
 }
 function next(index: number) {
   const i = index + 1
-  if (i >= words.length)
-    return
 
   // 校验结果
   const cw = ws[index]
@@ -65,6 +62,9 @@ function next(index: number) {
   setProgress('listening', index + 1, words.length)
 
   // window.console.log(cw)
+
+  if (i >= words.length)
+    return
 
   const nw = words[i]
   play(nw.word)

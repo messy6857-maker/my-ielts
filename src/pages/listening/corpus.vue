@@ -1,10 +1,9 @@
 <script setup>
 import chapterData from './spelling_convention'
 
+const audioPlayer = useAudioPlayer()
 function play(word) {
-  const audio = document.createElement('audio')
-  audio.src = `179_audios/${word}.mp3`
-  audio.play()
+  audioPlayer.play(`179_audios/${word}.mp3`)
 }
 
 const keyword = ref('')

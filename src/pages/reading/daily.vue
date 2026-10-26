@@ -34,8 +34,8 @@ interface DailyData {
   newsReadings: Reading[]
 }
 
-// 加载所有日期数据（构建时打包）
-const modules = import.meta.glob('./daily/[0-9]*.json', { eager: true }) as Record<string, { default: DailyData }>
+// 日期数据按需加载，不把归档全部放进一个页面分块。
+const modules = import.meta.glob<{ default: DailyData }>('./daily/[0-9]*.json')
 
 const dates = computed(() => {
   const list = (indexData.dates as string[]).filter(d => modules[`./daily/${d}.json`])
@@ -43,37 +43,70 @@ const dates = computed(() => {
 })
 
 const selectedDate = ref(dates.value[0] ?? '')
-const daily = computed<DailyData | null>(() => {
-  if (!selectedDate.value)
-    return null
-  return modules[`./daily/${selectedDate.value}.json`]?.default ?? null
-})
+const daily = ref<DailyData | null>(null)
+const dailyLoading = ref(false)
+const dailyError = ref(false)
+let dailySeq = 0
+async function loadDaily() {
+  const seq = ++dailySeq
+  daily.value = null
+  dailyError.value = false
+  const loader = modules[`./daily/${selectedDate.value}.json`]
+  if (!loader) {
+    dailyLoading.value = false
+    return
+  }
+  dailyLoading.value = true
+  try {
+    const data = await loader()
+    if (seq === dailySeq)
+      daily.value = data.default
+  }
+  catch {
+    if (seq === dailySeq)
+      dailyError.value = true
+  }
+  finally {
+    if (seq === dailySeq)
+      dailyLoading.value = false
+  }
+}
+watch(selectedDate, loadDaily, { immediate: true })
+onUnmounted(() => { dailySeq++ })
 
 // 当前账号的词汇阅读：从后端按 JWT 取，只能拿到自己的
 const myVocabReading = ref<Reading | null>(null)
 const vocabLoading = ref(false)
-async function loadMyVocabReading() {
+watch([selectedDate, currentUser], async ([date, user], _, onCleanup) => {
+  const controller = new AbortController()
+  let active = true
+  onCleanup(() => {
+    active = false
+    controller.abort()
+  })
   myVocabReading.value = null
-  const t = getToken()
-  if (!currentUser.value || !t || !selectedDate.value)
+  vocabLoading.value = false
+  const token = getToken()
+  if (!user || !token || !date)
     return
   vocabLoading.value = true
   try {
-    const resp = await fetch(`${SYNC_API_BASE}/daily-reading?date=${selectedDate.value}`, {
-      headers: { Authorization: `Bearer ${t}` },
+    const resp = await fetch(`${SYNC_API_BASE}/daily-reading?date=${encodeURIComponent(date)}`, {
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${token}` },
     })
     const data = await resp.json()
-    if (data.ok && data.reading)
+    if (active && resp.ok && data.ok && data.reading)
       myVocabReading.value = data.reading
   }
   catch {
-    // 忽略网络错误
+    // Optional personalized reading must not block the public archive.
   }
   finally {
-    vocabLoading.value = false
+    if (active)
+      vocabLoading.value = false
   }
-}
-watch([selectedDate, currentUser], loadMyVocabReading, { immediate: true })
+}, { immediate: true })
 
 // 生词注释：点击展开/收起中文（复用自测卡片的彩色样式）
 const dotColors = ['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-orange-500', 'bg-teal-500', 'bg-indigo-500']
@@ -218,6 +251,10 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
         </select>
       </div>
 
+      <p v-if="dailyLoading" class="py-10 text-center text-gray-500">加载中…</p>
+      <div v-else-if="dailyError" class="py-10 text-center text-gray-500">
+        文章加载失败，<button class="text-blue-600 underline" @click="loadDaily">点击重试</button>
+      </div>
       <template v-if="daily">
         <!-- 第一部分：词汇阅读（按账号个性化；游客不显示） -->
         <section v-if="myVocabReading" class="mb-8">

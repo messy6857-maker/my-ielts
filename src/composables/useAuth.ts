@@ -18,6 +18,11 @@ const SERVER_MARKER_HASH = 'server-managed'
 const writeListeners = new Set<() => void>()
 export function onLocalWrite(cb: () => void) {
   writeListeners.add(cb)
+  return () => writeListeners.delete(cb)
+}
+
+export function notifyLocalWrite() {
+  writeListeners.forEach(cb => cb())
 }
 
 export function readJson<T>(key: string, fallback: T): T {
@@ -35,11 +40,12 @@ export function readJson<T>(key: string, fallback: T): T {
 export function writeJson(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value))
-    writeListeners.forEach(cb => cb())
   }
   catch {
-    // 配额不足等情况静默失败
+    return false
   }
+  notifyLocalWrite()
+  return true
 }
 
 function randomSalt(): string {
@@ -107,7 +113,7 @@ export const useAuth = createGlobalState(() => {
   // ---------- 服务器模式 ----------
   async function serverRegister(username: string, password: string): Promise<AuthResult> {
     username = username.trim()
-    if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]{2,20}$/.test(username))
+    if (!/^[a-zA-Z0-9_\u4E00-\u9FA5]{2,20}$/.test(username))
       return { ok: false, message: '用户名需为 2-20 位字母、数字、下划线或中文' }
     if (password.length < 4)
       return { ok: false, message: '密码至少 4 位' }
@@ -145,16 +151,22 @@ export const useAuth = createGlobalState(() => {
     }
     if (!r.ok || !r.token)
       return { ok: false, message: r.message || '登录失败' }
-    setToken(r.token)
-    ensureServerMarker(username)
     // 拉取云端数据并与本地合并
     try {
-      const pull = await apiPull()
-      if (pull.ok && pull.data && Object.keys(pull.data).length > 0) {
+      const pull = await apiPull(r.token)
+      if (!pull.ok)
+        return { ok: false, message: pull.message || '读取云端数据失败，请重试' }
+      if (pull.data === undefined)
+        return { ok: false, message: '云端响应缺少数据字段，请重试' }
+      if (pull.data !== null && pull.data !== undefined && (typeof pull.data !== 'object' || Array.isArray(pull.data)))
+        return { ok: false, message: '云端数据格式异常' }
+      if (pull.data && Object.keys(pull.data).length > 0) {
         const localKeys = Object.keys(collectSyncData(username))
         if (localKeys.length === 0) {
           // 本机没数据：直接用云端
-          applySyncData(pull.data)
+          applySyncData(pull.data, username)
+          setToken(r.token)
+          ensureServerMarker(username)
           setSession(username, remember)
           currentUser.value = username
           location.reload()
@@ -164,22 +176,30 @@ export const useAuth = createGlobalState(() => {
         const dt = pull.updatedAt ? new Date(pull.updatedAt).toLocaleString() : '未知时间'
         const useServer = confirm(`云端已有学习数据（更新于 ${dt}），本机也有数据。\n\n点"确定"用云端数据覆盖本机，点"取消"把本机数据上传到云端。`)
         if (useServer) {
-          applySyncData(pull.data)
+          applySyncData(pull.data, username)
+          setToken(r.token)
+          ensureServerMarker(username)
           setSession(username, remember)
           currentUser.value = username
           location.reload()
           return { ok: true }
         }
-        await apiPush(collectSyncData(username))
+        const push = await apiPush(collectSyncData(username), r.token)
+        if (!push.ok)
+          return { ok: false, message: push.message || '上传学习数据失败，请重试' }
       }
       else {
         // 云端没数据：把本机数据推上去（换设备首次登录的迁移场景）
-        await apiPush(collectSyncData(username))
+        const push = await apiPush(collectSyncData(username), r.token)
+        if (!push.ok)
+          return { ok: false, message: push.message || '上传学习数据失败，请重试' }
       }
     }
     catch {
       return { ok: false, message: '同步数据失败，请重试' }
     }
+    setToken(r.token)
+    ensureServerMarker(username)
     setSession(username, remember)
     currentUser.value = username
     return { ok: true }
@@ -188,7 +208,7 @@ export const useAuth = createGlobalState(() => {
   // ---------- 本地模式（原有逻辑） ----------
   async function localRegister(username: string, password: string): Promise<AuthResult> {
     username = username.trim()
-    if (!/^[a-zA-Z0-9_\u4e00-\u9fa5]{2,20}$/.test(username))
+    if (!/^[a-zA-Z0-9_\u4E00-\u9FA5]{2,20}$/.test(username))
       return { ok: false, message: '用户名需为 2-20 位字母、数字、下划线或中文' }
     if (password.length < 4)
       return { ok: false, message: '密码至少 4 位' }

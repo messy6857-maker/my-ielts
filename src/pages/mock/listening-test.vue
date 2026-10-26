@@ -227,8 +227,13 @@ function toggleMultiSelect(qid: string, idx: number) {
   const s = String(idx)
   if (current.has(s))
     current.delete(s)
-  else
+  else {
+    const q = allQuestions.value.find(q => q.id === qid)
+    const limit = q && Array.isArray(q.answer) ? q.answer.length : 1
+    if (current.size >= limit)
+      return
     current.add(s)
+  }
   answers.value[qid] = [...current].join(',')
 }
 

@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { getCurrentScope, onScopeDispose, ref } from 'vue'
 
 /**
  * 浏览器录音（MediaRecorder），用于口语自测：
@@ -17,10 +17,12 @@ export function useRecorder() {
 
   let mediaRecorder: MediaRecorder | null = null
   let stream: MediaStream | null = null
-  let chunks: Blob[] = []
   let timer: ReturnType<typeof setInterval> | null = null
   let recognition: any = null
   let finalText = ''
+  let generation = 0
+  let starting = false
+  let disposed = false
 
   function startTranscription() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
@@ -81,20 +83,35 @@ export function useRecorder() {
     error.value = ''
     if (isRecording.value)
       return true
+    if (disposed || starting)
+      return false
     if (!navigator.mediaDevices?.getUserMedia) {
       error.value = '当前浏览器不支持录音'
       return false
     }
+    starting = true
+    const ownGeneration = ++generation
+    let recordingStream: MediaStream
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true })
     }
     catch {
       error.value = '无法访问麦克风，请在浏览器设置中允许麦克风权限后重试'
       return false
     }
-    chunks = []
+    finally {
+      starting = false
+    }
+    if (disposed || ownGeneration !== generation) {
+      recordingStream.getTracks().forEach(t => t.stop())
+      return false
+    }
+    stream = recordingStream
+    const chunks: Blob[] = []
+    let recorder: MediaRecorder
     try {
-      mediaRecorder = new MediaRecorder(stream)
+      recorder = new MediaRecorder(recordingStream)
+      recorder.start()
     }
     catch {
       error.value = '录音初始化失败，请换个浏览器试试'
@@ -102,41 +119,52 @@ export function useRecorder() {
       stream = null
       return false
     }
-    mediaRecorder.ondataavailable = (e: BlobEvent) => {
+    mediaRecorder = recorder
+    recorder.ondataavailable = (e: BlobEvent) => {
       if (e.data.size > 0)
         chunks.push(e.data)
     }
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: mediaRecorder?.mimeType || 'audio/webm' })
-      if (audioUrl.value)
-        URL.revokeObjectURL(audioUrl.value)
-      audioUrl.value = URL.createObjectURL(blob)
-      stream?.getTracks().forEach(t => t.stop())
-      stream = null
+    recorder.onstop = () => {
+      recordingStream.getTracks().forEach(t => t.stop())
+      if (stream === recordingStream)
+        stream = null
+      if (!disposed && ownGeneration === generation) {
+        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })
+        if (audioUrl.value)
+          URL.revokeObjectURL(audioUrl.value)
+        audioUrl.value = URL.createObjectURL(blob)
+      }
     }
-    mediaRecorder.start()
     isRecording.value = true
     elapsed.value = 0
     cleanupTimer()
-    timer = setInterval(() => { elapsed.value++ }, 1000)
+    timer = setInterval(() => {
+      elapsed.value++
+    }, 1000)
     // 同步启动语音转写（支持的浏览器）
     startTranscription()
     return true
   }
 
   function stop() {
-    if (mediaRecorder && isRecording.value) {
+    const wasRecording = isRecording.value
+    isRecording.value = false
+    cleanupTimer()
+    stopTranscription()
+    if (starting)
+      generation++
+    if (mediaRecorder && wasRecording) {
       try {
         mediaRecorder.stop()
       }
       catch { /* ignore */ }
-      isRecording.value = false
-      cleanupTimer()
-      stopTranscription()
     }
+    stream?.getTracks().forEach(t => t.stop())
+    stream = null
   }
 
   function clear() {
+    generation++
     stop()
     if (audioUrl.value)
       URL.revokeObjectURL(audioUrl.value)
@@ -146,10 +174,17 @@ export function useRecorder() {
     transcript.value = ''
   }
 
+  if (getCurrentScope()) {
+    onScopeDispose(() => {
+      disposed = true
+      clear()
+    })
+  }
+
   return { isRecording, audioUrl, error, elapsed, transcript, transcriptionSupported, start, stop, clear }
 }
 
-export function formatClock(totalSeconds: number): string {
+export function formatRecordingClock(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60)
   const s = totalSeconds % 60
   return `${m}:${s.toString().padStart(2, '0')}`

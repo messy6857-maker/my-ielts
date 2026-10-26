@@ -1,10 +1,10 @@
 // 云同步底层客户端：纯函数 + token 存取，不依赖 useAuth（避免循环引用）
 import { SYNC_API_BASE } from '../sync-config'
+import { studyBaseOf, writeStudyBatch } from '../utils/studyStorage'
 
 export const syncEnabled = SYNC_API_BASE.trim() !== ''
 
 const TOKEN_KEY = 'myielts_sync_token_v1'
-const SESSION_KEY = 'myielts_session_v1'
 
 export function getToken(): string | null {
   try {
@@ -46,8 +46,10 @@ async function api(path: string, method: string, body?: unknown, token?: string 
     headers,
     body: body === undefined ? undefined : JSON.stringify(body),
   })
-  const json = await res.json().catch(() => ({}))
-  return { ok: res.ok && json.ok !== false, ...json }
+  const json = await res.json().catch(() => null)
+  if (!json || typeof json !== 'object' || Array.isArray(json))
+    return { ok: false, message: '服务器响应格式异常' }
+  return { ...json, ok: res.ok && json.ok !== false }
 }
 
 export async function apiRegister(username: string, password: string): Promise<ApiResult> {
@@ -58,22 +60,21 @@ export async function apiLogin(username: string, password: string): Promise<ApiR
   return api('/login', 'POST', { username, password })
 }
 
-export async function apiPull(): Promise<ApiResult> {
-  return api('/sync', 'GET')
+export async function apiPull(token?: string): Promise<ApiResult> {
+  return api('/sync', 'GET', undefined, token)
 }
 
-export async function apiPush(data: Record<string, string>): Promise<ApiResult> {
-  return api('/sync', 'PUT', { data })
+export async function apiPush(data: Record<string, string>, token?: string): Promise<ApiResult> {
+  return api('/sync', 'PUT', { data }, token)
 }
 
 // 收集当前账号需要同步的本地数据（只收 myielts_u_<username>_ 前缀的 key）
 export function collectSyncData(username: string): Record<string, string> {
   const data: Record<string, string> = {}
-  const prefix = `myielts_u_${username}_`
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i)
-      if (key && key.startsWith(prefix) && key !== SESSION_KEY && key !== TOKEN_KEY) {
+      if (key && studyBaseOf(key, username) !== null) {
         const value = localStorage.getItem(key)
         if (value !== null)
           data[key] = value
@@ -87,18 +88,17 @@ export function collectSyncData(username: string): Record<string, string> {
 }
 
 // 把云端数据写回本地，然后调用方负责 reload
-export function applySyncData(data: Record<string, string>): number {
-  let count = 0
-  try {
-    for (const [k, v] of Object.entries(data)) {
-      if (k.startsWith('myielts_') && k !== SESSION_KEY && k !== TOKEN_KEY) {
-        localStorage.setItem(k, v)
-        count++
-      }
-    }
+export function applySyncData(data: Record<string, string>, username: string): number {
+  if (!data || typeof data !== 'object' || Array.isArray(data))
+    throw new Error('同步数据格式异常')
+  // Validate the complete payload before writing anything. Session, credentials,
+  // device identity and other accounts' keys are never imported.
+  const entries = Object.entries(data)
+  for (const [key, value] of entries) {
+    if (studyBaseOf(key, username) === null || typeof value !== 'string')
+      throw new Error('同步数据包含其他账号或未知模块')
+    JSON.parse(value)
   }
-  catch {
-    // 忽略
-  }
-  return count
+  writeStudyBatch(entries)
+  return entries.length
 }

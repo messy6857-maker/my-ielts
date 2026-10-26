@@ -10,7 +10,7 @@ import TaskChart from './TaskChart.vue'
 import AIGradePanel from '../AIGradePanel.vue'
 import ModelEssayView from '../ModelEssayView.vue'
 import { nsKey } from '../../../composables/useStudyData'
-import { readJson, writeJson } from '../../../composables/useAuth'
+import { readJson, useAuth, writeJson } from '../../../composables/useAuth'
 
 type AnyPrompt = Task1Prompt | CambridgeWritingTask
 const CAM_TASK1 = CAMBRIDGE_WRITING.filter(q => q.task === 1)
@@ -72,6 +72,20 @@ const secondsLeft = ref(TIME_LIMIT)
 const timerOn = ref(false)
 const timeUp = ref(false)
 let timerId: ReturnType<typeof setInterval> | null = null
+const { currentUser } = useAuth()
+watch(currentUser, () => {
+  if (timerId)
+    clearInterval(timerId)
+  timerOn.value = false
+  essayText.value = ''
+  view.value = 'home'
+  loadHistory()
+})
+onUnmounted(() => {
+  if (timerId)
+    clearInterval(timerId)
+})
+
 
 const wordCount = computed(() => essayText.value.trim().split(/\s+/).filter(Boolean).length)
 const timeText = computed(() => {

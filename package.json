@@ -1,6 +1,6 @@
 {
   "private": true,
-  "packageManager": "pnpm@8.6.0",
+  "packageManager": "pnpm@8.6.10",
   "scripts": {
     "build": "vite build",
     "dev": "vite --port 3333 --open",
@@ -8,7 +8,8 @@
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest",
-    "up": "taze major -I"
+    "up": "taze major -I",
+    "lint:critical": "eslint src/utils src/composables/syncClient.ts src/composables/useAuth.ts src/composables/useAISettings.ts src/composables/useAudio.ts src/composables/useBackup.ts src/composables/useDeckStore.ts src/composables/useMockHistory.ts src/composables/useRecorder.ts src/composables/useSingleAudio.ts test/audit-regression.test.ts test/reliability.test.ts test/uiReliability.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

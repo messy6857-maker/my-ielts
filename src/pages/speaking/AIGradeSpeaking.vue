@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onScopeDispose, ref, watch } from 'vue'
 import { gradeSpeakingWithAI, hasAISettings } from '~/composables/useAISettings'
 import type { AISpeakingResult } from '~/composables/useAISettings'
 import { useAuth } from '~/composables/useAuth'
@@ -23,22 +23,42 @@ const labels: Record<'fluency' | 'lexical' | 'grammar', string> = {
   grammar: '语法',
 }
 
+let controller: AbortController | null = null
+let requestId = 0
+watch([() => props.question, () => props.transcript, currentUser], () => {
+  requestId++
+  controller?.abort()
+  result.value = null
+  loading.value = false
+  error.value = ''
+})
+onScopeDispose(() => {
+  requestId++
+  controller?.abort()
+})
+
 async function runGrade() {
   if (!canUseAI.value) {
     error.value = '请先登录账号再使用 AI 评分'
     return
   }
+  const seq = ++requestId
+  controller = new AbortController()
   loading.value = true
   error.value = ''
   result.value = null
   try {
-    result.value = await gradeSpeakingWithAI(props.question, props.transcript)
+    const graded = await gradeSpeakingWithAI(props.question, props.transcript, controller.signal)
+    if (seq === requestId)
+      result.value = graded
   }
   catch (e) {
-    error.value = e instanceof Error ? e.message : '评分失败，请重试'
+    if (seq === requestId)
+      error.value = e instanceof Error ? e.message : '评分失败，请重试'
   }
   finally {
-    loading.value = false
+    if (seq === requestId)
+      loading.value = false
   }
 }
 

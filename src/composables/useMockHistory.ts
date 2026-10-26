@@ -1,4 +1,5 @@
-import { useAuth } from './useAuth'
+import { readJson, useAuth, writeJson } from './useAuth'
+import { nsKey } from './useStudyData'
 
 export interface MockRecord {
   id: string // test id, e.g. 'cam19-test1'
@@ -11,26 +12,36 @@ export interface MockRecord {
 }
 
 function key(): string {
-  const { currentUser } = useAuth()
-  const user = currentUser.value ?? 'guest'
-  return `myielts_u_${user}_mock_history_v1`
+  return nsKey('mock_history_v1')
 }
 
 export function getMockHistory(): MockRecord[] {
+  // Earlier versions stored visitors under the literal username "guest".
+  // Migrate only when no real local account owns that legacy namespace.
   try {
-    return JSON.parse(localStorage.getItem(key()) ?? '[]')
-  } catch {
-    return []
+    const legacy = 'myielts_u_guest_mock_history_v1'
+    if (!useAuth().currentUser.value && localStorage.getItem(key()) === null
+      && !readJson<Record<string, unknown>>('myielts_users_v1', {}).guest) {
+      const old = readJson<MockRecord[] | null>(legacy, null)
+      if (Array.isArray(old) && writeJson(key(), old))
+        localStorage.removeItem(legacy)
+    }
   }
+  catch {
+    // Storage can be disabled by the browser; readJson below retains its fallback.
+  }
+  const records = readJson<MockRecord[]>(key(), [])
+  return Array.isArray(records) ? records : []
 }
 
 export function saveMockRecord(r: Omit<MockRecord, 'date'>): void {
   const list = getMockHistory()
   list.unshift({ ...r, date: new Date().toISOString() })
   // 只保留最近 100 条
-  localStorage.setItem(key(), JSON.stringify(list.slice(0, 100)))
+  writeJson(key(), list.slice(0, 100))
 }
 
 export function clearMockHistory(): void {
-  localStorage.removeItem(key())
+  // Keep an explicit empty value so clearing is propagated to other devices.
+  writeJson(key(), [])
 }

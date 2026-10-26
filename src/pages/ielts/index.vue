@@ -2,10 +2,9 @@
 import words from './listening179.json'
 
 const ws = reactive(words)
+const audioPlayer = useAudioPlayer()
 function play(word: string) {
-  const audio = document.createElement('audio')
-  audio.src = `179_audios/${word}.mp3`
-  audio.play()
+  audioPlayer.play(`179_audios/${word}.mp3`)
 }
 </script>
 

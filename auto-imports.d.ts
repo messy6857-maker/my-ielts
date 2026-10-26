@@ -32,6 +32,7 @@ declare global {
   const createEventHook: typeof import('@vueuse/core')['createEventHook']
   const createGlobalState: typeof import('@vueuse/core')['createGlobalState']
   const createInjectionState: typeof import('@vueuse/core')['createInjectionState']
+  const createManagedAudio: typeof import('./src/composables/useSingleAudio')['createManagedAudio']
   const createReactiveFn: typeof import('@vueuse/core')['createReactiveFn']
   const createReusableTemplate: typeof import('@vueuse/core')['createReusableTemplate']
   const createSharedComposable: typeof import('@vueuse/core')['createSharedComposable']
@@ -51,6 +52,7 @@ declare global {
   const formatClock: typeof import('./src/composables/useStudyTimer')['formatClock']
   const formatDate: typeof import('./src/composables/useStudyData')['formatDate']
   const formatDuration: typeof import('./src/composables/useStudyTimer')['formatDuration']
+  const formatRecordingClock: typeof import('./src/composables/useRecorder')['formatRecordingClock']
   const getAISettings: typeof import('./src/composables/useAISettings')['getAISettings']
   const getCurrentInstance: typeof import('vue')['getCurrentInstance']
   const getCurrentScope: typeof import('vue')['getCurrentScope']
@@ -77,6 +79,7 @@ declare global {
   const makeDestructurable: typeof import('@vueuse/core')['makeDestructurable']
   const markRaw: typeof import('vue')['markRaw']
   const nextTick: typeof import('vue')['nextTick']
+  const notifyLocalWrite: typeof import('./src/composables/useAuth')['notifyLocalWrite']
   const nsKey: typeof import('./src/composables/useStudyData')['nsKey']
   const onActivated: typeof import('vue')['onActivated']
   const onBeforeMount: typeof import('vue')['onBeforeMount']
@@ -166,6 +169,7 @@ declare global {
   const useAsyncQueue: typeof import('@vueuse/core')['useAsyncQueue']
   const useAsyncState: typeof import('@vueuse/core')['useAsyncState']
   const useAttrs: typeof import('vue')['useAttrs']
+  const useAudioPlayer: typeof import('./src/composables/useSingleAudio')['useAudioPlayer']
   const useAuth: typeof import('./src/composables/useAuth')['useAuth']
   const useBase64: typeof import('@vueuse/core')['useBase64']
   const useBattery: typeof import('@vueuse/core')['useBattery']
@@ -375,6 +379,7 @@ declare module 'vue' {
     readonly createEventHook: UnwrapRef<typeof import('@vueuse/core')['createEventHook']>
     readonly createGlobalState: UnwrapRef<typeof import('@vueuse/core')['createGlobalState']>
     readonly createInjectionState: UnwrapRef<typeof import('@vueuse/core')['createInjectionState']>
+    readonly createManagedAudio: UnwrapRef<typeof import('./src/composables/useSingleAudio')['createManagedAudio']>
     readonly createReactiveFn: UnwrapRef<typeof import('@vueuse/core')['createReactiveFn']>
     readonly createReusableTemplate: UnwrapRef<typeof import('@vueuse/core')['createReusableTemplate']>
     readonly createSharedComposable: UnwrapRef<typeof import('@vueuse/core')['createSharedComposable']>
@@ -394,6 +399,7 @@ declare module 'vue' {
     readonly formatClock: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatClock']>
     readonly formatDate: UnwrapRef<typeof import('./src/composables/useStudyData')['formatDate']>
     readonly formatDuration: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatDuration']>
+    readonly formatRecordingClock: UnwrapRef<typeof import('./src/composables/useRecorder')['formatRecordingClock']>
     readonly getAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['getAISettings']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
@@ -420,6 +426,7 @@ declare module 'vue' {
     readonly makeDestructurable: UnwrapRef<typeof import('@vueuse/core')['makeDestructurable']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
+    readonly notifyLocalWrite: UnwrapRef<typeof import('./src/composables/useAuth')['notifyLocalWrite']>
     readonly nsKey: UnwrapRef<typeof import('./src/composables/useStudyData')['nsKey']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
@@ -509,6 +516,7 @@ declare module 'vue' {
     readonly useAsyncQueue: UnwrapRef<typeof import('@vueuse/core')['useAsyncQueue']>
     readonly useAsyncState: UnwrapRef<typeof import('@vueuse/core')['useAsyncState']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
+    readonly useAudioPlayer: UnwrapRef<typeof import('./src/composables/useSingleAudio')['useAudioPlayer']>
     readonly useAuth: UnwrapRef<typeof import('./src/composables/useAuth')['useAuth']>
     readonly useBase64: UnwrapRef<typeof import('@vueuse/core')['useBase64']>
     readonly useBattery: UnwrapRef<typeof import('@vueuse/core')['useBattery']>
@@ -712,6 +720,7 @@ declare module '@vue/runtime-core' {
     readonly createEventHook: UnwrapRef<typeof import('@vueuse/core')['createEventHook']>
     readonly createGlobalState: UnwrapRef<typeof import('@vueuse/core')['createGlobalState']>
     readonly createInjectionState: UnwrapRef<typeof import('@vueuse/core')['createInjectionState']>
+    readonly createManagedAudio: UnwrapRef<typeof import('./src/composables/useSingleAudio')['createManagedAudio']>
     readonly createReactiveFn: UnwrapRef<typeof import('@vueuse/core')['createReactiveFn']>
     readonly createReusableTemplate: UnwrapRef<typeof import('@vueuse/core')['createReusableTemplate']>
     readonly createSharedComposable: UnwrapRef<typeof import('@vueuse/core')['createSharedComposable']>
@@ -731,6 +740,7 @@ declare module '@vue/runtime-core' {
     readonly formatClock: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatClock']>
     readonly formatDate: UnwrapRef<typeof import('./src/composables/useStudyData')['formatDate']>
     readonly formatDuration: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatDuration']>
+    readonly formatRecordingClock: UnwrapRef<typeof import('./src/composables/useRecorder')['formatRecordingClock']>
     readonly getAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['getAISettings']>
     readonly getCurrentInstance: UnwrapRef<typeof import('vue')['getCurrentInstance']>
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
@@ -757,6 +767,7 @@ declare module '@vue/runtime-core' {
     readonly makeDestructurable: UnwrapRef<typeof import('@vueuse/core')['makeDestructurable']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
+    readonly notifyLocalWrite: UnwrapRef<typeof import('./src/composables/useAuth')['notifyLocalWrite']>
     readonly nsKey: UnwrapRef<typeof import('./src/composables/useStudyData')['nsKey']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
@@ -846,6 +857,7 @@ declare module '@vue/runtime-core' {
     readonly useAsyncQueue: UnwrapRef<typeof import('@vueuse/core')['useAsyncQueue']>
     readonly useAsyncState: UnwrapRef<typeof import('@vueuse/core')['useAsyncState']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
+    readonly useAudioPlayer: UnwrapRef<typeof import('./src/composables/useSingleAudio')['useAudioPlayer']>
     readonly useAuth: UnwrapRef<typeof import('./src/composables/useAuth')['useAuth']>
     readonly useBase64: UnwrapRef<typeof import('@vueuse/core')['useBase64']>
     readonly useBattery: UnwrapRef<typeof import('@vueuse/core')['useBattery']>

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { resolveAudioUrl } from '../../composables/useAudio'
 import vocabulary from './vocabulary'
 
 const CHAPTER_KEY = 'vocabulary_typing_chapter'
@@ -44,18 +43,10 @@ function reset() {
   playAudio()
 }
 
-let audio = null as HTMLAudioElement | null
+const audioPlayer = useAudioPlayer()
 function playAudio() {
-  const category = selectedChapter.value
-  const word = currentWord.value
-  const audioPath = resolveAudioUrl(`vocabulary/audio/${category}/${word}.mp3`)
-  if (audio) {
-    audio.pause()
-    audio.currentTime = 0
-  }
-  audio = document.createElement('audio')
-  audio.src = audioPath
-  audio.play()
+  if (currentWord.value)
+    audioPlayer.play(`vocabulary/audio/${selectedChapter.value}/${currentWord.value}.mp3`)
 }
 
 // Normalize whitespace: replace non-breaking spaces and other unicode spaces with regular space

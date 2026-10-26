@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { resolveAudioUrl } from '../../composables/useAudio'
 import { getMnemonic } from './mnemonics'
 import { parseExtra } from './extraParser'
 import { gradeSchedule } from '../../composables/useSpacedRepetition'
@@ -144,23 +143,11 @@ const studyLapses = computed(() => {
 })
 const showMnemonic = ref(false)
 
-let audio: HTMLAudioElement | null = null
+const audioPlayer = useAudioPlayer()
 function playAudio(word?: string) {
   const w = word || current.value?.word || studying.value?.word
-  if (!w)
-    return
-  try {
-    if (audio) {
-      audio.pause()
-      audio.currentTime = 0
-    }
-    audio = document.createElement('audio')
-    audio.src = resolveAudioUrl(`vocabulary/audio/${category.value}/${w}.mp3`)
-    audio.play().catch(() => {})
-  }
-  catch {
-    // 忽略音频异常
-  }
+  if (w)
+    audioPlayer.play(`vocabulary/audio/${category.value}/${w}.mp3`)
 }
 
 function toCard(w: any, isNew: boolean): Card {
