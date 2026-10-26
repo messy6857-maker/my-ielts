@@ -1,13 +1,17 @@
 <script setup lang="ts">
-import type { WordInfo } from '../../composables/useWordInfo'
-import { vocabularyWordAudio } from '../../composables/useAudio'
-import { planQueue } from '../../composables/useDeckStore'
-import { gradeSchedule } from '../../composables/useSpacedRepetition'
-import { formatClock, formatDuration, useStudyTimer } from '../../composables/useStudyTimer'
-import { chapters, initialChapter, useVocabularyChapter } from '../../composables/useVocabularyChapter'
-import { getWordInfoWithFallback } from '../../composables/useWordInfo'
-import { parseExtra } from './extraParser'
+import { resolveAudioUrl } from '../../composables/useAudio'
 import { getMnemonic } from './mnemonics'
+import { parseExtra } from './extraParser'
+import { gradeSchedule } from '../../composables/useSpacedRepetition'
+import { decrementAttempt, recordAttempt } from '../../composables/useStats'
+import { planQueue } from '../../composables/useDeckStore'
+import { formatClock, formatDuration, useStudyTimer } from '../../composables/useStudyTimer'
+import { getWordInfoWithFallback } from '../../composables/useWordInfo'
+import { synonymPosData } from './synonymPos'
+import { synonymMeanings } from './synonymMeanings'
+import { wordPhonetics } from './wordPhonetics'
+import type { WordInfo } from '../../composables/useWordInfo'
+import vocabulary from './vocabulary'
 
 interface Card {
   id: number | string
@@ -23,9 +27,9 @@ interface Card {
 }
 
 const CHAPTER_KEY = 'vocabulary_flashcard_chapter'
-const category = ref(initialChapter(CHAPTER_KEY))
-const { chapter, info: chapterInfo, loading: chapterLoading, error: chapterError, reload, infoError, reloadInfo } = useVocabularyChapter(category, true)
-const { addMistake } = useMistakes()
+const chapters = Object.keys(vocabulary)
+const category = ref(localStorage.getItem(CHAPTER_KEY) || chapters[0])
+const { addMistake, decrementMistake } = useMistakes()
 const { setProgress } = useProgress()
 const scheduleStore = useWordSchedule()
 const daily = useDailyGoal()
@@ -93,28 +97,42 @@ const extraDots = [
   'bg-orange-500', 'bg-teal-500', 'bg-indigo-500',
 ]
 // 同义词词性：从词库查（短语或生僻词查不到就不显示词性）
+const wordPosMap = computed(() => {
+  const map = new Map<string, string>()
+  for (const ch of Object.keys(vocabulary)) {
+    const chapter = (vocabulary as any)[ch]
+    if (!chapter)
+      continue
+    for (const w of chapter.words.flat()) {
+      const name = w.word?.[0]?.toLowerCase()
+      if (name && w.pos && !map.has(name))
+        map.set(name, w.pos)
+    }
+  }
+  return map
+})
 function synonymPos(syn: string): string {
-  return chapterInfo.value.positions[syn.trim().toLowerCase()] || ''
+  // 先查本站词库，再查联网抓取的词性数据；都查不到就不显示（如实标注）
+  const key = syn.trim().toLowerCase()
+  return wordPosMap.value.get(key) || synonymPosData[key] || ''
 }
 function synonymMeaning(syn: string): string {
-  return chapterInfo.value.meanings[syn.trim().toLowerCase()] || ''
+  return synonymMeanings[syn.trim().toLowerCase()] || ''
 }
-// 点击同义词展开/收起中文释义
-const expandedSyns = ref(new Set<string>())
+// 点击同义词展开/收起中文释义（用数组保证响应式稳定触发）
+const expandedSyns = ref<string[]>([])
 // 点击拓展词展开/收起中文释义
-const expandedExtras = ref(new Set<number>())
+const expandedExtras = ref<number[]>([])
 function toggleExtraMeaning(i: number) {
-  if (expandedExtras.value.has(i))
-    expandedExtras.value.delete(i)
-  else
-    expandedExtras.value.add(i)
+  expandedExtras.value = expandedExtras.value.includes(i)
+    ? expandedExtras.value.filter(v => v !== i)
+    : [...expandedExtras.value, i]
 }
 function toggleSynMeaning(syn: string) {
   const key = syn.trim().toLowerCase()
-  if (expandedSyns.value.has(key))
-    expandedSyns.value.delete(key)
-  else
-    expandedSyns.value.add(key)
+  expandedSyns.value = expandedSyns.value.includes(key)
+    ? expandedSyns.value.filter(v => v !== key)
+    : [...expandedSyns.value, key]
 }
 const showAnswer = ref(false)
 // 自评前例句巧记：拆词答案的显示开关（每张卡重置）
@@ -126,11 +144,60 @@ const studyLapses = computed(() => {
 })
 const showMnemonic = ref(false)
 
-const audioPlayer = useAudioPlayer()
+// 单词音标：内置数据 2662 词有音标，查不到的留空（不编造）
+function phonetic(word: string): string {
+  return wordPhonetics[word.toLowerCase().trim()] || ''
+}
+
+let audio: HTMLAudioElement | null = null
+function speakWord(w: string) {
+  try {
+    speechSynthesis.cancel()
+    const u = new SpeechSynthesisUtterance(w)
+    u.lang = 'en-US'
+    speechSynthesis.speak(u)
+  }
+  catch {
+    // 忽略朗读异常
+  }
+}
 function playAudio(word?: string) {
   const w = word || current.value?.word || studying.value?.word
-  if (w)
-    audioPlayer.play(vocabularyWordAudio(category.value, w))
+  if (!w)
+    return
+  try {
+    speechSynthesis.cancel()
+    if (audio) {
+      audio.pause()
+      audio.currentTime = 0
+    }
+    audio = document.createElement('audio')
+    let fellBack = false
+    const fallback = () => {
+      if (!fellBack) {
+        fellBack = true
+        speakWord(w)
+      }
+    }
+    audio.onerror = fallback
+    audio.src = resolveAudioUrl(`vocabulary/audio/${category.value}/${w}.mp3`)
+    audio.play().catch(fallback)
+  }
+  catch {
+    // 忽略音频异常
+  }
+}
+// 学习面板展示期间预加载下一个词的音频，切词时不再现取现播
+let preloadAudioEl: HTMLAudioElement | null = null
+function preloadAudio(word: string) {
+  try {
+    preloadAudioEl = document.createElement('audio')
+    preloadAudioEl.preload = 'auto'
+    preloadAudioEl.src = resolveAudioUrl(`vocabulary/audio/${category.value}/${word}.mp3`)
+  }
+  catch {
+    // 忽略预加载异常
+  }
 }
 
 function toCard(w: any, isNew: boolean): Card {
@@ -150,7 +217,8 @@ function toCard(w: any, isNew: boolean): Card {
 }
 
 function buildQueue() {
-  const all = chapter.value?.words.flat() ?? []
+  const chapter = (vocabulary as any)[category.value]
+  const all = chapter ? chapter.words.flat() : []
   // 复习配额 = 3 × 每日新词目标（1:3）：到期优先，不足时从已学词里补；新词按今日剩余名额取
   const plan = planQueue(all, id => scheduleStore.get(id), daily.goal.value, daily.remaining.value)
   queue.value = [...plan.newWords.map(w => toCard(w, true)), ...plan.reviews.map(w => toCard(w, false))]
@@ -159,6 +227,7 @@ function buildQueue() {
   dueCount.value = plan.dueCount
   newCount.value = plan.newWords.length
   bestGrade.value = {}
+  gradeHistory.value = []
   stats.value = { known: 0, vague: 0, unknown: 0 }
   finished.value = initialTotal.value === 0
   studying.value = null
@@ -168,13 +237,38 @@ function buildQueue() {
     playAudio(queue.value[0].word)
 }
 
+// 自评历史：用于“返回上一个”时还原（自评前调度 + 评分后调度快照 + 自评前本轮最佳成绩 + 自评前复现次数 + 本次是否计入新词）
+// postSchedule 用于拉取重载后校验：当前调度与评分后快照不一致时跳过调度恢复，避免旧快照覆盖他设备的新值
+interface GradeHistoryEntry {
+  card: Card
+  grade: 0 | 3 | 5
+  prevSchedule: ReturnType<typeof scheduleStore.get>
+  postSchedule: ReturnType<typeof scheduleStore.get>
+  prevBest: number | undefined
+  prevAttempts: number
+  countedNew: boolean
+}
+const gradeHistory = ref<GradeHistoryEntry[]>([])
+
 // 先自评：认识 / 不认识 / 模糊
 function grade(g: 0 | 3 | 5) {
   const card = current.value
-  if (!card || chapterLoading.value)
+  if (!card)
     return
+  const countedNew = card.isNew && !card.counted
+  const nextSchedule = gradeSchedule(scheduleStore.get(card.id), g)
+  gradeHistory.value.push({
+    card,
+    grade: g,
+    prevSchedule: scheduleStore.get(card.id),
+    postSchedule: JSON.parse(JSON.stringify(nextSchedule)),
+    prevBest: bestGrade.value[card.id],
+    prevAttempts: card.attempts,
+    countedNew,
+  })
   // 更新间隔重复调度
-  scheduleStore.set(card.id, gradeSchedule(scheduleStore.get(card.id), g))
+  scheduleStore.set(card.id, nextSchedule)
+  recordAttempt('vocabulary', g)
   // 统计
   if (g === 5)
     stats.value.known++
@@ -184,8 +278,8 @@ function grade(g: 0 | 3 | 5) {
     stats.value.unknown++
   bestGrade.value[card.id] = Math.max(bestGrade.value[card.id] ?? -1, g)
   // 新词计入今日学习量（一天只计一次）
-  if (card.isNew && !card.counted) {
-    daily.recordNewWord(card.id)
+  if (countedNew) {
+    daily.recordNewWord()
     card.counted = true
   }
   card.attempts++
@@ -212,6 +306,53 @@ function grade(g: 0 | 3 | 5) {
   showAnswer.value = false
   studying.value = card
   playAudio(card.word)
+  // 预加载下一个词的音频，切词时不再现取现播
+  if (queue.value.length > 0)
+    preloadAudio(queue.value[0].word)
+}
+
+// 返回上一个单词，重新测试：还原自评前调度、本轮统计、统计页累计、复现次数与新词计数，错词本计数减一
+function goBackOne() {
+  const entry = gradeHistory.value.pop()
+  if (!entry)
+    return
+  const { card, grade: g, prevSchedule, postSchedule, prevBest, prevAttempts, countedNew } = entry
+  // 拉取重载可能已把该词调度换成他设备的新值：当前值与评分后快照不一致时，
+  // 跳过调度恢复（只恢复计数类项目），避免旧快照覆盖他设备的新值
+  if (JSON.stringify(scheduleStore.get(card.id)) === JSON.stringify(postSchedule)) {
+    if (prevSchedule)
+      scheduleStore.set(card.id, prevSchedule)
+    else
+      scheduleStore.remove(card.id)
+  }
+  if (prevBest === undefined)
+    delete bestGrade.value[card.id]
+  else
+    bestGrade.value[card.id] = prevBest
+  if (g === 5)
+    stats.value.known = Math.max(0, stats.value.known - 1)
+  else if (g === 3)
+    stats.value.vague = Math.max(0, stats.value.vague - 1)
+  else
+    stats.value.unknown = Math.max(0, stats.value.unknown - 1)
+  decrementAttempt('vocabulary', g)
+  if (g !== 5)
+    decrementMistake(`vocabulary:${card.id}`)
+  // 本次自评计入的新词要扣回，并恢复 counted 标记（换章重建队列也不会重复计数）
+  if (countedNew) {
+    daily.decrementNewWord()
+    card.counted = false
+  }
+  card.attempts = prevAttempts
+  // 去掉本轮内复现排队的副本，再把该词放回队首
+  queue.value = queue.value.filter(c => c.id !== card.id)
+  queue.value.unshift(card)
+  studying.value = null
+  lastGrade.value = null
+  showAnswer.value = false
+  showPreAnswer.value = false
+  showMnemonic.value = false
+  playAudio(card.word)
 }
 
 function next() {
@@ -223,6 +364,11 @@ function next() {
     finishSession()
   else
     playAudio(queue.value[0].word)
+}
+
+/** 自评前加载例句/同义词：查内置预抓取数据（本词 → 派生词），同步返回 */
+function loadWordInfo(card: Card) {
+  wordInfo.value = getWordInfoWithFallback([card.word, ...card.hintWords])
 }
 
 function finishSession() {
@@ -238,47 +384,41 @@ function restart() {
   buildQueue()
 }
 
+// 重置记忆：二次确认后清空词汇自测的 SM-2 调度 + 自测进度 + 今日新词计数，
+// 全部单词回到新词；错词本、打卡、模考记录、学习统计历史不受影响；
+// 清空会走正常写入通道，登录账号时云同步会把清空同步到其他设备
+function resetMemory() {
+  const ok = window.confirm(
+    '确定要重置单词自测的记忆吗？此操作不可撤销。\n\n将清除：\n- 全部单词的记忆曲线（所有词回到新词）\n- 单词自测进度\n- 今日已学新词计数\n\n不受影响：错词本、打卡、模考记录、学习统计历史',
+  )
+  if (!ok)
+    return
+  scheduleStore.clear()
+  setProgress('flashcard', 0, 0)
+  daily.resetDaily()
+  timer.pause()
+  buildQueue()
+  timer.resume()
+}
+
 watch(category, (newVal) => {
   localStorage.setItem(CHAPTER_KEY, newVal)
-  audioPlayer.stop()
-  queue.value = []
-  studying.value = null
+  buildQueue()
 })
-watch(chapter, () => { if (chapter.value) buildQueue() })
 
 // 卡片切换时预加载联网例句/同义词
-watch([current, studying, chapterInfo], ([card, expanded]) => {
-  const item = expanded ?? card
-  wordInfo.value = item ? getWordInfoWithFallback([item.word, ...item.hintWords], chapterInfo.value.sentences) : null
-})
-
-const { currentUser } = useAuth()
-watch(currentUser, () => {
-  audioPlayer.stop()
-  showExitModal.value = false
-  buildQueue()
-  timer.start()
+watch(current, (c) => {
+  if (c)
+    loadWordInfo(c)
 })
 
 onMounted(() => {
+  buildQueue()
   timer.start()
 })
 </script>
 
 <template>
-  <p v-if="chapterLoading" role="status" class="p-6">
-正在加载章节…
-</p>
-  <p v-if="chapterError" role="alert" class="p-6">
-{{ chapterError }} <button @click="reload">
-重试
-</button>
-</p>
-  <p v-if="infoError" role="status" class="p-4 text-sm text-gray-500">
-{{ infoError }} <button class="underline" @click="reloadInfo">
-重试资料
-</button>
-</p>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-2xl mx-auto">
       <!-- Header -->
@@ -292,12 +432,8 @@ onMounted(() => {
             ← 返回
           </button>
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">
-单词自测
-</h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-看到单词先凭感觉自评，再按需学习词条
-</p>
+            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">单词自测</h1>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">看到单词先凭感觉自评，再按需学习词条</p>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -305,9 +441,7 @@ onMounted(() => {
             v-model="category"
             class="block w-36 border border-gray-300 rounded-lg bg-white p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500"
           >
-            <option v-for="c in chapters" :key="c" :value="c">
-{{ c }}
-</option>
+            <option v-for="c in chapters" :key="c" :value="c">{{ c }}</option>
           </select>
           <input
             v-model.lazy="goalProxy"
@@ -318,6 +452,13 @@ onMounted(() => {
             class="block w-20 border border-gray-300 rounded-lg bg-white p-2.5 text-sm text-center dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500"
           >
           <span class="text-sm text-gray-500 dark:text-gray-400">个/天</span>
+          <button
+            title="重置记忆：全部单词回到新词，从 0 开始"
+            class="shrink-0 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:border-red-800 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-900/20"
+            @click="resetMemory"
+          >
+            🔄 重置记忆
+          </button>
         </div>
       </div>
       <!-- 打卡 + 今日计划 -->
@@ -334,7 +475,7 @@ onMounted(() => {
             今日 {{ formatDuration(timer.dailySeconds.value) }}
           </span>
           <div class="w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden" title="今日目标 2 小时">
-            <div class="h-full bg-green-500 rounded-full transition-all" :style="{ width: `${Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) }%` }" />
+            <div class="h-full bg-green-500 rounded-full transition-all" :style="{ width: Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) + '%' }" />
           </div>
           <span class="text-xs font-bold text-orange-500">🔥 连续打卡 {{ checkinStreak }} 天</span>
           <div class="flex gap-1">
@@ -352,36 +493,20 @@ onMounted(() => {
       <!-- Session stats -->
       <div v-if="!finished" class="grid grid-cols-4 gap-3 mb-6 text-center">
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">
-本轮剩余
-</div>
-          <div class="text-lg font-bold dark:text-white">
-{{ remaining }}
-</div>
+          <div class="text-xs text-gray-500 mb-1">本轮剩余</div>
+          <div class="text-lg font-bold dark:text-white">{{ remaining }}</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">
-认识
-</div>
-          <div class="text-lg font-bold text-green-600">
-{{ stats.known }}
-</div>
+          <div class="text-xs text-gray-500 mb-1">认识</div>
+          <div class="text-lg font-bold text-green-600">{{ stats.known }}</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">
-不认识
-</div>
-          <div class="text-lg font-bold text-red-600">
-{{ stats.unknown }}
-</div>
+          <div class="text-xs text-gray-500 mb-1">不认识</div>
+          <div class="text-lg font-bold text-red-600">{{ stats.unknown }}</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">
-模糊
-</div>
-          <div class="text-lg font-bold text-yellow-600">
-{{ stats.vague }}
-</div>
+          <div class="text-xs text-gray-500 mb-1">模糊</div>
+          <div class="text-lg font-bold text-yellow-600">{{ stats.vague }}</div>
         </div>
       </div>
 
@@ -435,15 +560,16 @@ onMounted(() => {
               <i class="i-ph-speaker-high-bold text-2xl block" />
             </button>
           </div>
+          <p v-if="phonetic(current.word)" class="mb-2 text-lg text-gray-400" style="font-family: times;">
+            {{ phonetic(current.word) }}
+          </p>
 
           <!-- 例句巧记：自评前展示，辅助回忆；无内容时隐藏 -->
           <div
             v-if="preMnemonic || (wordInfo && (wordInfo.examples.length > 0 || wordInfo.synonyms.length > 0)) || current.example"
             class="my-5 rounded-xl bg-sky-50 border border-sky-200 p-4 text-left dark:bg-sky-900/20 dark:border-sky-800"
           >
-            <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">
-💡 例句巧记
-</div>
+            <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">💡 例句巧记</div>
             <!-- 拆词：先只给词块，答案（词义）点一下才显示 -->
             <template v-if="preMnemonic && preMnemonic.kind === 'parts'">
               <p class="mb-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
@@ -468,21 +594,25 @@ onMounted(() => {
             <p v-else-if="current.example" class="text-sm italic leading-relaxed text-gray-600 dark:text-gray-400">
               🔗 “{{ current.example }}”
             </p>
-            <p v-if="wordInfo && wordInfo.synonyms.length > 0" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              同义词：{{ wordInfo.synonyms.slice(0, 8).join(' · ') }}
-            </p>
+            <div v-if="wordInfo && wordInfo.synonyms.length > 0" class="mt-2">
+              <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">同义词（点词看意思）：</p>
+              <ul class="space-y-1.5">
+                <li v-for="(syn, i) in wordInfo.synonyms.slice(0, 8)" :key="i" class="text-sm">
+                  <span class="mr-1.5 inline-block w-2 h-2 rounded-full" :class="extraDots[i % extraDots.length]" />
+                  <button
+                    class="font-bold underline decoration-dotted underline-offset-2"
+                    :class="extraColors[i % extraColors.length]"
+                    @click="toggleSynMeaning(syn)"
+                  >{{ syn }}</button>
+                  <span v-if="synonymPos(syn)" class="ml-1 italic text-gray-500 dark:text-gray-400" style="font-family: times;">{{ synonymPos(syn) }}</span>
+                  <span v-if="expandedSyns.includes(syn.trim().toLowerCase()) && synonymMeaning(syn)" class="ml-2 text-gray-600 dark:text-gray-400">{{ synonymMeaning(syn) }}</span>
+                </li>
+              </ul>
+            </div>
           </div>
 
-          <p class="text-sm text-gray-400 mt-4 mb-6">
-看到这个词，第一感觉是？
-</p>
+          <p class="text-sm text-gray-400 mt-4 mb-6">看到这个词，第一感觉是？</p>
           <div class="grid grid-cols-3 gap-3">
-            <button
-              class="rounded-xl bg-green-50 border border-green-200 py-4 text-green-700 font-bold hover:bg-green-100 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
-              @click="grade(5)"
-            >
-              认识
-            </button>
             <button
               class="rounded-xl bg-red-50 border border-red-200 py-4 text-red-700 font-bold hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300"
               @click="grade(0)"
@@ -494,6 +624,12 @@ onMounted(() => {
               @click="grade(3)"
             >
               模糊
+            </button>
+            <button
+              class="rounded-xl bg-green-50 border border-green-200 py-4 text-green-700 font-bold hover:bg-green-100 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
+              @click="grade(5)"
+            >
+              认识
             </button>
           </div>
         </div>
@@ -520,6 +656,9 @@ onMounted(() => {
               <i class="i-ph-speaker-high-bold text-xl block" />
             </button>
           </div>
+          <p v-if="phonetic(studying.word)" class="mb-4 text-center text-lg text-gray-400" style="font-family: times;">
+            {{ phonetic(studying.word) }}
+          </p>
           <div class="text-center mb-4">
             <span class="text-sm italic text-gray-400 mr-2" style="font-family: times;">{{ studying.pos }}</span>
             <span class="text-xl font-medium text-gray-800 dark:text-gray-200">{{ studying.meaning }}</span>
@@ -530,9 +669,7 @@ onMounted(() => {
 
           <!-- 例句扩展：预抓取的真实例句 + 同义词 -->
           <div v-if="wordInfo && (wordInfo.examples.length > 0 || wordInfo.synonyms.length > 0)" class="mb-6 rounded-xl bg-sky-50 border border-sky-200 p-4 text-left dark:bg-sky-900/20 dark:border-sky-800">
-            <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">
-🔗 例句扩展
-</div>
+            <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">🔗 例句扩展</div>
             <div v-if="wordInfo.examples.length > 0">
               <p v-for="(ex, i) in wordInfo.examples.slice(0, 2)" :key="i" class="mb-1 text-sm italic leading-relaxed text-gray-600 dark:text-gray-400">
                 “{{ ex }}”
@@ -540,9 +677,7 @@ onMounted(() => {
               </p>
             </div>
             <div v-if="wordInfo.synonyms.length > 0" class="mt-2">
-              <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">
-同义词：
-</p>
+              <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">同义词：</p>
               <ul class="space-y-1.5">
                 <li v-for="(syn, i) in wordInfo.synonyms.slice(0, 8)" :key="i" class="text-sm">
                   <span class="mr-1.5 inline-block w-2 h-2 rounded-full" :class="extraDots[i % extraDots.length]" />
@@ -550,11 +685,9 @@ onMounted(() => {
                     class="font-bold underline decoration-dotted underline-offset-2"
                     :class="extraColors[i % extraColors.length]"
                     @click="toggleSynMeaning(syn)"
-                  >
-{{ syn }}
-</button>
+                  >{{ syn }}</button>
                   <span v-if="synonymPos(syn)" class="ml-1 italic text-gray-500 dark:text-gray-400" style="font-family: times;">{{ synonymPos(syn) }}</span>
-                  <span v-if="expandedSyns.has(syn.trim().toLowerCase()) && synonymMeaning(syn)" class="ml-2 text-gray-600 dark:text-gray-400">{{ synonymMeaning(syn) }}</span>
+                  <span v-if="expandedSyns.includes(syn.trim().toLowerCase()) && synonymMeaning(syn)" class="ml-2 text-gray-600 dark:text-gray-400">{{ synonymMeaning(syn) }}</span>
                 </li>
               </ul>
             </div>
@@ -572,11 +705,9 @@ onMounted(() => {
                   class="font-bold underline decoration-dotted underline-offset-2"
                   :class="extraColors[i % extraColors.length]"
                   @click="toggleExtraMeaning(i)"
-                >
-{{ ex.word }}
-</button>
+                >{{ ex.word }}</button>
                 <span v-if="ex.pos" class="ml-1 text-sm italic text-gray-500 dark:text-gray-400" style="font-family: times;">{{ ex.pos }}</span>
-                <span v-if="expandedExtras.has(i)" class="ml-2 text-gray-600 dark:text-gray-400">{{ ex.meaning }}</span>
+                <span v-if="expandedExtras.includes(i)" class="ml-2 text-gray-600 dark:text-gray-400">{{ ex.meaning }}</span>
               </li>
             </ul>
           </div>
@@ -591,9 +722,7 @@ onMounted(() => {
             <div v-if="showMnemonic" class="mt-2 text-sm text-amber-800 dark:text-amber-200">
               <template v-if="studyMnemonic">
                 <!-- 手写巧记：一句话 -->
-                <p v-if="studyMnemonic.kind === 'curated'">
-{{ studyMnemonic.body }}
-</p>
+                <p v-if="studyMnemonic.kind === 'curated'">{{ studyMnemonic.body }}</p>
                 <!-- 拆词巧记：自评后直接显示完整微故事 -->
                 <template v-else-if="studyMnemonic.kind === 'parts'">
                   <div class="flex flex-wrap gap-2 mb-1">
@@ -607,46 +736,43 @@ onMounted(() => {
                 </template>
                 <!-- 例句巧记：填空 + 点看答案 -->
                 <template v-else-if="studyMnemonic.kind === 'sentence'">
-                  <p class="italic mb-2">
-“{{ studyMnemonic.body }}”
-</p>
+                  <p class="italic mb-2">“{{ studyMnemonic.body }}”</p>
                   <button v-if="!showAnswer" class="text-xs underline underline-offset-2" @click="showAnswer = true">
                     想不起来？点我看答案
                   </button>
-                  <p v-else class="font-bold">
-答案：{{ studyMnemonic.answer }}
-</p>
+                  <p v-else class="font-bold">答案：{{ studyMnemonic.answer }}</p>
                 </template>
               </template>
-              <p v-else>
-试试拆音节跟读几遍，再结合上面的例句联想画面，效果会更好。
-</p>
+              <p v-else>试试拆音节跟读几遍，再结合上面的例句联想画面，效果会更好。</p>
             </div>
           </div>
 
-          <button
-            class="w-full rounded-xl bg-blue-600 py-3 text-white text-sm font-bold hover:bg-blue-700"
-            @click="next"
-          >
-            下一个
-          </button>
+          <div class="flex gap-3">
+            <button
+              v-if="gradeHistory.length > 0"
+              class="flex-1 rounded-xl border border-gray-300 py-3 text-gray-600 text-sm font-bold hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              @click="goBackOne"
+            >
+              ↩ 返回上一个，重新测试
+            </button>
+            <button
+              class="flex-1 rounded-xl bg-blue-600 py-3 text-white text-sm font-bold hover:bg-blue-700"
+              @click="next"
+            >
+              下一个
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- 退出结算弹窗 -->
       <div v-if="showExitModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="cancelExit">
         <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl dark:bg-gray-800">
-          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">
-本次学习结束
-</h3>
-          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">
-{{ formatDuration(lastSessionSec) }}
-</p>
-          <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">
-今日累计 {{ formatDuration(timer.dailySeconds.value) }}
-</p>
+          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">本次学习结束</h3>
+          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">{{ formatDuration(lastSessionSec) }}</p>
+          <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">今日累计 {{ formatDuration(timer.dailySeconds.value) }}</p>
           <div class="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-            <div class="h-full rounded-full bg-green-500 transition-all" :style="{ width: `${Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) }%` }" />
+            <div class="h-full rounded-full bg-green-500 transition-all" :style="{ width: Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) + '%' }" />
           </div>
           <p class="mb-4 text-xs text-gray-400">
             {{ timer.dailySeconds.value >= timer.dailyGoal ? '今日目标已达成 🎉' : `距离今日目标 2 小时还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}` }}

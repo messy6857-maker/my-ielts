@@ -1,14 +1,28 @@
 <script setup lang="ts">
+import { ref, onMounted, watch } from 'vue'
+import { getMockHistory, clearMockHistory } from '~/composables/useMockHistory'
+import { onSyncApplied } from '~/composables/syncClient'
+import { useAuth } from '~/composables/useAuth'
 import type { MockRecord } from '~/composables/useMockHistory'
-import { ref, watch } from 'vue'
-import { clearMockHistory, getMockHistory } from '~/composables/useMockHistory'
 
 const records = ref<MockRecord[]>([])
 const { currentUser } = useAuth()
 
+onMounted(() => {
+  records.value = getMockHistory()
+})
+
+// 拉取重载只写 localStorage、不通知本页时列表会滞后：订阅同步应用通知后重读
+// （与各 store 的做法一致，不另设反注册机制）
+onSyncApplied(() => {
+  records.value = getMockHistory()
+})
+
+// 退出/切换账号不导航、不触发拉取时列表会滞留旧账号数据：跟随身份变化重读
+// （getMockHistory 按调用时刻的 currentUser 取 key，退出后读游客 key，不再显示上个账号的记录）
 watch(currentUser, () => {
   records.value = getMockHistory()
-}, { immediate: true })
+})
 
 function formatDate(iso: string): string {
   const d = new Date(iso)

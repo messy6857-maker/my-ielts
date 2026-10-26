@@ -1,4 +1,4 @@
-import { getCurrentScope, onScopeDispose, ref } from 'vue'
+import { ref } from 'vue'
 
 /**
  * 浏览器录音（MediaRecorder），用于口语自测：
@@ -17,28 +17,25 @@ export function useRecorder() {
 
   let mediaRecorder: MediaRecorder | null = null
   let stream: MediaStream | null = null
+  let chunks: Blob[] = []
   let timer: ReturnType<typeof setInterval> | null = null
+  let recordStartAt = 0
   let recognition: any = null
-  let generation = 0
+  let finalText = ''
+  // 权限弹窗等待期连点会并发两次 getUserMedia：starting 守卫挡住第二次
   let starting = false
-  let disposed = false
 
   function startTranscription() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR)
       return
-    detachTranscription()
-    const ownGeneration = generation
-    let finalText = ''
+    finalText = ''
     transcript.value = ''
-    const instance = new SR()
-    recognition = instance
-    instance.lang = 'en-US'
-    instance.continuous = true
-    instance.interimResults = true
-    instance.onresult = (e: any) => {
-      if (disposed || generation !== ownGeneration || recognition !== instance)
-        return
+    recognition = new SR()
+    recognition.lang = 'en-US'
+    recognition.continuous = true
+    recognition.interimResults = true
+    recognition.onresult = (e: any) => {
       let interim = ''
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t: string = e.results[i][0].transcript
@@ -49,18 +46,18 @@ export function useRecorder() {
       }
       transcript.value = (finalText + interim).trim()
     }
-    instance.onerror = () => { /* 忽略，转写失败不影响录音 */ }
-    instance.onend = () => {
+    recognition.onerror = () => { /* 忽略，转写失败不影响录音 */ }
+    recognition.onend = () => {
       // 录音中途识别中断则自动重启
-      if (!disposed && generation === ownGeneration && isRecording.value && recognition === instance) {
+      if (isRecording.value && recognition) {
         try {
-          instance.start()
+          recognition.start()
         }
         catch { /* ignore */ }
       }
     }
     try {
-      instance.start()
+      recognition.start()
     }
     catch { /* ignore */ }
   }
@@ -72,16 +69,6 @@ export function useRecorder() {
         recognition.stop()
       }
       catch { /* ignore */ }
-      // Keep this instance until clear/restart so its final current-session
-      // result can arrive after stop(). Old sessions are detached separately.
-    }
-  }
-
-  function detachTranscription() {
-    if (recognition) {
-      recognition.onresult = null
-      recognition.onerror = null
-      recognition.onend = null
       recognition = null
     }
   }
@@ -94,38 +81,41 @@ export function useRecorder() {
   }
 
   async function start(): Promise<boolean> {
-    error.value = ''
     if (isRecording.value)
       return true
-    if (disposed || starting)
+    if (starting)
       return false
+    // 新一次开始即清空旧转写与旧录音：失败重录后，旧面板素材不再残留冒充新结果
+    error.value = ''
+    transcript.value = ''
+    if (audioUrl.value) {
+      URL.revokeObjectURL(audioUrl.value)
+      audioUrl.value = null
+    }
+    starting = true
+    try {
+      return await doStart()
+    }
+    finally {
+      starting = false
+    }
+  }
+
+  async function doStart(): Promise<boolean> {
     if (!navigator.mediaDevices?.getUserMedia) {
       error.value = '当前浏览器不支持录音'
       return false
     }
-    starting = true
-    const ownGeneration = ++generation
-    let recordingStream: MediaStream
     try {
-      recordingStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     }
     catch {
       error.value = '无法访问麦克风，请在浏览器设置中允许麦克风权限后重试'
       return false
     }
-    finally {
-      starting = false
-    }
-    if (disposed || ownGeneration !== generation) {
-      recordingStream.getTracks().forEach(t => t.stop())
-      return false
-    }
-    stream = recordingStream
-    const chunks: Blob[] = []
-    let recorder: MediaRecorder
+    chunks = []
     try {
-      recorder = new MediaRecorder(recordingStream)
-      recorder.start()
+      mediaRecorder = new MediaRecorder(stream)
     }
     catch {
       error.value = '录音初始化失败，请换个浏览器试试'
@@ -133,54 +123,46 @@ export function useRecorder() {
       stream = null
       return false
     }
-    mediaRecorder = recorder
-    recorder.ondataavailable = (e: BlobEvent) => {
+    mediaRecorder.ondataavailable = (e: BlobEvent) => {
       if (e.data.size > 0)
         chunks.push(e.data)
     }
-    recorder.onstop = () => {
-      recordingStream.getTracks().forEach(t => t.stop())
-      if (stream === recordingStream)
-        stream = null
-      if (!disposed && ownGeneration === generation) {
-        const blob = new Blob(chunks, { type: recorder.mimeType || 'audio/webm' })
-        if (audioUrl.value)
-          URL.revokeObjectURL(audioUrl.value)
-        audioUrl.value = URL.createObjectURL(blob)
-      }
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(chunks, { type: mediaRecorder?.mimeType || 'audio/webm' })
+      if (audioUrl.value)
+        URL.revokeObjectURL(audioUrl.value)
+      audioUrl.value = URL.createObjectURL(blob)
+      stream?.getTracks().forEach(t => t.stop())
+      stream = null
     }
+    mediaRecorder.start()
     isRecording.value = true
     elapsed.value = 0
     cleanupTimer()
-    timer = setInterval(() => {
-      elapsed.value++
-    }, 1000)
+    // 墙钟锚点：后台节流时 elapsed 仍按真实时间重算，仅用于显示
+    recordStartAt = Date.now()
+    timer = setInterval(() => { elapsed.value = Math.floor((Date.now() - recordStartAt) / 1000) }, 1000)
     // 同步启动语音转写（支持的浏览器）
     startTranscription()
     return true
   }
 
   function stop() {
-    const wasRecording = isRecording.value
-    isRecording.value = false
-    cleanupTimer()
-    stopTranscription()
-    if (starting)
-      generation++
-    if (mediaRecorder && wasRecording) {
+    if (mediaRecorder && isRecording.value) {
       try {
         mediaRecorder.stop()
       }
       catch { /* ignore */ }
+      isRecording.value = false
+      // 按锚点结算一次最终值，避免最后不足 1 秒的尾巴被丢掉
+      elapsed.value = Math.floor((Date.now() - recordStartAt) / 1000)
+      cleanupTimer()
+      stopTranscription()
     }
-    stream?.getTracks().forEach(t => t.stop())
-    stream = null
   }
 
   function clear() {
-    generation++
     stop()
-    detachTranscription()
     if (audioUrl.value)
       URL.revokeObjectURL(audioUrl.value)
     audioUrl.value = null
@@ -189,17 +171,10 @@ export function useRecorder() {
     transcript.value = ''
   }
 
-  if (getCurrentScope()) {
-    onScopeDispose(() => {
-      disposed = true
-      clear()
-    })
-  }
-
   return { isRecording, audioUrl, error, elapsed, transcript, transcriptionSupported, start, stop, clear }
 }
 
-export function formatRecordingClock(totalSeconds: number): string {
+export function formatClock(totalSeconds: number): string {
   const m = Math.floor(totalSeconds / 60)
   const s = totalSeconds % 60
   return `${m}:${s.toString().padStart(2, '0')}`

@@ -3,10 +3,8 @@
  * 用法：node scripts/retry-examples.mjs
  */
 import { readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { parseExtra } from '../src/pages/vocabulary/extraParser.ts'
+import { dirname, join } from 'node:path'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const PROGRESS_FILE = join(ROOT, 'scripts', '.fetch-progress.json')
@@ -16,8 +14,23 @@ const UA = 'my-ielts-study-site/1.0 (vocabulary example fetcher; retry pass)'
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 const stripHtml = s => s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()
 
+const POS = '(?:adj|adv|n|vi|vt|v|prep|conj|pron|num|art|interj)'
+const ENTRY_RE = new RegExp(
+  `^([A-Za-z][A-Za-z'.\\-/() ]*?)(?:\\s+(${POS})\\.?)?\\s*([\u4e00-\u9fa5\uff00-\uffef\u3000-\u303f].*)$`,
+)
 function parseExtraWords(extra) {
-  return [...new Set(parseExtra(extra).map(entry => entry.word.toLowerCase()))].slice(0, 3)
+  if (!extra || extra.trim() === '' || extra.trim() === '-')
+    return []
+  const out = []
+  for (const seg of extra.split('。')) {
+    for (const piece of seg.split('；')) {
+      const p = piece.trim().replace(/\/[\u4e00-\u9fa5]+/g, '')
+      const m = p.match(ENTRY_RE)
+      if (m && m[1].trim())
+        out.push(m[1].trim().toLowerCase())
+    }
+  }
+  return [...new Set(out)].slice(0, 3)
 }
 
 async function fetchJson(url, timeoutMs = 15000) {

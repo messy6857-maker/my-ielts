@@ -1,4 +1,3 @@
-import { execFileSync as exec } from 'node:child_process'
 /**
  * 多源补抓例句（雅思难度：不太简、不太难）。
  * 优先级：Cambridge Dictionary（学习者例句，难度最对口）
@@ -8,9 +7,9 @@ import { execFileSync as exec } from 'node:child_process'
  * 用法：node scripts/fetch-cambridge.mjs
  */
 import { readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+import { execFileSync as exec } from 'node:child_process'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const PROGRESS_FILE = join(ROOT, 'scripts', '.fetch-progress.json')
@@ -146,7 +145,7 @@ async function main() {
   const targets = words.filter(w => progress[w] && progress[w].ex.length === 0)
   console.log(`targets (no examples): ${targets.length}`)
 
-  let fixed = 0; let cambridgeHits = 0; let n = 0
+  let fixed = 0, cambridgeHits = 0, n = 0
   for (const word of targets) {
     n++
     let ex = await cambridgeExamples(word)

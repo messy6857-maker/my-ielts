@@ -1,10 +1,12 @@
 <!-- 通用考点词自测卡片：听力 179 / 阅读 538 共用
      与词汇自测卡片（/vocabulary/flashcard）是独立入口、独立进度 -->
 <script setup lang="ts">
-import type { MistakeModule, ProgressModule } from '../composables/useStudyData'
-import { planQueue, useDeckStore } from '../composables/useDeckStore'
 import { gradeSchedule } from '../composables/useSpacedRepetition'
+import { decrementAttempt, recordAttempt } from '../composables/useStats'
+import { planQueue, useDeckStore } from '../composables/useDeckStore'
 import { formatClock, formatDuration, useStudyTimer } from '../composables/useStudyTimer'
+import { useGoBack } from '../composables/useGoBack'
+import type { MistakeModule, ProgressModule } from '../composables/useStudyData'
 
 export interface DeckCard {
   id: string | number
@@ -35,7 +37,7 @@ interface Card extends DeckCard {
 }
 
 const deck = useDeckStore(props.ns)
-const router = useRouter()
+const { goBack } = useGoBack(props.backTo)
 const timer = useStudyTimer()
 const showExitModal = ref(false)
 const lastSessionSec = ref(0)
@@ -50,9 +52,10 @@ function cancelExit() {
 }
 function confirmExit() {
   showExitModal.value = false
-  router.push(props.backTo)
+  // 站内栈有上一步则回上一步，否则去默认返回页，绝不离站
+  goBack()
 }
-const { addMistake } = useMistakes()
+const { addMistake, decrementMistake } = useMistakes()
 const { setProgress } = useProgress()
 const { streak: checkinStreak, weekDots: checkinWeekDots, checkin: doCheckin } = useCheckin()
 
@@ -75,11 +78,36 @@ const lastGrade = ref<0 | 3 | 5 | null>(null)
 const current = computed(() => (!studying.value ? queue.value[0] ?? null : null))
 const remaining = computed(() => queue.value.length)
 
-const audioPlayer = useAudioPlayer()
+let audio: HTMLAudioElement | null = null
 function playAudio(word?: string) {
   const w = word || current.value?.word || studying.value?.word
-  if (w)
-    audioPlayer.play(props.audioFor(w))
+  if (!w)
+    return
+  try {
+    // 新播放先取消旧朗读，避免 TTS 与新音频叠加
+    speechSynthesis.cancel()
+    if (audio) {
+      audio.pause()
+      audio.currentTime = 0
+    }
+    audio = document.createElement('audio')
+    audio.src = props.audioFor(w)
+    // MP3 不存在时用浏览器朗读兜底（onerror 与 play().catch 只触发一次）
+    let fellBack = false
+    const fallback = () => {
+      if (fellBack)
+        return
+      fellBack = true
+      const u = new SpeechSynthesisUtterance(w)
+      u.lang = 'en-US'
+      speechSynthesis.speak(u)
+    }
+    audio.onerror = fallback
+    audio.play().catch(fallback)
+  }
+  catch {
+    // 忽略音频异常
+  }
 }
 
 function toCard(c: DeckCard, isNew: boolean): Card {
@@ -95,6 +123,7 @@ function buildQueue() {
   dueCount.value = plan.dueCount
   newCount.value = plan.newWords.length
   bestGrade.value = {}
+  gradeHistory.value = []
   stats.value = { known: 0, vague: 0, unknown: 0 }
   finished.value = initialTotal.value === 0
   studying.value = null
@@ -103,12 +132,37 @@ function buildQueue() {
     playAudio(queue.value[0].word)
 }
 
+// 自评历史：用于“返回上一个”时还原（对照词汇卡片）
+// postSchedule 用于拉取重载后校验：当前调度与评分后快照不一致时跳过调度恢复，避免旧快照覆盖他设备的新值
+interface GradeHistoryEntry {
+  card: Card
+  grade: 0 | 3 | 5
+  prevSchedule: ReturnType<typeof deck.getSchedule>
+  postSchedule: ReturnType<typeof deck.getSchedule>
+  prevBest: number | undefined
+  prevAttempts: number
+  countedNew: boolean
+}
+const gradeHistory = ref<GradeHistoryEntry[]>([])
+
 // 先自评：认识 / 不认识 / 模糊
 function grade(g: 0 | 3 | 5) {
   const card = current.value
   if (!card)
     return
-  deck.setSchedule(card.id, gradeSchedule(deck.getSchedule(card.id), g))
+  const countedNew = card.isNew && !card.counted
+  const nextSchedule = gradeSchedule(deck.getSchedule(card.id), g)
+  gradeHistory.value.push({
+    card,
+    grade: g,
+    prevSchedule: deck.getSchedule(card.id),
+    postSchedule: JSON.parse(JSON.stringify(nextSchedule)),
+    prevBest: bestGrade.value[card.id],
+    prevAttempts: card.attempts,
+    countedNew,
+  })
+  deck.setSchedule(card.id, nextSchedule)
+  recordAttempt(props.ns, g)
   if (g === 5)
     stats.value.known++
   else if (g === 3)
@@ -116,8 +170,8 @@ function grade(g: 0 | 3 | 5) {
   else
     stats.value.unknown++
   bestGrade.value[card.id] = Math.max(bestGrade.value[card.id] ?? -1, g)
-  if (card.isNew && !card.counted) {
-    deck.recordNewWord(card.id)
+  if (countedNew) {
+    deck.recordNewWord()
     card.counted = true
   }
   card.attempts++
@@ -140,6 +194,55 @@ function grade(g: 0 | 3 | 5) {
   playAudio(card.word)
 }
 
+// 返回上一个，重新测试：还原调度、本轮统计、统计页累计、复现次数与新词计数
+function goBackOne() {
+  const entry = gradeHistory.value.pop()
+  if (!entry)
+    return
+  const { card, grade: g, prevSchedule, postSchedule, prevBest, prevAttempts, countedNew } = entry
+  // 拉取重载可能已把该词调度换成他设备的新值：当前值与评分后快照不一致时，
+  // 跳过调度恢复（只恢复计数类项目），避免旧快照覆盖他设备的新值
+  if (JSON.stringify(deck.getSchedule(card.id)) === JSON.stringify(postSchedule)) {
+    if (prevSchedule)
+      deck.setSchedule(card.id, prevSchedule)
+    else
+      deck.removeSchedule(card.id)
+  }
+  if (prevBest === undefined)
+    delete bestGrade.value[card.id]
+  else
+    bestGrade.value[card.id] = prevBest
+  if (g === 5)
+    stats.value.known = Math.max(0, stats.value.known - 1)
+  else if (g === 3)
+    stats.value.vague = Math.max(0, stats.value.vague - 1)
+  else
+    stats.value.unknown = Math.max(0, stats.value.unknown - 1)
+  decrementAttempt(props.ns, g)
+  if (g !== 5)
+    decrementMistake(`${props.ns}:${card.id}`)
+  if (countedNew) {
+    deck.decrementNewWord()
+    card.counted = false
+  }
+  card.attempts = prevAttempts
+  queue.value = queue.value.filter(c => c.id !== card.id)
+  queue.value.unshift(card)
+  studying.value = null
+  lastGrade.value = null
+  playAudio(card.word)
+}
+
+// 完成屏统计按卡片最佳成绩去重计数，不按自评次数累加
+const finishStats = computed(() => {
+  const vals = Object.values(bestGrade.value)
+  return {
+    known: vals.filter(v => v === 5).length,
+    vague: vals.filter(v => v === 3).length,
+    unknown: vals.filter(v => v === 0).length,
+  }
+})
+
 function next() {
   studying.value = null
   lastGrade.value = null
@@ -161,17 +264,33 @@ function restart() {
   buildQueue()
 }
 
-const { currentUser } = useAuth()
-watch(currentUser, () => {
-  audioPlayer.stop()
-  showExitModal.value = false
+// 重置记忆：二次确认后清空本卡片的 SM-2 调度 + 自测进度 + 今日新词计数
+function resetMemory() {
+  const ok = window.confirm(
+    '确定要重置记忆吗？此操作不可撤销。\n\n将清除：\n- 本卡片全部单词的记忆曲线（所有词回到新词）\n- 本卡片自测进度\n- 今日已学新词计数\n\n不受影响：错词本、打卡、模考记录、学习统计历史',
+  )
+  if (!ok)
+    return
+  deck.clear()
+  setProgress(props.progressModule, 0, 0)
+  deck.resetDaily()
+  timer.pause()
   buildQueue()
-  timer.start()
-})
+  timer.resume()
+}
 
 onMounted(() => {
   buildQueue()
   timer.start()
+})
+
+// 离页时停掉 TTS 与音频，避免后台继续出声
+onUnmounted(() => {
+  speechSynthesis.cancel()
+  if (audio) {
+    audio.pause()
+    audio = null
+  }
 })
 </script>
 
@@ -188,12 +307,8 @@ onMounted(() => {
             ← {{ backLabel || '返回' }}
           </button>
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">
-{{ title }}
-</h1>
-            <p v-if="subtitle" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-{{ subtitle }}
-</p>
+            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ title }}</h1>
+            <p v-if="subtitle" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</p>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -206,6 +321,13 @@ onMounted(() => {
             class="block w-20 border border-gray-300 rounded-lg bg-white p-2.5 text-sm text-center dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500"
           >
           <span class="text-sm text-gray-500 dark:text-gray-400">个/天</span>
+          <button
+            title="重置记忆：全部单词回到新词，从 0 开始"
+            class="shrink-0 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:border-red-800 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-900/20"
+            @click="resetMemory"
+          >
+            🔄 重置记忆
+          </button>
         </div>
       </div>
       <!-- 打卡 + 今日计划 -->
@@ -222,7 +344,7 @@ onMounted(() => {
             今日 {{ formatDuration(timer.dailySeconds.value) }}
           </span>
           <div class="w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden" title="今日目标 2 小时">
-            <div class="h-full bg-green-500 rounded-full transition-all" :style="{ width: `${Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) }%` }" />
+            <div class="h-full bg-green-500 rounded-full transition-all" :style="{ width: Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) + '%' }" />
           </div>
           <span class="text-xs font-bold text-orange-500">🔥 连续打卡 {{ checkinStreak }} 天</span>
           <div class="flex gap-1">
@@ -240,36 +362,20 @@ onMounted(() => {
       <!-- Session stats -->
       <div v-if="!finished" class="grid grid-cols-4 gap-3 mb-6 text-center">
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">
-本轮剩余
-</div>
-          <div class="text-lg font-bold dark:text-white">
-{{ remaining }}
-</div>
+          <div class="text-xs text-gray-500 mb-1">本轮剩余</div>
+          <div class="text-lg font-bold dark:text-white">{{ remaining }}</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">
-认识
-</div>
-          <div class="text-lg font-bold text-green-600">
-{{ stats.known }}
-</div>
+          <div class="text-xs text-gray-500 mb-1">认识</div>
+          <div class="text-lg font-bold text-green-600">{{ stats.known }}</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">
-不认识
-</div>
-          <div class="text-lg font-bold text-red-600">
-{{ stats.unknown }}
-</div>
+          <div class="text-xs text-gray-500 mb-1">不认识</div>
+          <div class="text-lg font-bold text-red-600">{{ stats.unknown }}</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">
-模糊
-</div>
-          <div class="text-lg font-bold text-yellow-600">
-{{ stats.vague }}
-</div>
+          <div class="text-xs text-gray-500 mb-1">模糊</div>
+          <div class="text-lg font-bold text-yellow-600">{{ stats.vague }}</div>
         </div>
       </div>
 
@@ -279,9 +385,9 @@ onMounted(() => {
           {{ initialTotal === 0 ? '今日目标已完成 🎉' : '本轮完成 🎉' }}
         </h2>
         <div v-if="initialTotal > 0" class="flex justify-center gap-6 mb-6 text-sm">
-          <span class="text-green-600 font-bold">认识 {{ stats.known }}</span>
-          <span class="text-red-600 font-bold">不认识 {{ stats.unknown }}</span>
-          <span class="text-yellow-600 font-bold">模糊 {{ stats.vague }}</span>
+          <span class="text-green-600 font-bold">认识 {{ finishStats.known }}</span>
+          <span class="text-red-600 font-bold">不认识 {{ finishStats.unknown }}</span>
+          <span class="text-yellow-600 font-bold">模糊 {{ finishStats.vague }}</span>
         </div>
         <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
           {{ initialTotal === 0
@@ -324,16 +430,8 @@ onMounted(() => {
             </button>
           </div>
 
-          <p class="text-sm text-gray-400 mt-4 mb-6">
-看到这个词，第一感觉是？
-</p>
+          <p class="text-sm text-gray-400 mt-4 mb-6">看到这个词，第一感觉是？</p>
           <div class="grid grid-cols-3 gap-3">
-            <button
-              class="rounded-xl bg-green-50 border border-green-200 py-4 text-green-700 font-bold hover:bg-green-100 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
-              @click="grade(5)"
-            >
-              认识
-            </button>
             <button
               class="rounded-xl bg-red-50 border border-red-200 py-4 text-red-700 font-bold hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300"
               @click="grade(0)"
@@ -345,6 +443,12 @@ onMounted(() => {
               @click="grade(3)"
             >
               模糊
+            </button>
+            <button
+              class="rounded-xl bg-green-50 border border-green-200 py-4 text-green-700 font-bold hover:bg-green-100 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
+              @click="grade(5)"
+            >
+              认识
             </button>
           </div>
         </div>
@@ -378,37 +482,36 @@ onMounted(() => {
 
           <!-- 同义替换 -->
           <div v-if="studying.synonyms.length > 0" class="mb-6 rounded-xl bg-teal-50 border border-teal-200 p-4 dark:bg-teal-900/20 dark:border-teal-800">
-            <div class="mb-2 text-sm font-bold text-teal-700 dark:text-teal-300">
-🔗 同义替换
-</div>
-            <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
-{{ studying.synonyms.join(' · ') }}
-</p>
+            <div class="mb-2 text-sm font-bold text-teal-700 dark:text-teal-300">🔗 同义替换</div>
+            <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{{ studying.synonyms.join(' · ') }}</p>
           </div>
 
-          <button
-            class="w-full rounded-xl bg-blue-600 py-3 text-white text-sm font-bold hover:bg-blue-700"
-            @click="next"
-          >
-            下一个
-          </button>
+          <div class="flex gap-3">
+            <button
+              v-if="gradeHistory.length > 0"
+              class="flex-1 rounded-xl border border-gray-300 py-3 text-gray-600 text-sm font-bold hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              @click="goBackOne"
+            >
+              ↩ 返回上一个，重新测试
+            </button>
+            <button
+              class="flex-1 rounded-xl bg-blue-600 py-3 text-white text-sm font-bold hover:bg-blue-700"
+              @click="next"
+            >
+              下一个
+            </button>
+          </div>
         </div>
       </div>
 
       <!-- 退出结算弹窗 -->
       <div v-if="showExitModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="cancelExit">
         <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl dark:bg-gray-800">
-          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">
-本次学习结束
-</h3>
-          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">
-{{ formatDuration(lastSessionSec) }}
-</p>
-          <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">
-今日累计 {{ formatDuration(timer.dailySeconds.value) }}
-</p>
+          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">本次学习结束</h3>
+          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">{{ formatDuration(lastSessionSec) }}</p>
+          <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">今日累计 {{ formatDuration(timer.dailySeconds.value) }}</p>
           <div class="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-            <div class="h-full rounded-full bg-green-500 transition-all" :style="{ width: `${Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) }%` }" />
+            <div class="h-full rounded-full bg-green-500 transition-all" :style="{ width: Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) + '%' }" />
           </div>
           <p class="mb-4 text-xs text-gray-400">
             {{ timer.dailySeconds.value >= timer.dailyGoal ? '今日目标已达成 🎉' : `距离今日目标 2 小时还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}` }}

@@ -149,6 +149,9 @@ function clamp(n: number, min: number, max: number): number {
 
 export function analyzeEssay(text: string): EssayStats {
   const words = tokenize(text)
+  // 词数口径统一为空白切分，与写作页显示/提交门槛一致；
+  // tokenize（只认英文字母）只保留给句长、词汇多样性等语言学统计
+  const displayWords = text.trim() ? text.trim().split(/\s+/).filter(Boolean).length : 0
   const sentences = splitSentences(text)
   const paragraphs = splitParagraphs(text)
   const lower = text.toLowerCase()
@@ -171,7 +174,7 @@ export function analyzeEssay(text: string): EssayStats {
   for (const s of sentences) {
     const sl = ` ${s.toLowerCase()} `
     const hasSub = COMPLEX_MARKERS.some(m => sl.includes(` ${m} `))
-    const hasPassive = /\b(?:is|are|was|were|be|been|being)\s+\w+ed\b/.test(sl)
+    const hasPassive = /\b(is|are|was|were|be|been|being)\s+\w+ed\b/.test(sl)
     const hasCommaClause = (s.match(/,/g) || []).length >= 1 && s.split(/\s+/).length > 14
     if (hasSub || hasPassive || hasCommaClause)
       complexCount++
@@ -180,7 +183,9 @@ export function analyzeEssay(text: string): EssayStats {
   const avgLen = sentences.length > 0 ? words.length / sentences.length : 0
 
   return {
-    words: words.length,
+    // 注意：words 是空白切分词数（显示/清单/历史/规则打分共用）；
+    // avgSentenceLen 与 typeTokenRatio 仍按 tokenize 词数计算
+    words: displayWords,
     sentences: sentences.length,
     paragraphs: paragraphs.length,
     avgSentenceLen: Math.round(avgLen * 10) / 10,

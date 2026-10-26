@@ -40,13 +40,24 @@ const menus = reactive([
     icon: 'i-carbon-notebook',
     link: '/mistakes',
   },
+  {
+    label: '学习统计',
+    icon: 'i-carbon-dashboard',
+    link: '/stats',
+  },
 ])
 const showMobileMenu = ref(false)
 const { totalCount: mistakeCount } = useMistakes()
 const { currentUser, logout } = useAuth()
-const { syncEnabled, status, statusText, errorMsg, needsRelogin, pushNow, ensureWired } = useSync()
+const { syncEnabled, status, statusText, errorMsg, needsRelogin, pushNow, pullNow, ensureWired, clearAuthError } = useSync()
 ensureWired()
+// 登录成功后清除上一会话的 401/pending 残留状态（登出时 currentUser 变空，不触发）
+watch(currentUser, (u, prev) => {
+  if (u && !prev)
+    clearAuthError()
+})
 const router = useRouter()
+const route = useRoute()
 
 const syncDotClass = computed(() => {
   switch (status.value) {
@@ -59,17 +70,25 @@ const syncDotClass = computed(() => {
 
 async function onLogout() {
   await logout()
+  clearAuthError()
   showMobileMenu.value = false
+  // 退出回首页：页面卸载，旧账号的页内状态自然清掉，关闭退出不清屏家族。
+  // 已在首页时不重复导航（首页数据来自响应式 store，退出后自动刷新为游客数据）。
+  if (route.path !== '/')
+    router.push('/')
 }
 
 async function onManualSync() {
-  // 老本地会话：先退出再重登，才能拿到云同步 token
+  // 老本地会话或 token 过期：先退出再重登，才能拿到云同步 token
   if (needsRelogin.value) {
     await logout()
+    clearAuthError()
     router.push('/login')
     return
   }
-  await pushNow()
+  // 手动同步：先推后拉，推成功才拉，避免拉取覆盖未推数据
+  if (await pushNow())
+    await pullNow()
 }
 </script>
 
@@ -82,7 +101,8 @@ async function onManualSync() {
             <span class="self-center whitespace-nowrap text-xl font-semibold sm:text-2xl dark:text-white">My
               <span class="ml-1 text-red-600"> IELTS™</span>
             </span>
-</router-link>
+
+          </router-link>
           <!-- Desktop menu -->
           <div class="hidden w-full items-center justify-between lg:order-1 lg:w-auto lg:flex">
             <ul class="mt-4 flex flex-col items-center justify-items-center text-center align-middle text-sm font-medium lg:mt-0 lg:flex-row space-x-6 xl:space-x-8">

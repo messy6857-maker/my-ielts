@@ -1,10 +1,14 @@
-import { nextStudyDay, studyDate } from '../utils/studyDate'
 // 学习计时：进入自测卡片自动开始，退出时结算
 // 每日累计按账号隔离，目标每天 2 小时
-import { studyBaseOf, studyPrefix, writeStudyBatch } from '../utils/studyStorage'
-import { notifyLocalWrite, onBeforeLogout, readJson, useAuth } from './useAuth'
+import { readJson, removeJson, useAuth, writeJson } from './useAuth'
+import { nsKey } from './useStudyData'
 
 export const DAILY_STUDY_GOAL = 2 * 3600 // 秒：每天 2 小时
+
+function todayStr() {
+  const d = new Date()
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+}
 
 // 多设备同步场景下，云端按整 key 覆盖，单 key 累计会丢失其他设备的时长。
 // 因此计时按「每设备一个 key」累计，展示时把各设备今日秒数求和。
@@ -37,7 +41,7 @@ export function deviceTimerKey(baseKey: string, deviceId: string): string {
 }
 
 /** 对多条设备计时记录按日期求和（非今日/负数不计） */
-export function sumDeviceTimerRecords(records: Array<{ date: string; seconds: number }>, date: string): number {
+export function sumDeviceTimerRecords(records: Array<{ date: string, seconds: number }>, date: string): number {
   return records.reduce((sum, r) => sum + (r.date === date ? Math.max(0, Math.round(r.seconds) || 0) : 0), 0)
 }
 
@@ -67,39 +71,30 @@ export function useStudyTimer() {
   let tickId = 0
   let hideHandler: (() => void) | null = null
   let ownSeconds = 0 // 本设备今日累计（不含其他设备），写入本设备 key
-  let owner = currentUser.value
-  const deviceId = getDeviceId()
-  let recordDate = studyDate()
-  let settledAt = 0
-  let legacyPending = false
+  let autoPaused = false // 仅切后台触发的自动暂停才为真，用户主动暂停（退出弹窗等）不置此标志
+  // 属主制：起表时记录当时身份（游客为 null），结算一律写属主 key，不用实时 currentUser。
+  // 否则页内退出后结算会把属主名下的段写进游客 key（导航退出同样中招：logout 先于卸载执行）。
+  let timerOwner: string | null = null
 
-  function baseKey(): string {
-    return `${studyPrefix(owner)}${KEY}`
+  function ownKey(user?: string | null): string {
+    return deviceTimerKey(nsKey(KEY, user), getDeviceId())
   }
 
-  function ownKey(): string {
-    return deviceTimerKey(baseKey(), deviceId)
-  }
-
-  function load(date = studyDate()) {
-    const base = baseKey()
-    recordDate = date
-    const me = ownKey()
-    legacyPending = false
-    let legacySeconds = 0
-    // Write the replacement and remove the original as one rollback-safe batch.
+  function load(user?: string | null) {
+    const base = nsKey(KEY, user)
+    const today = todayStr()
+    const me = ownKey(user)
+    // 第一步：一次性迁移旧的单 key 数据，并入本设备 key
     try {
       const raw = localStorage.getItem(base)
       if (raw !== null) {
-        const rec = readJson<{ date: string; seconds: number }>(base, { date: '', seconds: 0 }, KEY)
-        const oldOwn = readJson<{ date: string; seconds: number }>(me, { date: '', seconds: 0 }, KEY)
-        legacySeconds = rec.date === date ? rec.seconds : 0
-        const merged = (oldOwn.date === date ? oldOwn.seconds : 0) + legacySeconds
-        legacyPending = true
-        writeStudyBatch([[me, JSON.stringify({ date, seconds: merged })]], [base])
-        legacyPending = false
-        legacySeconds = 0
-        notifyLocalWrite()
+        const rec = readJson<{ date: string, seconds: number }>(base, { date: '', seconds: 0 })
+        const oldOwn = readJson<{ date: string, seconds: number }>(me, { date: '', seconds: 0 })
+        const merged = (oldOwn.date === today ? oldOwn.seconds : 0)
+          + (rec.date === today ? rec.seconds : 0)
+        writeJson(me, { date: today, seconds: merged })
+        // 旧单 key 属同步前缀 key，走 removeJson 记墓碑，避免合并型 PUT 下云端旧值拉取复活
+        removeJson(base)
       }
     }
     catch {
@@ -110,13 +105,12 @@ export function useStudyTimer() {
     let others = 0
     try {
       const prefix = `${base}_`
-      // Snapshot keys before validated reads can append recovery records.
-      const keys = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i))
-      for (const k of keys) {
-        if (!k || !k.startsWith(prefix) || studyBaseOf(k, owner) === null)
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (!k || !k.startsWith(prefix))
           continue
-        const rec = readJson<{ date: string; seconds: number }>(k, { date: '', seconds: 0 }, KEY)
-        const sec = rec.date === date ? rec.seconds : 0
+        const rec = readJson<{ date: string, seconds: number }>(k, { date: '', seconds: 0 })
+        const sec = rec.date === today ? Math.max(0, Math.round(rec.seconds) || 0) : 0
         if (k === me)
           own = sec
         else others += sec
@@ -125,53 +119,33 @@ export function useStudyTimer() {
     catch {
       // 忽略
     }
-    ownSeconds = own + legacySeconds
-    dailySeconds.value = ownSeconds + others
+    ownSeconds = own
+    dailySeconds.value = own + others
   }
 
   function persist() {
-    // 只写本设备自己的累计，不把求和后的总数写回，避免其他设备重复计算
-    try {
-      writeStudyBatch([[ownKey(), JSON.stringify({ date: recordDate, seconds: ownSeconds })]], legacyPending ? [baseKey()] : [])
-      legacyPending = false
-      notifyLocalWrite()
-    }
-    catch {
-      // Retain the original legacy record if storage is full.
-    }
-  }
-
-  function settleUntil(now: number) {
-    // Split by local midnight (including DST), without re-labelling old totals.
-    while (settledAt < now) {
-      const boundary = Math.min(now, nextStudyDay(settledAt))
-      const seconds = Math.max(0, Math.floor((boundary - settledAt) / 1000))
-      ownSeconds += seconds
-      dailySeconds.value += seconds
-      settledAt = boundary
-      if (studyDate(boundary) !== recordDate) {
-        persist()
-        load(studyDate(boundary))
-      }
-    }
+    // 只写本设备自己的累计，不把求和后的总数写回，避免其他设备重复计算。
+    // 一律写属主 key：页内退出后 currentUser 已变，实时算 key 会错账。
+    writeJson(ownKey(timerOwner), { date: todayStr(), seconds: ownSeconds })
   }
 
   function start() {
     if (running.value)
       return
-    owner = currentUser.value
-    load()
+    // 先定属主再 load：load 的迁移与汇总都按起表身份算，之后身份再变也不影响本会话。
+    timerOwner = currentUser.value
+    load(timerOwner)
+    // 后台标签里打开时不直接起表：否则打开到关闭的整段都会被算成学习时长。
+    // 记 autoPaused，等切回可见时 onVisibilityChange 自动 resume 起表。
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      autoPaused = true
+      return
+    }
     startAt = Date.now()
-    settledAt = startAt
     elapsed.value = 0
     running.value = true
     tickId = window.setInterval(() => {
-      const now = Date.now()
-      if (studyDate(now) !== recordDate) {
-        settleUntil(now)
-        persist()
-      }
-      elapsed.value = Math.max(0, Math.floor((now - startAt) / 1000))
+      elapsed.value = Math.floor((Date.now() - startAt) / 1000)
     }, 1000)
     hideHandler = () => pause()
     window.addEventListener('pagehide', hideHandler)
@@ -181,8 +155,7 @@ export function useStudyTimer() {
   function pause(): number {
     if (!running.value)
       return 0
-    const now = Date.now()
-    const sec = Math.max(0, Math.floor((now - startAt) / 1000))
+    const sec = Math.floor((Date.now() - startAt) / 1000)
     running.value = false
     window.clearInterval(tickId)
     if (hideHandler) {
@@ -190,7 +163,8 @@ export function useStudyTimer() {
       hideHandler = null
     }
     if (sec > 0) {
-      settleUntil(now)
+      ownSeconds += sec
+      dailySeconds.value += sec
       persist()
     }
     elapsed.value = 0
@@ -201,15 +175,41 @@ export function useStudyTimer() {
     start()
   }
 
-  watch(currentUser, () => {
-    pause()
-    owner = currentUser.value
+  /** 只读已持久化的当日累计，不启动计时（供统计页展示用，避免新建独立 ref 导致恒为 0） */
+  function refresh() {
     load()
-  }, { flush: 'sync' })
-  const removeLogoutListener = onBeforeLogout(() => pause())
+  }
+
+  // 切后台自动暂停：hidden 时若正在跑，按 pause() 结算并记 autoPaused；visible 时仅 autoPaused 才恢复。
+  // 注意 visibilitychange 是往返事件，与一次性的 pagehide 不同：本监听必须跟组件同生命周期，
+  // 绝不能随 pause() 移除——否则 hidden 后 pause 掉监听、visible 再也回不来，自动恢复永不触发。
+  // 互斥：用户主动暂停（退出弹窗等）时 running 已为假，hidden 处理不置 autoPaused，visible 不会自动恢复，
+  // 恢复只走弹窗自己的 resume()；pause() 本身已幂等（running 为假时直接返回），pagehide 再调也是 no-op。
+  function onVisibilityChange() {
+    if (document.visibilityState === 'hidden') {
+      if (running.value) {
+        pause()
+        autoPaused = true
+      }
+    }
+    else if (document.visibilityState === 'visible') {
+      if (autoPaused) {
+        autoPaused = false
+        resume()
+      }
+    }
+  }
+  document.addEventListener('visibilitychange', onVisibilityChange)
+
+  // 身份变化时：计时进行中跳过 load()，不让新身份的已存累计覆盖进行中会话的 ownSeconds，
+  // 否则随后 pause 结算会把新身份基数 + 本段写进属主 key；未跑时保持原有 load() 行为。
+  watch(currentUser, () => {
+    if (!running.value)
+      load()
+  })
   onUnmounted(() => {
     pause()
-    removeLogoutListener()
+    document.removeEventListener('visibilitychange', onVisibilityChange)
   })
 
   return {
@@ -220,5 +220,6 @@ export function useStudyTimer() {
     start,
     pause,
     resume,
+    refresh,
   }
 }

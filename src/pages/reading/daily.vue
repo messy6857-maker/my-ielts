@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { getToken } from '../../composables/syncClient'
+import indexData from './daily/index.json'
 import { useAuth } from '../../composables/useAuth'
-import { stopAllAudio } from '../../composables/useSingleAudio'
+import { getToken } from '../../composables/syncClient'
 import { SYNC_API_BASE } from '../../sync-config'
 import { wordPhonetics } from '../vocabulary/wordPhonetics'
-import indexData from './daily/index.json'
+import { stopAllAudio } from '../../composables/useSingleAudio'
 
 const { currentUser } = useAuth()
 
@@ -34,8 +34,8 @@ interface DailyData {
   newsReadings: Reading[]
 }
 
-// 日期数据按需加载，不把归档全部放进一个页面分块。
-const modules = import.meta.glob<{ default: DailyData }>('./daily/[0-9]*.json')
+// 加载所有日期数据（构建时打包）
+const modules = import.meta.glob('./daily/[0-9]*.json', { eager: true }) as Record<string, { default: DailyData }>
 
 const dates = computed(() => {
   const list = (indexData.dates as string[]).filter(d => modules[`./daily/${d}.json`])
@@ -43,70 +43,51 @@ const dates = computed(() => {
 })
 
 const selectedDate = ref(dates.value[0] ?? '')
-const daily = ref<DailyData | null>(null)
-const dailyLoading = ref(false)
-const dailyError = ref(false)
-let dailySeq = 0
-async function loadDaily() {
-  const seq = ++dailySeq
-  daily.value = null
-  dailyError.value = false
-  const loader = modules[`./daily/${selectedDate.value}.json`]
-  if (!loader) {
-    dailyLoading.value = false
-    return
-  }
-  dailyLoading.value = true
-  try {
-    const data = await loader()
-    if (seq === dailySeq)
-      daily.value = data.default
-  }
-  catch {
-    if (seq === dailySeq)
-      dailyError.value = true
-  }
-  finally {
-    if (seq === dailySeq)
-      dailyLoading.value = false
-  }
-}
-watch(selectedDate, loadDaily, { immediate: true })
-onUnmounted(() => { dailySeq++ })
+const daily = computed<DailyData | null>(() => {
+  if (!selectedDate.value)
+    return null
+  return modules[`./daily/${selectedDate.value}.json`]?.default ?? null
+})
 
 // 当前账号的词汇阅读：从后端按 JWT 取，只能拿到自己的
 const myVocabReading = ref<Reading | null>(null)
 const vocabLoading = ref(false)
-watch([selectedDate, currentUser], async ([date, user], _, onCleanup) => {
-  const controller = new AbortController()
-  let active = true
-  onCleanup(() => {
-    active = false
-    controller.abort()
-  })
+const vocabError = ref(false)
+// 请求序号：快速切日期时，旧日期的慢响应不覆盖新日期
+let vocabReqSeq = 0
+async function loadMyVocabReading() {
   myVocabReading.value = null
-  vocabLoading.value = false
-  const token = getToken(user)
-  if (!user || !token || !date)
+  vocabError.value = false
+  const t = getToken()
+  if (!currentUser.value || !t || !selectedDate.value)
     return
+  const seq = ++vocabReqSeq
   vocabLoading.value = true
   try {
-    const resp = await fetch(`${SYNC_API_BASE}/daily-reading?date=${encodeURIComponent(date)}`, {
-      signal: controller.signal,
-      headers: { Authorization: `Bearer ${token}` },
+    const resp = await fetch(`${SYNC_API_BASE}/daily-reading?date=${selectedDate.value}`, {
+      headers: { Authorization: `Bearer ${t}` },
     })
+    if (seq !== vocabReqSeq)
+      return
+    if (!resp.ok)
+      throw new Error(`HTTP ${resp.status}`)
     const data = await resp.json()
-    if (active && resp.ok && data.ok && data.reading)
+    if (seq !== vocabReqSeq)
+      return
+    if (data.ok && data.reading)
       myVocabReading.value = data.reading
   }
   catch {
-    // Optional personalized reading must not block the public archive.
+    // 只有最新请求才置失败态，旧请求的失败不干扰新日期
+    if (seq === vocabReqSeq)
+      vocabError.value = true
   }
   finally {
-    if (active)
+    if (seq === vocabReqSeq)
       vocabLoading.value = false
   }
-}, { immediate: true })
+}
+watch([selectedDate, currentUser], loadMyVocabReading, { immediate: true })
 
 // 生词注释：点击展开/收起中文（复用自测卡片的彩色样式）
 const dotColors = ['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-orange-500', 'bg-teal-500', 'bg-indigo-500']
@@ -139,12 +120,12 @@ function optionClass(articleKey: string, qIdx: number, optIdx: number, correctId
   const chosen = answers.value[key]
   const base = 'block w-full rounded-lg border px-4 py-2.5 text-left text-sm transition-colors '
   if (chosen === undefined)
-    return `${base  }border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500 dark:hover:bg-blue-900/20`
+    return base + 'border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500 dark:hover:bg-blue-900/20'
   if (optIdx === correctIdx)
-    return `${base  }border-green-500 bg-green-50 text-green-800 dark:border-green-500 dark:bg-green-900/30 dark:text-green-300`
+    return base + 'border-green-500 bg-green-50 text-green-800 dark:border-green-500 dark:bg-green-900/30 dark:text-green-300'
   if (optIdx === chosen)
-    return `${base  }border-red-500 bg-red-50 text-red-800 dark:border-red-500 dark:bg-red-900/30 dark:text-red-300`
-  return `${base  }border-gray-200 bg-white opacity-60 dark:border-gray-700 dark:bg-gray-800`
+    return base + 'border-red-500 bg-red-50 text-red-800 dark:border-red-500 dark:bg-red-900/30 dark:text-red-300'
+  return base + 'border-gray-200 bg-white opacity-60 dark:border-gray-700 dark:bg-gray-800'
 }
 
 watch(selectedDate, () => {
@@ -211,6 +192,7 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
 
 <template>
   <div class="mx-auto max-w-3xl px-4 pt-6 2xl:px-0">
+    <ReadingTabs />
     <div class="mb-6 flex items-center justify-between">
       <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
         📅 每日阅读
@@ -251,14 +233,6 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
         </select>
       </div>
 
-      <p v-if="dailyLoading" class="py-10 text-center text-gray-500">
-加载中…
-</p>
-      <div v-else-if="dailyError" class="py-10 text-center text-gray-500">
-        文章加载失败，<button class="text-blue-600 underline" @click="loadDaily">
-点击重试
-</button>
-      </div>
       <template v-if="daily">
         <!-- 第一部分：词汇阅读（按账号个性化；游客不显示） -->
         <section v-if="myVocabReading" class="mb-8">
@@ -336,14 +310,36 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
             </div>
           </article>
         </section>
+        <!-- 词汇阅读加载态 -->
+        <section v-else-if="currentUser && vocabLoading" class="mb-8">
+          <div class="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              📖 词汇阅读加载中…
+            </p>
+          </div>
+        </section>
+        <!-- 词汇阅读加载失败 -->
+        <section v-else-if="currentUser && vocabError" class="mb-8">
+          <div class="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-800">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              📖 词汇阅读加载失败，请稍后重试
+            </p>
+          </div>
+        </section>
+        <!-- 登录用户本日暂无词汇阅读 -->
+        <section v-else-if="currentUser" class="mb-8">
+          <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center dark:border-gray-600 dark:bg-gray-800/50">
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              📖 本日暂无词汇阅读
+            </p>
+          </div>
+        </section>
         <!-- 游客提示：登录后可看个性化词汇阅读 -->
         <section v-else-if="!currentUser" class="mb-8">
           <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center dark:border-gray-600 dark:bg-gray-800/50">
             <p class="text-sm text-gray-500 dark:text-gray-400">
               📖 词汇阅读是按你的学词记录个性化生成的，
-              <router-link to="/login" class="text-blue-600 underline underline-offset-2 dark:text-blue-400">
-登录
-</router-link>
+              <router-link to="/login" class="text-blue-600 underline underline-offset-2 dark:text-blue-400">登录</router-link>
               后可见
             </p>
           </div>
@@ -357,8 +353,8 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
           </h3>
           <article
             v-for="(art, ai) in daily.newsReadings"
-            :id="`reading-news-${ai}`"
             :key="ai"
+            :id="`reading-news-${ai}`"
             class="mb-6 scroll-mt-20 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
           >
             <h4 class="mb-1 text-xl font-bold text-gray-900 dark:text-white">

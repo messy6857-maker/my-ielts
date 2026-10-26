@@ -1,6 +1,6 @@
-import type { WordSentence } from '../src/pages/vocabulary/wordSentences'
 import { describe, expect, it } from 'vitest'
 import { getWordInfo, getWordInfoWithFallback } from '../src/composables/useWordInfo'
+import type { WordSentence } from '../src/pages/vocabulary/wordSentences'
 
 const DATA: Record<string, WordSentence> = {
   atmosphere: {

@@ -50,21 +50,23 @@ export interface ListeningMockTest {
   timeLimit: number
 }
 
-/** 雅思听力/阅读分数换算（40 题制） */
-export function bandScore(correct: number): number {
-  if (correct >= 39) return 9.0
-  if (correct >= 37) return 8.5
-  if (correct >= 35) return 8.0
-  if (correct >= 33) return 7.5
-  if (correct >= 30) return 7.0
-  if (correct >= 27) return 6.5
-  if (correct >= 23) return 6.0
-  if (correct >= 20) return 5.5
-  if (correct >= 16) return 5.0
-  if (correct >= 13) return 4.5
-  if (correct >= 10) return 4.0
-  if (correct >= 8) return 3.5
-  if (correct >= 6) return 3.0
+/** 雅思听力/阅读分数换算；total 为卷面满分（默认 40），各档阈值按 total/40 等比缩放并向上取整，38 分卷全对可到 9.0 */
+export function bandScore(correct: number, total = 40): number {
+  const t = total > 0 ? total : 40
+  const at = (base: number) => Math.ceil((base / 40) * t)
+  if (correct >= at(39)) return 9.0
+  if (correct >= at(37)) return 8.5
+  if (correct >= at(35)) return 8.0
+  if (correct >= at(33)) return 7.5
+  if (correct >= at(30)) return 7.0
+  if (correct >= at(27)) return 6.5
+  if (correct >= at(23)) return 6.0
+  if (correct >= at(20)) return 5.5
+  if (correct >= at(16)) return 5.0
+  if (correct >= at(13)) return 4.5
+  if (correct >= at(10)) return 4.0
+  if (correct >= at(8)) return 3.5
+  if (correct >= at(6)) return 3.0
   return 2.5
 }
 
@@ -88,20 +90,20 @@ export function isCorrect(q: MockQuestion, userAnswer: string): boolean {
   return userAnswer === String(q.answer)
 }
 
-/** 多选题得分：选对几个得几分（Choose TWO 最多 2 分） */
+/** 多选题得分：选对几个得几分（Choose TWO 最多 2 分）；用户选项数超过答案数时返回 0 分，防止全选刷分 */
 export function multiSelectScore(q: MockQuestion, userAnswer: string): number {
   if (q.type !== 'multi-select' || !Array.isArray(q.answer))
     return isCorrect(q, userAnswer) ? 1 : 0
   const userSet = new Set(userAnswer.split(',').filter(Boolean).map(s => Number(s)))
   const ansSet = new Set(q.answer as number[])
-  if (userSet.size > ansSet.size || [...userSet].some(a => !Number.isInteger(a) || a < 0 || a >= (q.options?.length ?? 0)))
+  // 防御：选项数超过答案数（例如全选）直接 0 分；界面层 toggleMultiSelect 也限制最多选答案个数
+  if (userSet.size > ansSet.size)
     return 0
   let score = 0
   for (const a of userSet) {
     if (ansSet.has(a))
       score++
   }
-  // 合法选择数量内按命中数给分；超选已在上面判为无效。
   return score
 }
 

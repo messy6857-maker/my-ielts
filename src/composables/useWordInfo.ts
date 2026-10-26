@@ -1,5 +1,9 @@
-/** 按章节加载预抓取资料后进行纯函数查词；没有资料时由调用方使用本地例句降级。 */
+/**
+ * 单词例句 + 同义词：查内置预抓取数据（构建时由 scripts/fetch-examples.mjs 生成），
+ * 运行时零联网、零等待。查不到时返回 null，调用方用本地例句降级。
+ */
 
+import { wordSentences } from '../pages/vocabulary/wordSentences'
 import type { WordSentence } from '../pages/vocabulary/wordSentences'
 
 export interface WordInfo {
@@ -12,7 +16,7 @@ export interface WordInfo {
 /** 纯函数：从内置数据查词（data 参数便于单测注入） */
 export function getWordInfo(
   rawWord: string,
-  data: Record<string, WordSentence> = {},
+  data: Record<string, WordSentence> = wordSentences,
 ): WordInfo | null {
   const key = rawWord.trim().toLowerCase()
   if (!key)
@@ -33,7 +37,7 @@ export function getWordInfo(
  */
 export function getWordInfoWithFallback(
   words: string[],
-  data: Record<string, WordSentence> = {},
+  data: Record<string, WordSentence> = wordSentences,
 ): WordInfo | null {
   let fallback: WordInfo | null = null
   const seen = new Set<string>()

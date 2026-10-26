@@ -2,19 +2,30 @@
 // 数据按账号隔离（经 nsKey），同一 ns 返回同一实例
 // 供听力 179 / 阅读 538 等独立卡片使用（词汇卡片沿用 useSpacedRepetition 的单例）
 
+import { readJson, useAuth, writeJson } from './useAuth'
+import { nsKey } from './useStudyData'
+import { onSyncApplied } from './syncClient'
 import type { WordSchedule } from './useSpacedRepetition'
-import { effectScope } from 'vue'
-import { useAccountData } from './useAccountData'
-import { createDailyCounter } from './useDailyCounter'
+
+function todayStr(offset = 0) {
+  const d = new Date()
+  d.setDate(d.getDate() - offset)
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+}
 
 export interface DeckStores {
-  getSchedule: (id: string | number) => WordSchedule | undefined
-  setSchedule: (id: string | number, s: WordSchedule) => void
+  getSchedule(id: string | number): WordSchedule | undefined
+  setSchedule(id: string | number, s: WordSchedule): void
+  removeSchedule(id: string | number): void
+  clear(): void
+  reload(): void
   goal: Ref<number>
   dailyCount: Ref<number>
   remaining: ComputedRef<number>
-  setGoal: (n: number) => void
-  recordNewWord: (id?: string | number) => void
+  setGoal(n: number): void
+  recordNewWord(): void
+  decrementNewWord(): void
+  resetDaily(): void
 }
 
 const cache = new Map<string, DeckStores>()
@@ -23,15 +34,33 @@ export function useDeckStore(ns: string): DeckStores {
   if (hit)
     return hit
 
-  // The cache outlives a page. Its watchers must have the same lifetime.
-  const stores = effectScope(true).run(() => createDeckStore(ns))!
-  cache.set(ns, stores)
-  return stores
-}
+  const { currentUser } = useAuth()
+  const schedules = ref<Record<string, WordSchedule>>({})
+  const goal = ref(30)
+  const dailyCount = ref(0)
 
-function createDeckStore(ns: string): DeckStores {
-  const schedules = useAccountData<Record<string, WordSchedule>>(`${ns}_sr_v1`, () => ({}))
-  const daily = createDailyCounter(ns)
+  const SKEY = `${ns}_sr_v1`
+  const GKEY = `${ns}_daily_goal_v1`
+  const NKEY = `${ns}_daily_new_v1`
+
+  function load() {
+    schedules.value = readJson<Record<string, WordSchedule>>(nsKey(SKEY), {})
+    goal.value = readJson<number>(nsKey(GKEY), 30)
+    const saved = readJson<{ date: string, count: number }>(nsKey(NKEY), { date: '', count: 0 })
+    if (saved.date === todayStr()) {
+      dailyCount.value = saved.count
+    }
+    else {
+      dailyCount.value = 0
+      writeJson(nsKey(NKEY), { date: todayStr(), count: 0 })
+    }
+  }
+  load()
+
+  watch(currentUser, load)
+  // 拉取后 reload：云端新数据写进 localStorage 后，内存里的旧快照不能再写回覆盖它
+  onSyncApplied(load)
+  watch(schedules, v => writeJson(nsKey(SKEY), v), { deep: true })
 
   function keyOf(id: string | number) {
     return `${ns}:${id}`
@@ -44,8 +73,39 @@ function createDeckStore(ns: string): DeckStores {
     setSchedule(id: string | number, s: WordSchedule) {
       schedules.value[keyOf(id)] = s
     },
-    ...daily,
+    removeSchedule(id: string | number) {
+      delete schedules.value[keyOf(id)]
+    },
+    clear() {
+      schedules.value = {}
+    },
+    reload() {
+      load()
+    },
+    goal,
+    dailyCount,
+    remaining: computed(() => Math.max(0, goal.value - dailyCount.value)),
+    setGoal(n: number) {
+      if (!Number.isFinite(n))
+        return
+      const v = Math.min(500, Math.max(1, Math.round(n)))
+      goal.value = v
+      writeJson(nsKey(GKEY), v)
+    },
+    recordNewWord() {
+      dailyCount.value += 1
+      writeJson(nsKey(NKEY), { date: todayStr(), count: dailyCount.value })
+    },
+    decrementNewWord() {
+      dailyCount.value = Math.max(0, dailyCount.value - 1)
+      writeJson(nsKey(NKEY), { date: todayStr(), count: dailyCount.value })
+    },
+    resetDaily() {
+      dailyCount.value = 0
+      writeJson(nsKey(NKEY), { date: todayStr(), count: 0 })
+    },
   }
+  cache.set(ns, stores)
   return stores
 }
 

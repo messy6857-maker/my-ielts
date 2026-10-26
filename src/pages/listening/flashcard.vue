@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { DeckCard } from '../../components/KeywordFlashcard.vue'
 import words from './listening179.json'
+import type { DeckCard } from '../../components/KeywordFlashcard.vue'
+import { resolveAudioUrl } from '../../composables/useAudio'
 
 defineOptions({ name: 'ListeningFlashcardPage' })
 
@@ -12,8 +13,8 @@ const cards: DeckCard[] = (words as any[]).map(w => ({
   synonyms: Array.isArray(w.replace) ? w.replace : [],
 }))
 
-// 相对路径，自动适配部署基址（/my-ielts/）
-const audioFor = (word: string) => `179_audios/${word}.mp3`
+// 媒体站绝对地址（见 useAudio.ts）
+const audioFor = (word: string) => resolveAudioUrl(`179_audios/${word}.mp3`)
 </script>
 
 <template>

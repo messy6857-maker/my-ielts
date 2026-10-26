@@ -91,7 +91,7 @@
 
 ### 口语
 
-Part 1 / Part 2 / Part 3 题目练习、录音回放与语音转写；登录并配置 AI 后可使用文字评分。
+TODO
 
 ### 阅读
 
@@ -137,21 +137,3 @@ pnpm run build
 ```
 
 ## 禁止将本项目用于任何商业目的！！！
-
-
-## 数据维护与部署
-
-开发环境：Node.js 24.22.x、pnpm 11.25.0。
-
-- 修改词库后执行 `pnpm data:split`，提交生成文件；CI 使用 `pnpm data:check` 校验。
-- 验证：`pnpm exec vitest run`、`pnpm typecheck`、`pnpm lint`。
-- 整章词汇音频直接从仓库原文件流式播放，不重复放入 Pages 发布目录；单词和模考音频仍随网站发布。
-- 网站构建：`pnpm build`；资源整理已纳入 Vite 构建插件，直接运行 `vite build` 也会执行。默认须使用完整 public，校验全部运行时引用的音频、题图、明暗语法图和讲义，包括不打包的 22 个整章音频。
-- Android 构建：`pnpm build:android` 后执行 `npx cap sync android`；音频从已部署站点加载，不复制进 APK，题图和讲义保留。
-- GitHub Pages 使用 gh-pages 根目录，必须一起发布 dist 中的页面、JS、样式和 public 资源。
-- 音频切分标签移至 maintenance/audio-tags，仅供素材维护，不参与发布。
-- 采用 Git tree 复用媒体 blob 的流程须显式提供 `PUBLIC_ASSET_INDEX=/绝对路径/media-index.json pnpm build`，清单格式为 `{ "treeSha": "40位Git树SHA", "files": { "favicon.png": { "sha": "40位blobSHA", "size": 1077 } } }`，包含所有运行时资源。清单须从已核对的 Git tree 生成；本地已有文件会核对 blob 哈希与大小，缺引用会阻止构建。旧 `MEDIA_FROM_GIT_TREE=1` 不再跳过校验。发布器仍须复用清单对应的媒体 blob，不能仅上传源码副本的 dist。
-
-旧 /ielts 地址会跳转到现用听力页面。复习计划、模块进度、已掌握和打卡按条目合并；错词按原子批次保存，时间不回退，支持正负次数修正（最少为 1，清空用删除）。支持 Web Locks 的浏览器每 128 个批次自动生成检查点并回收已合并日志；不支持时保留日志以保证并发安全。日计数按词 ID 去重，定期清理超过两天宽限期的旧分量。备份和同步输出合并后的结果，保持旧格式兼容。
-
-听力语料库目前仅有第 2 章资料，第 3、4 章显示待补充状态；搜索涵盖英美拼写和中文释义，发音使用在线词典。Android 语法图使用 APK 包内资源。

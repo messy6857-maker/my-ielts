@@ -1,15 +1,24 @@
 <script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { gradeSpeakingWithAI, hasAISettings, isBandScore } from '~/composables/useAISettings'
 import type { AISpeakingResult } from '~/composables/useAISettings'
-import { computed, onScopeDispose, ref, watch } from 'vue'
-import { gradeSpeakingWithAI, hasAISettings } from '~/composables/useAISettings'
-import { useAuth } from '~/composables/useAuth'
+import { useAuth, writeJson } from '~/composables/useAuth'
 
-const props = defineProps<{
+// part 由调用方传入（PartTwoPractice 传 part2；Part 1/3 的 QuestionRecorder 未传，
+// 其调用页不在本次改动范围，缺省为空，但 key 仍凭题目+转写哈希唯一）
+const props = withDefaults(defineProps<{
   question: string
   transcript: string
-}>()
+  part?: string
+}>(), { part: '' })
 
-const { currentUser } = useAuth()
+const { currentUser, logout } = useAuth()
+const router = useRouter()
+
+async function goRelogin() {
+  await logout()
+  router.push('/login')
+}
 // 与写作 AI 批改一致：所有登录账号可用
 const canUseAI = computed(() => !!currentUser.value)
 
@@ -17,48 +26,79 @@ const loading = ref(false)
 const result = ref<AISpeakingResult | null>(null)
 const error = ref('')
 
+// 评分结果存档：与写作 AIGradePanel 同款写法（key 含 part + 题目 + 转写哈希，
+// 经 writeJson 进同步清单）；挂载时恢复同一题同一段转写的结果
+function storageKey(): string {
+  const user = currentUser.value ? `u_${currentUser.value}` : 'guest'
+  const s = `${props.question}|${props.transcript}`
+  let h = 0
+  for (let i = 0; i < s.length; i++)
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0
+  return `myielts_${user}_aigrade_speaking_v1_${props.part || 'na'}_${h.toString(36)}`
+}
+
+function loadSaved(): boolean {
+  try {
+    const raw = localStorage.getItem(storageKey())
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<AISpeakingResult>
+      // 旧存档走与评分入口同一口径校验：任一项不合格即视为无存档（面板置空、可重新评分），
+      // 不删存储里的旧档（新评分会按同一 key 覆盖，自然消失），不弹错、不崩溃。
+      // 注意 JSON 存不了 NaN/Infinity（存时已变 null），同样会被 isBandScore 拦下。
+      if (parsed?.scores && isBandScore(parsed.scores.overall) && isBandScore(parsed.scores.fluency)
+        && isBandScore(parsed.scores.lexical) && isBandScore(parsed.scores.grammar)
+        && parsed.comments && typeof parsed.comments.fluency === 'string'
+        && typeof parsed.comments.lexical === 'string' && typeof parsed.comments.grammar === 'string') {
+        result.value = parsed as AISpeakingResult
+        return true
+      }
+    }
+  }
+  catch { /* ignore */ }
+  return false
+}
+
+function saveResult() {
+  try {
+    if (result.value)
+      writeJson(storageKey(), result.value) // 经 writeJson 触发云同步
+  }
+  catch { /* ignore */ }
+}
+
+onMounted(() => {
+  loadSaved()
+})
+
+// 账号变化时清空上一账号的结果，不让游客/新账号看到旧评分
+watch(currentUser, () => {
+  result.value = null
+  error.value = ''
+})
+
 const labels: Record<'fluency' | 'lexical' | 'grammar', string> = {
   fluency: '流利连贯',
   lexical: '词汇资源',
   grammar: '语法',
 }
 
-let controller: AbortController | null = null
-let requestId = 0
-watch([() => props.question, () => props.transcript, currentUser], () => {
-  requestId++
-  controller?.abort()
-  result.value = null
-  loading.value = false
-  error.value = ''
-})
-onScopeDispose(() => {
-  requestId++
-  controller?.abort()
-})
-
 async function runGrade() {
   if (!canUseAI.value) {
     error.value = '请先登录账号再使用 AI 评分'
     return
   }
-  const seq = ++requestId
-  controller = new AbortController()
   loading.value = true
   error.value = ''
   result.value = null
   try {
-    const graded = await gradeSpeakingWithAI(props.question, props.transcript, controller.signal)
-    if (seq === requestId)
-      result.value = graded
+    result.value = await gradeSpeakingWithAI(props.question, props.transcript)
+    saveResult()
   }
   catch (e) {
-    if (seq === requestId)
-      error.value = e instanceof Error ? e.message : '评分失败，请重试'
+    error.value = e instanceof Error ? e.message : '评分失败，请重试'
   }
   finally {
-    if (seq === requestId)
-      loading.value = false
+    loading.value = false
   }
 }
 
@@ -73,9 +113,7 @@ function scoreColor(s: number) {
 <template>
   <div class="mt-3 rounded-xl border border-purple-200 bg-purple-50/50 p-4 dark:border-purple-900/50 dark:bg-purple-900/10">
     <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-      <h4 class="text-sm font-bold dark:text-white">
-🤖 AI 评分 <span class="font-normal text-xs text-gray-400">（口语三项标准）</span>
-</h4>
+      <h4 class="text-sm font-bold dark:text-white">🤖 AI 评分 <span class="font-normal text-xs text-gray-400">（口语三项标准）</span></h4>
       <div class="flex items-center gap-2">
         <span v-if="!canUseAI" class="text-gray-400" title="locked">🔒</span>
         <template v-else>
@@ -95,17 +133,27 @@ function scoreColor(s: number) {
     </div>
 
     <p v-if="error" class="text-xs text-red-500">
-{{ error }}
-</p>
+      {{ error }}
+      <button
+        v-if="error.includes('登录已过期')"
+        class="ml-2 rounded-lg bg-blue-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-blue-700"
+        @click="goRelogin"
+      >
+        去登录
+      </button>
+      <button
+        v-else-if="error.includes('API Key')"
+        class="ml-2 rounded-lg bg-blue-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-blue-700"
+        @click="$router.push('/settings')"
+      >
+        去设置
+      </button>
+    </p>
 
     <div v-if="result">
       <div class="mb-3 text-center">
-        <div class="text-4xl font-bold" :class="scoreColor(result.scores.overall)">
-{{ result.scores.overall.toFixed(1) }}
-</div>
-        <div class="mt-1 text-xs text-gray-400">
-AI 预估总分
-</div>
+        <div class="text-4xl font-bold" :class="scoreColor(result.scores.overall)">{{ result.scores.overall?.toFixed(1) ?? '—' }}</div>
+        <div class="mt-1 text-xs text-gray-400">AI 预估总分</div>
       </div>
       <div class="mb-3 grid grid-cols-3 gap-2">
         <div
@@ -114,29 +162,21 @@ AI 预估总分
           class="rounded-lg bg-white p-2 text-center dark:bg-gray-700/50"
         >
           <div class="text-xl font-bold" :class="scoreColor(result.scores[key])">
-            {{ result.scores[key].toFixed(1) }}
+            {{ result.scores[key]?.toFixed(1) ?? '—' }}
           </div>
-          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-{{ label }}
-</div>
+          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ label }}</div>
         </div>
       </div>
       <div class="mb-3 space-y-2">
         <div v-for="(label, key) in labels" :key="key">
-          <div class="text-xs font-bold dark:text-white">
-{{ label }}
-</div>
-          <p class="text-xs leading-5 text-gray-600 dark:text-gray-300">
-{{ result.comments[key] }}
-</p>
+          <div class="text-xs font-bold dark:text-white">{{ label }}</div>
+          <p class="text-xs leading-5 text-gray-600 dark:text-gray-300">{{ result.comments?.[key] ?? '' }}</p>
         </div>
       </div>
       <div class="rounded-lg bg-white p-3 text-xs leading-5 dark:bg-gray-700/50 dark:text-gray-200">
         <span class="font-bold">📈 提分建议：</span>{{ result.suggestion }}
       </div>
-      <p class="mt-2 text-xs text-gray-400">
-发音项无法从文字转写评估，请回放录音自行检查语调、重音和连读。AI 评分仅供练习参考。
-</p>
+      <p class="mt-2 text-xs text-gray-400">发音项无法从文字转写评估，请回放录音自行检查语调、重音和连读。AI 评分仅供练习参考。</p>
     </div>
 
     <p v-else-if="!loading && !error" class="text-xs leading-5 text-gray-400">
