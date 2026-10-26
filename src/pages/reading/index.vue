@@ -3,54 +3,69 @@ import words from './reading538words'
 
 const ws = reactive(words)
 
-const keyword = ref('')
+// 每类独立的搜索关键词（互不联动）；过滤后列表只用于展示，总数仍按原 ws 计算
+const keywords = reactive({})
+const filteredCats = computed(() => ws.map((cat) => {
+  const kw = (keywords[cat.title] || '').trim().toLowerCase()
+  if (!kw)
+    return cat
+  return {
+    ...cat,
+    words: cat.words.filter(w => String(w[1]).toLowerCase().includes(kw) || w[3].join(' ').toLowerCase().includes(kw)),
+  }
+}))
 
 const { isMastered, toggleMastered, masteredCount } = useMastered('reading_mastered_v1')
 const { setProgress } = useProgress()
 const totalWords = computed(() => ws.reduce((n, cat) => n + cat.words.length, 0))
 watch(masteredCount, () => setProgress('reading', masteredCount.value, totalWords.value), { immediate: true })
 
-const audioPlayer = useAudioPlayer()
-function play(word) {
-  audioPlayer.play(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=1`)
+let audio = null
+function speakFallback(word) {
+  speechSynthesis.cancel()
+  const u = new SpeechSynthesisUtterance(word)
+  u.lang = 'en-US'
+  speechSynthesis.speak(u)
 }
-
+function play(word) {
+  if (audio) {
+    audio.pause()
+    audio.currentTime = 0
+  }
+  // 停掉上一词可能还在读的 TTS 兜底，避免叠加
+  speechSynthesis.cancel()
+  let fellBack = false
+  const fallback = () => {
+    if (fellBack)
+      return
+    fellBack = true
+    speakFallback(word)
+  }
+  audio = document.createElement('audio')
+  // 含空格/特殊字符的短语需编码，否则有道接口取不到音
+  audio.src = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=1`
+  audio.onerror = fallback
+  const p = audio.play()
+  if (p)
+    p.catch(fallback)
+}
 </script>
 
 <template>
   <div class="px-4 pt-6 2xl:px-0">
     <div class="border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
+      <!-- 页签：阅读考点词 / 自测卡片 / 每日阅读 / 限时模考 -->
+      <ReadingTabs />
       <div class="mb-4 lg:mb-0">
         <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
           阅读考点词
         </h3>
         <span class="text-base font-normal text-gray-500 dark:text-gray-400">538 考点词同义替换</span>
         <span class="ml-4 text-sm font-medium text-green-600 dark:text-green-400">已掌握 {{ masteredCount }} / {{ totalWords }}</span>
-        <button
-          type="button"
-          class="ml-4 rounded-lg bg-green-700 px-4 py-1.5 text-sm font-medium text-white dark:bg-green-600 hover:bg-green-800"
-          @click="$router.push('/reading/flashcard')"
-        >
-          自测卡片
-        </button>
-        <button
-          type="button"
-          class="ml-2 rounded-lg bg-blue-700 px-4 py-1.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800"
-          @click="$router.push('/reading/daily')"
-        >
-          📅 每日阅读
-        </button>
-        <button
-          type="button"
-          class="ml-2 rounded-lg bg-purple-700 px-4 py-1.5 text-sm font-medium text-white dark:bg-purple-600 hover:bg-purple-800"
-          @click="$router.push('/mock/reading-test')"
-        >
-          ⏱ 限时模考
-        </button>
       </div>
       <!-- Card header -->
       <template
-        v-for="cat in ws"
+        v-for="cat in filteredCats"
         :key="cat.title"
       >
         <div class="mt-6 items-center justify-between lg:flex">
@@ -70,7 +85,7 @@ function play(word) {
                   </svg>
                 </div>
                 <input
-                  v-model="keyword"
+                  v-model="keywords[cat.title]"
                   type="search"
                   class="block w-full border border-gray-300 rounded-lg bg-gray-50 p-2.5 pl-10 text-sm text-gray-900 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500 dark:placeholder-gray-400" placeholder="Search"
                 >
@@ -107,7 +122,7 @@ function play(word) {
             <tbody>
               <tr
                 v-for="w in cat.words"
-                :key="w.index"
+                :key="w[0]"
                 class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"
               >
                 <td class="px-6 py-4">

@@ -1,13 +1,41 @@
 <script setup>
 import words from './listening179.json'
+import { resolveAudioUrl } from '../../composables/useAudio'
 
 const ws = reactive(words)
-const audioPlayer = useAudioPlayer()
+let audio = null
 function play(word) {
-  audioPlayer.play(`179_audios/${word}.mp3`)
+  // 复用单个 audio，播放前先停旧的；MP3 缺失时用浏览器朗读兜底（只触发一次）
+  speechSynthesis.cancel()
+  if (audio) {
+    audio.pause()
+    audio.currentTime = 0
+  }
+  audio = document.createElement('audio')
+  audio.src = resolveAudioUrl(`179_audios/${word}.mp3`)
+  let fellBack = false
+  const fallback = () => {
+    if (fellBack)
+      return
+    fellBack = true
+    const u = new SpeechSynthesisUtterance(word)
+    u.lang = 'en-US'
+    speechSynthesis.speak(u)
+  }
+  audio.onerror = fallback
+  audio.play().catch(fallback)
 }
 
 const keyword = ref('')
+// 搜索框：按单词或释义过滤（忽略大小写）
+const filteredWs = computed(() => {
+  const kw = keyword.value.trim().toLowerCase()
+  if (!kw)
+    return ws
+  return ws.filter(w =>
+    w.word.toLowerCase().includes(kw) || (w.meaning || '').toLowerCase().includes(kw),
+  )
+})
 </script>
 
 <template>
@@ -75,7 +103,7 @@ const keyword = ref('')
         </tr>
       </thead>
       <tbody>
-        <tr v-for="w in ws" :key="w.index" class="border-b bg-white dark:border-gray-700 dark:bg-gray-800">
+        <tr v-for="w in filteredWs" :key="w.index" class="border-b bg-white dark:border-gray-700 dark:bg-gray-800">
           <td class="px-6 py-4">
             {{ w.index }}
           </td>

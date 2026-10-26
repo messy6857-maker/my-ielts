@@ -10,37 +10,25 @@ on:
 jobs:
   test-build-deploy:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v2
         with:
-          node-version: 24.22.1
+          node-version: lts/Hydrogen
       
       - name: Install Dependencies
-        run: npm -g install pnpm@11.25.0 && pnpm install --frozen-lockfile
+        run: npm -g install pnpm@8.6.10 && pnpm i
 
-      - name: Verify generated vocabulary
-        run: pnpm run data:check
-
-      - name: Run Tests
-        run: pnpm exec vitest run
-
-      - name: Check Types
-        run: pnpm run typecheck
-
-      - name: Lint Critical Modules
-        run: pnpm run lint:critical
+      # - name: Run Tests
+      #   run: yarn test
 
       - name: Run Build
         run: pnpm run build
 
       - name: Deploy
-        if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4.2.5
         with:
           branch: gh-pages

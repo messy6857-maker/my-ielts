@@ -16,34 +16,15 @@ export interface ExtraEntry {
   meaning: string
 }
 
-const POS = new Set(['adj', 'adv', 'n', 'vi', 'vt', 'v', 'prep', 'conj', 'pron', 'num', 'art', 'interj'])
-// Split at the first Chinese/full-width character, avoiding ambiguous nested
-// quantifiers when a long piece has no translation.
-function matchEntry(piece: string): [string, string, string, string] | null {
-  let boundary = -1
-  for (let i = 0; i < piece.length; i++) {
-    const code = piece.charCodeAt(i)
-    if ((code >= 0x4E00 && code <= 0x9FA5) || (code >= 0xFF00 && code <= 0xFFEF) || (code >= 0x3000 && code <= 0x303F)) {
-      boundary = i
-      break
-    }
-  }
-  if (boundary < 1) return null
-  let word = piece.slice(0, boundary).trimEnd()
-  let pos = ''
-  const lastSpace = word.lastIndexOf(' ')
-  const suffix = word.slice(lastSpace + 1).replace(/\.$/, '')
-  if (lastSpace >= 0 && POS.has(suffix)) {
-    pos = suffix
-    word = word.slice(0, lastSpace).trimEnd()
-  }
-  if (!/^[A-Z][A-Z'./() -]*$/i.test(word)) return null
-  return [piece, word, pos, piece.slice(boundary)]
-}
+const POS = '(?:adj|adv|n|vi|vt|v|prep|conj|pron|num|art|interj)'
+// 词性必须是空白分隔的独立 token，避免把 phenomenon 词尾的 n 误判成词性
+const ENTRY_RE = new RegExp(
+  `^([A-Za-z][A-Za-z'.\\-/() ]*?)(?:\\s+(${POS})\\.?)?\\s*([\u4e00-\u9fa5\uff00-\uffef\u3000-\u303f].*)$`,
+)
 
 /** 去掉 "/词的" 这类跟在英文后的中文备注残留（保留 film/movie 这种英文内的斜杠） */
 function cleanPiece(piece: string): string {
-  return piece.replace(/\/[\u4E00-\u9FA5]+/g, '')
+  return piece.replace(/\/[\u4e00-\u9fa5]+/g, '')
 }
 
 export function parseExtra(extra: string | undefined | null): ExtraEntry[] {
@@ -59,7 +40,7 @@ export function parseExtra(extra: string | undefined | null): ExtraEntry[] {
       const piece = cleanPiece(pieceRaw.trim())
       if (!piece)
         continue
-      const m = matchEntry(piece)
+      const m = piece.match(ENTRY_RE)
       if (m) {
         entries.push({
           word: m[1].trim(),
@@ -71,7 +52,7 @@ export function parseExtra(extra: string | undefined | null): ExtraEntry[] {
       else if (
         entries.length > 0
         // 中文开头的无词头片段 → 视为上一词条的补充释义；含冒号的是备注，直接丢弃
-        && /^[\u4E00-\u9FA5（(]/.test(piece)
+        && /^[\u4e00-\u9fa5（(]/.test(piece)
         && !/[:：]/.test(piece)
       ) {
         entries[entries.length - 1].meaning += `；${piece}`

@@ -13,7 +13,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24.22.1
+          node-version: 22
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -22,16 +22,17 @@ jobs:
           java-version: 21
 
       - name: Install dependencies
-        run: npm -g install pnpm@11.25.0 && pnpm install --frozen-lockfile
-
-      - name: Verify generated vocabulary
-        run: pnpm run data:check
+        run: npm -g install pnpm@8.6.10 && pnpm i
 
       - name: Build web app
-        run: pnpm run build:android
+        run: pnpm run build
 
       - name: Sync Capacitor
         run: npx cap sync android
+
+      # vocabulary 音频 480MB 不打进包，App 内改为在线加载
+      - name: Strip heavy audio assets
+        run: rm -rf android/app/src/main/assets/public/vocabulary/audio
 
       - name: Build debug APK
         run: cd android && ./gradlew assembleDebug

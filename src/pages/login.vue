@@ -117,8 +117,8 @@ async function onSubmit() {
           </div>
           <div v-if="mode === 'login'" class="mb-4 flex items-center">
             <input
-              id="remember-me"
               v-model="remember"
+              id="remember-me"
               type="checkbox"
               class="h-4 w-4 rounded border-gray-300 bg-gray-100 text-blue-600 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:focus:ring-blue-600"
             >

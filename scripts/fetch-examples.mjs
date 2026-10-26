@@ -9,11 +9,9 @@
  * 输出：src/pages/vocabulary/wordSentences.ts
  * 支持断点续抓：进度保存在 scripts/.fetch-progress.json
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import process from 'node:process'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { parseExtra } from '../src/pages/vocabulary/extraParser.ts'
+import { dirname, join } from 'node:path'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const PROGRESS_FILE = join(ROOT, 'scripts', '.fetch-progress.json')
@@ -43,8 +41,23 @@ function loadWords() {
 }
 
 // ---- 解析拓展字段里的派生词（extraParser.ts 的简化移植） ----
+const POS = '(?:adj|adv|n|vi|vt|v|prep|conj|pron|num|art|interj)'
+const ENTRY_RE = new RegExp(
+  `^([A-Za-z][A-Za-z'.\\-/() ]*?)(?:\\s+(${POS})\\.?)?\\s*([\u4e00-\u9fa5\uff00-\uffef\u3000-\u303f].*)$`,
+)
 function parseExtraWords(extra) {
-  return [...new Set(parseExtra(extra).map(entry => entry.word.toLowerCase()))].slice(0, 3)
+  if (!extra || extra.trim() === '' || extra.trim() === '-')
+    return []
+  const out = []
+  for (const seg of extra.split('。')) {
+    for (const piece of seg.split('；')) {
+      const p = piece.trim().replace(/\/[\u4e00-\u9fa5]+/g, '')
+      const m = p.match(ENTRY_RE)
+      if (m && m[1].trim())
+        out.push(m[1].trim().toLowerCase())
+    }
+  }
+  return [...new Set(out)].slice(0, 3)
 }
 
 async function fetchJson(url, timeoutMs = 12000) {

@@ -2,8 +2,9 @@
 // 认识 -> 拉长复习间隔；模糊 -> 明天再见；不认识 -> 本轮内高频复现
 // 调度数据按账号隔离存储
 
-import { useAccountData } from './useAccountData'
-import { createDailyCounter, useStudyDay } from './useDailyCounter'
+import { readJson, writeJson } from './useAuth'
+import { nsKey } from './useStudyData'
+import { onSyncApplied } from './syncClient'
 
 export interface WordSchedule {
   ease: number // 记忆强度系数
@@ -19,7 +20,7 @@ export type Grade = 0 | 3 | 5
 const DAY = 86400000
 
 function todayStr(offset = 0) {
-  const d = new Date(useStudyDay().now.value)
+  const d = new Date()
   d.setDate(d.getDate() - offset)
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
 }
@@ -56,16 +57,82 @@ export function gradeSchedule(prev: WordSchedule | undefined, grade: Grade, now 
 }
 
 // 每日学习目标：每天学 N 个新词（复习的词不占名额），按账号隔离、按天清零
-export const useDailyGoal = createGlobalState(() => createDailyCounter('flashcard'))
+export const useDailyGoal = createGlobalState(() => {
+  const { currentUser } = useAuth()
+  const goal = ref(30)
+  const dailyCount = ref(0) // 今天已学的新词数
+
+  function load() {
+    goal.value = readJson<number>(nsKey('flashcard_daily_goal_v1'), 30)
+    const saved = readJson<{ date: string, count: number }>(
+      nsKey('flashcard_daily_new_v1'),
+      { date: '', count: 0 },
+    )
+    if (saved.date === todayStr()) {
+      dailyCount.value = saved.count
+    }
+    else {
+      dailyCount.value = 0
+      writeJson(nsKey('flashcard_daily_new_v1'), { date: todayStr(), count: 0 })
+    }
+  }
+  load()
+
+  watch(currentUser, load)
+  // 拉取后 reload：云端新数据写进 localStorage 后，内存里的旧快照不能再写回覆盖它
+  onSyncApplied(load)
+
+  function setGoal(n: number) {
+    if (!Number.isFinite(n))
+      return
+    const v = Math.min(500, Math.max(1, Math.round(n)))
+    goal.value = v
+    writeJson(nsKey('flashcard_daily_goal_v1'), v)
+  }
+
+  // 学完一个新词时调用（同一词一天内只计一次，由调用方用 counted 标记去重）
+  function recordNewWord() {
+    dailyCount.value += 1
+    writeJson(nsKey('flashcard_daily_new_v1'), { date: todayStr(), count: dailyCount.value })
+  }
+
+  // “返回上一个”时扣回一次今日新词计数，与 recordNewWord 对称
+  function decrementNewWord() {
+    dailyCount.value = Math.max(0, dailyCount.value - 1)
+    writeJson(nsKey('flashcard_daily_new_v1'), { date: todayStr(), count: dailyCount.value })
+  }
+
+  // 重置今日新词计数（配合记忆重置从 0 开始）
+  function resetDaily() {
+    dailyCount.value = 0
+    writeJson(nsKey('flashcard_daily_new_v1'), { date: todayStr(), count: 0 })
+  }
+
+  // 今天还能学几个新词
+  const remaining = computed(() => Math.max(0, goal.value - dailyCount.value))
+
+  return { goal, dailyCount, remaining, setGoal, recordNewWord, decrementNewWord, resetDaily, reload: load }
+})
 
 // 每天打卡：完成一轮学习即记一天，按账号隔离
 export const useCheckin = createGlobalState(() => {
-  const dates = useAccountData<string[]>('flashcard_checkin_v1', () => [])
+  const { currentUser } = useAuth()
+  const dates = ref<string[]>([])
+
+  function load() {
+    dates.value = readJson<string[]>(nsKey('flashcard_checkin_v1'), [])
+  }
+  load()
+
+  watch(currentUser, load)
+  // 拉取后 reload，见 useDailyGoal
+  onSyncApplied(load)
 
   function checkin() {
     const t = todayStr()
     if (!dates.value.includes(t)) {
       dates.value = [...dates.value, t]
+      writeJson(nsKey('flashcard_checkin_v1'), dates.value)
     }
   }
 
@@ -83,7 +150,7 @@ export const useCheckin = createGlobalState(() => {
   // 最近 7 天打卡点
   const weekDots = computed(() => {
     return [6, 5, 4, 3, 2, 1, 0].map((offset) => {
-      const d = new Date(useStudyDay().now.value)
+      const d = new Date()
       d.setDate(d.getDate() - offset)
       return {
         label: offset === 0 ? '今天' : `${d.getMonth() + 1}/${d.getDate()}`,
@@ -92,11 +159,22 @@ export const useCheckin = createGlobalState(() => {
     })
   })
 
-  return { dates, checkin, streak, weekDots }
+  return { dates, checkin, streak, weekDots, reload: load }
 })
 
 export const useWordSchedule = createGlobalState(() => {
-  const schedules = useAccountData<Record<string, WordSchedule>>('sr_vocabulary_v1', () => ({}))
+  const { currentUser } = useAuth()
+  const schedules = ref<Record<string, WordSchedule>>({})
+
+  function load() {
+    schedules.value = readJson<Record<string, WordSchedule>>(nsKey('sr_vocabulary_v1'), {})
+  }
+  load()
+
+  watch(currentUser, load)
+  // 拉取后 reload，见 useDailyGoal
+  onSyncApplied(load)
+  watch(schedules, v => writeJson(nsKey('sr_vocabulary_v1'), v), { deep: true })
 
   function keyOf(id: string | number) {
     return `vocab:${id}`
@@ -110,5 +188,14 @@ export const useWordSchedule = createGlobalState(() => {
     schedules.value[keyOf(id)] = s
   }
 
-  return { schedules, get, set }
+  function remove(id: string | number) {
+    delete schedules.value[keyOf(id)]
+  }
+
+  // 重置记忆：全部单词回到新词（清空 SM-2 调度）
+  function clear() {
+    schedules.value = {}
+  }
+
+  return { schedules, get, set, remove, clear, reload: load }
 })

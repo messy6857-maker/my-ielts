@@ -1,8 +1,7 @@
 <!-- eslint-disable eslint-comments/no-unlimited-disable -->
 <script setup generic="T extends any, O extends any">
-import { resolveAudioUrl, vocabularyChapterAudio, vocabularyWordAudio } from '../../composables/useAudio'
-import { chapters, initialChapter, useVocabularyChapter } from '../../composables/useVocabularyChapter'
-import { acceptsAnswer } from '../../utils/acceptedAnswers'
+import vocabulary from './vocabulary'
+import { resolveAudioUrl } from '../../composables/useAudio'
 
 const CHAPTER_KEY = 'vocabulary_chapter'
 
@@ -14,28 +13,56 @@ const isFinishTraining = ref(false)
 const isShowSource = ref(false)
 
 const trainingStats = ref('')
-const category = ref(initialChapter(CHAPTER_KEY))
+const keyword = ref('')
+const chapters = Object.keys(vocabulary)
+const category = ref(localStorage.getItem(CHAPTER_KEY) || chapters[0])
 
 const loaded = ref(false)
-const { chapter, loading: chapterLoading, error: chapterError, reload } = useVocabularyChapter(category)
-const refVocabulary = computed(() => chapter.value ? { [category.value]: chapter.value } : {})
+const refVocabulary = reactive(vocabulary)
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
-watch(category, (newVal) => {
-  localStorage.setItem(CHAPTER_KEY, newVal)
-  isFinishTraining.value = false
-  trainingStats.value = ''
+const wordList = computed(() => {
+  const result = structuredClone(vocabulary) // deep clone
+  // const keywordValue = keyword.value.trim().toLowerCase()
+  const categoryValue = category.value
+
+  if (categoryValue !== '') {
+    // for (const key in result) {
+    //   if (key !== categoryValue)
+    //     delete result[key]
+    // }
+    return { [categoryValue]: result[categoryValue] }
+  }
+
+  /* if (keywordValue !== '') {
+    for (const key in result) {
+      const category = result[key]
+      const words = []
+      category.words.forEach((group) => {
+        words.push(group.filter((item) => {
+          return item.word.toLowerCase().includes(keywordValue)
+        }))
+      })
+      category.words = words
+    }
+  } */
+  return {}
 })
-watch(chapter, () => { if (chapter.value) syncProgress() })
+
+watch(category, (newVal, oldVal) => {
+  // console.log(newVal, oldVal)
+  localStorage.setItem(CHAPTER_KEY, newVal)
+  syncProgress()
+})
 
 function calcStats() {
   let error = 0
   let missing = 0
   let correct = 0
   if (isTrainingModel.value) {
-    const cur = refVocabulary.value[category.value]
+    const cur = refVocabulary[category.value]
     // 遍历所有单词的属性
-    for (const group of cur?.words ?? []) {
+    for (const group of cur.words) {
       for (const item of group) {
         if (item.spellValue) {
           if (item.spellError)
@@ -66,37 +93,54 @@ onMounted(() => {
   }
 })
 
-useEventListener(document, 'keydown', (ev) => {
-  if (ev.target instanceof HTMLElement && (ev.target.closest('input, textarea, select, button, a') || ev.target.isContentEditable))
-    return
-  // 激活的那个音频可以通过方向键进行快进/退
-  if (['ArrowLeft', 'ArrowRight', ' '].includes(ev.key)) {
-    ev.preventDefault()
-    const audioTags = document.getElementsByTagName('audio')
-    const keyMap = {
-      ArrowLeft: -5,
-      ArrowRight: 5,
-    }
-    for (const audioTag of audioTags) {
-      audioTag.blur()
-      if (keyMap[ev.key]) {
-        const step = keyMap[ev.key]
-        audioTag.currentTime = audioTag.currentTime + step
-        // console.log(step, audioT ag.currentTime)
-      }
-      if (ev.key === ' ') {
-        if (audioTag.paused)
-          audioTag.play()
-        else
-          audioTag.pause()
-      }
-    }
-  }
+onUpdated(() => {
+  // 音频再切换 SRC 之后需要调用一下 load() 不然看不到效果
+  for (const el of document.getElementsByTagName('audio'))
+    el.load()
 })
 
-const audioPlayer = useAudioPlayer()
+// 音频快捷键：方向键快进/退、空格播放/暂停。
+// 只在非输入场景生效（输入框里打空格、移光标不受影响），
+// 且离开词汇页时卸载，避免监听常驻全站、每次进页叠加。
+function onAudioKeydown(ev) {
+  const t = ev.target
+  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.tagName === 'BUTTON' || t.isContentEditable))
+    return
+  if (!['ArrowLeft', 'ArrowRight', ' '].includes(ev.key))
+    return
+  ev.preventDefault()
+  const audioTags = document.getElementsByTagName('audio')
+  const keyMap = {
+    ArrowLeft: -5,
+    ArrowRight: 5,
+  }
+  for (const audioTag of audioTags) {
+    audioTag.blur()
+    if (keyMap[ev.key]) {
+      const step = keyMap[ev.key]
+      audioTag.currentTime = audioTag.currentTime + step
+    }
+    if (ev.key === ' ') {
+      if (audioTag.paused)
+        audioTag.play()
+      else
+        audioTag.pause()
+    }
+  }
+}
+
+onMounted(() => document.addEventListener('keydown', onAudioKeydown))
+onUnmounted(() => document.removeEventListener('keydown', onAudioKeydown))
+
+let audio = null
 function play(audioPath) {
-  audioPlayer.play(audioPath)
+  if (audio) {
+    audio.pause()
+    audio.currentTime = 0
+  }
+  audio = document.createElement('audio')
+  audio.src = audioPath
+  audio.play()
 }
 
 function copyText(item) {
@@ -114,7 +158,10 @@ function onInputKeydown(e) {
   }
 }
 
+// 聚焦时的拼写值（按输入框 id 存），供失焦时判断是否真的改过
+const focusSpellValues = {}
 function onInputFocusIn(e, audioPath) {
+  focusSpellValues[e.target.id] = (e.target.value || '').toLowerCase().trim()
   if (isAutoPlayWordAudio.value)
     play(audioPath)
 }
@@ -128,16 +175,17 @@ function onInputFocusOut(e, item) {
   }
   else {
     item.spellValue = spellValue
-    item.spellError = !acceptsAnswer(spellValue, item.word)
+    item.spellError = !item.word.map(v => v.toLowerCase().trim()).includes(spellValue)
     if (item.spellError) {
-      // 拼写错误：记入错词本
-      addMistake('vocabulary', {
-        key: `vocabulary:${item.id}`,
-        title: item.word.join(' / '),
-        answers: item.word,
-        detail: `${item.pos} ${item.meaning}`,
-        hint: item.example,
-      })
+      // 只有本次输入与聚焦时不一致才记入错词本，同一错词反复失焦不重复计数
+      if (spellValue !== focusSpellValues[target.id]) {
+        addMistake('vocabulary', {
+          key: `vocabulary:${item.id}`,
+          title: item.word.join(' / '),
+          detail: `${item.pos} ${item.meaning}`,
+          hint: item.example,
+        })
+      }
     }
   }
   trainingStats.value = calcStats()
@@ -147,9 +195,9 @@ function onInputFocusOut(e, item) {
 function syncProgress() {
   let done = 0
   let total = 0
-  const cur = refVocabulary.value[category.value]
+  const cur = refVocabulary[category.value]
   if (cur) {
-    for (const group of cur?.words ?? []) {
+    for (const group of cur.words) {
       for (const item of group) {
         total++
         if (item.spellValue)
@@ -176,7 +224,7 @@ function getInputStyleClass(item) {
 }
 
 function copyAllError() {
-  const words = refVocabulary.value[category.value]?.words ?? []
+  const words = refVocabulary[category.value].words
   const errorWords = []
   for (const group of words) {
     for (const item of group) {
@@ -189,14 +237,6 @@ function copyAllError() {
 </script>
 
 <template>
-  <p v-if="chapterLoading" class="p-6" role="status">
-正在加载章节…
-</p>
-  <p v-if="chapterError" class="p-6" role="alert">
-{{ chapterError }} <button @click="reload">
-重试
-</button>
-</p>
   <div class="px-4 pt-6 2xl:px-0">
     <div class="border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
       <!-- Card header -->
@@ -216,7 +256,7 @@ function copyAllError() {
               <!-- <option value="">
                 全部章节
               </option> -->
-              <option v-for="k in chapters" :key="k" :value="k">
+              <option v-for="(_, k) in refVocabulary" :key="k" :value="k">
                 {{ k }}
               </option>
             </select>
@@ -271,7 +311,7 @@ function copyAllError() {
         </div>
       </div>
       <!-- Table -->
-      <div v-if="chapter" class="mt-6 flex flex-col">
+      <div class="mt-6 flex flex-col">
         <div class="overflow-x-auto rounded-lg">
           <div class="inline-block min-w-full align-middle">
             <div class="shadow sm:rounded-lg">
@@ -314,7 +354,7 @@ function copyAllError() {
                         </div>
                         <div class="justify-items-end">
                           <audio controls class="chapter">
-                            <source :src="vocabularyChapterAudio(refVocabulary[category].audio)" type="audio/mpeg">
+                            <source :src="resolveAudioUrl(`vocabulary/audio/${refVocabulary[category].audio}`)" type="audio/mpeg">
                           </audio>
                         </div>
                       </div>
@@ -333,19 +373,19 @@ function copyAllError() {
                       <td>
                         <i
                           class="i-ph-speaker-simple-high-bold inline-block cursor-pointer"
-                          @click="play(resolveAudioUrl(vocabularyWordAudio(category, item.word[0])))"
+                          @click="play(resolveAudioUrl(`vocabulary/audio/${category}/${item.word[0]}.mp3`))"
                         />
 
                         <template v-if="isTrainingModel">
                           <i
-                            :class="item.showSource ? 'i-ph-eye-slash-bold' : 'i-ph-eye-bold'" class="inline-block cursor-pointer ml-4"
+                            :class="`${item.showSource ? 'i-ph-eye-slash-bold' : 'i-ph-eye-bold'} inline-block cursor-pointer ml-4`"
                             title="显示原词" @click="item.showSource = !item.showSource"
                           />
                           <input
                             :id="item.id" autocomplete="off" :class="getInputStyleClass(item)"
                             type="text"
                             @focusout="onInputFocusOut($event, item)" 
-                            @focusin="onInputFocusIn($event, resolveAudioUrl(vocabularyWordAudio(category, item.word[0])))" 
+                            @focusin="onInputFocusIn($event, resolveAudioUrl(`vocabulary/audio/${category}/${item.word[0]}.mp3`))" 
                             @keydown="onInputKeydown"
                           >
                         </template>

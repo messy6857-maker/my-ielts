@@ -1,9 +1,7 @@
-<script setup lang="ts">
+<script setup>
 import sentences from './100sentences'
-import AsyncWritingTask from './AsyncWritingTask.vue'
-
-const loadTaskOne = () => import('./task1/TaskOne.vue')
-const loadTaskTwo = () => import('./task2/TaskTwo.vue')
+import TaskOne from './task1/TaskOne.vue'
+import TaskTwo from './task2/TaskTwo.vue'
 
 const { isMastered, toggleMastered, masteredCount } = useMastered('writing_mastered_v1')
 const { setProgress } = useProgress()
@@ -21,7 +19,7 @@ const STOPWORDS = new Set([
   'more', 'most', 'much', 'many', 'some', 'any', 'all', 'both', 'each', 'every', 'other', 'into',
   'over', 'under', 'between', 'through', 'during', 'about', 'against', 'among', 'up', 'out', 'off',
 ])
-function extractKeywords(translation: string) {
+function extractKeywords(translation) {
   const words = (translation || '').toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || []
   const seen = new Set()
   const result = []
@@ -37,7 +35,8 @@ function extractKeywords(translation: string) {
 }
 
 // 页签：修复旧版 href="/#/writing" 丢掉 /my-ielts/ 基址导致的 404
-const activeTab = ref('sentences')
+// 页签选中状态持久化：去设置页填 API Key 再返回时，保持在原页签
+const activeTab = usePersistentString('myielts_writing_tab', 'sentences')
 const TABS = [
   { key: 'sentences', label: '100 句翻译练习' },
   { key: 'essay-big', label: '雅思大作文' },
@@ -48,23 +47,22 @@ const TABS = [
 const practicing = ref(false)
 const practiceScope = ref('all') // all | unmastered | mistakes
 const practiceOrder = ref('seq') // seq | random
-type Sentence = Extract<(typeof sentences)[number], { no: number }>
-const practiceQueue = ref<Sentence[]>([])
+const practiceQueue = ref([])
 const practiceIndex = ref(0)
 const userAnswer = ref('')
 const revealed = ref(false)
-const graded = ref<boolean | null>(null) // null | true | false
+const graded = ref(null) // null | true | false
 const practiceStats = ref({ correct: 0, wrong: 0 })
 const practiceFinished = ref(false)
 const practiceEmptyMsg = ref('')
-const hintKeywords = ref<string[]>([]) // 已揭示的关键词
+const hintKeywords = ref([]) // 已揭示的关键词
 
 const currentPractice = computed(() => practiceQueue.value[practiceIndex.value] ?? null)
 const allKeywords = computed(() => currentPractice.value ? extractKeywords(currentPractice.value.translationFromBook) : [])
 
 function startPractice() {
-  const all = sentences.filter((s): s is Sentence => s.no != null)
-  let queue: Sentence[]
+  const all = sentences.filter(s => s.no != null)
+  let queue
   if (practiceScope.value === 'unmastered') {
     queue = all.filter(s => !isMastered(s.no))
     practiceEmptyMsg.value = '全部句子都已掌握，太棒了！'
@@ -114,7 +112,7 @@ function exitPractice() {
   practicing.value = false
 }
 
-function gradePractice(ok: boolean) {
+function gradePractice(ok) {
   const item = currentPractice.value
   if (!item || graded.value !== null)
     return
@@ -138,15 +136,6 @@ function gradePractice(ok: boolean) {
   }
 }
 
-const route = useRoute()
-watch(() => route?.query.scope, (scope) => {
-  if (scope === 'mistakes') {
-    activeTab.value = 'sentences'
-    practiceScope.value = 'mistakes'
-    startPractice()
-  }
-}, { immediate: true })
-
 function nextPractice() {
   if (practiceIndex.value + 1 >= practiceQueue.value.length) {
     practiceFinished.value = true
@@ -161,15 +150,14 @@ function nextPractice() {
 <template>
   <div class="px-4 pt-6 2xl:px-0">
     <div
-      class="mb-4 border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
->
+      class="mb-4 border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
       <!-- 页签 -->
       <ul
-        class="mb-4 text-sm font-medium text-center text-gray-500 rounded-lg shadow sm:flex dark:divide-gray-700 dark:text-gray-400"
->
+        class="mb-4 text-sm font-medium text-center text-gray-500 rounded-lg shadow sm:flex dark:divide-gray-700 dark:text-gray-400">
         <li v-for="(tab, i) in TABS" :key="tab.key" class="w-full">
           <button
-            class="inline-block w-full p-4 border-r border-gray-200 dark:border-gray-700 focus:ring-4 focus:ring-blue-300 focus:outline-none" :class="[
+            :class="[
+              'inline-block w-full p-4 border-r border-gray-200 dark:border-gray-700 focus-visible:ring-4 focus-visible:ring-blue-300 focus-visible:outline-none',
               i === 0 ? 'rounded-s-lg' : '',
               i === TABS.length - 1 ? 'rounded-e-lg' : '',
               activeTab === tab.key
@@ -236,9 +224,7 @@ function nextPractice() {
             </div>
 
             <div class="rounded-2xl border border-gray-200 dark:border-gray-700 p-6 sm:p-8">
-              <p class="text-xs text-gray-400 mb-2">
-把下面这句翻译成英文：
-</p>
+              <p class="text-xs text-gray-400 mb-2">把下面这句翻译成英文：</p>
               <p class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-6">
                 {{ currentPractice.sentence }}
               </p>
@@ -280,28 +266,16 @@ function nextPractice() {
 
               <div v-else class="space-y-4">
                 <div class="rounded-xl bg-gray-50 dark:bg-gray-700/50 p-4 text-sm">
-                  <p class="mb-1 text-xs text-gray-400">
-📖 书上标准答案
-</p>
-                  <p class="text-gray-800 dark:text-gray-200">
-{{ currentPractice.translationFromBook }}
-</p>
+                  <p class="mb-1 text-xs text-gray-400">📖 书上标准答案</p>
+                  <p class="text-gray-800 dark:text-gray-200">{{ currentPractice.translationFromBook }}</p>
                 </div>
                 <div v-if="currentPractice.chatgpt" class="rounded-xl bg-gray-50 dark:bg-gray-700/50 p-4 text-sm">
-                  <p class="mb-1 text-xs text-gray-400">
-🤖 ChatGPT 优化版
-</p>
-                  <p class="text-gray-800 dark:text-gray-200">
-{{ currentPractice.chatgpt }}
-</p>
+                  <p class="mb-1 text-xs text-gray-400">🤖 ChatGPT 优化版</p>
+                  <p class="text-gray-800 dark:text-gray-200">{{ currentPractice.chatgpt }}</p>
                 </div>
                 <div v-if="currentPractice.remark" class="rounded-xl bg-amber-50 dark:bg-amber-900/20 p-4 text-sm">
-                  <p class="mb-1 text-xs text-amber-600 dark:text-amber-400">
-💡 备注
-</p>
-                  <p class="text-amber-800 dark:text-amber-200 whitespace-pre-line">
-{{ currentPractice.remark }}
-</p>
+                  <p class="mb-1 text-xs text-amber-600 dark:text-amber-400">💡 备注</p>
+                  <p class="text-amber-800 dark:text-amber-200 whitespace-pre-line">{{ currentPractice.remark }}</p>
                 </div>
 
                 <!-- 自评 -->
@@ -351,27 +325,17 @@ function nextPractice() {
                 v-model="practiceScope"
                 class="rounded-lg border border-gray-300 bg-white p-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               >
-                <option value="all">
-全部句子
-</option>
-                <option value="unmastered">
-只练未掌握
-</option>
-                <option value="mistakes">
-只练错题本
-</option>
+                <option value="all">全部句子</option>
+                <option value="unmastered">只练未掌握</option>
+                <option value="mistakes">只练错题本</option>
               </select>
               <label class="text-sm text-gray-500 dark:text-gray-400">顺序</label>
               <select
                 v-model="practiceOrder"
                 class="rounded-lg border border-gray-300 bg-white p-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               >
-                <option value="seq">
-顺序练习
-</option>
-                <option value="random">
-随机练习
-</option>
+                <option value="seq">顺序练习</option>
+                <option value="random">随机练习</option>
               </select>
               <button
                 class="rounded-lg bg-blue-700 px-5 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:bg-blue-600"
@@ -388,12 +352,10 @@ function nextPractice() {
                 <div class="shadow sm:rounded-lg">
                   <table class="min-w-[620px] w-full divide-y divide-gray-200 dark:divide-gray-600">
                     <tbody class="bg-white dark:bg-gray-800 border-b-1">
-                      <template v-for="item of sentences" :key="item.no ?? item.title">
+                      <template v-for="item of sentences" :key="item.no" class="text-sm text-gray-900 dark:text-white">
                         <template v-if="item.no == null">
                           <tr class="border-t-1 border-x-1">
-                            <td colspan="5" class="p-4 font-bold text-xl">
-{{ item.title }}
-</td>
+                            <td colspan="5" class="p-4 font-bold text-xl">{{ item.title }}</td>
                           </tr>
                         </template>
                         <template v-else>
@@ -414,9 +376,7 @@ function nextPractice() {
                               </div>
                             </td>
                             <td class="p-4 border-b-1 flex items-center">
-                              <div class="mr-4" title="来自书上标准答案">
-<i class="i-carbon-book block" />
-</div>
+                              <div class="mr-4" title="来自书上标准答案"><i class="i-carbon-book block"></i></div>
                               <div>{{ item.translationFromBook }}</div>
                             </td>
                             <td class="p-4 border-x-1 w-30% whitespace-pre-line" rowspan="2">
@@ -425,9 +385,7 @@ function nextPractice() {
                           </tr>
                           <tr>
                             <td class="p-4 flex items-center">
-                              <div class="mr-4" title="来自 ChatGPT">
-<i class="i-simple-icons-openai block" />
-</div>
+                              <div class="mr-4" title="来自 ChatGPT"><i class="i-simple-icons-openai block"></i></div>
                               <div>{{ item.chatgpt }}</div>
                             </td>
                           </tr>
@@ -444,12 +402,12 @@ function nextPractice() {
 
       <!-- ============ 雅思大作文（Task 2） ============ -->
       <div v-else-if="activeTab === 'essay-big'">
-        <AsyncWritingTask :loader="loadTaskTwo" />
+        <TaskTwo />
       </div>
 
       <!-- ============ 雅思小作文（Task 1） ============ -->
       <div v-else-if="activeTab === 'essay-small'">
-        <AsyncWritingTask :loader="loadTaskOne" />
+        <TaskOne />
       </div>
     </div>
   </div>

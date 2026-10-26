@@ -1,6 +1,6 @@
 <script setup>
-import { normalizeAnswer } from '../../utils/normalizeAnswer'
 import words from './listening179.json'
+import { resolveAudioUrl } from '../../composables/useAudio'
 
 const ws = reactive(words.map((v) => {
   const item = {
@@ -27,19 +27,38 @@ function onKeydown(e, word) {
   }
 }
 
-const audioPlayer = useAudioPlayer()
+let audio = null
 function play(word) {
-  audioPlayer.play(`179_audios/${word}.mp3`)
+  // 复用单个 audio，播放前先停旧的；MP3 缺失时用浏览器朗读兜底（只触发一次）
+  speechSynthesis.cancel()
+  if (audio) {
+    audio.pause()
+    audio.currentTime = 0
+  }
+  audio = document.createElement('audio')
+  audio.src = resolveAudioUrl(`179_audios/${word}.mp3`)
+  let fellBack = false
+  const fallback = () => {
+    if (fellBack)
+      return
+    fellBack = true
+    const u = new SpeechSynthesisUtterance(word)
+    u.lang = 'en-US'
+    speechSynthesis.speak(u)
+  }
+  audio.onerror = fallback
+  audio.play().catch(fallback)
 }
 function next(index) {
   const i = index + 1
+  const isLast = i >= words.length
 
-  // 校验结果
+  // 校验结果（最后一词同样先跑完校验、记错词、推进度，再结束）
   const cw = ws[index]
 
   // 处理词
   const practiceWord = cw.form.word.trim().toLowerCase()
-  const practiceReplace = cw.form.replaceStr.split(/[,，]/).map(v => normalizeAnswer(v))
+  const practiceReplace = cw.form.replaceStr.split(/[,，]/).map(v => v.trim().toLowerCase().replace(/\s+/g, ' '))
   // window.console.log(practiceReplace, practiceWord)
 
   const errorWords = []
@@ -47,7 +66,7 @@ function next(index) {
     errorWords.push(cw.word)
 
   errorWords.push(...cw.replace.filter((w) => {
-    return !practiceReplace.includes(normalizeAnswer(w))
+    return !practiceReplace.includes(w)
   }))
   cw.result.checked = true
   cw.result.errorWords = errorWords
@@ -64,9 +83,9 @@ function next(index) {
 
   // window.console.log(cw)
 
-  if (i >= words.length)
+  // 最后一词：校验与进度已完成，不再播下一个词/移光标
+  if (isLast)
     return
-
   const nw = words[i]
   play(nw.word)
   // 光标移动到下一个输入框

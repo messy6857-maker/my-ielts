@@ -1,9 +1,10 @@
-[build]
-  publish = "dist"
-  command = "npx pnpm@11.25.0 install --frozen-lockfile && npx pnpm@11.25.0 run build"
 [build.environment]
   NPM_FLAGS = "--version"
-  NODE_VERSION = "24.22.1"
+  NODE_VERSION = "16"
+
+[build]
+  publish = "dist"
+  command = "npx pnpm i --store=node_modules/.pnpm-store && npx pnpm run build"
 
 [[redirects]]
   from = "/*"

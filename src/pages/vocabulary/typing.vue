@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { vocabularyWordAudio } from '../../composables/useAudio'
-import { chapters, initialChapter, useVocabularyChapter } from '../../composables/useVocabularyChapter'
+import { resolveAudioUrl } from '../../composables/useAudio'
+import vocabulary from './vocabulary'
 
 const CHAPTER_KEY = 'vocabulary_typing_chapter'
-const selectedChapter = ref(initialChapter(CHAPTER_KEY))
-
-const { chapter, loading: chapterLoading, error: chapterError, reload } = useVocabularyChapter(selectedChapter)
+const chapters = Object.keys(vocabulary)
+const selectedChapter = ref(localStorage.getItem(CHAPTER_KEY) || chapters[0])
 
 const currentWordIndex = ref(0)
 const userInput = ref('')
@@ -16,23 +15,13 @@ const isFinished = ref(false)
 const wordHadError = ref(false)
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
-const { currentUser } = useAuth()
-const audioPlayer = useAudioPlayer()
-let advanceTimer: ReturnType<typeof setTimeout> | null = null
-
-function cancelAdvance() {
-  if (advanceTimer !== null)
-    clearTimeout(advanceTimer)
-  advanceTimer = null
-}
-watch(currentUser, () => reset(), { flush: 'sync' })
-onUnmounted(cancelAdvance)
 
 const words = computed(() => {
-  if (!chapter.value)
+  const chapter = (vocabulary as any)[selectedChapter.value]
+  if (!chapter)
     return []
   // Flatten groups into a single list of words
-  return chapter.value.words.flat()
+  return chapter.words.flat()
 })
 
 const currentWordData = computed(() => words.value[currentWordIndex.value])
@@ -40,13 +29,10 @@ const currentWord = computed(() => currentWordData.value?.word[0] || '')
 
 watch(selectedChapter, (newVal) => {
   localStorage.setItem(CHAPTER_KEY, newVal)
-  cancelAdvance()
-  audioPlayer.stop()
-  userInput.value = ''
+  reset()
 })
 
 function reset() {
-  cancelAdvance()
   currentWordIndex.value = 0
   userInput.value = ''
   startTime.value = null
@@ -58,9 +44,30 @@ function reset() {
   playAudio()
 }
 
+let audio = null as HTMLAudioElement | null
 function playAudio() {
-  if (currentWord.value)
-    audioPlayer.play(vocabularyWordAudio(selectedChapter.value, currentWord.value))
+  const category = selectedChapter.value
+  const word = currentWord.value
+  const audioPath = resolveAudioUrl(`vocabulary/audio/${category}/${word}.mp3`)
+  speechSynthesis.cancel()
+  if (audio) {
+    audio.pause()
+    audio.currentTime = 0
+  }
+  audio = document.createElement('audio')
+  audio.src = audioPath
+  // MP3 不存在时用浏览器朗读兜底（onerror 与 play().catch 只触发一次）
+  let fellBack = false
+  const fallback = () => {
+    if (fellBack)
+      return
+    fellBack = true
+    const u = new SpeechSynthesisUtterance(word)
+    u.lang = 'en-US'
+    speechSynthesis.speak(u)
+  }
+  audio.onerror = fallback
+  audio.play().catch(fallback)
 }
 
 // Normalize whitespace: replace non-breaking spaces and other unicode spaces with regular space
@@ -69,9 +76,6 @@ function normalizeInput(s: string) {
 }
 
 function handleInput(e: Event) {
-  cancelAdvance()
-  if (chapterLoading.value || !currentWord.value)
-    return
   if (!startTime.value)
     startTime.value = Date.now()
 
@@ -102,17 +106,8 @@ function handleInput(e: Event) {
     wpm.value = Math.round((input.length / 5) / timeElapsed)
 
   // Check if finished
-  if (input === currentWord.value) {
-    const chapter = selectedChapter.value
-    const index = currentWordIndex.value
-    const user = currentUser.value
-    advanceTimer = setTimeout(() => {
-      advanceTimer = null
-      if (chapter === selectedChapter.value && index === currentWordIndex.value
-        && user === currentUser.value && userInput.value === currentWord.value)
-        nextWord()
-    }, 200)
-  }
+  if (input === currentWord.value)
+    setTimeout(nextWord, 200)
 }
 
 function nextWord() {
@@ -139,29 +134,19 @@ function nextWord() {
   }
 }
 
-watch(chapter, () => { if (chapter.value) reset() })
+onMounted(() => {
+  reset()
+})
 </script>
 
 <template>
-  <p v-if="chapterLoading" role="status" class="p-6">
-正在加载章节…
-</p>
-  <p v-if="chapterError" role="alert" class="p-6">
-{{ chapterError }} <button @click="reload">
-重试
-</button>
-</p>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-3xl mx-auto">
       <!-- Header -->
       <div class="flex justify-between items-center mb-8">
         <div>
-          <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white">
-单词打字练习
-</h1>
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
-照着背景单词输入，提升你的速度
-</p>
+          <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white">单词打字练习</h1>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">照着背景单词输入，提升你的速度</p>
         </div>
         <select
           v-model="selectedChapter"
@@ -171,9 +156,7 @@ watch(chapter, () => { if (chapter.value) reset() })
             v-for="c in chapters"
             :key="c"
             :value="c"
-          >
-{{ c }}
-</option>
+          >{{ c }}</option>
         </select>
       </div>
 
@@ -182,35 +165,23 @@ watch(chapter, () => { if (chapter.value) reset() })
         <div
           class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center"
         >
-          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">
-准确率
-</div>
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">准确率</div>
           <div
             class="text-2xl font-bold"
             :class="accuracy < 90 ? 'text-red-500' : 'text-green-500'"
-          >
-{{ accuracy }}%
-</div>
+          >{{ accuracy }}%</div>
         </div>
         <div
           class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center"
         >
-          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">
-WPM (速度)
-</div>
-          <div class="text-2xl font-bold text-blue-500">
-{{ wpm }}
-</div>
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">WPM (速度)</div>
+          <div class="text-2xl font-bold text-blue-500">{{ wpm }}</div>
         </div>
         <div
           class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center"
         >
-          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">
-进度
-</div>
-          <div class="text-2xl font-bold dark:text-white">
-{{ currentWordIndex + 1 }} / {{ words.length }}
-</div>
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">进度</div>
+          <div class="text-2xl font-bold dark:text-white">{{ currentWordIndex + 1 }} / {{ words.length }}</div>
         </div>
       </div>
 
@@ -246,7 +217,6 @@ WPM (速度)
 
         <!-- Invisible Input covering the whole area -->
         <input
-          v-model="userInput"
           type="text"
           class="absolute inset-0 opacity-0 w-full h-full cursor-default caret-transparent"
           autofocus
@@ -254,17 +224,17 @@ WPM (速度)
           autocorrect="off"
           autocomplete="off"
           spellcheck="false"
-          :disabled="isFinished || chapterLoading || !!chapterError"
+          v-model="userInput"
           @input="handleInput"
-        >
+          :disabled="isFinished"
+        />
 
         <!-- Meaning & Example (Hint) -->
         <div class="w-full text-center border-t border-gray-100 dark:border-gray-700 pt-6">
           <div class="text-xl font-medium text-gray-800 dark:text-gray-200 mb-2">
             <span
               style="font-style: italic; font-family: times;"
-              class="text-sm font-normal text-gray-400 mr-2 tracking-wide"
->
+              class="text-sm font-normal text-gray-400 mr-2 tracking-wide">
               {{ currentWordData?.pos }}
             </span>
             {{ currentWordData?.meaning }}
@@ -277,10 +247,10 @@ WPM (速度)
         <!-- Audio trigger hint -->
         <div class="absolute top-4 right-4">
           <button
-            class="p-2 text-gray-400 hover:text-blue-500 transition-colors"
             @click="playAudio"
+            class="p-2 text-gray-400 hover:text-blue-500 transition-colors"
           >
-            <i class="i-ph-speaker-high-bold text-xl block" />
+            <i class="i-ph-speaker-high-bold text-xl block"></i>
           </button>
         </div>
       </div>
@@ -290,12 +260,10 @@ WPM (速度)
         v-if="isFinished"
         class="mt-8 bg-blue-600 text-white p-6 rounded-2xl text-center shadow-xl animate-bounce"
       >
-        <h2 class="text-2xl font-bold mb-2">
-太棒了！恭喜完成本章练习 🎉
-</h2>
+        <h2 class="text-2xl font-bold mb-2">太棒了！恭喜完成本章练习 🎉</h2>
         <button
-          class="mt-4 bg-white text-blue-600 px-6 py-2 rounded-full font-bold hover:bg-blue-50 transition-colors"
           @click="reset"
+          class="mt-4 bg-white text-blue-600 px-6 py-2 rounded-full font-bold hover:bg-blue-50 transition-colors"
         >
           再练一次
         </button>
@@ -312,7 +280,6 @@ WPM (速度)
 <style scoped>
 /* Ensure the input always has focus or can be focused easily */
 .relative:focus-within {
-  box-shadow: 0 0 0 4px rgb(59 130 246 / 20%);
-  border-color: #3b82f6;
+  @apply ring-4 ring-blue-500/20 border-blue-500;
 }
 </style>

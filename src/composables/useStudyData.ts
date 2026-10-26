@@ -2,20 +2,16 @@
 // 数据按账号隔离：未登录用 myielts_ 前缀（游客模式），
 // 登录后用 myielts_u_<用户名>_ 前缀，每个账号一套独立数据
 
-import type { MistakeModule } from '../utils/studyModules'
-import { MISTAKE_MODULE_LABEL } from '../utils/studyModules'
+import { readJson, useAuth, writeJson } from './useAuth'
+import { onSyncApplied } from './syncClient'
 
-import { useAccountData } from './useAccountData'
-import { useAuth } from './useAuth'
-export { MISTAKE_MODULE_LABEL }
-export type { MistakeModule }
-export type ProgressModule = 'vocabulary' | 'flashcard' | 'typing' | 'listening' | 'reading' | 'writing' | 'listening_flashcard' | 'reading_flashcard'
+export type MistakeModule = 'vocabulary' | 'typing' | 'listening' | 'reading'
+export type ProgressModule = 'vocabulary' | 'flashcard' | 'typing' | 'listening' | 'reading' | 'writing' | 'listening_flashcard' | 'reading_flashcard' | 'corpus_flashcard'
 
 export interface MistakeItem {
   key: string // 全站唯一，如 `vocabulary:123`
   module: MistakeModule
   title: string // 单词本身
-  answers?: string[] // 合法拼写；展示标题不参与新记录的答案编码
   detail: string // 词性 + 释义
   hint?: string // 例句等提示
   count: number // 累计记错次数
@@ -29,6 +25,13 @@ export interface ModuleProgress {
   updatedAt: number
 }
 
+export const MISTAKE_MODULE_LABEL: Record<MistakeModule, string> = {
+  vocabulary: '词汇拼写',
+  typing: '打字练习',
+  listening: '听力 179',
+  reading: '阅读 538',
+}
+
 export const PROGRESS_MODULE_LABEL: Record<ProgressModule, string> = {
   vocabulary: '词汇拼写',
   flashcard: '单词自测',
@@ -38,27 +41,37 @@ export const PROGRESS_MODULE_LABEL: Record<ProgressModule, string> = {
   writing: '写作',
   listening_flashcard: '听力自测',
   reading_flashcard: '阅读自测',
+  corpus_flashcard: '语料库自测',
 }
 
-// 按当前账号拼出实际存储 key
-export function nsKey(base: string): string {
-  const { currentUser } = useAuth()
-  const user = currentUser.value
-  return user ? `myielts_u_${user}_${base}` : `myielts_${base}`
+// 按账号拼出实际存储 key；显式传 user（含 null 表示游客）时用该身份，缺省走当前登录身份
+export function nsKey(base: string, user?: string | null): string {
+  const u = user !== undefined ? user : useAuth().currentUser.value
+  return u ? `myielts_u_${u}_${base}` : `myielts_${base}`
 }
 
 // 用全局单例，保证导航栏徽标和各页面看到的是同一份响应式数据
 export const useMistakes = createGlobalState(() => {
-  const mistakes = useAccountData<MistakeItem[]>('mistakes_v1', () => ([]))
+  const { currentUser } = useAuth()
+  const mistakes = ref<MistakeItem[]>([])
 
-  function addMistake(module: MistakeModule, input: { key: string; title: string; answers?: string[]; detail?: string; hint?: string }) {
+  function load() {
+    mistakes.value = readJson<MistakeItem[]>(nsKey('mistakes_v1'), [])
+  }
+  load()
+
+  // 切换账号时重新加载该账号的数据
+  watch(currentUser, load)
+  // 拉取后 reload：云端新数据写进 localStorage 后，内存里的旧快照不能再写回覆盖它
+  onSyncApplied(load)
+  watch(mistakes, v => writeJson(nsKey('mistakes_v1'), v), { deep: true })
+
+  function addMistake(module: MistakeModule, input: { key: string, title: string, detail?: string, hint?: string }) {
     const now = Date.now()
     const exist = mistakes.value.find(m => m.key === input.key)
     if (exist) {
       exist.count += 1
       exist.lastAt = now
-      if (input.answers?.length)
-        exist.answers = [...input.answers]
       if (input.detail)
         exist.detail = input.detail
       if (input.hint)
@@ -69,7 +82,6 @@ export const useMistakes = createGlobalState(() => {
         key: input.key,
         module,
         title: input.title,
-        answers: input.answers ? [...input.answers] : undefined,
         detail: input.detail || '',
         hint: input.hint,
         count: 1,
@@ -81,6 +93,17 @@ export const useMistakes = createGlobalState(() => {
 
   function removeMistake(key: string) {
     mistakes.value = mistakes.value.filter(m => m.key !== key)
+  }
+
+  // 返回上一个时用：记错次数减一，减到 0 就从错词本移除
+  function decrementMistake(key: string) {
+    const item = mistakes.value.find(m => m.key === key)
+    if (!item)
+      return
+    if (item.count > 1)
+      item.count -= 1
+    else
+      mistakes.value = mistakes.value.filter(m => m.key !== key)
   }
 
   function clearMistakes(module?: MistakeModule) {
@@ -106,11 +129,22 @@ export const useMistakes = createGlobalState(() => {
       .filter(g => g.items.length > 0)
   })
 
-  return { mistakes, addMistake, removeMistake, clearMistakes, totalCount, countByModule, grouped }
+  return { mistakes, addMistake, removeMistake, decrementMistake, clearMistakes, totalCount, countByModule, grouped, reload: load }
 })
 
 export const useProgress = createGlobalState(() => {
-  const progress = useAccountData<Record<string, ModuleProgress>>('progress_v1', () => ({}))
+  const { currentUser } = useAuth()
+  const progress = ref<Record<string, ModuleProgress>>({})
+
+  function load() {
+    progress.value = readJson<Record<string, ModuleProgress>>(nsKey('progress_v1'), {})
+  }
+  load()
+
+  watch(currentUser, load)
+  // 拉取后 reload，见 useMistakes
+  onSyncApplied(load)
+  watch(progress, v => writeJson(nsKey('progress_v1'), v), { deep: true })
 
   function setProgress(module: ProgressModule, done: number, total: number) {
     progress.value[module] = { done, total, updatedAt: Date.now() }
@@ -130,12 +164,21 @@ export const useProgress = createGlobalState(() => {
 
   const hasAnyProgress = computed(() => Object.keys(progress.value).length > 0)
 
-  return { progress, setProgress, getProgress, modules, hasAnyProgress }
+  return { progress, setProgress, getProgress, modules, hasAnyProgress, reload: load }
 })
 
 // 通用“已掌握”标记（如写作 100 句、阅读 538 词），按账号隔离
 export function useMastered(base: string) {
-  const mastered = useAccountData<string[]>(base, () => ([]))
+  const { currentUser } = useAuth()
+  const mastered = ref<string[]>([])
+
+  function load() {
+    mastered.value = readJson<string[]>(nsKey(base), [])
+  }
+  load()
+
+  watch(currentUser, load)
+  watch(mastered, v => writeJson(nsKey(base), v))
 
   function isMastered(id: string | number) {
     return mastered.value.includes(String(id))
