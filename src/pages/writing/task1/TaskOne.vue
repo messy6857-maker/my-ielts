@@ -53,7 +53,7 @@ const showGuide = usePersistentBool('myielts_task1_guide_open')
 // ---------- 历史 ----------
 const history = ref<SavedEssay[]>([])
 function loadHistory() {
-  history.value = readJson<SavedEssay[]>(nsKey(ESSAY_KEY), [])
+  history.value = readJson<SavedEssay[]>(nsKey(ESSAY_KEY), [], ESSAY_KEY)
 }
 loadHistory()
 function saveEssay(e: SavedEssay) {

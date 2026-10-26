@@ -3,15 +3,10 @@
 // 供听力 179 / 阅读 538 等独立卡片使用（词汇卡片沿用 useSpacedRepetition 的单例）
 
 import { effectScope } from 'vue'
+import { createDailyCounter } from './useDailyCounter'
 import { readJson, useAuth, writeJson } from './useAuth'
 import { nsKey } from './useStudyData'
 import type { WordSchedule } from './useSpacedRepetition'
-
-function todayStr(offset = 0) {
-  const d = new Date()
-  d.setDate(d.getDate() - offset)
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
-}
 
 export interface DeckStores {
   getSchedule(id: string | number): WordSchedule | undefined
@@ -38,24 +33,12 @@ export function useDeckStore(ns: string): DeckStores {
 function createDeckStore(ns: string): DeckStores {
   const { currentUser } = useAuth()
   const schedules = ref<Record<string, WordSchedule>>({})
-  const goal = ref(30)
-  const dailyCount = ref(0)
+  const daily = createDailyCounter(ns)
 
   const SKEY = `${ns}_sr_v1`
-  const GKEY = `${ns}_daily_goal_v1`
-  const NKEY = `${ns}_daily_new_v1`
 
   function load() {
-    schedules.value = readJson<Record<string, WordSchedule>>(nsKey(SKEY), {})
-    goal.value = readJson<number>(nsKey(GKEY), 30)
-    const saved = readJson<{ date: string; count: number }>(nsKey(NKEY), { date: '', count: 0 })
-    if (saved.date === todayStr()) {
-      dailyCount.value = saved.count
-    }
-    else {
-      dailyCount.value = 0
-      writeJson(nsKey(NKEY), { date: todayStr(), count: 0 })
-    }
+    schedules.value = readJson<Record<string, WordSchedule>>(nsKey(SKEY), {}, SKEY)
   }
   load()
 
@@ -73,20 +56,7 @@ function createDeckStore(ns: string): DeckStores {
     setSchedule(id: string | number, s: WordSchedule) {
       schedules.value[keyOf(id)] = s
     },
-    goal,
-    dailyCount,
-    remaining: computed(() => Math.max(0, goal.value - dailyCount.value)),
-    setGoal(n: number) {
-      if (!Number.isFinite(n))
-        return
-      const v = Math.min(500, Math.max(1, Math.round(n)))
-      goal.value = v
-      writeJson(nsKey(GKEY), v)
-    },
-    recordNewWord() {
-      dailyCount.value += 1
-      writeJson(nsKey(NKEY), { date: todayStr(), count: dailyCount.value })
-    },
+    ...daily,
   }
   return stores
 }

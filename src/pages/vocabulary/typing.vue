@@ -14,6 +14,16 @@ const isFinished = ref(false)
 const wordHadError = ref(false)
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
+const { currentUser } = useAuth()
+let advanceTimer: ReturnType<typeof setTimeout> | null = null
+
+function cancelAdvance() {
+  if (advanceTimer !== null)
+    clearTimeout(advanceTimer)
+  advanceTimer = null
+}
+watch(currentUser, cancelAdvance, { flush: 'sync' })
+onUnmounted(cancelAdvance)
 
 const words = computed(() => {
   const chapter = (vocabulary as any)[selectedChapter.value]
@@ -32,6 +42,7 @@ watch(selectedChapter, (newVal) => {
 })
 
 function reset() {
+  cancelAdvance()
   currentWordIndex.value = 0
   userInput.value = ''
   startTime.value = null
@@ -55,6 +66,7 @@ function normalizeInput(s: string) {
 }
 
 function handleInput(e: Event) {
+  cancelAdvance()
   if (!startTime.value)
     startTime.value = Date.now()
 
@@ -85,8 +97,17 @@ function handleInput(e: Event) {
     wpm.value = Math.round((input.length / 5) / timeElapsed)
 
   // Check if finished
-  if (input === currentWord.value)
-    setTimeout(nextWord, 200)
+  if (input === currentWord.value) {
+    const chapter = selectedChapter.value
+    const index = currentWordIndex.value
+    const user = currentUser.value
+    advanceTimer = setTimeout(() => {
+      advanceTimer = null
+      if (chapter === selectedChapter.value && index === currentWordIndex.value
+        && user === currentUser.value && userInput.value === currentWord.value)
+        nextWord()
+    }, 200)
+  }
 }
 
 function nextWord() {

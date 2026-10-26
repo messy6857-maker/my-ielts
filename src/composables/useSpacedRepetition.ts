@@ -4,6 +4,7 @@
 
 import { readJson, writeJson } from './useAuth'
 import { nsKey } from './useStudyData'
+import { createDailyCounter, useStudyDay } from './useDailyCounter'
 
 export interface WordSchedule {
   ease: number // 记忆强度系数
@@ -19,7 +20,7 @@ export type Grade = 0 | 3 | 5
 const DAY = 86400000
 
 function todayStr(offset = 0) {
-  const d = new Date()
+  const d = new Date(useStudyDay().now.value)
   d.setDate(d.getDate() - offset)
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
 }
@@ -56,48 +57,7 @@ export function gradeSchedule(prev: WordSchedule | undefined, grade: Grade, now 
 }
 
 // 每日学习目标：每天学 N 个新词（复习的词不占名额），按账号隔离、按天清零
-export const useDailyGoal = createGlobalState(() => {
-  const { currentUser } = useAuth()
-  const goal = ref(30)
-  const dailyCount = ref(0) // 今天已学的新词数
-
-  function load() {
-    goal.value = readJson<number>(nsKey('flashcard_daily_goal_v1'), 30)
-    const saved = readJson<{ date: string, count: number }>(
-      nsKey('flashcard_daily_new_v1'),
-      { date: '', count: 0 },
-    )
-    if (saved.date === todayStr()) {
-      dailyCount.value = saved.count
-    }
-    else {
-      dailyCount.value = 0
-      writeJson(nsKey('flashcard_daily_new_v1'), { date: todayStr(), count: 0 })
-    }
-  }
-  load()
-
-  watch(currentUser, load)
-
-  function setGoal(n: number) {
-    if (!Number.isFinite(n))
-      return
-    const v = Math.min(500, Math.max(1, Math.round(n)))
-    goal.value = v
-    writeJson(nsKey('flashcard_daily_goal_v1'), v)
-  }
-
-  // 学完一个新词时调用（同一词一天内只计一次，由调用方用 counted 标记去重）
-  function recordNewWord() {
-    dailyCount.value += 1
-    writeJson(nsKey('flashcard_daily_new_v1'), { date: todayStr(), count: dailyCount.value })
-  }
-
-  // 今天还能学几个新词
-  const remaining = computed(() => Math.max(0, goal.value - dailyCount.value))
-
-  return { goal, dailyCount, remaining, setGoal, recordNewWord }
-})
+export const useDailyGoal = createGlobalState(() => createDailyCounter('flashcard'))
 
 // 每天打卡：完成一轮学习即记一天，按账号隔离
 export const useCheckin = createGlobalState(() => {
@@ -105,7 +65,7 @@ export const useCheckin = createGlobalState(() => {
   const dates = ref<string[]>([])
 
   function load() {
-    dates.value = readJson<string[]>(nsKey('flashcard_checkin_v1'), [])
+    dates.value = readJson<string[]>(nsKey('flashcard_checkin_v1'), [], 'flashcard_checkin_v1')
   }
   load()
 
@@ -133,7 +93,7 @@ export const useCheckin = createGlobalState(() => {
   // 最近 7 天打卡点
   const weekDots = computed(() => {
     return [6, 5, 4, 3, 2, 1, 0].map((offset) => {
-      const d = new Date()
+      const d = new Date(useStudyDay().now.value)
       d.setDate(d.getDate() - offset)
       return {
         label: offset === 0 ? '今天' : `${d.getMonth() + 1}/${d.getDate()}`,
@@ -150,7 +110,7 @@ export const useWordSchedule = createGlobalState(() => {
   const schedules = ref<Record<string, WordSchedule>>({})
 
   function load() {
-    schedules.value = readJson<Record<string, WordSchedule>>(nsKey('sr_vocabulary_v1'), {})
+    schedules.value = readJson<Record<string, WordSchedule>>(nsKey('sr_vocabulary_v1'), {}, 'sr_vocabulary_v1')
   }
   load()
 

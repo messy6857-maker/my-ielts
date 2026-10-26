@@ -1,4 +1,5 @@
 import { isStudyBase, studyBaseOf, studyPrefix, writeStudyBatch } from '../utils/studyStorage'
+import { parseStudyValue } from '../utils/studySchema'
 import { notifyLocalWrite, useAuth } from './useAuth'
 
 export const BACKUP_VERSION = 1
@@ -51,7 +52,7 @@ export async function importBackup(file: File): Promise<{ ok: boolean; message: 
     for (const [base, value] of entries) {
       if (!isStudyBase(base) || typeof value !== 'string')
         return { ok: false, message: '备份包含未知模块，未导入数据' }
-      JSON.parse(value)
+      parseStudyValue(base, value)
     }
     if (currentUser.value !== user)
       return { ok: false, message: '账号已切换，请重新选择备份文件' }

@@ -9,7 +9,10 @@ export const useSync = createGlobalState(() => {
   const status = ref<SyncStatus>('idle')
   const lastSyncAt = ref<number>(0)
   const errorMsg = ref('')
-  let dirty = false
+  let revision = 0
+  let uploadedRevision = 0
+  let generation = 0
+  let inFlight: Promise<boolean> | null = null
   let timer: ReturnType<typeof setTimeout> | null = null
   let wired = false
 
@@ -21,41 +24,61 @@ export const useSync = createGlobalState(() => {
   // 已登录但没有服务器 token（老本地会话）：需要退出重登
   const needsRelogin = computed(() => syncEnabled && !!currentUser.value && !getToken())
 
-  async function pushNow(): Promise<boolean> {
+  function pushNow(): Promise<boolean> {
     if (!syncEnabled || !currentUser.value)
-      return false
-    if (!getToken()) {
+      return Promise.resolve(false)
+    const user = currentUser.value
+    const token = getToken()
+    if (!token) {
       setStatus('error', '请先退出登录，再重新登录以启用云同步')
-      return false
+      return Promise.resolve(false)
     }
-    setStatus('syncing')
-    try {
-      const data = collectSyncData(currentUser.value)
-      const r = await apiPush(data)
-      if (r.ok) {
-        dirty = false
-        lastSyncAt.value = Date.now()
+    const credential = token
+    if (inFlight)
+      return inFlight
+    const ownGeneration = generation
+    const isCurrent = () => generation === ownGeneration && currentUser.value === user && getToken() === credential
+    async function upload(): Promise<boolean> {
+      setStatus('syncing')
+      try {
+        do {
+          const snapshotRevision = revision
+          const result = await apiPush(collectSyncData(user), credential)
+          if (!isCurrent())
+            return false
+          if (!result.ok) {
+            setStatus('error', result.message || '推送失败')
+            return false
+          }
+          uploadedRevision = snapshotRevision
+          lastSyncAt.value = Date.now()
+        } while (revision !== uploadedRevision)
         setStatus('ok')
         return true
       }
-      setStatus('error', r.message || '推送失败')
-      return false
+      catch {
+        if (isCurrent())
+          setStatus('error', '无法连接同步服务器')
+        return false
+      }
     }
-    catch {
-      setStatus('error', '无法连接同步服务器')
-      return false
-    }
+    const pending = upload().finally(() => {
+      if (inFlight === pending)
+        inFlight = null
+    })
+    inFlight = pending
+    return pending
   }
 
   function schedulePush() {
     if (!syncEnabled || !currentUser.value || !getToken())
       return
-    dirty = true
+    revision++
     if (timer)
       clearTimeout(timer)
     timer = setTimeout(() => {
       timer = null
-      if (dirty)
+      if (revision !== uploadedRevision)
         pushNow()
     }, 8000)
   }
@@ -67,7 +90,7 @@ export const useSync = createGlobalState(() => {
     wired = true
     onLocalWrite(() => schedulePush())
     const flush = () => {
-      if (dirty && currentUser.value && getToken())
+      if (revision !== uploadedRevision && currentUser.value && getToken())
         pushNow()
     }
     window.addEventListener('pagehide', flush)
@@ -76,6 +99,18 @@ export const useSync = createGlobalState(() => {
         flush()
     })
   }
+
+  watch(currentUser, () => {
+    generation++
+    if (timer)
+      clearTimeout(timer)
+    timer = null
+    inFlight = null
+    revision = 0
+    uploadedRevision = 0
+    lastSyncAt.value = 0
+    setStatus('idle')
+  }, { flush: 'sync' })
 
   const statusText = computed(() => {
     switch (status.value) {

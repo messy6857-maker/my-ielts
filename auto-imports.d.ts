@@ -29,6 +29,7 @@ declare global {
   const controlledComputed: typeof import('@vueuse/core')['controlledComputed']
   const controlledRef: typeof import('@vueuse/core')['controlledRef']
   const createApp: typeof import('vue')['createApp']
+  const createDailyCounter: typeof import('./src/composables/useDailyCounter')['createDailyCounter']
   const createEventHook: typeof import('@vueuse/core')['createEventHook']
   const createGlobalState: typeof import('@vueuse/core')['createGlobalState']
   const createInjectionState: typeof import('@vueuse/core')['createInjectionState']
@@ -82,6 +83,7 @@ declare global {
   const notifyLocalWrite: typeof import('./src/composables/useAuth')['notifyLocalWrite']
   const nsKey: typeof import('./src/composables/useStudyData')['nsKey']
   const onActivated: typeof import('vue')['onActivated']
+  const onBeforeLogout: typeof import('./src/composables/useAuth')['onBeforeLogout']
   const onBeforeMount: typeof import('vue')['onBeforeMount']
   const onBeforeRouteLeave: typeof import('vue-router')['onBeforeRouteLeave']
   const onBeforeRouteUpdate: typeof import('vue-router')['onBeforeRouteUpdate']
@@ -288,6 +290,7 @@ declare global {
   const useStepper: typeof import('@vueuse/core')['useStepper']
   const useStorage: typeof import('@vueuse/core')['useStorage']
   const useStorageAsync: typeof import('@vueuse/core')['useStorageAsync']
+  const useStudyDay: typeof import('./src/composables/useDailyCounter')['useStudyDay']
   const useStudyTimer: typeof import('./src/composables/useStudyTimer')['useStudyTimer']
   const useStyleTag: typeof import('@vueuse/core')['useStyleTag']
   const useSupported: typeof import('@vueuse/core')['useSupported']
@@ -376,6 +379,7 @@ declare module 'vue' {
     readonly controlledComputed: UnwrapRef<typeof import('@vueuse/core')['controlledComputed']>
     readonly controlledRef: UnwrapRef<typeof import('@vueuse/core')['controlledRef']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
+    readonly createDailyCounter: UnwrapRef<typeof import('./src/composables/useDailyCounter')['createDailyCounter']>
     readonly createEventHook: UnwrapRef<typeof import('@vueuse/core')['createEventHook']>
     readonly createGlobalState: UnwrapRef<typeof import('@vueuse/core')['createGlobalState']>
     readonly createInjectionState: UnwrapRef<typeof import('@vueuse/core')['createInjectionState']>
@@ -429,6 +433,7 @@ declare module 'vue' {
     readonly notifyLocalWrite: UnwrapRef<typeof import('./src/composables/useAuth')['notifyLocalWrite']>
     readonly nsKey: UnwrapRef<typeof import('./src/composables/useStudyData')['nsKey']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
+    readonly onBeforeLogout: UnwrapRef<typeof import('./src/composables/useAuth')['onBeforeLogout']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
     readonly onBeforeRouteLeave: UnwrapRef<typeof import('vue-router')['onBeforeRouteLeave']>
     readonly onBeforeRouteUpdate: UnwrapRef<typeof import('vue-router')['onBeforeRouteUpdate']>
@@ -635,6 +640,7 @@ declare module 'vue' {
     readonly useStepper: UnwrapRef<typeof import('@vueuse/core')['useStepper']>
     readonly useStorage: UnwrapRef<typeof import('@vueuse/core')['useStorage']>
     readonly useStorageAsync: UnwrapRef<typeof import('@vueuse/core')['useStorageAsync']>
+    readonly useStudyDay: UnwrapRef<typeof import('./src/composables/useDailyCounter')['useStudyDay']>
     readonly useStudyTimer: UnwrapRef<typeof import('./src/composables/useStudyTimer')['useStudyTimer']>
     readonly useStyleTag: UnwrapRef<typeof import('@vueuse/core')['useStyleTag']>
     readonly useSupported: UnwrapRef<typeof import('@vueuse/core')['useSupported']>
@@ -717,6 +723,7 @@ declare module '@vue/runtime-core' {
     readonly controlledComputed: UnwrapRef<typeof import('@vueuse/core')['controlledComputed']>
     readonly controlledRef: UnwrapRef<typeof import('@vueuse/core')['controlledRef']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
+    readonly createDailyCounter: UnwrapRef<typeof import('./src/composables/useDailyCounter')['createDailyCounter']>
     readonly createEventHook: UnwrapRef<typeof import('@vueuse/core')['createEventHook']>
     readonly createGlobalState: UnwrapRef<typeof import('@vueuse/core')['createGlobalState']>
     readonly createInjectionState: UnwrapRef<typeof import('@vueuse/core')['createInjectionState']>
@@ -770,6 +777,7 @@ declare module '@vue/runtime-core' {
     readonly notifyLocalWrite: UnwrapRef<typeof import('./src/composables/useAuth')['notifyLocalWrite']>
     readonly nsKey: UnwrapRef<typeof import('./src/composables/useStudyData')['nsKey']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
+    readonly onBeforeLogout: UnwrapRef<typeof import('./src/composables/useAuth')['onBeforeLogout']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
     readonly onBeforeRouteLeave: UnwrapRef<typeof import('vue-router')['onBeforeRouteLeave']>
     readonly onBeforeRouteUpdate: UnwrapRef<typeof import('vue-router')['onBeforeRouteUpdate']>
@@ -976,6 +984,7 @@ declare module '@vue/runtime-core' {
     readonly useStepper: UnwrapRef<typeof import('@vueuse/core')['useStepper']>
     readonly useStorage: UnwrapRef<typeof import('@vueuse/core')['useStorage']>
     readonly useStorageAsync: UnwrapRef<typeof import('@vueuse/core')['useStorageAsync']>
+    readonly useStudyDay: UnwrapRef<typeof import('./src/composables/useDailyCounter')['useStudyDay']>
     readonly useStudyTimer: UnwrapRef<typeof import('./src/composables/useStudyTimer')['useStudyTimer']>
     readonly useStyleTag: UnwrapRef<typeof import('@vueuse/core')['useStyleTag']>
     readonly useSupported: UnwrapRef<typeof import('@vueuse/core')['useSupported']>

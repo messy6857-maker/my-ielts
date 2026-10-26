@@ -29,16 +29,26 @@ export function studyBaseOf(key: string, username: string | null): string | null
 
 // Roll back the complete batch on quota/storage errors. Remove staged values
 // first so restoring the previous snapshot has its original storage budget.
-export function writeStudyBatch(entries: [string, string][]) {
-  const previous = entries.map(([key]) => [key, localStorage.getItem(key)] as const)
+export function writeStudyBatch(entries: [string, string][], removals: string[] = []) {
+  const keys = new Set([...entries.map(([key]) => key), ...removals])
+  const previous = new Map([...keys].map(key => [key, localStorage.getItem(key)]))
+  const changed = new Set<string>()
   try {
-    for (const [key, value] of entries)
+    for (const [key, value] of entries) {
       localStorage.setItem(key, value)
+      changed.add(key)
+    }
+    for (const key of removals) {
+      localStorage.removeItem(key)
+      changed.add(key)
+    }
   }
   catch (e) {
-    for (const [key] of previous)
+    // A failed first write must not remove untouched legacy records.
+    for (const key of changed)
       localStorage.removeItem(key)
-    for (const [key, value] of previous) {
+    for (const key of changed) {
+      const value = previous.get(key)!
       if (value !== null)
         localStorage.setItem(key, value)
     }

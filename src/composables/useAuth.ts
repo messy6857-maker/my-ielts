@@ -1,6 +1,7 @@
 // 账号体系：
 // - 未配置同步服务器时：纯前端本地账号（密码加盐哈希存 localStorage，单机使用）
 // - 配置了 SYNC_API_BASE 时：走服务器注册/登录，学习数据多设备同步
+import { validateStudyValue } from '../utils/studySchema'
 import { apiLogin, apiPull, apiPush, apiRegister, applySyncData, collectSyncData, getToken, setToken, syncEnabled } from './syncClient'
 
 export interface AccountRecord {
@@ -25,12 +26,15 @@ export function notifyLocalWrite() {
   writeListeners.forEach(cb => cb())
 }
 
-export function readJson<T>(key: string, fallback: T): T {
+export function readJson<T>(key: string, fallback: T, studyBase?: string): T {
   try {
     const raw = localStorage.getItem(key)
     if (!raw)
       return fallback
-    return JSON.parse(raw) as T
+    const value: unknown = JSON.parse(raw)
+    if (studyBase)
+      validateStudyValue(studyBase, value)
+    return value as T
   }
   catch {
     return fallback
@@ -62,6 +66,12 @@ async function sha256Hex(text: string): Promise<string> {
 export interface AuthResult {
   ok: boolean
   message?: string
+}
+
+const beforeLogout = new Set<() => void>()
+export function onBeforeLogout(callback: () => void) {
+  beforeLogout.add(callback)
+  return () => beforeLogout.delete(callback)
 }
 
 export const useAuth = createGlobalState(() => {
@@ -252,6 +262,8 @@ export const useAuth = createGlobalState(() => {
   }
 
   async function logout() {
+    // Settle active study sessions before collecting the final upload.
+    beforeLogout.forEach(callback => callback())
     // 退出前尽力把最新数据推到云端
     if (syncEnabled && currentUser.value && getToken()) {
       try {

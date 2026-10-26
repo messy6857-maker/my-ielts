@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "up": "taze major -I",
-    "lint:critical": "eslint src/utils src/composables/syncClient.ts src/composables/useAuth.ts src/composables/useAISettings.ts src/composables/useAudio.ts src/composables/useBackup.ts src/composables/useDeckStore.ts src/composables/useMockHistory.ts src/composables/useRecorder.ts src/composables/useSingleAudio.ts test/audit-regression.test.ts test/reliability.test.ts test/uiReliability.test.ts"
+    "lint:critical": "eslint src/utils src/composables/syncClient.ts src/composables/useAuth.ts src/composables/useAISettings.ts src/composables/useAudio.ts src/composables/useBackup.ts src/composables/useDeckStore.ts src/composables/useMockHistory.ts src/composables/useRecorder.ts src/composables/useSingleAudio.ts test/audit-regression.test.ts test/reliability.test.ts test/uiReliability.test.ts src/composables/useSync.ts src/composables/useStudyData.ts src/composables/useStudyTimer.ts src/composables/useSpacedRepetition.ts src/composables/useDailyCounter.ts test/additional-review.test.ts test/dataset-review.test.ts test/study-lifecycle.test.ts"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

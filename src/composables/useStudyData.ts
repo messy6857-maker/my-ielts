@@ -55,7 +55,7 @@ export const useMistakes = createGlobalState(() => {
   const mistakes = ref<MistakeItem[]>([])
 
   function load() {
-    mistakes.value = readJson<MistakeItem[]>(nsKey('mistakes_v1'), [])
+    mistakes.value = readJson<MistakeItem[]>(nsKey('mistakes_v1'), [], 'mistakes_v1')
   }
   load()
 
@@ -63,7 +63,7 @@ export const useMistakes = createGlobalState(() => {
   watch(currentUser, load)
   watch(mistakes, v => writeJson(nsKey('mistakes_v1'), v), { deep: true })
 
-  function addMistake(module: MistakeModule, input: { key: string, title: string, detail?: string, hint?: string }) {
+  function addMistake(module: MistakeModule, input: { key: string; title: string; detail?: string; hint?: string }) {
     const now = Date.now()
     const exist = mistakes.value.find(m => m.key === input.key)
     if (exist) {
@@ -123,7 +123,7 @@ export const useProgress = createGlobalState(() => {
   const progress = ref<Record<string, ModuleProgress>>({})
 
   function load() {
-    progress.value = readJson<Record<string, ModuleProgress>>(nsKey('progress_v1'), {})
+    progress.value = readJson<Record<string, ModuleProgress>>(nsKey('progress_v1'), {}, 'progress_v1')
   }
   load()
 
@@ -157,7 +157,7 @@ export function useMastered(base: string) {
   const mastered = ref<string[]>([])
 
   function load() {
-    mastered.value = readJson<string[]>(nsKey(base), [])
+    mastered.value = readJson<string[]>(nsKey(base), [], base)
   }
   load()
 

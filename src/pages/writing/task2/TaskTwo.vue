@@ -70,7 +70,7 @@ const TIME_LIMIT = 40 * 60
 const view = ref<'home' | 'write' | 'result'>('home')
 const history = ref<SavedTask2[]>([])
 function loadHistory() {
-  history.value = readJson<SavedTask2[]>(nsKey(ESSAY_KEY), [])
+  history.value = readJson<SavedTask2[]>(nsKey(ESSAY_KEY), [], ESSAY_KEY)
 }
 loadHistory()
 function saveEssay(e: SavedTask2) {
