@@ -1,20 +1,24 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
-import AIGradeSpeaking from './AIGradeSpeaking.vue'
-import { formatRecordingClock, useRecorder } from '~/composables/useRecorder'
 import type { Part2Card } from './part2'
+import { computed, onUnmounted, ref } from 'vue'
+import { formatRecordingClock, useRecorder } from '~/composables/useRecorder'
+import { useDeadlineCountdown } from '../../composables/useDeadlineCountdown'
+import AIGradeSpeaking from './AIGradeSpeaking.vue'
 
 defineProps<{ card: Part2Card }>()
 const emit = defineEmits<{ back: [] }>()
 
 type Phase = 'ready' | 'prep' | 'talk' | 'done'
 const phase = ref<Phase>('ready')
-const countdown = ref(0)
+const clock = useDeadlineCountdown(() => {
+  if (phase.value === 'prep') void startTalk()
+  else if (phase.value === 'talk') finishTalk()
+})
+const countdown = clock.secondsLeft
 
 const PREP_SECONDS = 60
 const TALK_SECONDS = 120
 
-let timer: ReturnType<typeof setInterval> | null = null
 const recorder = useRecorder()
 
 const phaseLabel = computed(() => ({
@@ -24,24 +28,10 @@ const phaseLabel = computed(() => ({
   done: '✅ 完成',
 }[phase.value]))
 
-function clearTimer() {
-  if (timer) {
-    clearInterval(timer)
-    timer = null
-  }
-}
-
+function clearTimer() { clock.pause() }
 function startPrep() {
   phase.value = 'prep'
-  countdown.value = PREP_SECONDS
-  clearTimer()
-  timer = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0) {
-      clearTimer()
-      startTalk()
-    }
-  }, 1000)
+  clock.start(PREP_SECONDS)
 }
 
 async function startTalk() {
@@ -58,11 +48,7 @@ async function startTalk() {
     recorder.stop()
     return
   }
-  timer = setInterval(() => {
-    countdown.value--
-    if (countdown.value <= 0)
-      finishTalk()
-  }, 1000)
+  clock.start(TALK_SECONDS)
 }
 
 function finishTalk() {
@@ -98,12 +84,22 @@ onUnmounted(() => {
 
     <!-- Cue card -->
     <div class="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900/50 dark:bg-amber-900/10">
-      <div class="mb-1 text-xs text-gray-500 dark:text-gray-400">{{ card.category }} · Part 2</div>
-      <h3 class="mb-3 text-lg font-bold dark:text-white">{{ card.title }}</h3>
-      <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">{{ card.titleCn }}</p>
-      <div class="text-sm font-bold dark:text-white">You should say:</div>
+      <div class="mb-1 text-xs text-gray-500 dark:text-gray-400">
+{{ card.category }} · Part 2
+</div>
+      <h3 class="mb-3 text-lg font-bold dark:text-white">
+{{ card.title }}
+</h3>
+      <p class="mb-2 text-sm text-gray-500 dark:text-gray-400">
+{{ card.titleCn }}
+</p>
+      <div class="text-sm font-bold dark:text-white">
+You should say:
+</div>
       <ul class="mt-1 list-disc space-y-1 pl-5 text-sm leading-6 text-gray-700 dark:text-gray-300">
-        <li v-for="(b, i) in card.bullets" :key="i">{{ b }}</li>
+        <li v-for="(b, i) in card.bullets" :key="i">
+{{ b }}
+</li>
       </ul>
     </div>
 
@@ -133,7 +129,9 @@ onUnmounted(() => {
       </div>
 
       <div v-if="phase === 'prep'" class="space-y-3">
-        <p class="text-sm text-gray-500 dark:text-gray-400">在纸上快速记下要点，想好开头、中间、结尾。准备好可提前开始。</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+在纸上快速记下要点，想好开头、中间、结尾。准备好可提前开始。
+</p>
         <button
           class="rounded-lg bg-green-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-green-700"
           @click="startTalk"
@@ -156,12 +154,20 @@ onUnmounted(() => {
       </div>
 
       <div v-if="phase === 'done'" class="space-y-3">
-        <p class="text-sm text-gray-500 dark:text-gray-400">回放你的陈述，检查：有没有说满时间？四个要点都覆盖了吗？有没有长时间卡壳？</p>
+        <p class="text-sm text-gray-500 dark:text-gray-400">
+回放你的陈述，检查：有没有说满时间？四个要点都覆盖了吗？有没有长时间卡壳？
+</p>
         <audio v-if="recorder.audioUrl.value" :src="recorder.audioUrl.value" controls class="w-full" />
-        <p v-if="recorder.error.value" class="text-sm text-red-500">{{ recorder.error.value }}</p>
+        <p v-if="recorder.error.value" class="text-sm text-red-500">
+{{ recorder.error.value }}
+</p>
         <div v-if="recorder.transcript.value" class="rounded-lg bg-gray-50 p-3 text-xs leading-5 dark:bg-gray-700/50">
-          <div class="mb-1 font-bold text-gray-500 dark:text-gray-400">📝 语音转写</div>
-          <p class="text-gray-700 dark:text-gray-200">{{ recorder.transcript.value }}</p>
+          <div class="mb-1 font-bold text-gray-500 dark:text-gray-400">
+📝 语音转写
+</div>
+          <p class="text-gray-700 dark:text-gray-200">
+{{ recorder.transcript.value }}
+</p>
         </div>
         <AIGradeSpeaking
           v-if="recorder.transcript.value.trim()"

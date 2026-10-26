@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import type { Part2Card } from './part2'
 import { computed, ref } from 'vue'
-import PartTwoPractice from './PartTwoPractice.vue'
-import QuestionRecorder from './QuestionRecorder.vue'
 import { PART1_TOPICS } from './part1'
 import { PART2_CARDS } from './part2'
-import type { Part2Card } from './part2'
 import { PART3_TOPICS } from './part3'
+import PartTwoPractice from './PartTwoPractice.vue'
+import QuestionRecorder from './QuestionRecorder.vue'
 
 type Tab = 'part1' | 'part2' | 'part3'
 const tab = ref<Tab>('part1')
@@ -50,15 +50,23 @@ const tabBtn = (t: Tab) =>
 
 <template>
   <div class="mx-auto max-w-3xl px-4 pt-6 2xl:px-0">
-    <h2 class="mb-1 text-xl font-bold dark:text-white">🎙 口语</h2>
+    <h2 class="mb-1 text-xl font-bold dark:text-white">
+🎙 口语
+</h2>
     <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
       Part 1 日常问答 · Part 2 个人陈述（1 分钟准备 + 2 分钟陈述）· Part 3 深入讨论
     </p>
 
     <div class="mb-5 flex gap-2">
-      <button :class="tabBtn('part1')" @click="tab = 'part1'">Part 1</button>
-      <button :class="tabBtn('part2')" @click="tab = 'part2'">Part 2</button>
-      <button :class="tabBtn('part3')" @click="tab = 'part3'">Part 3</button>
+      <button :class="tabBtn('part1')" @click="tab = 'part1'">
+Part 1
+</button>
+      <button :class="tabBtn('part2')" @click="tab = 'part2'">
+Part 2
+</button>
+      <button :class="tabBtn('part3')" @click="tab = 'part3'">
+Part 3
+</button>
     </div>
 
     <!-- Part 1 -->
@@ -67,8 +75,10 @@ const tabBtn = (t: Tab) =>
         v-model="p1Keyword"
         placeholder="搜索话题…（如 工作、家乡）"
         class="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-      />
-      <p class="mb-3 text-xs text-gray-400">{{ p1Filtered.length }} 个话题 · 每题回答 20–30 秒，点话题展开后可录音自测</p>
+      >
+      <p class="mb-3 text-xs text-gray-400">
+{{ p1Filtered.length }} 个话题 · 每题回答 20–30 秒，点话题展开后可录音自测
+</p>
       <div class="space-y-2">
         <div
           v-for="t in p1Filtered"
@@ -81,7 +91,9 @@ const tabBtn = (t: Tab) =>
           </button>
           <div v-if="p1Expanded === t.id" class="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
             <div v-for="(q, i) in t.questions" :key="i" class="border-b border-gray-50 py-3 last:border-0 dark:border-gray-700/50">
-              <p class="text-sm leading-6 dark:text-gray-200">{{ q }}</p>
+              <p class="text-sm leading-6 dark:text-gray-200">
+{{ q }}
+</p>
               <QuestionRecorder :question="q" />
             </div>
           </div>
@@ -105,7 +117,9 @@ const tabBtn = (t: Tab) =>
             {{ c }}
           </button>
         </div>
-        <p class="mb-3 text-xs text-gray-400">{{ p2Filtered.length }} 张卡片 · 点一张开始计时练习</p>
+        <p class="mb-3 text-xs text-gray-400">
+{{ p2Filtered.length }} 张卡片 · 点一张开始计时练习
+</p>
         <div class="grid gap-2 sm:grid-cols-2">
           <button
             v-for="card in p2Filtered"
@@ -113,9 +127,15 @@ const tabBtn = (t: Tab) =>
             class="rounded-xl border border-gray-200 bg-white p-4 text-left hover:border-amber-400 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800"
             @click="activeCard = card"
           >
-            <div class="mb-1 text-xs text-amber-600 dark:text-amber-400">{{ card.category }}</div>
-            <div class="text-sm font-bold leading-6 dark:text-white">{{ card.title }}</div>
-            <div class="mt-1 text-xs text-gray-400">{{ card.titleCn }}</div>
+            <div class="mb-1 text-xs text-amber-600 dark:text-amber-400">
+{{ card.category }}
+</div>
+            <div class="text-sm font-bold leading-6 dark:text-white">
+{{ card.title }}
+</div>
+            <div class="mt-1 text-xs text-gray-400">
+{{ card.titleCn }}
+</div>
           </button>
         </div>
       </div>
@@ -124,7 +144,9 @@ const tabBtn = (t: Tab) =>
 
     <!-- Part 3 -->
     <div v-if="tab === 'part3'">
-      <p class="mb-3 text-xs text-gray-400">{{ PART3_TOPICS.length }} 个讨论话题 · 回答要有观点 + 解释 + 例子，可录音自测</p>
+      <p class="mb-3 text-xs text-gray-400">
+{{ PART3_TOPICS.length }} 个讨论话题 · 回答要有观点 + 解释 + 例子，可录音自测
+</p>
       <div class="space-y-2">
         <div
           v-for="t in PART3_TOPICS"
@@ -137,7 +159,9 @@ const tabBtn = (t: Tab) =>
           </button>
           <div v-if="p3Expanded === t.id" class="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
             <div v-for="(q, i) in t.questions" :key="i" class="border-b border-gray-50 py-3 last:border-0 dark:border-gray-700/50">
-              <p class="text-sm leading-6 dark:text-gray-200">{{ q }}</p>
+              <p class="text-sm leading-6 dark:text-gray-200">
+{{ q }}
+</p>
               <QuestionRecorder :question="q" />
             </div>
           </div>

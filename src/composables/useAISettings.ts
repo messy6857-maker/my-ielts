@@ -66,7 +66,7 @@ function extractJson(text: string): string {
 // 去掉模型可能输出的特殊 token（如 <endoftext>）和 think 标签
   const clean = text.replace(/<\|?endoftext\|?>/gi, '').replace(/<\/?think>/gi, '').trim()
   // 兼容模型把 JSON 包在 markdown 代码块里的情况
-  const m = clean.match(/```(?:json)?\s*([\s\S]*?)```/)
+  const m = clean.match(/```(?:json)?([\s\S]*?)```/)
   const raw = (m ? m[1] : clean).trim()
   const start = raw.indexOf('{')
   const end = raw.lastIndexOf('}')

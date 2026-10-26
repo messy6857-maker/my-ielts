@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import raw from './reading538words'
 import type { DeckCard } from '../../components/KeywordFlashcard.vue'
+import raw from './reading538words'
 
 defineOptions({ name: 'ReadingFlashcardPage' })
 

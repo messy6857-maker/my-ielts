@@ -1,7 +1,7 @@
+import { mount } from '@vue/test-utils'
 // Regression coverage for the seven follow-up audit findings.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
-import { mount } from '@vue/test-utils'
 
 beforeEach(() => {
   vi.resetModules()
@@ -16,7 +16,7 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-describe('Additional review regressions', () => {
+describe('additional review regressions', () => {
   it('sync must upload edits made while the previous upload is pending', async () => {
     vi.useFakeTimers()
     const { useAuth, writeJson } = await import('../src/composables/useAuth')
@@ -30,10 +30,10 @@ describe('Additional review regressions', () => {
     vi.stubGlobal('fetch', fetchMock)
     const { useSync } = await import('../src/composables/useSync')
     useSync().ensureWired()
-    writeJson('myielts_u_alice_progress_v1', { reading: { done: 1 } })
+    writeJson('myielts_u_alice_progress_v1', { reading: { done: 1, total: 40, updatedAt: 1 } })
     await vi.advanceTimersByTimeAsync(8000)
     expect(fetchMock).toHaveBeenCalledTimes(1)
-    writeJson('myielts_u_alice_progress_v1', { reading: { done: 2 } })
+    writeJson('myielts_u_alice_progress_v1', { reading: { done: 2, total: 40, updatedAt: 2 } })
     finish({ ok: true, json: async () => ({ ok: true }) })
     await Promise.resolve()
     await Promise.resolve()
@@ -127,6 +127,8 @@ describe('Additional review regressions', () => {
     const Typing = (await import('../src/pages/vocabulary/typing.vue')).default
     const { useProgress } = await import('../src/composables/useStudyData')
     const wrapper = mount(Typing)
+    await vi.dynamicImportSettled()
+    await nextTick()
     await wrapper.find('input[type="text"]').setValue(first)
     await wrapper.find('input[type="text"]').setValue(`${first}x`)
     await vi.advanceTimersByTimeAsync(200)
@@ -142,6 +144,8 @@ describe('Additional review regressions', () => {
     const Typing = (await import('../src/pages/vocabulary/typing.vue')).default
     const { useProgress } = await import('../src/composables/useStudyData')
     const wrapper = mount(Typing)
+    await vi.dynamicImportSettled()
+    await nextTick()
     await wrapper.find('input[type="text"]').setValue(first)
     wrapper.unmount()
     await vi.advanceTimersByTimeAsync(200)

@@ -1,7 +1,7 @@
+import { mount } from '@vue/test-utils'
 // Regression coverage for the October code audit. All external APIs are mocked.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick } from 'vue'
-import { mount } from '@vue/test-utils'
 
 beforeEach(() => {
   vi.resetModules()
@@ -17,22 +17,22 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-describe('Audit regressions: expected correct behavior', () => {
-  it('R01: choosing every option must not earn full marks on Choose TWO', async () => {
+describe('audit regressions: expected correct behavior', () => {
+  it('r01: choosing every option must not earn full marks on Choose TWO', async () => {
     const { multiSelectScore } = await import('../src/pages/mock/types')
     const { cam21Test1Listening } = await import('../src/pages/mock/cam21-test1-listening')
     const q = cam21Test1Listening.parts[2].questions[0]
     expect(multiSelectScore(q, '0,1,2,3,4')).toBe(0)
   })
 
-  it('R02: alice sync must exclude a distinct account alice_bob', async () => {
+  it('r02: alice sync must exclude a distinct account alice_bob', async () => {
     const { collectSyncData } = await import('../src/composables/syncClient')
     localStorage.setItem('myielts_u_alice_progress_v1', '{}')
     localStorage.setItem('myielts_u_alice_bob_task1_essays_v1', '["private fixture"]')
     expect(Object.keys(collectSyncData('alice'))).toEqual(['myielts_u_alice_progress_v1'])
   })
 
-  it('R03: mock-history save must notify automatic sync', async () => {
+  it('r03: mock-history save must notify automatic sync', async () => {
     const { onLocalWrite } = await import('../src/composables/useAuth')
     const { saveMockRecord } = await import('../src/composables/useMockHistory')
     const notify = vi.fn()
@@ -41,7 +41,7 @@ describe('Audit regressions: expected correct behavior', () => {
     expect(notify).toHaveBeenCalled()
   })
 
-  it('R04: cached deck must persist after first component scope is destroyed', async () => {
+  it('r04: cached deck must persist after first component scope is destroyed', async () => {
     const { useDeckStore } = await import('../src/composables/useDeckStore')
     const first = effectScope()
     let deck: ReturnType<typeof useDeckStore>
@@ -63,7 +63,7 @@ describe('Audit regressions: expected correct behavior', () => {
     expect(saved['audit_deck:b']).toEqual(schedule)
   })
 
-  it('R05: home Export Backup button must execute without ReferenceError', async () => {
+  it('r05: home Export Backup button must execute without ReferenceError', async () => {
     vi.useFakeTimers()
     const createURL = vi.fn(() => 'blob:fixture')
     const revokeURL = vi.fn()
@@ -88,7 +88,7 @@ describe('Audit regressions: expected correct behavior', () => {
     expect(revokeURL).toHaveBeenCalledWith('blob:fixture')
   })
 
-  it('R06: unmounting a recorder must stop its microphone tracks', async () => {
+  it('r06: unmounting a recorder must stop its microphone tracks', async () => {
     vi.useFakeTimers()
     const stopTrack = vi.fn()
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: { getUserMedia: vi.fn(async () => ({ getTracks: () => [{ stop: stopTrack }] })) } })
@@ -116,7 +116,7 @@ describe('Audit regressions: expected correct behavior', () => {
     expect(released).toBeGreaterThan(0)
   })
 
-  it('R07: global audio coordination must include detached audio used by pages', async () => {
+  it('r07: global audio coordination must include detached audio used by pages', async () => {
     const { initSingleAudio, createManagedAudio } = await import('../src/composables/useSingleAudio')
     initSingleAudio()
     const oldAudio = createManagedAudio()
@@ -129,16 +129,16 @@ describe('Audit regressions: expected correct behavior', () => {
     expect(pause).toHaveBeenCalled()
   })
 
-  it('R08: AI response missing criterion scores must be rejected before rendering', async () => {
+  it('r08: AI response missing criterion scores must be rejected before rendering', async () => {
     const { setToken } = await import('../src/composables/syncClient')
     setToken('fixture-token')
     const { saveAISettings, gradeEssayWithAI } = await import('../src/composables/useAISettings')
     saveAISettings({ baseUrl: 'https://example.invalid', apiKey: 'fixture', model: 'fixture' })
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ok: true, data: { choices: [{ message: { content: '{"scores":{"overall":6.5}}' } }] } }) })))
-    await expect(gradeEssayWithAI('task1', 'fixture question', Array(25).fill('word').join(' '))).rejects.toThrow()
+    await expect(gradeEssayWithAI('task1', 'fixture question', Array.from({length: 25}).fill('word').join(' '))).rejects.toThrow()
   })
 
-  it('R09: listening 179 audio must resolve under the GitHub Pages project base', async () => {
+  it('r09: listening 179 audio must resolve under the GitHub Pages project base', async () => {
     const Practice = (await import('../src/pages/listening/179practice.vue')).default
     const original = document.createElement.bind(document)
     const audio = original('audio')
@@ -158,7 +158,7 @@ describe('Audit regressions: expected correct behavior', () => {
     wrapper.unmount()
   })
 
-  it('R10: failed cloud GET must not be treated as an empty cloud and trigger PUT', async () => {
+  it('r10: failed cloud GET must not be treated as an empty cloud and trigger PUT', async () => {
     localStorage.setItem('myielts_u_alice_progress_v1', '{"reading":{"done":1}}')
     const requests: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {

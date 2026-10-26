@@ -1,4 +1,5 @@
-<script setup lang="ts" generic="T extends any, O extends any">
+<script setup lang="ts">
+import { normalizeAnswer } from '../../utils/normalizeAnswer'
 import words from './listening179.json'
 
 const ws = reactive(words.map((v) => {
@@ -30,6 +31,7 @@ const audioPlayer = useAudioPlayer()
 function play(word: string) {
   audioPlayer.play(`179_audios/${word}.mp3`)
 }
+function startPractice() { play(words[0].word) }
 function next(index: number) {
   const i = index + 1
 
@@ -38,7 +40,7 @@ function next(index: number) {
 
   // 处理词
   const practiceWord = cw.form.word.trim().toLowerCase()
-  const practiceReplace = cw.form.replaceStr.split(/[,，]/).map(v => v.trim().toLowerCase().replace(/\s+/g, ' '))
+  const practiceReplace = cw.form.replaceStr.split(/[,，]/).map(v => normalizeAnswer(v))
   // window.console.log(practiceReplace, practiceWord)
 
   const errorWords: string[] = []
@@ -46,7 +48,7 @@ function next(index: number) {
     errorWords.push(cw.word)
 
   errorWords.push(...cw.replace.filter((w) => {
-    return !practiceReplace.includes(w)
+    return !practiceReplace.includes(normalizeAnswer(w))
   }))
   cw.result.checked = true
   cw.result.errorWords = errorWords
@@ -77,7 +79,7 @@ function next(index: number) {
   <div>
     <div class="relative overflow-x-auto">
       <div>
-        <button @click="() => { play(words[0].word) }">
+        <button @click="startPractice">
           开始
         </button>
       </div>

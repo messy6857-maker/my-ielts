@@ -1,6 +1,6 @@
 <script setup lang="ts" generic="T extends any, O extends any">
 import { RouterLink } from 'vue-router'
-import { exportBackup, importBackup } from '../composables/useBackup'
+import { collectBackupData, exportBackup, importBackup } from '../composables/useBackup'
 
 defineOptions({
   name: 'IndexPage',
@@ -21,9 +21,10 @@ const fileInput = ref<HTMLInputElement | null>(null)
 
 function onExportBackup() {
   try {
+    const recoveryCount = Object.keys(collectBackupData().recovery ?? {}).length
     const count = exportBackup()
     backupOk.value = true
-    backupMsg.value = count > 0 ? `已导出 ${count} 项数据为备份文件` : '当前没有可备份的数据'
+    backupMsg.value = recoveryCount ? `已导出 ${count} 项有效数据；${recoveryCount} 项损坏原文保存在备份 recovery 中，便于手动恢复` : (count > 0 ? `已导出 ${count} 项数据为备份文件` : '当前没有可备份的数据')
   }
   catch {
     backupOk.value = false

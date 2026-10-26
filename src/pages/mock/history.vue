@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { getMockHistory, clearMockHistory } from '~/composables/useMockHistory'
 import type { MockRecord } from '~/composables/useMockHistory'
+import { ref, watch } from 'vue'
+import { clearMockHistory, getMockHistory } from '~/composables/useMockHistory'
 
 const records = ref<MockRecord[]>([])
 const { currentUser } = useAuth()

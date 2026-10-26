@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import vocabulary from './vocabulary'
+import { chapters, initialChapter, useVocabularyChapter } from '../../composables/useVocabularyChapter'
 
 const CHAPTER_KEY = 'vocabulary_typing_chapter'
-const chapters = Object.keys(vocabulary)
-const selectedChapter = ref(localStorage.getItem(CHAPTER_KEY) || chapters[0])
+const selectedChapter = ref(initialChapter(CHAPTER_KEY))
+
+const { chapter, loading: chapterLoading, error: chapterError, reload } = useVocabularyChapter(selectedChapter)
 
 const currentWordIndex = ref(0)
 const userInput = ref('')
@@ -15,6 +16,7 @@ const wordHadError = ref(false)
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
 const { currentUser } = useAuth()
+const audioPlayer = useAudioPlayer()
 let advanceTimer: ReturnType<typeof setTimeout> | null = null
 
 function cancelAdvance() {
@@ -22,15 +24,14 @@ function cancelAdvance() {
     clearTimeout(advanceTimer)
   advanceTimer = null
 }
-watch(currentUser, cancelAdvance, { flush: 'sync' })
+watch(currentUser, () => reset(), { flush: 'sync' })
 onUnmounted(cancelAdvance)
 
 const words = computed(() => {
-  const chapter = (vocabulary as any)[selectedChapter.value]
-  if (!chapter)
+  if (!chapter.value)
     return []
   // Flatten groups into a single list of words
-  return chapter.words.flat()
+  return chapter.value.words.flat()
 })
 
 const currentWordData = computed(() => words.value[currentWordIndex.value])
@@ -38,7 +39,9 @@ const currentWord = computed(() => currentWordData.value?.word[0] || '')
 
 watch(selectedChapter, (newVal) => {
   localStorage.setItem(CHAPTER_KEY, newVal)
-  reset()
+  cancelAdvance()
+  audioPlayer.stop()
+  userInput.value = ''
 })
 
 function reset() {
@@ -54,7 +57,6 @@ function reset() {
   playAudio()
 }
 
-const audioPlayer = useAudioPlayer()
 function playAudio() {
   if (currentWord.value)
     audioPlayer.play(`vocabulary/audio/${selectedChapter.value}/${currentWord.value}.mp3`)
@@ -67,6 +69,8 @@ function normalizeInput(s: string) {
 
 function handleInput(e: Event) {
   cancelAdvance()
+  if (chapterLoading.value || !currentWord.value)
+    return
   if (!startTime.value)
     startTime.value = Date.now()
 
@@ -134,19 +138,29 @@ function nextWord() {
   }
 }
 
-onMounted(() => {
-  reset()
-})
+watch(chapter, () => { if (chapter.value) reset() })
 </script>
 
 <template>
+  <p v-if="chapterLoading" role="status" class="p-6">
+正在加载章节…
+</p>
+  <p v-if="chapterError" role="alert" class="p-6">
+{{ chapterError }} <button @click="reload">
+重试
+</button>
+</p>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-3xl mx-auto">
       <!-- Header -->
       <div class="flex justify-between items-center mb-8">
         <div>
-          <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white">单词打字练习</h1>
-          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">照着背景单词输入，提升你的速度</p>
+          <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white">
+单词打字练习
+</h1>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+照着背景单词输入，提升你的速度
+</p>
         </div>
         <select
           v-model="selectedChapter"
@@ -156,7 +170,9 @@ onMounted(() => {
             v-for="c in chapters"
             :key="c"
             :value="c"
-          >{{ c }}</option>
+          >
+{{ c }}
+</option>
         </select>
       </div>
 
@@ -165,23 +181,35 @@ onMounted(() => {
         <div
           class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center"
         >
-          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">准确率</div>
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">
+准确率
+</div>
           <div
             class="text-2xl font-bold"
             :class="accuracy < 90 ? 'text-red-500' : 'text-green-500'"
-          >{{ accuracy }}%</div>
+          >
+{{ accuracy }}%
+</div>
         </div>
         <div
           class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center"
         >
-          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">WPM (速度)</div>
-          <div class="text-2xl font-bold text-blue-500">{{ wpm }}</div>
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">
+WPM (速度)
+</div>
+          <div class="text-2xl font-bold text-blue-500">
+{{ wpm }}
+</div>
         </div>
         <div
           class="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 text-center"
         >
-          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">进度</div>
-          <div class="text-2xl font-bold dark:text-white">{{ currentWordIndex + 1 }} / {{ words.length }}</div>
+          <div class="text-xs text-gray-500 uppercase tracking-wider mb-1">
+进度
+</div>
+          <div class="text-2xl font-bold dark:text-white">
+{{ currentWordIndex + 1 }} / {{ words.length }}
+</div>
         </div>
       </div>
 
@@ -217,6 +245,7 @@ onMounted(() => {
 
         <!-- Invisible Input covering the whole area -->
         <input
+          v-model="userInput"
           type="text"
           class="absolute inset-0 opacity-0 w-full h-full cursor-default caret-transparent"
           autofocus
@@ -224,17 +253,17 @@ onMounted(() => {
           autocorrect="off"
           autocomplete="off"
           spellcheck="false"
-          v-model="userInput"
+          :disabled="isFinished || chapterLoading || !!chapterError"
           @input="handleInput"
-          :disabled="isFinished"
-        />
+        >
 
         <!-- Meaning & Example (Hint) -->
         <div class="w-full text-center border-t border-gray-100 dark:border-gray-700 pt-6">
           <div class="text-xl font-medium text-gray-800 dark:text-gray-200 mb-2">
             <span
               style="font-style: italic; font-family: times;"
-              class="text-sm font-normal text-gray-400 mr-2 tracking-wide">
+              class="text-sm font-normal text-gray-400 mr-2 tracking-wide"
+>
               {{ currentWordData?.pos }}
             </span>
             {{ currentWordData?.meaning }}
@@ -247,10 +276,10 @@ onMounted(() => {
         <!-- Audio trigger hint -->
         <div class="absolute top-4 right-4">
           <button
-            @click="playAudio"
             class="p-2 text-gray-400 hover:text-blue-500 transition-colors"
+            @click="playAudio"
           >
-            <i class="i-ph-speaker-high-bold text-xl block"></i>
+            <i class="i-ph-speaker-high-bold text-xl block" />
           </button>
         </div>
       </div>
@@ -260,10 +289,12 @@ onMounted(() => {
         v-if="isFinished"
         class="mt-8 bg-blue-600 text-white p-6 rounded-2xl text-center shadow-xl animate-bounce"
       >
-        <h2 class="text-2xl font-bold mb-2">太棒了！恭喜完成本章练习 🎉</h2>
+        <h2 class="text-2xl font-bold mb-2">
+太棒了！恭喜完成本章练习 🎉
+</h2>
         <button
-          @click="reset"
           class="mt-4 bg-white text-blue-600 px-6 py-2 rounded-full font-bold hover:bg-blue-50 transition-colors"
+          @click="reset"
         >
           再练一次
         </button>
@@ -280,6 +311,7 @@ onMounted(() => {
 <style scoped>
 /* Ensure the input always has focus or can be focused easily */
 .relative:focus-within {
-  @apply ring-4 ring-blue-500/20 border-blue-500;
+  box-shadow: 0 0 0 4px rgb(59 130 246 / 20%);
+  border-color: #3b82f6;
 }
 </style>

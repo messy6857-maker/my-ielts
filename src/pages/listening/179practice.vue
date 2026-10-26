@@ -1,4 +1,5 @@
 <script setup>
+import { normalizeAnswer } from '../../utils/normalizeAnswer'
 import words from './listening179.json'
 
 const ws = reactive(words.map((v) => {
@@ -38,7 +39,7 @@ function next(index) {
 
   // 处理词
   const practiceWord = cw.form.word.trim().toLowerCase()
-  const practiceReplace = cw.form.replaceStr.split(/[,，]/).map(v => v.trim().toLowerCase().replace(/\s+/g, ' '))
+  const practiceReplace = cw.form.replaceStr.split(/[,，]/).map(v => normalizeAnswer(v))
   // window.console.log(practiceReplace, practiceWord)
 
   const errorWords = []
@@ -46,7 +47,7 @@ function next(index) {
     errorWords.push(cw.word)
 
   errorWords.push(...cw.replace.filter((w) => {
-    return !practiceReplace.includes(w)
+    return !practiceReplace.includes(normalizeAnswer(w))
   }))
   cw.result.checked = true
   cw.result.errorWords = errorWords

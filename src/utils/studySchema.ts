@@ -61,6 +61,10 @@ export function validateStudyValue(base: string, value: unknown): void {
       && ['listening', 'reading'].includes(String(item.kind)) && integer(item.total)
       && integer(item.score) && item.score <= item.total && number(item.band, 9))
   }
+  else if (base === 'task1_drafts_v1' || base === 'task2_drafts_v1') {
+    valid = object(value) && Object.values(value).every(item => object(item)
+      && typeof item.text === 'string' && integer(item.secondsLeft, base === 'task1_drafts_v1' ? 1200 : 2400) && number(item.updatedAt))
+  }
   else if (base === 'task1_essays_v1' || base === 'task2_essays_v1') {
     valid = Array.isArray(value) && value.every(item => object(item)
       && fields(item, ['promptId', 'promptTitleCn', 'text']) && number(item.id)

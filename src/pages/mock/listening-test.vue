@@ -1,26 +1,10 @@
 <script setup lang="ts">
-import { mockTestList, loadMockTest } from './registry'
-import type { MockTestPair } from './registry'
-import { bandScore, formatCountdown, isCorrect, multiSelectScore } from './types'
-import type { MockQuestion } from './types'
-import { useRouter, useRoute } from 'vue-router'
-import { saveMockRecord } from '~/composables/useMockHistory'
-
+import { useMockSession } from '../../composables/useMockSession'
+import { mockTestList } from './registry'
+import { formatCountdown } from './types'
 const router = useRouter()
-const route = useRoute()
-const testId = computed(() => (route.query.test as string) || 'cam21-test1')
-const testPair = ref<MockTestPair | null>(null)
-const test = computed(() => testPair.value?.listening)
-const loading = ref(true)
-const loadError = ref(false)
-const started = ref(false) // 点"开始测试"后才计时
-const timeLeft = ref(0)
-const answers = ref<Record<string, string>>({})
-const submitted = ref(false)
 const activePart = ref(0)
 const audioEl = ref<HTMLAudioElement | null>(null)
-let timer: ReturnType<typeof setInterval> | null = null
-let loadSeq = 0
 
 // audio 的 ref 写在 v-for 里，Vue 会收成数组；逐个暂停
 function pauseAllAudio() {
@@ -31,63 +15,12 @@ function pauseAllAudio() {
     els?.pause?.()
 }
 
-// 异步加载选中的套题（按需加载，不一次全载入）
-// loadSeq 防止快速切换时旧的加载覆盖新的；try/finally 保证 loading 一定复位
-async function loadTest() {
-  const seq = ++loadSeq
-  loading.value = true
-  loadError.value = false
-  if (timer)
-    clearInterval(timer)
-  pauseAllAudio()
-  try {
-    const pair = await loadMockTest(testId.value)
-    if (seq !== loadSeq)
-      return // 已被更新的加载取代
-    testPair.value = pair
-    answers.value = {}
-    submitted.value = false
-    activePart.value = 0
-    started.value = false
-  }
-  catch {
-    if (seq !== loadSeq)
-      return
-    loadError.value = true
-  }
-  finally {
-    if (seq === loadSeq)
-      loading.value = false
-  }
-}
-
-// 点"开始测试"才重置状态并开始计时
-function startTest() {
-  if (!testPair.value || started.value)
-    return
-  started.value = true
-  timeLeft.value = testPair.value.listening.timeLimit
-  answers.value = {}
-  submitted.value = false
+const { testId, testPair, loading, loadError, started, timeLeft, answers, submitted,
+  scoredTotal, correctCount, band, loadTest, startTest, submit, setAnswer, toggleMultiSelect, questionStatus } = useMockSession('listening', () => {
   activePart.value = 0
-  if (timer)
-    clearInterval(timer)
-  timer = setInterval(() => {
-    timeLeft.value--
-    if (timeLeft.value <= 0)
-      submit()
-  }, 1000)
-}
-
-onMounted(loadTest)
-watch(testId, loadTest)
-
-onUnmounted(() => {
-  if (timer)
-    clearInterval(timer)
-  pauseAllAudio()
-  document.body.classList.remove('listening-sticky-page')
-})
+}, pauseAllAudio)
+const test = computed(() => testPair.value?.listening)
+onUnmounted(() => document.body.classList.remove('listening-sticky-page'))
 
 // ---------- 地图图片 sticky ----------
 // App 内容容器默认 overflow-y-auto 会自己滚动，导致 sticky 相对它失效；
@@ -175,83 +108,6 @@ function onZoomWheel(e: WheelEvent) {
   adjustZoom(e.deltaY < 0 ? 0.25 : -0.25)
 }
 
-function submit() {
-  if (submitted.value)
-    return
-  submitted.value = true
-  if (timer)
-    clearInterval(timer)
-  pauseAllAudio()
-  // 保存做题记录
-  const qs = allQuestions.value
-  const total = qs.reduce((s, q) => s + (q.type === 'multi-select' && Array.isArray(q.answer) ? q.answer.length : 1), 0)
-  saveMockRecord({
-    id: testId.value,
-    label: testPair.value?.label ?? testId.value,
-    kind: 'listening',
-    score: correctCount.value,
-    total,
-    band: band.value,
-  })
-}
-
-const allQuestions = computed<MockQuestion[]>(() =>
-  test.value?.parts.flatMap(p => p.questions) ?? [],
-)
-
-// 满分题数（多选题按答案个数计）
-const scoredTotal = computed(() =>
-  allQuestions.value.reduce((s, q) => s + (q.type === 'multi-select' && Array.isArray(q.answer) ? q.answer.length : 1), 0),
-)
-
-const correctCount = computed(() => {
-  if (!submitted.value)
-    return 0
-  return allQuestions.value.reduce((sum, q) => {
-    const ans = answers.value[q.id] ?? ''
-    return sum + (q.type === 'multi-select' ? multiSelectScore(q, ans) : (isCorrect(q, ans) ? 1 : 0))
-  }, 0)
-})
-
-const band = computed(() => bandScore(correctCount.value))
-
-function setAnswer(qid: string, val: string) {
-  if (!submitted.value)
-    answers.value[qid] = val
-}
-
-function toggleMultiSelect(qid: string, idx: number) {
-  if (submitted.value)
-    return
-  const current = new Set((answers.value[qid] ?? '').split(',').filter(Boolean))
-  const s = String(idx)
-  if (current.has(s))
-    current.delete(s)
-  else {
-    const q = allQuestions.value.find(q => q.id === qid)
-    const limit = q && Array.isArray(q.answer) ? q.answer.length : 1
-    if (current.size >= limit)
-      return
-    current.add(s)
-  }
-  answers.value[qid] = [...current].join(',')
-}
-
-function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'unanswered' {
-  if (!submitted.value)
-    return 'unanswered'
-  const userAns = answers.value[q.id] ?? ''
-  if (!userAns)
-    return 'unanswered'
-  if (q.type === 'multi-select') {
-    const score = multiSelectScore(q, userAns)
-    const max = Array.isArray(q.answer) ? q.answer.length : 1
-    if (score === max)
-      return 'correct'
-    return score > 0 ? 'partial' : 'wrong'
-  }
-  return isCorrect(q, userAns) ? 'correct' : 'wrong'
-}
 </script>
 
 <template>
@@ -260,8 +116,12 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
       加载中…
     </div>
     <div v-else-if="loadError" class="py-20 text-center">
-      <p class="mb-4 text-4xl">😢</p>
-      <p class="mb-4 text-gray-500 dark:text-gray-400">题目加载失败，可能是网络抖动</p>
+      <p class="mb-4 text-4xl">
+😢
+</p>
+      <p class="mb-4 text-gray-500 dark:text-gray-400">
+题目加载失败，可能是网络抖动
+</p>
       <button
         class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
         @click="loadTest"
@@ -272,7 +132,9 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
     <template v-else-if="test">
     <!-- 开始屏：点开始才计时 -->
     <div v-if="!started" class="mx-auto max-w-2xl py-16 text-center">
-      <p class="mb-4 text-5xl">🎧</p>
+      <p class="mb-4 text-5xl">
+🎧
+</p>
       <h2 class="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
         {{ test.title }}
       </h2>
@@ -355,7 +217,7 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
       </button>
     </div>
 
-    <div v-for="(p, pi) in test.parts" :key="pi" v-show="submitted || activePart === pi" class="mb-8">
+    <div v-for="(p, pi) in test.parts" v-show="submitted || activePart === pi" :key="pi" class="mb-8">
       <article class="mb-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
         <h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
           {{ p.title }}
@@ -381,7 +243,7 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
               alt="题目示意图"
               class="w-full cursor-zoom-in rounded-lg lg:max-h-[70vh] lg:object-contain"
               @click="openZoom(p.image)"
-            />
+            >
             <button
               class="mt-2 w-full rounded-lg bg-gray-100 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
               @click="openZoom(p.image)"
@@ -456,7 +318,7 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
             placeholder="输入答案"
             class="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             @input="setAnswer(q.id, ($event.target as HTMLInputElement).value)"
-          />
+          >
 
           <input
             v-if="q.type === 'map-label'"
@@ -466,7 +328,7 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
             maxlength="1"
             class="w-24 rounded-lg border border-gray-300 px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             @input="setAnswer(q.id, ($event.target as HTMLInputElement).value)"
-          />
+          >
 
           <p v-if="submitted && questionStatus(q) !== 'correct'" class="mt-2 text-sm text-gray-500 dark:text-gray-400">
             正确答案：{{ q.type === 'fill-blank' ? (Array.isArray(q.answer) ? q.answer.join(' / ') : q.answer) : q.type === 'map-label' ? q.answer : q.options?.[q.answer as number] }}
@@ -504,18 +366,24 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
         <button
           class="h-9 w-9 rounded-full bg-white/15 text-xl font-bold text-white active:bg-white/30"
           @click="adjustZoom(-0.5)"
-        >−</button>
+        >
+−
+</button>
         <span class="w-14 text-center text-sm text-white/80">{{ Math.round(zoomScale * 100) }}%</span>
         <button
           class="h-9 w-9 rounded-full bg-white/15 text-xl font-bold text-white active:bg-white/30"
           @click="adjustZoom(0.5)"
-        >＋</button>
+        >
+＋
+</button>
       </div>
       <span class="hidden text-xs text-white/50 sm:inline">双指缩放 · 拖动平移 · 双击放大/还原</span>
       <button
         class="rounded-full bg-white/15 px-4 py-2 text-sm text-white active:bg-white/30"
         @click="closeZoom"
-      >✕ 关闭</button>
+      >
+✕ 关闭
+</button>
     </div>
     <div
       class="flex flex-1 touch-none items-center justify-center overflow-hidden"
@@ -531,7 +399,7 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
         class="max-h-full max-w-full rounded-lg"
         :style="{ transform: `translate(${zoomPos.x}px, ${zoomPos.y}px) scale(${zoomScale})` }"
         draggable="false"
-      />
+      >
     </div>
   </div>
 </template>

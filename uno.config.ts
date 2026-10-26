@@ -2,8 +2,8 @@ import {
   defineConfig,
   presetAttributify,
   presetIcons,
-  presetUno,
   presetWebFonts,
+  presetWind3,
 } from 'unocss'
 
 export default defineConfig({
@@ -24,13 +24,12 @@ export default defineConfig({
     transitionProperty: {
       width: 'width',
     },
-    textDecoration: ['active'],
     minWidth: {
       kanban: '28rem',
     },
   },
   presets: [
-    presetUno(),
+    presetWind3(),
     presetAttributify(),
     presetIcons({
       scale: 1.2,

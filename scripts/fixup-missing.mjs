@@ -6,8 +6,9 @@
  * 用法：node scripts/fixup-missing.mjs
  */
 import { readFileSync, writeFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const PROGRESS_FILE = join(ROOT, 'scripts', '.fetch-progress.json')

@@ -1,7 +1,8 @@
 // 云同步底层客户端：纯函数 + token 存取，不依赖 useAuth（避免循环引用）
 import { SYNC_API_BASE } from '../sync-config'
-import { studyBaseOf, writeStudyBatch } from '../utils/studyStorage'
 import { parseStudyValue } from '../utils/studySchema'
+import { collectStudySnapshot } from '../utils/studySnapshot'
+import { studyBaseOf, writeStudyBatch } from '../utils/studyStorage'
 
 export const syncEnabled = SYNC_API_BASE.trim() !== ''
 
@@ -42,15 +43,31 @@ async function api(path: string, method: string, body?: unknown, token?: string 
   const t = token === undefined ? getToken() : token
   if (t)
     headers.Authorization = `Bearer ${t}`
-  const res = await fetch(`${SYNC_API_BASE}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-  const json = await res.json().catch(() => null)
-  if (!json || typeof json !== 'object' || Array.isArray(json))
-    return { ok: false, message: '服务器响应格式异常' }
-  return { ...json, ok: res.ok && json.ok !== false }
+  const controller = new AbortController()
+  let timeout: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      (async () => {
+        const res = await fetch(`${SYNC_API_BASE}${path}`, {
+          method, headers, signal: controller.signal,
+          body: body === undefined ? undefined : JSON.stringify(body),
+        })
+        const json = await res.json().catch(() => null)
+        if (!json || typeof json !== 'object' || Array.isArray(json))
+          return { ok: false, message: '服务器响应格式异常' }
+        return { ...json, ok: res.ok && json.ok !== false } as ApiResult
+      })(),
+      new Promise<ApiResult>((_, reject) => {
+        timeout = setTimeout(() => {
+          controller.abort()
+          reject(new Error('同步请求超时，请重试'))
+        }, 15000)
+      }),
+    ])
+  }
+  finally {
+    clearTimeout(timeout)
+  }
 }
 
 export async function apiRegister(username: string, password: string): Promise<ApiResult> {
@@ -65,9 +82,13 @@ export async function apiPull(token?: string): Promise<ApiResult> {
   return api('/sync', 'GET', undefined, token)
 }
 
+const incompleteSnapshots = new WeakSet<object>()
+
 const uploads = new Map<string, Promise<ApiResult>>()
 
 export async function apiPush(data: Record<string, string>, token?: string): Promise<ApiResult> {
+  if (incompleteSnapshots.has(data))
+    return { ok: false, message: '本地有损坏的数据，已暂停上传；请先导出备份保留恢复内容' }
   // Logout and automatic/manual uploads share one queue per credential.
   // Capture credentials now rather than reading another account's token later.
   const credential = token ?? getToken()
@@ -86,21 +107,10 @@ export async function apiPush(data: Record<string, string>, token?: string): Pro
 
 // 收集当前账号需要同步的本地数据（只收 myielts_u_<username>_ 前缀的 key）
 export function collectSyncData(username: string): Record<string, string> {
-  const data: Record<string, string> = {}
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && studyBaseOf(key, username) !== null) {
-        const value = localStorage.getItem(key)
-        if (value !== null)
-          data[key] = value
-      }
-    }
-  }
-  catch {
-    // 忽略
-  }
-  return data
+  const snapshot = collectStudySnapshot(username)
+  if (snapshot.invalidBases.length)
+    incompleteSnapshots.add(snapshot.data)
+  return snapshot.data
 }
 
 // 把云端数据写回本地，然后调用方负责 reload

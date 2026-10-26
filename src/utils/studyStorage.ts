@@ -6,7 +6,7 @@ const studyBases = new Set([
   'flashcard_daily_goal_v1', 'flashcard_daily_new_v1', 'flashcard_checkin_v1',
   'listening179_sr_v1', 'listening179_daily_goal_v1', 'listening179_daily_new_v1',
   'reading538_sr_v1', 'reading538_daily_goal_v1', 'reading538_daily_new_v1',
-  'study_time_v1',
+  'study_time_v1', 'task1_drafts_v1', 'task2_drafts_v1',
 ])
 
 export function isStudyBase(base: string): boolean {

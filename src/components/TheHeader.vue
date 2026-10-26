@@ -82,8 +82,7 @@ async function onManualSync() {
             <span class="self-center whitespace-nowrap text-xl font-semibold sm:text-2xl dark:text-white">My
               <span class="ml-1 text-red-600"> IELTS™</span>
             </span>
-
-          </router-link>
+</router-link>
           <!-- Desktop menu -->
           <div class="hidden w-full items-center justify-between lg:order-1 lg:w-auto lg:flex">
             <ul class="mt-4 flex flex-col items-center justify-items-center text-center align-middle text-sm font-medium lg:mt-0 lg:flex-row space-x-6 xl:space-x-8">

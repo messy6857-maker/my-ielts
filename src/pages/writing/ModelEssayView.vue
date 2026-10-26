@@ -18,7 +18,9 @@ const essay = computed(() => getModelEssay(props.promptId))
       📖 查看范文
       <span class="ml-1 font-normal text-xs text-gray-400">{{ essay.wordCount }} 词</span>
     </summary>
-    <div class="mt-4 whitespace-pre-wrap text-sm leading-7 text-gray-800 dark:text-gray-200">{{ essay.essay }}</div>
+    <div class="mt-4 whitespace-pre-wrap text-sm leading-7 text-gray-800 dark:text-gray-200">
+{{ essay.essay }}
+</div>
     <p class="mt-4 text-xs text-gray-400">
       来源：
       <a

@@ -1,7 +1,7 @@
 <!-- eslint-disable eslint-comments/no-unlimited-disable -->
 <script setup generic="T extends any, O extends any">
-import vocabulary from './vocabulary'
 import { resolveAudioUrl } from '../../composables/useAudio'
+import { chapters, initialChapter, useVocabularyChapter } from '../../composables/useVocabularyChapter'
 
 const CHAPTER_KEY = 'vocabulary_chapter'
 
@@ -13,56 +13,28 @@ const isFinishTraining = ref(false)
 const isShowSource = ref(false)
 
 const trainingStats = ref('')
-const keyword = ref('')
-const chapters = Object.keys(vocabulary)
-const category = ref(localStorage.getItem(CHAPTER_KEY) || chapters[0])
+const category = ref(initialChapter(CHAPTER_KEY))
 
 const loaded = ref(false)
-const refVocabulary = reactive(vocabulary)
+const { chapter, loading: chapterLoading, error: chapterError, reload } = useVocabularyChapter(category)
+const refVocabulary = computed(() => chapter.value ? { [category.value]: chapter.value } : {})
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
-const wordList = computed(() => {
-  const result = vocabulary // Copy only the selected chapter below.
-  // const keywordValue = keyword.value.trim().toLowerCase()
-  const categoryValue = category.value
-
-  if (categoryValue !== '') {
-    // for (const key in result) {
-    //   if (key !== categoryValue)
-    //     delete result[key]
-    // }
-    return { [categoryValue]: structuredClone(result[categoryValue]) }
-  }
-
-  /* if (keywordValue !== '') {
-    for (const key in result) {
-      const category = result[key]
-      const words = []
-      category.words.forEach((group) => {
-        words.push(group.filter((item) => {
-          return item.word.toLowerCase().includes(keywordValue)
-        }))
-      })
-      category.words = words
-    }
-  } */
-  return {}
-})
-
-watch(category, (newVal, oldVal) => {
-  // console.log(newVal, oldVal)
+watch(category, (newVal) => {
   localStorage.setItem(CHAPTER_KEY, newVal)
-  syncProgress()
+  isFinishTraining.value = false
+  trainingStats.value = ''
 })
+watch(chapter, () => { if (chapter.value) syncProgress() })
 
 function calcStats() {
   let error = 0
   let missing = 0
   let correct = 0
   if (isTrainingModel.value) {
-    const cur = refVocabulary[category.value]
+    const cur = refVocabulary.value[category.value]
     // 遍历所有单词的属性
-    for (const group of cur.words) {
+    for (const group of cur?.words ?? []) {
       for (const item of group) {
         if (item.spellValue) {
           if (item.spellError)
@@ -93,13 +65,9 @@ onMounted(() => {
   }
 })
 
-onUpdated(() => {
-  // 音频再切换 SRC 之后需要调用一下 load() 不然看不到效果
-  for (const el of document.getElementsByTagName('audio'))
-    el.load()
-})
-
-document.addEventListener('keydown', (ev) => {
+useEventListener(document, 'keydown', (ev) => {
+  if (ev.target instanceof HTMLElement && (ev.target.closest('input, textarea, select, button, a') || ev.target.isContentEditable))
+    return
   // 激活的那个音频可以通过方向键进行快进/退
   if (['ArrowLeft', 'ArrowRight', ' '].includes(ev.key)) {
     ev.preventDefault()
@@ -177,9 +145,9 @@ function onInputFocusOut(e, item) {
 function syncProgress() {
   let done = 0
   let total = 0
-  const cur = refVocabulary[category.value]
+  const cur = refVocabulary.value[category.value]
   if (cur) {
-    for (const group of cur.words) {
+    for (const group of cur?.words ?? []) {
       for (const item of group) {
         total++
         if (item.spellValue)
@@ -206,7 +174,7 @@ function getInputStyleClass(item) {
 }
 
 function copyAllError() {
-  const words = refVocabulary[category.value].words
+  const words = refVocabulary.value[category.value]?.words ?? []
   const errorWords = []
   for (const group of words) {
     for (const item of group) {
@@ -219,6 +187,14 @@ function copyAllError() {
 </script>
 
 <template>
+  <p v-if="chapterLoading" class="p-6" role="status">
+正在加载章节…
+</p>
+  <p v-if="chapterError" class="p-6" role="alert">
+{{ chapterError }} <button @click="reload">
+重试
+</button>
+</p>
   <div class="px-4 pt-6 2xl:px-0">
     <div class="border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
       <!-- Card header -->
@@ -238,7 +214,7 @@ function copyAllError() {
               <!-- <option value="">
                 全部章节
               </option> -->
-              <option v-for="(_, k) in refVocabulary" :key="k" :value="k">
+              <option v-for="k in chapters" :key="k" :value="k">
                 {{ k }}
               </option>
             </select>
@@ -293,7 +269,7 @@ function copyAllError() {
         </div>
       </div>
       <!-- Table -->
-      <div class="mt-6 flex flex-col">
+      <div v-if="chapter" class="mt-6 flex flex-col">
         <div class="overflow-x-auto rounded-lg">
           <div class="inline-block min-w-full align-middle">
             <div class="shadow sm:rounded-lg">
@@ -360,7 +336,7 @@ function copyAllError() {
 
                         <template v-if="isTrainingModel">
                           <i
-                            :class="`${item.showSource ? 'i-ph-eye-slash-bold' : 'i-ph-eye-bold'} inline-block cursor-pointer ml-4`"
+                            :class="item.showSource ? 'i-ph-eye-slash-bold' : 'i-ph-eye-bold'" class="inline-block cursor-pointer ml-4"
                             title="显示原词" @click="item.showSource = !item.showSource"
                           />
                           <input

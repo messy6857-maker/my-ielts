@@ -1,6 +1,6 @@
+import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
-import { flushPromises, mount } from '@vue/test-utils'
 
 beforeEach(() => {
   vi.resetModules()
@@ -33,12 +33,12 @@ function aiResponse() {
   return { ok: true, status: 200, json: async () => ({ ok: true, data: { choices: [{ message: { content: JSON.stringify(grade) } }] } }) }
 }
 
-describe('AI panel lifecycle', () => {
+describe('aI panel lifecycle', () => {
   it('renders a validated response and persists it under the original account', async () => {
     await enableAI()
     vi.stubGlobal('fetch', vi.fn(async () => aiResponse()))
     const Panel = (await import('../src/pages/writing/AIGradePanel.vue')).default
-    const wrapper = mount(Panel, { props: { task: 'task1', question: 'fixture', essay: Array(25).fill('word').join(' ') }, global: { stubs: { RouterLink: true } } })
+    const wrapper = mount(Panel, { props: { task: 'task1', question: 'fixture', essay: Array.from({length: 25}).fill('word').join(' ') }, global: { stubs: { RouterLink: true } } })
     await wrapper.find('button').trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('AI 预估总分')
@@ -56,9 +56,9 @@ describe('AI panel lifecycle', () => {
       finish = resolve
     })))
     const Panel = (await import('../src/pages/writing/AIGradePanel.vue')).default
-    const wrapper = mount(Panel, { props: { task: 'task1', question: 'fixture', essay: Array(25).fill('old').join(' ') }, global: { stubs: { RouterLink: true } } })
+    const wrapper = mount(Panel, { props: { task: 'task1', question: 'fixture', essay: Array.from({length: 25}).fill('old').join(' ') }, global: { stubs: { RouterLink: true } } })
     await wrapper.find('button').trigger('click')
-    await wrapper.setProps({ essay: Array(25).fill('new').join(' ') })
+    await wrapper.setProps({ essay: Array.from({length: 25}).fill('new').join(' ') })
     finish(aiResponse())
     await flushPromises()
     expect(Object.keys(localStorage).filter(key => key.includes('_aigrade_v1_'))).toEqual([])
@@ -88,14 +88,14 @@ describe('AI panel lifecycle', () => {
       options.signal!.addEventListener('abort', () => reject(new Error('fixture aborted')), { once: true })
     })))
     const { gradeEssayWithAI } = await import('../src/composables/useAISettings')
-    const pending = gradeEssayWithAI('task1', 'fixture', Array(25).fill('word').join(' ')).catch(e => e as Error)
+    const pending = gradeEssayWithAI('task1', 'fixture', Array.from({length: 25}).fill('word').join(' ')).catch(e => e as Error)
     await vi.advanceTimersByTimeAsync(90000)
     expect((await pending as Error).message).toContain('超时')
     expect(vi.getTimerCount()).toBe(0)
   })
 })
 
-describe('Account-specific views', () => {
+describe('account-specific views', () => {
   it('clears displayed mock history immediately when switching account', async () => {
     const { useAuth } = await import('../src/composables/useAuth')
     useAuth().currentUser.value = 'alice'

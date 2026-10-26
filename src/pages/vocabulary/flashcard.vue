@@ -1,14 +1,12 @@
 <script setup lang="ts">
-import { getMnemonic } from './mnemonics'
-import { parseExtra } from './extraParser'
-import { gradeSchedule } from '../../composables/useSpacedRepetition'
-import { planQueue } from '../../composables/useDeckStore'
-import { formatClock, formatDuration, useStudyTimer } from '../../composables/useStudyTimer'
-import { getWordInfoWithFallback } from '../../composables/useWordInfo'
-import { synonymPosData } from './synonymPos'
-import { synonymMeanings } from './synonymMeanings'
 import type { WordInfo } from '../../composables/useWordInfo'
-import vocabulary from './vocabulary'
+import { planQueue } from '../../composables/useDeckStore'
+import { gradeSchedule } from '../../composables/useSpacedRepetition'
+import { formatClock, formatDuration, useStudyTimer } from '../../composables/useStudyTimer'
+import { chapters, initialChapter, useVocabularyChapter } from '../../composables/useVocabularyChapter'
+import { getWordInfoWithFallback } from '../../composables/useWordInfo'
+import { parseExtra } from './extraParser'
+import { getMnemonic } from './mnemonics'
 
 interface Card {
   id: number | string
@@ -24,8 +22,8 @@ interface Card {
 }
 
 const CHAPTER_KEY = 'vocabulary_flashcard_chapter'
-const chapters = Object.keys(vocabulary)
-const category = ref(localStorage.getItem(CHAPTER_KEY) || chapters[0])
+const category = ref(initialChapter(CHAPTER_KEY))
+const { chapter, info: chapterInfo, loading: chapterLoading, error: chapterError, reload } = useVocabularyChapter(category, true)
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
 const scheduleStore = useWordSchedule()
@@ -94,27 +92,11 @@ const extraDots = [
   'bg-orange-500', 'bg-teal-500', 'bg-indigo-500',
 ]
 // 同义词词性：从词库查（短语或生僻词查不到就不显示词性）
-const wordPosMap = computed(() => {
-  const map = new Map<string, string>()
-  for (const ch of Object.keys(vocabulary)) {
-    const chapter = (vocabulary as any)[ch]
-    if (!chapter)
-      continue
-    for (const w of chapter.words.flat()) {
-      const name = w.word?.[0]?.toLowerCase()
-      if (name && w.pos && !map.has(name))
-        map.set(name, w.pos)
-    }
-  }
-  return map
-})
 function synonymPos(syn: string): string {
-  // 先查本站词库，再查联网抓取的词性数据；都查不到就不显示（如实标注）
-  const key = syn.trim().toLowerCase()
-  return wordPosMap.value.get(key) || synonymPosData[key] || ''
+  return chapterInfo.value.positions[syn.trim().toLowerCase()] || ''
 }
 function synonymMeaning(syn: string): string {
-  return synonymMeanings[syn.trim().toLowerCase()] || ''
+  return chapterInfo.value.meanings[syn.trim().toLowerCase()] || ''
 }
 // 点击同义词展开/收起中文释义
 const expandedSyns = ref(new Set<string>())
@@ -167,8 +149,7 @@ function toCard(w: any, isNew: boolean): Card {
 }
 
 function buildQueue() {
-  const chapter = (vocabulary as any)[category.value]
-  const all = chapter ? chapter.words.flat() : []
+  const all = chapter.value?.words.flat() ?? []
   // 复习配额 = 3 × 每日新词目标（1:3）：到期优先，不足时从已学词里补；新词按今日剩余名额取
   const plan = planQueue(all, id => scheduleStore.get(id), daily.goal.value, daily.remaining.value)
   queue.value = [...plan.newWords.map(w => toCard(w, true)), ...plan.reviews.map(w => toCard(w, false))]
@@ -189,7 +170,7 @@ function buildQueue() {
 // 先自评：认识 / 不认识 / 模糊
 function grade(g: 0 | 3 | 5) {
   const card = current.value
-  if (!card)
+  if (!card || chapterLoading.value)
     return
   // 更新间隔重复调度
   scheduleStore.set(card.id, gradeSchedule(scheduleStore.get(card.id), g))
@@ -245,7 +226,7 @@ function next() {
 
 /** 自评前加载例句/同义词：查内置预抓取数据（本词 → 派生词），同步返回 */
 function loadWordInfo(card: Card) {
-  wordInfo.value = getWordInfoWithFallback([card.word, ...card.hintWords])
+  wordInfo.value = getWordInfoWithFallback([card.word, ...card.hintWords], chapterInfo.value.sentences)
 }
 
 function finishSession() {
@@ -263,8 +244,11 @@ function restart() {
 
 watch(category, (newVal) => {
   localStorage.setItem(CHAPTER_KEY, newVal)
-  buildQueue()
+  audioPlayer.stop()
+  queue.value = []
+  studying.value = null
 })
+watch(chapter, () => { if (chapter.value) buildQueue() })
 
 // 卡片切换时预加载联网例句/同义词
 watch(current, (c) => {
@@ -272,13 +256,28 @@ watch(current, (c) => {
     loadWordInfo(c)
 })
 
-onMounted(() => {
+const { currentUser } = useAuth()
+watch(currentUser, () => {
+  audioPlayer.stop()
+  showExitModal.value = false
   buildQueue()
+  timer.start()
+})
+
+onMounted(() => {
   timer.start()
 })
 </script>
 
 <template>
+  <p v-if="chapterLoading" role="status" class="p-6">
+正在加载章节…
+</p>
+  <p v-if="chapterError" role="alert" class="p-6">
+{{ chapterError }} <button @click="reload">
+重试
+</button>
+</p>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
     <div class="max-w-2xl mx-auto">
       <!-- Header -->
@@ -292,8 +291,12 @@ onMounted(() => {
             ← 返回
           </button>
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">单词自测</h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">看到单词先凭感觉自评，再按需学习词条</p>
+            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">
+单词自测
+</h1>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+看到单词先凭感觉自评，再按需学习词条
+</p>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -301,7 +304,9 @@ onMounted(() => {
             v-model="category"
             class="block w-36 border border-gray-300 rounded-lg bg-white p-2.5 text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500"
           >
-            <option v-for="c in chapters" :key="c" :value="c">{{ c }}</option>
+            <option v-for="c in chapters" :key="c" :value="c">
+{{ c }}
+</option>
           </select>
           <input
             v-model.lazy="goalProxy"
@@ -328,7 +333,7 @@ onMounted(() => {
             今日 {{ formatDuration(timer.dailySeconds.value) }}
           </span>
           <div class="w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden" title="今日目标 2 小时">
-            <div class="h-full bg-green-500 rounded-full transition-all" :style="{ width: Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) + '%' }" />
+            <div class="h-full bg-green-500 rounded-full transition-all" :style="{ width: `${Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) }%` }" />
           </div>
           <span class="text-xs font-bold text-orange-500">🔥 连续打卡 {{ checkinStreak }} 天</span>
           <div class="flex gap-1">
@@ -346,20 +351,36 @@ onMounted(() => {
       <!-- Session stats -->
       <div v-if="!finished" class="grid grid-cols-4 gap-3 mb-6 text-center">
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">本轮剩余</div>
-          <div class="text-lg font-bold dark:text-white">{{ remaining }}</div>
+          <div class="text-xs text-gray-500 mb-1">
+本轮剩余
+</div>
+          <div class="text-lg font-bold dark:text-white">
+{{ remaining }}
+</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">认识</div>
-          <div class="text-lg font-bold text-green-600">{{ stats.known }}</div>
+          <div class="text-xs text-gray-500 mb-1">
+认识
+</div>
+          <div class="text-lg font-bold text-green-600">
+{{ stats.known }}
+</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">不认识</div>
-          <div class="text-lg font-bold text-red-600">{{ stats.unknown }}</div>
+          <div class="text-xs text-gray-500 mb-1">
+不认识
+</div>
+          <div class="text-lg font-bold text-red-600">
+{{ stats.unknown }}
+</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">模糊</div>
-          <div class="text-lg font-bold text-yellow-600">{{ stats.vague }}</div>
+          <div class="text-xs text-gray-500 mb-1">
+模糊
+</div>
+          <div class="text-lg font-bold text-yellow-600">
+{{ stats.vague }}
+</div>
         </div>
       </div>
 
@@ -419,7 +440,9 @@ onMounted(() => {
             v-if="preMnemonic || (wordInfo && (wordInfo.examples.length > 0 || wordInfo.synonyms.length > 0)) || current.example"
             class="my-5 rounded-xl bg-sky-50 border border-sky-200 p-4 text-left dark:bg-sky-900/20 dark:border-sky-800"
           >
-            <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">💡 例句巧记</div>
+            <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">
+💡 例句巧记
+</div>
             <!-- 拆词：先只给词块，答案（词义）点一下才显示 -->
             <template v-if="preMnemonic && preMnemonic.kind === 'parts'">
               <p class="mb-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300">
@@ -449,7 +472,9 @@ onMounted(() => {
             </p>
           </div>
 
-          <p class="text-sm text-gray-400 mt-4 mb-6">看到这个词，第一感觉是？</p>
+          <p class="text-sm text-gray-400 mt-4 mb-6">
+看到这个词，第一感觉是？
+</p>
           <div class="grid grid-cols-3 gap-3">
             <button
               class="rounded-xl bg-green-50 border border-green-200 py-4 text-green-700 font-bold hover:bg-green-100 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
@@ -504,7 +529,9 @@ onMounted(() => {
 
           <!-- 例句扩展：预抓取的真实例句 + 同义词 -->
           <div v-if="wordInfo && (wordInfo.examples.length > 0 || wordInfo.synonyms.length > 0)" class="mb-6 rounded-xl bg-sky-50 border border-sky-200 p-4 text-left dark:bg-sky-900/20 dark:border-sky-800">
-            <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">🔗 例句扩展</div>
+            <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">
+🔗 例句扩展
+</div>
             <div v-if="wordInfo.examples.length > 0">
               <p v-for="(ex, i) in wordInfo.examples.slice(0, 2)" :key="i" class="mb-1 text-sm italic leading-relaxed text-gray-600 dark:text-gray-400">
                 “{{ ex }}”
@@ -512,7 +539,9 @@ onMounted(() => {
               </p>
             </div>
             <div v-if="wordInfo.synonyms.length > 0" class="mt-2">
-              <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">同义词：</p>
+              <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">
+同义词：
+</p>
               <ul class="space-y-1.5">
                 <li v-for="(syn, i) in wordInfo.synonyms.slice(0, 8)" :key="i" class="text-sm">
                   <span class="mr-1.5 inline-block w-2 h-2 rounded-full" :class="extraDots[i % extraDots.length]" />
@@ -520,7 +549,9 @@ onMounted(() => {
                     class="font-bold underline decoration-dotted underline-offset-2"
                     :class="extraColors[i % extraColors.length]"
                     @click="toggleSynMeaning(syn)"
-                  >{{ syn }}</button>
+                  >
+{{ syn }}
+</button>
                   <span v-if="synonymPos(syn)" class="ml-1 italic text-gray-500 dark:text-gray-400" style="font-family: times;">{{ synonymPos(syn) }}</span>
                   <span v-if="expandedSyns.has(syn.trim().toLowerCase()) && synonymMeaning(syn)" class="ml-2 text-gray-600 dark:text-gray-400">{{ synonymMeaning(syn) }}</span>
                 </li>
@@ -540,7 +571,9 @@ onMounted(() => {
                   class="font-bold underline decoration-dotted underline-offset-2"
                   :class="extraColors[i % extraColors.length]"
                   @click="toggleExtraMeaning(i)"
-                >{{ ex.word }}</button>
+                >
+{{ ex.word }}
+</button>
                 <span v-if="ex.pos" class="ml-1 text-sm italic text-gray-500 dark:text-gray-400" style="font-family: times;">{{ ex.pos }}</span>
                 <span v-if="expandedExtras.has(i)" class="ml-2 text-gray-600 dark:text-gray-400">{{ ex.meaning }}</span>
               </li>
@@ -557,7 +590,9 @@ onMounted(() => {
             <div v-if="showMnemonic" class="mt-2 text-sm text-amber-800 dark:text-amber-200">
               <template v-if="studyMnemonic">
                 <!-- 手写巧记：一句话 -->
-                <p v-if="studyMnemonic.kind === 'curated'">{{ studyMnemonic.body }}</p>
+                <p v-if="studyMnemonic.kind === 'curated'">
+{{ studyMnemonic.body }}
+</p>
                 <!-- 拆词巧记：自评后直接显示完整微故事 -->
                 <template v-else-if="studyMnemonic.kind === 'parts'">
                   <div class="flex flex-wrap gap-2 mb-1">
@@ -571,14 +606,20 @@ onMounted(() => {
                 </template>
                 <!-- 例句巧记：填空 + 点看答案 -->
                 <template v-else-if="studyMnemonic.kind === 'sentence'">
-                  <p class="italic mb-2">“{{ studyMnemonic.body }}”</p>
+                  <p class="italic mb-2">
+“{{ studyMnemonic.body }}”
+</p>
                   <button v-if="!showAnswer" class="text-xs underline underline-offset-2" @click="showAnswer = true">
                     想不起来？点我看答案
                   </button>
-                  <p v-else class="font-bold">答案：{{ studyMnemonic.answer }}</p>
+                  <p v-else class="font-bold">
+答案：{{ studyMnemonic.answer }}
+</p>
                 </template>
               </template>
-              <p v-else>试试拆音节跟读几遍，再结合上面的例句联想画面，效果会更好。</p>
+              <p v-else>
+试试拆音节跟读几遍，再结合上面的例句联想画面，效果会更好。
+</p>
             </div>
           </div>
 
@@ -594,11 +635,17 @@ onMounted(() => {
       <!-- 退出结算弹窗 -->
       <div v-if="showExitModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="cancelExit">
         <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl dark:bg-gray-800">
-          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">本次学习结束</h3>
-          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">{{ formatDuration(lastSessionSec) }}</p>
-          <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">今日累计 {{ formatDuration(timer.dailySeconds.value) }}</p>
+          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">
+本次学习结束
+</h3>
+          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">
+{{ formatDuration(lastSessionSec) }}
+</p>
+          <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">
+今日累计 {{ formatDuration(timer.dailySeconds.value) }}
+</p>
           <div class="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-            <div class="h-full rounded-full bg-green-500 transition-all" :style="{ width: Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) + '%' }" />
+            <div class="h-full rounded-full bg-green-500 transition-all" :style="{ width: `${Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) }%` }" />
           </div>
           <p class="mb-4 text-xs text-gray-400">
             {{ timer.dailySeconds.value >= timer.dailyGoal ? '今日目标已达成 🎉' : `距离今日目标 2 小时还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}` }}

@@ -2,20 +2,19 @@
 // 数据按账号隔离（经 nsKey），同一 ns 返回同一实例
 // 供听力 179 / 阅读 538 等独立卡片使用（词汇卡片沿用 useSpacedRepetition 的单例）
 
-import { effectScope } from 'vue'
-import { createDailyCounter } from './useDailyCounter'
-import { readJson, useAuth, writeJson } from './useAuth'
-import { nsKey } from './useStudyData'
 import type { WordSchedule } from './useSpacedRepetition'
+import { effectScope } from 'vue'
+import { useAccountData } from './useAccountData'
+import { createDailyCounter } from './useDailyCounter'
 
 export interface DeckStores {
-  getSchedule(id: string | number): WordSchedule | undefined
-  setSchedule(id: string | number, s: WordSchedule): void
+  getSchedule: (id: string | number) => WordSchedule | undefined
+  setSchedule: (id: string | number, s: WordSchedule) => void
   goal: Ref<number>
   dailyCount: Ref<number>
   remaining: ComputedRef<number>
-  setGoal(n: number): void
-  recordNewWord(): void
+  setGoal: (n: number) => void
+  recordNewWord: () => void
 }
 
 const cache = new Map<string, DeckStores>()
@@ -31,19 +30,8 @@ export function useDeckStore(ns: string): DeckStores {
 }
 
 function createDeckStore(ns: string): DeckStores {
-  const { currentUser } = useAuth()
-  const schedules = ref<Record<string, WordSchedule>>({})
+  const schedules = useAccountData<Record<string, WordSchedule>>(`${ns}_sr_v1`, () => ({}))
   const daily = createDailyCounter(ns)
-
-  const SKEY = `${ns}_sr_v1`
-
-  function load() {
-    schedules.value = readJson<Record<string, WordSchedule>>(nsKey(SKEY), {}, SKEY)
-  }
-  load()
-
-  watch(currentUser, load, { flush: 'sync' })
-  watch(schedules, v => writeJson(nsKey(SKEY), v), { deep: true, flush: 'sync' })
 
   function keyOf(id: string | number) {
     return `${ns}:${id}`

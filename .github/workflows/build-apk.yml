@@ -13,7 +13,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24.22.1
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -22,7 +22,7 @@ jobs:
           java-version: 21
 
       - name: Install dependencies
-        run: npm -g install pnpm@8.6.10 && pnpm i
+        run: npm -g install pnpm@11.25.0 && pnpm install --frozen-lockfile
 
       - name: Build web app
         run: pnpm run build

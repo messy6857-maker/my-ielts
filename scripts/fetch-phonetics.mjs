@@ -1,3 +1,4 @@
+import { execFile } from 'node:child_process'
 /**
  * 预抓取词库音标，打包进网站（每日阅读词汇注释显示发音用）。
  * 数据源：dictionaryapi.dev（https://api.dictionaryapi.dev/api/v2/entries/en/{word}）
@@ -6,10 +7,9 @@
  * 输出：src/pages/vocabulary/wordPhonetics.ts
  * 支持断点续抓：进度保存在 scripts/.fetch-phonetics-progress.json
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { execFile } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
 
 const execFileAsync = promisify(execFile)

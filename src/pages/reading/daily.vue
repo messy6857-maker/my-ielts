@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import indexData from './daily/index.json'
-import { useAuth } from '../../composables/useAuth'
 import { getToken } from '../../composables/syncClient'
+import { useAuth } from '../../composables/useAuth'
+import { stopAllAudio } from '../../composables/useSingleAudio'
 import { SYNC_API_BASE } from '../../sync-config'
 import { wordPhonetics } from '../vocabulary/wordPhonetics'
-import { stopAllAudio } from '../../composables/useSingleAudio'
+import indexData from './daily/index.json'
 
 const { currentUser } = useAuth()
 
@@ -139,12 +139,12 @@ function optionClass(articleKey: string, qIdx: number, optIdx: number, correctId
   const chosen = answers.value[key]
   const base = 'block w-full rounded-lg border px-4 py-2.5 text-left text-sm transition-colors '
   if (chosen === undefined)
-    return base + 'border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500 dark:hover:bg-blue-900/20'
+    return `${base  }border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500 dark:hover:bg-blue-900/20`
   if (optIdx === correctIdx)
-    return base + 'border-green-500 bg-green-50 text-green-800 dark:border-green-500 dark:bg-green-900/30 dark:text-green-300'
+    return `${base  }border-green-500 bg-green-50 text-green-800 dark:border-green-500 dark:bg-green-900/30 dark:text-green-300`
   if (optIdx === chosen)
-    return base + 'border-red-500 bg-red-50 text-red-800 dark:border-red-500 dark:bg-red-900/30 dark:text-red-300'
-  return base + 'border-gray-200 bg-white opacity-60 dark:border-gray-700 dark:bg-gray-800'
+    return `${base  }border-red-500 bg-red-50 text-red-800 dark:border-red-500 dark:bg-red-900/30 dark:text-red-300`
+  return `${base  }border-gray-200 bg-white opacity-60 dark:border-gray-700 dark:bg-gray-800`
 }
 
 watch(selectedDate, () => {
@@ -251,9 +251,13 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
         </select>
       </div>
 
-      <p v-if="dailyLoading" class="py-10 text-center text-gray-500">加载中…</p>
+      <p v-if="dailyLoading" class="py-10 text-center text-gray-500">
+加载中…
+</p>
       <div v-else-if="dailyError" class="py-10 text-center text-gray-500">
-        文章加载失败，<button class="text-blue-600 underline" @click="loadDaily">点击重试</button>
+        文章加载失败，<button class="text-blue-600 underline" @click="loadDaily">
+点击重试
+</button>
       </div>
       <template v-if="daily">
         <!-- 第一部分：词汇阅读（按账号个性化；游客不显示） -->
@@ -337,7 +341,9 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
           <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center dark:border-gray-600 dark:bg-gray-800/50">
             <p class="text-sm text-gray-500 dark:text-gray-400">
               📖 词汇阅读是按你的学词记录个性化生成的，
-              <router-link to="/login" class="text-blue-600 underline underline-offset-2 dark:text-blue-400">登录</router-link>
+              <router-link to="/login" class="text-blue-600 underline underline-offset-2 dark:text-blue-400">
+登录
+</router-link>
               后可见
             </p>
           </div>
@@ -351,8 +357,8 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
           </h3>
           <article
             v-for="(art, ai) in daily.newsReadings"
-            :key="ai"
             :id="`reading-news-${ai}`"
+            :key="ai"
             class="mb-6 scroll-mt-20 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
           >
             <h4 class="mb-1 text-xl font-bold text-gray-900 dark:text-white">

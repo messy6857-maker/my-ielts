@@ -1,10 +1,10 @@
 <!-- 通用考点词自测卡片：听力 179 / 阅读 538 共用
      与词汇自测卡片（/vocabulary/flashcard）是独立入口、独立进度 -->
 <script setup lang="ts">
-import { gradeSchedule } from '../composables/useSpacedRepetition'
-import { planQueue, useDeckStore } from '../composables/useDeckStore'
-import { formatClock, formatDuration, useStudyTimer } from '../composables/useStudyTimer'
 import type { MistakeModule, ProgressModule } from '../composables/useStudyData'
+import { planQueue, useDeckStore } from '../composables/useDeckStore'
+import { gradeSchedule } from '../composables/useSpacedRepetition'
+import { formatClock, formatDuration, useStudyTimer } from '../composables/useStudyTimer'
 
 export interface DeckCard {
   id: string | number
@@ -161,6 +161,14 @@ function restart() {
   buildQueue()
 }
 
+const { currentUser } = useAuth()
+watch(currentUser, () => {
+  audioPlayer.stop()
+  showExitModal.value = false
+  buildQueue()
+  timer.start()
+})
+
 onMounted(() => {
   buildQueue()
   timer.start()
@@ -180,8 +188,12 @@ onMounted(() => {
             ← {{ backLabel || '返回' }}
           </button>
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ title }}</h1>
-            <p v-if="subtitle" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</p>
+            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">
+{{ title }}
+</h1>
+            <p v-if="subtitle" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+{{ subtitle }}
+</p>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -210,7 +222,7 @@ onMounted(() => {
             今日 {{ formatDuration(timer.dailySeconds.value) }}
           </span>
           <div class="w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden" title="今日目标 2 小时">
-            <div class="h-full bg-green-500 rounded-full transition-all" :style="{ width: Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) + '%' }" />
+            <div class="h-full bg-green-500 rounded-full transition-all" :style="{ width: `${Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) }%` }" />
           </div>
           <span class="text-xs font-bold text-orange-500">🔥 连续打卡 {{ checkinStreak }} 天</span>
           <div class="flex gap-1">
@@ -228,20 +240,36 @@ onMounted(() => {
       <!-- Session stats -->
       <div v-if="!finished" class="grid grid-cols-4 gap-3 mb-6 text-center">
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">本轮剩余</div>
-          <div class="text-lg font-bold dark:text-white">{{ remaining }}</div>
+          <div class="text-xs text-gray-500 mb-1">
+本轮剩余
+</div>
+          <div class="text-lg font-bold dark:text-white">
+{{ remaining }}
+</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">认识</div>
-          <div class="text-lg font-bold text-green-600">{{ stats.known }}</div>
+          <div class="text-xs text-gray-500 mb-1">
+认识
+</div>
+          <div class="text-lg font-bold text-green-600">
+{{ stats.known }}
+</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">不认识</div>
-          <div class="text-lg font-bold text-red-600">{{ stats.unknown }}</div>
+          <div class="text-xs text-gray-500 mb-1">
+不认识
+</div>
+          <div class="text-lg font-bold text-red-600">
+{{ stats.unknown }}
+</div>
         </div>
         <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">模糊</div>
-          <div class="text-lg font-bold text-yellow-600">{{ stats.vague }}</div>
+          <div class="text-xs text-gray-500 mb-1">
+模糊
+</div>
+          <div class="text-lg font-bold text-yellow-600">
+{{ stats.vague }}
+</div>
         </div>
       </div>
 
@@ -296,7 +324,9 @@ onMounted(() => {
             </button>
           </div>
 
-          <p class="text-sm text-gray-400 mt-4 mb-6">看到这个词，第一感觉是？</p>
+          <p class="text-sm text-gray-400 mt-4 mb-6">
+看到这个词，第一感觉是？
+</p>
           <div class="grid grid-cols-3 gap-3">
             <button
               class="rounded-xl bg-green-50 border border-green-200 py-4 text-green-700 font-bold hover:bg-green-100 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
@@ -348,8 +378,12 @@ onMounted(() => {
 
           <!-- 同义替换 -->
           <div v-if="studying.synonyms.length > 0" class="mb-6 rounded-xl bg-teal-50 border border-teal-200 p-4 dark:bg-teal-900/20 dark:border-teal-800">
-            <div class="mb-2 text-sm font-bold text-teal-700 dark:text-teal-300">🔗 同义替换</div>
-            <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{{ studying.synonyms.join(' · ') }}</p>
+            <div class="mb-2 text-sm font-bold text-teal-700 dark:text-teal-300">
+🔗 同义替换
+</div>
+            <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+{{ studying.synonyms.join(' · ') }}
+</p>
           </div>
 
           <button
@@ -364,11 +398,17 @@ onMounted(() => {
       <!-- 退出结算弹窗 -->
       <div v-if="showExitModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="cancelExit">
         <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl dark:bg-gray-800">
-          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">本次学习结束</h3>
-          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">{{ formatDuration(lastSessionSec) }}</p>
-          <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">今日累计 {{ formatDuration(timer.dailySeconds.value) }}</p>
+          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">
+本次学习结束
+</h3>
+          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">
+{{ formatDuration(lastSessionSec) }}
+</p>
+          <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">
+今日累计 {{ formatDuration(timer.dailySeconds.value) }}
+</p>
           <div class="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-            <div class="h-full rounded-full bg-green-500 transition-all" :style="{ width: Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) + '%' }" />
+            <div class="h-full rounded-full bg-green-500 transition-all" :style="{ width: `${Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) }%` }" />
           </div>
           <p class="mb-4 text-xs text-gray-400">
             {{ timer.dailySeconds.value >= timer.dailyGoal ? '今日目标已达成 🎉' : `距离今日目标 2 小时还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}` }}

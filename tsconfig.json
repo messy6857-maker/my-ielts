@@ -1,28 +1,35 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "module": "ESNext",
-    "target": "es2016",
-    "lib": ["DOM", "ESNext"],
-    "strict": true,
+    "target": "ES2022",
     "jsx": "preserve",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
+    "lib": [
+      "DOM",
+      "ESNext"
+    ],
+    "module": "ESNext",
     "moduleResolution": "bundler",
+    "paths": {
+      "~/*": [
+        "./src/*"
+      ]
+    },
     "resolveJsonModule": true,
-    "noUnusedLocals": true,
-    "strictNullChecks": true,
-    "allowJs": true,
-    "noEmit": true,
-    "forceConsistentCasingInFileNames": true,
     "types": [
       "vite/client",
-      "vite-plugin-pages/client",
-      "unplugin-vue-macros/macros-global"
+      "vite-plugin-pages/client"
     ],
-    "paths": {
-      "~/*": ["src/*"]
-    }
+    "allowJs": true,
+    "strict": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
   },
-  "exclude": ["dist", "node_modules", "src/pages/vocabulary/vocabulary.js"]
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/pages/vocabulary/vocabulary.js"
+  ]
 }

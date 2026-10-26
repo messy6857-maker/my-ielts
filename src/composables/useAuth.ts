@@ -37,17 +37,30 @@ export function readJson<T>(key: string, fallback: T, studyBase?: string): T {
     return value as T
   }
   catch {
+    if (studyBase) {
+      try {
+        const raw = localStorage.getItem(key)
+        if (raw !== null && localStorage.getItem(`${key}__recovery`) === null)
+          localStorage.setItem(`${key}__recovery`, raw)
+      }
+      catch { /* The original key remains intact if recovery storage is full. */ }
+    }
     return fallback
   }
 }
+
+export const storageFailures = ref<string[]>([])
 
 export function writeJson(key: string, value: unknown) {
   try {
     localStorage.setItem(key, JSON.stringify(value))
   }
   catch {
+    if (!storageFailures.value.includes(key))
+      storageFailures.value = [...storageFailures.value, key]
     return false
   }
+  storageFailures.value = storageFailures.value.filter(failed => failed !== key)
   notifyLocalWrite()
   return true
 }
@@ -123,7 +136,7 @@ export const useAuth = createGlobalState(() => {
   // ---------- 服务器模式 ----------
   async function serverRegister(username: string, password: string): Promise<AuthResult> {
     username = username.trim()
-    if (!/^[a-zA-Z0-9_\u4E00-\u9FA5]{2,20}$/.test(username))
+    if (!/^[\w\u4E00-\u9FA5]{2,20}$/.test(username))
       return { ok: false, message: '用户名需为 2-20 位字母、数字、下划线或中文' }
     if (password.length < 4)
       return { ok: false, message: '密码至少 4 位' }
@@ -218,7 +231,7 @@ export const useAuth = createGlobalState(() => {
   // ---------- 本地模式（原有逻辑） ----------
   async function localRegister(username: string, password: string): Promise<AuthResult> {
     username = username.trim()
-    if (!/^[a-zA-Z0-9_\u4E00-\u9FA5]{2,20}$/.test(username))
+    if (!/^[\w\u4E00-\u9FA5]{2,20}$/.test(username))
       return { ok: false, message: '用户名需为 2-20 位字母、数字、下划线或中文' }
     if (password.length < 4)
       return { ok: false, message: '密码至少 4 位' }
@@ -261,18 +274,35 @@ export const useAuth = createGlobalState(() => {
     return localLogin(username, password, remember)
   }
 
+  const logoutNotice = ref('')
   async function logout() {
+    const user = currentUser.value
+    const credential = getToken()
+    let notice = ''
+    logoutNotice.value = ''
     // Settle active study sessions before collecting the final upload.
-    beforeLogout.forEach(callback => callback())
-    // 退出前尽力把最新数据推到云端
-    if (syncEnabled && currentUser.value && getToken()) {
+    beforeLogout.forEach((callback) => {
+      try { callback() }
+      catch { notice = '部分数据未能保存，请检查浏览器存储空间' }
+    })
+    if (syncEnabled && user && credential) {
+      let timeout: ReturnType<typeof setTimeout> | undefined
       try {
-        await apiPush(collectSyncData(currentUser.value))
+        const result = await Promise.race([
+          apiPush(collectSyncData(user), credential),
+          new Promise<{ ok: boolean }>(resolve => { timeout = setTimeout(resolve, 5000, { ok: false }) }),
+        ])
+        if (!result.ok)
+          notice = '已退出；本机学习数据已保留，云端同步未完成，请下次登录后重试'
       }
       catch {
-        // 忽略
+        notice = '已退出；本机学习数据已保留，云端同步未完成，请下次登录后重试'
       }
+      finally { clearTimeout(timeout) }
     }
+    if (currentUser.value !== user || getToken() !== credential)
+      return
+    logoutNotice.value = notice
     setToken(null)
     try {
       localStorage.removeItem(SESSION_KEY)
@@ -284,5 +314,5 @@ export const useAuth = createGlobalState(() => {
     currentUser.value = null
   }
 
-  return { currentUser, register, login, logout, syncEnabled }
+  return { currentUser, register, login, logout, logoutNotice, syncEnabled }
 })

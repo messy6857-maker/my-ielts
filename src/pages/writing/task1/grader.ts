@@ -171,7 +171,7 @@ export function analyzeEssay(text: string): EssayStats {
   for (const s of sentences) {
     const sl = ` ${s.toLowerCase()} `
     const hasSub = COMPLEX_MARKERS.some(m => sl.includes(` ${m} `))
-    const hasPassive = /\b(is|are|was|were|be|been|being)\s+\w+ed\b/.test(sl)
+    const hasPassive = /\b(?:is|are|was|were|be|been|being)\s+\w+ed\b/.test(sl)
     const hasCommaClause = (s.match(/,/g) || []).length >= 1 && s.split(/\s+/).length > 14
     if (hasSub || hasPassive || hasCommaClause)
       complexCount++

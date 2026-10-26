@@ -116,7 +116,9 @@ function pieSlices(data: { label: string, value: number }[]) {
     <!-- pie -->
     <div v-else-if="prompt.type === 'pie'" class="flex flex-wrap justify-around gap-4">
       <div v-for="pie in (prompt.pies || [])" :key="pie.title" class="text-center">
-        <div class="mb-1 text-sm font-bold text-gray-700">{{ pie.title }}</div>
+        <div class="mb-1 text-sm font-bold text-gray-700">
+{{ pie.title }}
+</div>
         <svg viewBox="0 0 180 180" class="mx-auto w-44">
           <path v-for="s in pieSlices(pie.data)" :key="s.label" :d="s.d" :fill="s.color" stroke="#fff" stroke-width="1.5" />
         </svg>
@@ -133,12 +135,16 @@ function pieSlices(data: { label: string, value: number }[]) {
     <table class="w-full min-w-[560px] text-sm">
       <thead>
         <tr class="border-b border-gray-200">
-          <th v-for="h in (prompt.tableHead || [])" :key="h" class="px-3 py-2 text-left font-bold text-gray-700">{{ h }}</th>
+          <th v-for="h in (prompt.tableHead || [])" :key="h" class="px-3 py-2 text-left font-bold text-gray-700">
+{{ h }}
+</th>
         </tr>
       </thead>
       <tbody>
         <tr v-for="(row, i) in (prompt.tableRows || [])" :key="i" class="border-b border-gray-100 last:border-0">
-          <td v-for="(cell, j) in row" :key="j" class="px-3 py-2 text-gray-600" :class="{ 'font-medium text-gray-800': j === 0 }">{{ cell }}</td>
+          <td v-for="(cell, j) in row" :key="j" class="px-3 py-2 text-gray-600" :class="{ 'font-medium text-gray-800': j === 0 }">
+{{ cell }}
+</td>
         </tr>
       </tbody>
     </table>

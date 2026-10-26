@@ -1,5 +1,5 @@
+import { createGlobalState, useEventListener, useIntervalFn } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
-import { createGlobalState, useEventListener, useNow } from '@vueuse/core'
 import { studyDate } from '../utils/studyDate'
 import { studyPrefix } from '../utils/studyStorage'
 import { readJson, useAuth, writeJson } from './useAuth'
@@ -7,11 +7,12 @@ import { nsKey } from './useStudyData'
 
 // One clock for all cached decks, including pages that remain open overnight.
 export const useStudyDay = createGlobalState(() => {
-  const now = useNow({ interval: 1000 })
+  const now = ref(new Date())
   const day = computed(() => studyDate(now.value))
   const refresh = () => {
     now.value = new Date()
   }
+  useIntervalFn(refresh, 1000)
   useEventListener(document, 'visibilitychange', refresh)
   return { now, day, refresh }
 })

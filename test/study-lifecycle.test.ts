@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 beforeEach(() => {
   vi.resetModules()
@@ -16,7 +16,7 @@ function response(ok = true) {
   return { ok, json: async () => ({ ok }) }
 }
 
-describe('Upload coordination', () => {
+describe('upload coordination', () => {
   it('coalesces manual pushes and ignores a response from the previous account', async () => {
     const { useAuth } = await import('../src/composables/useAuth')
     const { setToken } = await import('../src/composables/syncClient')
@@ -81,7 +81,7 @@ describe('Upload coordination', () => {
   })
 })
 
-describe('Account and date boundaries', () => {
+describe('account and date boundaries', () => {
   it('includes the settled timer in the logout upload and stops the session', async () => {
     vi.useFakeTimers()
     const { useAuth } = await import('../src/composables/useAuth')
@@ -140,7 +140,7 @@ describe('Account and date boundaries', () => {
   })
 })
 
-describe('Study data validation', () => {
+describe('study data validation', () => {
   it('keeps malformed stored mistakes and progress from crashing the app', async () => {
     localStorage.setItem('myielts_mistakes_v1', 'null')
     localStorage.setItem('myielts_progress_v1', '{"reading":null}')

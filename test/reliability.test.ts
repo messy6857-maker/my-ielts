@@ -1,6 +1,6 @@
+import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope, nextTick } from 'vue'
-import { mount } from '@vue/test-utils'
 
 beforeEach(() => {
   vi.resetModules()
@@ -27,8 +27,8 @@ function response(ok: boolean, data: unknown) {
   return { ok, status: ok ? 200 : 500, json: async () => data }
 }
 
-describe('Sync boundaries and failure handling', () => {
-  it('HTTP failure takes precedence over a JSON ok flag', async () => {
+describe('sync boundaries and failure handling', () => {
+  it('hTTP failure takes precedence over a JSON ok flag', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => response(false, { ok: true })))
     const { apiPull } = await import('../src/composables/syncClient')
     expect((await apiPull()).ok).toBe(false)
@@ -80,7 +80,7 @@ describe('Sync boundaries and failure handling', () => {
     const { collectSyncData } = await import('../src/composables/syncClient')
     localStorage.setItem('myielts_sync_token_v1', 'fixture')
     localStorage.setItem('myielts_u_alice_ai_settings_v1', '{}')
-    localStorage.setItem('myielts_u_alice_study_time_v1_device-1', '{}')
+    localStorage.setItem('myielts_u_alice_study_time_v1_device-1', '{"date":"2026-10-26","seconds":1}')
     expect(Object.keys(collectSyncData('alice'))).toEqual(['myielts_u_alice_study_time_v1_device-1'])
   })
 
@@ -101,7 +101,7 @@ describe('Sync boundaries and failure handling', () => {
   })
 })
 
-describe('Portable backups', () => {
+describe('portable backups', () => {
   it('exports the current account, excluding other accounts and secrets', async () => {
     const { useAuth } = await import('../src/composables/useAuth')
     useAuth().currentUser.value = 'alice'
@@ -185,7 +185,7 @@ describe('Portable backups', () => {
   })
 })
 
-describe('Study lifecycle and scoring', () => {
+describe('study lifecycle and scoring', () => {
   it('migrates legacy visitor history without assigning it to a future guest account', async () => {
     localStorage.setItem('myielts_u_guest_mock_history_v1', '[{"id":"fixture"}]')
     const { getMockHistory } = await import('../src/composables/useMockHistory')
@@ -274,7 +274,7 @@ describe('Study lifecycle and scoring', () => {
   })
 })
 
-describe('AI response schemas', () => {
+describe('aI response schemas', () => {
   function essay() {
     return {
       scores: { tr: 6, cc: 6.5, lr: 7, gra: 6, overall: 6.5 },

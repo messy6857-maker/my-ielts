@@ -2,8 +2,7 @@
 // 认识 -> 拉长复习间隔；模糊 -> 明天再见；不认识 -> 本轮内高频复现
 // 调度数据按账号隔离存储
 
-import { readJson, writeJson } from './useAuth'
-import { nsKey } from './useStudyData'
+import { useAccountData } from './useAccountData'
 import { createDailyCounter, useStudyDay } from './useDailyCounter'
 
 export interface WordSchedule {
@@ -61,21 +60,12 @@ export const useDailyGoal = createGlobalState(() => createDailyCounter('flashcar
 
 // 每天打卡：完成一轮学习即记一天，按账号隔离
 export const useCheckin = createGlobalState(() => {
-  const { currentUser } = useAuth()
-  const dates = ref<string[]>([])
-
-  function load() {
-    dates.value = readJson<string[]>(nsKey('flashcard_checkin_v1'), [], 'flashcard_checkin_v1')
-  }
-  load()
-
-  watch(currentUser, load)
+  const dates = useAccountData<string[]>('flashcard_checkin_v1', () => [])
 
   function checkin() {
     const t = todayStr()
     if (!dates.value.includes(t)) {
       dates.value = [...dates.value, t]
-      writeJson(nsKey('flashcard_checkin_v1'), dates.value)
     }
   }
 
@@ -106,16 +96,7 @@ export const useCheckin = createGlobalState(() => {
 })
 
 export const useWordSchedule = createGlobalState(() => {
-  const { currentUser } = useAuth()
-  const schedules = ref<Record<string, WordSchedule>>({})
-
-  function load() {
-    schedules.value = readJson<Record<string, WordSchedule>>(nsKey('sr_vocabulary_v1'), {}, 'sr_vocabulary_v1')
-  }
-  load()
-
-  watch(currentUser, load)
-  watch(schedules, v => writeJson(nsKey('sr_vocabulary_v1'), v), { deep: true })
+  const schedules = useAccountData<Record<string, WordSchedule>>('sr_vocabulary_v1', () => ({}))
 
   function keyOf(id: string | number) {
     return `vocab:${id}`

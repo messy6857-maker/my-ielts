@@ -1,7 +1,7 @@
+import { nextStudyDay, studyDate } from '../utils/studyDate'
 // 学习计时：进入自测卡片自动开始，退出时结算
 // 每日累计按账号隔离，目标每天 2 小时
 import { studyPrefix, writeStudyBatch } from '../utils/studyStorage'
-import { nextStudyDay, studyDate } from '../utils/studyDate'
 import { notifyLocalWrite, onBeforeLogout, readJson, useAuth } from './useAuth'
 
 export const DAILY_STUDY_GOAL = 2 * 3600 // 秒：每天 2 小时

@@ -33,7 +33,7 @@ export function parseAIGradeResult(value: unknown, task: 'task1' | 'task2'): AIG
   validateCriteria(result.scores, [...criteria, 'overall'], true)
   validateCriteria(result.comments, criteria, false)
   if (typeof result.suggestion !== 'string' || !Array.isArray(result.corrections))
-    throw new Error('AI 返回格式异常，请重试')
+    throw new TypeError('AI 返回格式异常，请重试')
   for (const correction of result.corrections)
     validateCriteria(correction, ['original', 'fixed', 'reason'], false)
   if (result.advice !== undefined)
@@ -49,6 +49,6 @@ export function parseAISpeakingResult(value: unknown): AISpeakingResult {
   validateCriteria(result.scores, [...criteria, 'overall'], true)
   validateCriteria(result.comments, criteria, false)
   if (typeof result.suggestion !== 'string')
-    throw new Error('AI 返回格式异常，请重试')
+    throw new TypeError('AI 返回格式异常，请重试')
   return result as unknown as AISpeakingResult
 }

@@ -1,13 +1,12 @@
 <script setup lang="ts">
+import type { AIGradeResult } from '~/composables/useAISettings'
+import type { DiffToken } from '~/composables/useWordDiff'
 import { computed, onScopeDispose, ref, watch } from 'vue'
 import { gradeEssayWithAI, hasAISettings } from '~/composables/useAISettings'
-import type { AIGradeResult } from '~/composables/useAISettings'
-import { useAuth } from '~/composables/useAuth'
-import { diffWords } from '~/composables/useWordDiff'
-import type { DiffToken } from '~/composables/useWordDiff'
-import { parseAIGradeResult } from '~/utils/aiSchema'
+import { useAuth, writeJson  } from '~/composables/useAuth'
 import { nsKey } from '~/composables/useStudyData'
-import { writeJson } from '~/composables/useAuth'
+import { diffWords } from '~/composables/useWordDiff'
+import { parseAIGradeResult } from '~/utils/aiSchema'
 
 const props = defineProps<{
   task: 'task1' | 'task2'
@@ -157,7 +156,9 @@ function tokenClass(t: DiffToken): string {
 <template>
   <div class="mb-6 rounded-xl border border-purple-200 bg-white p-5 dark:border-purple-900/50 dark:bg-gray-800">
     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-      <h4 class="font-bold text-sm dark:text-white">🤖 AI 批改 <span class="font-normal text-xs text-gray-400">（四项官方标准）</span></h4>
+      <h4 class="font-bold text-sm dark:text-white">
+🤖 AI 批改 <span class="font-normal text-xs text-gray-400">（四项官方标准）</span>
+</h4>
       <div class="flex items-center gap-3">
         <span v-if="!canUseAI" class="text-gray-400" title="locked">🔒</span>
         <template v-else>
@@ -175,7 +176,9 @@ function tokenClass(t: DiffToken): string {
       </div>
     </div>
 
-    <p v-if="aiError" class="text-sm text-red-500">{{ aiError }}</p>
+    <p v-if="aiError" class="text-sm text-red-500">
+{{ aiError }}
+</p>
 
     <div v-if="aiLoading" class="flex items-center gap-3 rounded-lg bg-purple-50 p-4 dark:bg-purple-900/20">
       <span class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-purple-300 border-t-purple-700" />
@@ -184,8 +187,12 @@ function tokenClass(t: DiffToken): string {
 
     <div v-if="aiResult">
       <div class="mb-4 text-center">
-        <div class="text-5xl font-bold" :class="scoreColor(aiResult.scores.overall)">{{ aiResult.scores.overall.toFixed(1) }}</div>
-        <div class="mt-1 text-xs text-gray-400">AI 预估总分</div>
+        <div class="text-5xl font-bold" :class="scoreColor(aiResult.scores.overall)">
+{{ aiResult.scores.overall.toFixed(1) }}
+</div>
+        <div class="mt-1 text-xs text-gray-400">
+AI 预估总分
+</div>
       </div>
       <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div
@@ -196,42 +203,62 @@ function tokenClass(t: DiffToken): string {
           <div class="text-2xl font-bold" :class="scoreColor(aiResult.scores[key])">
             {{ aiResult.scores[key].toFixed(1) }}
           </div>
-          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ label }}</div>
+          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+{{ label }}
+</div>
         </div>
       </div>
 
       <div class="mb-5 space-y-3">
         <div v-for="(label, key) in criterionLabels" :key="key">
-          <div class="mb-1 text-sm font-bold dark:text-white">{{ label }}</div>
-          <p class="text-sm leading-6 text-gray-600 dark:text-gray-300">{{ aiResult.comments[key] }}</p>
+          <div class="mb-1 text-sm font-bold dark:text-white">
+{{ label }}
+</div>
+          <p class="text-sm leading-6 text-gray-600 dark:text-gray-300">
+{{ aiResult.comments[key] }}
+</p>
         </div>
       </div>
 
       <div v-if="aiResult.advice" class="mb-5">
-        <div class="mb-2 text-sm font-bold dark:text-white">📋 四项标准详细修改建议</div>
+        <div class="mb-2 text-sm font-bold dark:text-white">
+📋 四项标准详细修改建议
+</div>
         <div class="space-y-2">
           <div
             v-for="(label, key) in criterionLabels"
             :key="key"
             class="rounded-lg border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-900/10"
           >
-            <div class="mb-1 text-xs font-bold text-blue-700 dark:text-blue-300">{{ label }} · {{ aiResult.scores[key].toFixed(1) }}分</div>
-            <p class="text-sm leading-6 text-gray-700 dark:text-gray-200">{{ aiResult.advice[key] }}</p>
+            <div class="mb-1 text-xs font-bold text-blue-700 dark:text-blue-300">
+{{ label }} · {{ aiResult.scores[key].toFixed(1) }}分
+</div>
+            <p class="text-sm leading-6 text-gray-700 dark:text-gray-200">
+{{ aiResult.advice[key] }}
+</p>
           </div>
         </div>
       </div>
 
       <div v-if="aiResult.corrections.length" class="mb-5">
-        <div class="mb-2 text-sm font-bold dark:text-white">✏️ 逐句修改</div>
+        <div class="mb-2 text-sm font-bold dark:text-white">
+✏️ 逐句修改
+</div>
         <div class="space-y-2">
           <div
             v-for="(c, i) in aiResult.corrections"
             :key="i"
             class="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50"
           >
-            <p class="text-gray-500 line-through dark:text-gray-400">{{ c.original }}</p>
-            <p class="mt-1 font-medium text-green-700 dark:text-green-400">{{ c.fixed }}</p>
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">💡 {{ c.reason }}</p>
+            <p class="text-gray-500 line-through dark:text-gray-400">
+{{ c.original }}
+</p>
+            <p class="mt-1 font-medium text-green-700 dark:text-green-400">
+{{ c.fixed }}
+</p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+💡 {{ c.reason }}
+</p>
           </div>
         </div>
       </div>
@@ -267,7 +294,9 @@ function tokenClass(t: DiffToken): string {
       <div class="rounded-lg bg-purple-50 p-4 text-sm leading-6 dark:bg-purple-900/20 dark:text-gray-200">
         <span class="font-bold">📈 提分建议：</span>{{ aiResult.suggestion }}
       </div>
-      <p class="mt-3 text-xs text-gray-400">AI 批改仅供练习参考，不是官方评分</p>
+      <p class="mt-3 text-xs text-gray-400">
+AI 批改仅供练习参考，不是官方评分
+</p>
     </div>
 
     <p v-else-if="!aiLoading && !aiError" class="text-xs leading-5 text-gray-400">

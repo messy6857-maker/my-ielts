@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import words from './listening179.json'
 import type { DeckCard } from '../../components/KeywordFlashcard.vue'
+import words from './listening179.json'
 
 defineOptions({ name: 'ListeningFlashcardPage' })
 

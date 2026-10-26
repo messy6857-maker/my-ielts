@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import type { AISpeakingResult } from '~/composables/useAISettings'
 import { computed, onScopeDispose, ref, watch } from 'vue'
 import { gradeSpeakingWithAI, hasAISettings } from '~/composables/useAISettings'
-import type { AISpeakingResult } from '~/composables/useAISettings'
 import { useAuth } from '~/composables/useAuth'
 
 const props = defineProps<{
@@ -73,7 +73,9 @@ function scoreColor(s: number) {
 <template>
   <div class="mt-3 rounded-xl border border-purple-200 bg-purple-50/50 p-4 dark:border-purple-900/50 dark:bg-purple-900/10">
     <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-      <h4 class="text-sm font-bold dark:text-white">🤖 AI 评分 <span class="font-normal text-xs text-gray-400">（口语三项标准）</span></h4>
+      <h4 class="text-sm font-bold dark:text-white">
+🤖 AI 评分 <span class="font-normal text-xs text-gray-400">（口语三项标准）</span>
+</h4>
       <div class="flex items-center gap-2">
         <span v-if="!canUseAI" class="text-gray-400" title="locked">🔒</span>
         <template v-else>
@@ -92,12 +94,18 @@ function scoreColor(s: number) {
       </div>
     </div>
 
-    <p v-if="error" class="text-xs text-red-500">{{ error }}</p>
+    <p v-if="error" class="text-xs text-red-500">
+{{ error }}
+</p>
 
     <div v-if="result">
       <div class="mb-3 text-center">
-        <div class="text-4xl font-bold" :class="scoreColor(result.scores.overall)">{{ result.scores.overall.toFixed(1) }}</div>
-        <div class="mt-1 text-xs text-gray-400">AI 预估总分</div>
+        <div class="text-4xl font-bold" :class="scoreColor(result.scores.overall)">
+{{ result.scores.overall.toFixed(1) }}
+</div>
+        <div class="mt-1 text-xs text-gray-400">
+AI 预估总分
+</div>
       </div>
       <div class="mb-3 grid grid-cols-3 gap-2">
         <div
@@ -108,19 +116,27 @@ function scoreColor(s: number) {
           <div class="text-xl font-bold" :class="scoreColor(result.scores[key])">
             {{ result.scores[key].toFixed(1) }}
           </div>
-          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ label }}</div>
+          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+{{ label }}
+</div>
         </div>
       </div>
       <div class="mb-3 space-y-2">
         <div v-for="(label, key) in labels" :key="key">
-          <div class="text-xs font-bold dark:text-white">{{ label }}</div>
-          <p class="text-xs leading-5 text-gray-600 dark:text-gray-300">{{ result.comments[key] }}</p>
+          <div class="text-xs font-bold dark:text-white">
+{{ label }}
+</div>
+          <p class="text-xs leading-5 text-gray-600 dark:text-gray-300">
+{{ result.comments[key] }}
+</p>
         </div>
       </div>
       <div class="rounded-lg bg-white p-3 text-xs leading-5 dark:bg-gray-700/50 dark:text-gray-200">
         <span class="font-bold">📈 提分建议：</span>{{ result.suggestion }}
       </div>
-      <p class="mt-2 text-xs text-gray-400">发音项无法从文字转写评估，请回放录音自行检查语调、重音和连读。AI 评分仅供练习参考。</p>
+      <p class="mt-2 text-xs text-gray-400">
+发音项无法从文字转写评估，请回放录音自行检查语调、重音和连读。AI 评分仅供练习参考。
+</p>
     </div>
 
     <p v-else-if="!loading && !error" class="text-xs leading-5 text-gray-400">

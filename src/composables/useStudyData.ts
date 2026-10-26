@@ -2,7 +2,8 @@
 // 数据按账号隔离：未登录用 myielts_ 前缀（游客模式），
 // 登录后用 myielts_u_<用户名>_ 前缀，每个账号一套独立数据
 
-import { readJson, useAuth, writeJson } from './useAuth'
+import { useAccountData } from './useAccountData'
+import { useAuth } from './useAuth'
 
 export type MistakeModule = 'vocabulary' | 'typing' | 'listening' | 'reading'
 export type ProgressModule = 'vocabulary' | 'flashcard' | 'typing' | 'listening' | 'reading' | 'writing' | 'listening_flashcard' | 'reading_flashcard'
@@ -51,17 +52,7 @@ export function nsKey(base: string): string {
 
 // 用全局单例，保证导航栏徽标和各页面看到的是同一份响应式数据
 export const useMistakes = createGlobalState(() => {
-  const { currentUser } = useAuth()
-  const mistakes = ref<MistakeItem[]>([])
-
-  function load() {
-    mistakes.value = readJson<MistakeItem[]>(nsKey('mistakes_v1'), [], 'mistakes_v1')
-  }
-  load()
-
-  // 切换账号时重新加载该账号的数据
-  watch(currentUser, load)
-  watch(mistakes, v => writeJson(nsKey('mistakes_v1'), v), { deep: true })
+  const mistakes = useAccountData<MistakeItem[]>('mistakes_v1', () => ([]))
 
   function addMistake(module: MistakeModule, input: { key: string; title: string; detail?: string; hint?: string }) {
     const now = Date.now()
@@ -119,16 +110,7 @@ export const useMistakes = createGlobalState(() => {
 })
 
 export const useProgress = createGlobalState(() => {
-  const { currentUser } = useAuth()
-  const progress = ref<Record<string, ModuleProgress>>({})
-
-  function load() {
-    progress.value = readJson<Record<string, ModuleProgress>>(nsKey('progress_v1'), {}, 'progress_v1')
-  }
-  load()
-
-  watch(currentUser, load)
-  watch(progress, v => writeJson(nsKey('progress_v1'), v), { deep: true })
+  const progress = useAccountData<Record<string, ModuleProgress>>('progress_v1', () => ({}))
 
   function setProgress(module: ProgressModule, done: number, total: number) {
     progress.value[module] = { done, total, updatedAt: Date.now() }
@@ -153,16 +135,7 @@ export const useProgress = createGlobalState(() => {
 
 // 通用“已掌握”标记（如写作 100 句、阅读 538 词），按账号隔离
 export function useMastered(base: string) {
-  const { currentUser } = useAuth()
-  const mastered = ref<string[]>([])
-
-  function load() {
-    mastered.value = readJson<string[]>(nsKey(base), [], base)
-  }
-  load()
-
-  watch(currentUser, load)
-  watch(mastered, v => writeJson(nsKey(base), v))
+  const mastered = useAccountData<string[]>(base, () => ([]))
 
   function isMastered(id: string | number) {
     return mastered.value.includes(String(id))

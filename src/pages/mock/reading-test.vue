@@ -1,164 +1,21 @@
 <script setup lang="ts">
-import { mockTestList, loadMockTest } from './registry'
-import type { MockTestPair } from './registry'
-import { bandScore, formatCountdown, isCorrect, multiSelectScore } from './types'
-import type { MockQuestion } from './types'
-import { useRouter } from 'vue-router'
-import { saveMockRecord } from '~/composables/useMockHistory'
-
+import { useMockSession } from '../../composables/useMockSession'
+import { mockTestList } from './registry'
+import { formatCountdown } from './types'
 const router = useRouter()
-const route = useRoute()
-const testId = computed(() => (route.query.test as string) || 'cam21-test1')
-const testPair = ref<MockTestPair | null>(null)
-const test = computed(() => testPair.value?.reading)
-const loading = ref(true)
-const loadError = ref(false)
-const started = ref(false) // 点"开始测试"后才计时
-const timeLeft = ref(0)
-const answers = ref<Record<string, string>>({})
-const submitted = ref(false)
 const activePassage = ref(0)
 const showPassageModal = ref(false)
 // 划词高亮：passageIndex -> 高亮词组列表
 const highlights = ref<Map<number, string[]>>(new Map())
 const selPopup = ref<{ x: number, y: number, text: string } | null>(null)
-let timer: ReturnType<typeof setInterval> | null = null
-let loadSeq = 0
-
-function submit() {
-  if (submitted.value)
-    return
-  submitted.value = true
-  if (timer)
-    clearInterval(timer)
-  // 保存做题记录
-  const total = allQuestions.value.reduce((s, q) => s + (q.type === 'multi-select' && Array.isArray(q.answer) ? q.answer.length : 1), 0)
-  saveMockRecord({
-    id: testId.value,
-    label: testPair.value?.label ?? testId.value,
-    kind: 'reading',
-    score: correctCount.value,
-    total,
-    band: band.value,
-  })
-}
-
-// 异步加载选中的套题（按需加载）
-// loadSeq 防止快速切换时旧的加载覆盖新的；try/finally 保证 loading 一定复位
-async function loadTest() {
-  const seq = ++loadSeq
-  loading.value = true
-  loadError.value = false
-  if (timer)
-    clearInterval(timer)
-  try {
-    const pair = await loadMockTest(testId.value)
-    if (seq !== loadSeq)
-      return // 已被更新的加载取代
-    testPair.value = pair
-    answers.value = {}
-    submitted.value = false
-    activePassage.value = 0
-    highlights.value = new Map()
-    selPopup.value = null
-    started.value = false
-  }
-  catch {
-    if (seq !== loadSeq)
-      return
-    loadError.value = true
-  }
-  finally {
-    if (seq === loadSeq)
-      loading.value = false
-  }
-}
-
-// 点"开始测试"才重置状态并开始计时
-function startTest() {
-  if (!testPair.value || started.value)
-    return
-  started.value = true
-  timeLeft.value = testPair.value.reading.timeLimit
-  answers.value = {}
-  submitted.value = false
+const { testId, testPair, loading, loadError, started, timeLeft, answers, submitted,
+  scoredTotal, correctCount, band, loadTest, startTest, submit, setAnswer, toggleMultiSelect, questionStatus } = useMockSession('reading', () => {
   activePassage.value = 0
+  showPassageModal.value = false
   highlights.value = new Map()
   selPopup.value = null
-  if (timer)
-    clearInterval(timer)
-  timer = setInterval(() => {
-    timeLeft.value--
-    if (timeLeft.value <= 0)
-      submit()
-  }, 1000)
-}
-
-onMounted(loadTest)
-watch(testId, loadTest)
-
-onUnmounted(() => {
-  if (timer)
-    clearInterval(timer)
 })
-
-const allQuestions = computed<MockQuestion[]>(() =>
-  test.value?.passages.flatMap(p => p.questions) ?? [],
-)
-
-// 满分题数（多选题按答案个数计）
-const scoredTotal = computed(() =>
-  allQuestions.value.reduce((s, q) => s + (q.type === 'multi-select' && Array.isArray(q.answer) ? q.answer.length : 1), 0),
-)
-
-const correctCount = computed(() => {
-  if (!submitted.value)
-    return 0
-  return allQuestions.value.reduce((sum, q) => {
-    const ans = answers.value[q.id] ?? ''
-    return sum + (q.type === 'multi-select' ? multiSelectScore(q, ans) : (isCorrect(q, ans) ? 1 : 0))
-  }, 0)
-})
-
-const band = computed(() => bandScore(correctCount.value))
-
-function setAnswer(qid: string, val: string) {
-  if (!submitted.value)
-    answers.value[qid] = val
-}
-
-function toggleMultiSelect(qid: string, idx: number) {
-  if (submitted.value)
-    return
-  const current = new Set((answers.value[qid] ?? '').split(',').filter(Boolean))
-  const s = String(idx)
-  if (current.has(s))
-    current.delete(s)
-  else {
-    const q = allQuestions.value.find(q => q.id === qid)
-    const limit = q && Array.isArray(q.answer) ? q.answer.length : 1
-    if (current.size >= limit)
-      return
-    current.add(s)
-  }
-  answers.value[qid] = [...current].join(',')
-}
-
-function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'unanswered' {
-  if (!submitted.value)
-    return 'unanswered'
-  const userAns = answers.value[q.id] ?? ''
-  if (!userAns)
-    return 'unanswered'
-  if (q.type === 'multi-select') {
-    const score = multiSelectScore(q, userAns)
-    const max = Array.isArray(q.answer) ? q.answer.length : 1
-    if (score === max)
-      return 'correct'
-    return score > 0 ? 'partial' : 'wrong'
-  }
-  return isCorrect(q, userAns) ? 'correct' : 'wrong'
-}
+const test = computed(() => testPair.value?.reading)
 
 // 划词高亮
 function escapeRegExp(s: string): string {
@@ -246,8 +103,12 @@ function handleMarkClick(e: MouseEvent) {
       加载中…
     </div>
     <div v-else-if="loadError" class="py-20 text-center">
-      <p class="mb-4 text-4xl">😢</p>
-      <p class="mb-4 text-gray-500 dark:text-gray-400">题目加载失败，可能是网络抖动</p>
+      <p class="mb-4 text-4xl">
+😢
+</p>
+      <p class="mb-4 text-gray-500 dark:text-gray-400">
+题目加载失败，可能是网络抖动
+</p>
       <button
         class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
         @click="loadTest"
@@ -258,7 +119,9 @@ function handleMarkClick(e: MouseEvent) {
     <template v-else-if="test">
     <!-- 开始屏：点开始才计时 -->
     <div v-if="!started" class="mx-auto max-w-2xl py-16 text-center">
-      <p class="mb-4 text-5xl">📖</p>
+      <p class="mb-4 text-5xl">
+📖
+</p>
       <h2 class="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
         {{ test.title }}
       </h2>
@@ -345,7 +208,7 @@ function handleMarkClick(e: MouseEvent) {
     </div>
 
     <!-- 题目区：桌面端左右分栏各自独立滚动，手机端上下堆叠 -->
-    <div v-for="(p, pi) in test.passages" :key="pi" v-show="submitted || activePassage === pi" class="mb-8">
+    <div v-for="(p, pi) in test.passages" v-show="submitted || activePassage === pi" :key="pi" class="mb-8">
       <div class="grid gap-6 lg:grid-cols-2 lg:h-[calc(100vh-12rem)]">
         <!-- 左：文章（独立滚动，支持划词高亮） -->
         <article
@@ -370,14 +233,14 @@ function handleMarkClick(e: MouseEvent) {
             💡 选中词组可标记高亮，点击已标记的词可取消
           </p>
           <div class="space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
-            <p v-for="(para, i) in p.passage.split('\n\n')" :key="i" v-html="highlightedPara(para, pi)" @click="handleMarkClick" />
+            <p v-for="(para, i) in p.passage.split('\n\n')" :key="i" @click="handleMarkClick" v-html="highlightedPara(para, pi)" />
           </div>
           <img
             v-if="p.image"
             :src="p.image"
             :alt="`${p.title} 示意图`"
             class="mt-4 max-w-full rounded-lg border border-gray-200 dark:border-gray-700"
-          />
+          >
         </article>
 
         <!-- 右：题目（独立滚动） -->
@@ -448,7 +311,7 @@ function handleMarkClick(e: MouseEvent) {
             placeholder="输入答案"
             class="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             @input="setAnswer(q.id, ($event.target as HTMLInputElement).value)"
-          />
+          >
 
           <!-- 地图标注题 -->
           <input
@@ -459,7 +322,7 @@ function handleMarkClick(e: MouseEvent) {
             maxlength="2"
             class="w-24 rounded-lg border border-gray-300 px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             @input="setAnswer(q.id, ($event.target as HTMLInputElement).value)"
-          />
+          >
 
           <!-- 交卷后显示正确答案 -->
           <p v-if="submitted && questionStatus(q) !== 'correct'" class="mt-2 text-sm text-gray-500 dark:text-gray-400">
@@ -491,7 +354,7 @@ function handleMarkClick(e: MouseEvent) {
     <div
       v-if="selPopup"
       class="fixed z-50 -translate-x-1/2 -translate-y-full rounded-lg bg-gray-900 px-3 py-2 shadow-xl"
-      :style="{ left: selPopup.x + 'px', top: selPopup.y + 'px' }"
+      :style="{ left: `${selPopup.x }px`, top: `${selPopup.y }px` }"
     >
       <div class="flex items-center gap-2">
         <button
@@ -537,14 +400,14 @@ function handleMarkClick(e: MouseEvent) {
       </div>
       <div class="flex-1 overflow-y-auto px-4 py-4" data-passage @mouseup="handleSelect(activePassage)" @touchend="handleSelect(activePassage)">
         <div class="space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
-          <p v-for="(para, i) in test.passages[activePassage].passage.split('\n\n')" :key="i" v-html="highlightedPara(para, activePassage)" @click="handleMarkClick" />
+          <p v-for="(para, i) in test.passages[activePassage].passage.split('\n\n')" :key="i" @click="handleMarkClick" v-html="highlightedPara(para, activePassage)" />
         </div>
         <img
           v-if="test.passages[activePassage].image"
           :src="test.passages[activePassage].image"
           :alt="`${test.passages[activePassage].title} 示意图`"
           class="mt-4 max-w-full rounded-lg border border-gray-200 dark:border-gray-700"
-        />
+        >
       </div>
     </div>
     </div>

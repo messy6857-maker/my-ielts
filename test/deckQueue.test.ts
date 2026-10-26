@@ -1,6 +1,6 @@
+import type { WordSchedule } from '../src/composables/useSpacedRepetition'
 import { describe, expect, it } from 'vitest'
 import { planQueue } from '../src/composables/useDeckStore'
-import type { WordSchedule } from '../src/composables/useSpacedRepetition'
 
 const NOW = 1_000_000_000_000
 const DAY = 86_400_000
