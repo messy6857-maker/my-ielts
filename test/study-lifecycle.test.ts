@@ -21,7 +21,7 @@ describe('upload coordination', () => {
     const { useAuth } = await import('../src/composables/useAuth')
     const { setToken } = await import('../src/composables/syncClient')
     useAuth().currentUser.value = 'alice'
-    setToken('alice-token')
+    setToken('alice-token', 'alice')
     let finish!: (result: ReturnType<typeof response>) => void
     const fetchMock = vi.fn(() => new Promise((resolve) => {
       finish = resolve
@@ -34,7 +34,7 @@ describe('upload coordination', () => {
     await Promise.resolve()
     await Promise.resolve()
     useAuth().currentUser.value = 'bob'
-    setToken('bob-token')
+    setToken('bob-token', 'bob')
     finish(response())
     expect(await first).toBe(false)
     expect(fetchMock).toHaveBeenCalledOnce()
@@ -44,7 +44,7 @@ describe('upload coordination', () => {
 
   it('serializes API uploads under the credential captured when called', async () => {
     const { apiPush, setToken } = await import('../src/composables/syncClient')
-    setToken('alice-token')
+    setToken('alice-token', 'alice')
     let finish!: (result: ReturnType<typeof response>) => void
     const fetchMock = vi.fn().mockImplementationOnce(() => new Promise((resolve) => {
       finish = resolve
@@ -52,7 +52,7 @@ describe('upload coordination', () => {
     vi.stubGlobal('fetch', fetchMock)
     const first = apiPush({ first: '{}' })
     const second = apiPush({ second: '{}' })
-    setToken('bob-token')
+    setToken('bob-token', 'bob')
     await Promise.resolve()
     await Promise.resolve()
     expect(fetchMock).toHaveBeenCalledOnce()
@@ -66,7 +66,7 @@ describe('upload coordination', () => {
     const { useAuth, writeJson } = await import('../src/composables/useAuth')
     const { setToken } = await import('../src/composables/syncClient')
     useAuth().currentUser.value = 'alice'
-    setToken('fixture')
+    setToken('fixture', 'alice')
     const fetchMock = vi.fn().mockResolvedValueOnce(response(false)).mockResolvedValue(response())
     vi.stubGlobal('fetch', fetchMock)
     const { useSync } = await import('../src/composables/useSync')
@@ -88,7 +88,7 @@ describe('account and date boundaries', () => {
     const { setToken } = await import('../src/composables/syncClient')
     const auth = useAuth()
     auth.currentUser.value = 'alice'
-    setToken('fixture')
+    setToken('fixture', 'alice')
     const fetchMock = vi.fn().mockResolvedValue(response())
     vi.stubGlobal('fetch', fetchMock)
     const { useStudyTimer, getDeviceId } = await import('../src/composables/useStudyTimer')

@@ -37,7 +37,7 @@ describe('sync boundaries and failure handling', () => {
   it('failed login sync preserves the previous token and account', async () => {
     const { setToken, getToken } = await import('../src/composables/syncClient')
     const { useAuth } = await import('../src/composables/useAuth')
-    setToken('old-token')
+    setToken('old-token', 'old_user')
     useAuth().currentUser.value = 'old_user'
     vi.stubGlobal('fetch', vi.fn(async (url: string) => url.endsWith('/login')
       ? response(true, { ok: true, token: 'new-token' })

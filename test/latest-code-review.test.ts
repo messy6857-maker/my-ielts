@@ -155,7 +155,7 @@ describe('wall clock and network interruption', () => {
     const { setToken } = await import('../src/composables/syncClient')
     const auth = useAuth()
     auth.currentUser.value = 'alice'
-    setToken('fixture')
+    setToken('fixture', 'alice')
     let finish!: (value: unknown) => void
     vi.stubGlobal('fetch', vi.fn(() => new Promise((resolve) => { finish = resolve })))
     const pending = auth.logout()

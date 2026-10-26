@@ -13,6 +13,7 @@ declare global {
   const EffectScope: typeof import('vue').EffectScope
   const MISTAKE_MODULE_LABEL: typeof import('./src/composables/useStudyData').MISTAKE_MODULE_LABEL
   const PROGRESS_MODULE_LABEL: typeof import('./src/composables/useStudyData').PROGRESS_MODULE_LABEL
+  const TOKEN_KEY: typeof import('./src/composables/syncClient').TOKEN_KEY
   const aiSettingsState: typeof import('./src/composables/useAISettings').aiSettingsState
   const apiLogin: typeof import('./src/composables/syncClient').apiLogin
   const apiPull: typeof import('./src/composables/syncClient').apiPull
@@ -236,6 +237,7 @@ declare global {
   const useElementSize: typeof import('@vueuse/core').useElementSize
   const useElementVisibility: typeof import('@vueuse/core').useElementVisibility
   const useEssayDraft: typeof import('./src/composables/useEssayDraft').useEssayDraft
+  const useEssayHistory: typeof import('./src/composables/useWritingSession').useEssayHistory
   const useEventBus: typeof import('@vueuse/core').useEventBus
   const useEventListener: typeof import('@vueuse/core').useEventListener
   const useEventSource: typeof import('@vueuse/core').useEventSource
@@ -364,6 +366,7 @@ declare global {
   const useWindowScroll: typeof import('@vueuse/core').useWindowScroll
   const useWindowSize: typeof import('@vueuse/core').useWindowSize
   const useWordSchedule: typeof import('./src/composables/useSpacedRepetition').useWordSchedule
+  const useWritingSession: typeof import('./src/composables/useWritingSession').useWritingSession
   const watch: typeof import('vue').watch
   const watchArray: typeof import('@vueuse/core').watchArray
   const watchAtMost: typeof import('@vueuse/core').watchAtMost
@@ -432,6 +435,7 @@ declare module 'vue' {
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly MISTAKE_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['MISTAKE_MODULE_LABEL']>
     readonly PROGRESS_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['PROGRESS_MODULE_LABEL']>
+    readonly TOKEN_KEY: UnwrapRef<typeof import('./src/composables/syncClient')['TOKEN_KEY']>
     readonly aiSettingsState: UnwrapRef<typeof import('./src/composables/useAISettings')['aiSettingsState']>
     readonly apiLogin: UnwrapRef<typeof import('./src/composables/syncClient')['apiLogin']>
     readonly apiPull: UnwrapRef<typeof import('./src/composables/syncClient')['apiPull']>
@@ -652,6 +656,7 @@ declare module 'vue' {
     readonly useElementSize: UnwrapRef<typeof import('@vueuse/core')['useElementSize']>
     readonly useElementVisibility: UnwrapRef<typeof import('@vueuse/core')['useElementVisibility']>
     readonly useEssayDraft: UnwrapRef<typeof import('./src/composables/useEssayDraft')['useEssayDraft']>
+    readonly useEssayHistory: UnwrapRef<typeof import('./src/composables/useWritingSession')['useEssayHistory']>
     readonly useEventBus: UnwrapRef<typeof import('@vueuse/core')['useEventBus']>
     readonly useEventListener: UnwrapRef<typeof import('@vueuse/core')['useEventListener']>
     readonly useEventSource: UnwrapRef<typeof import('@vueuse/core')['useEventSource']>
@@ -780,6 +785,7 @@ declare module 'vue' {
     readonly useWindowScroll: UnwrapRef<typeof import('@vueuse/core')['useWindowScroll']>
     readonly useWindowSize: UnwrapRef<typeof import('@vueuse/core')['useWindowSize']>
     readonly useWordSchedule: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['useWordSchedule']>
+    readonly useWritingSession: UnwrapRef<typeof import('./src/composables/useWritingSession')['useWritingSession']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
     readonly watchArray: UnwrapRef<typeof import('@vueuse/core')['watchArray']>
     readonly watchAtMost: UnwrapRef<typeof import('@vueuse/core')['watchAtMost']>

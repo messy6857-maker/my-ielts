@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import sentences from './100sentences'
-import TaskOne from './task1/TaskOne.vue'
-import TaskTwo from './task2/TaskTwo.vue'
+import AsyncWritingTask from './AsyncWritingTask.vue'
+
+const loadTaskOne = () => import('./task1/TaskOne.vue')
+const loadTaskTwo = () => import('./task2/TaskTwo.vue')
 
 const { isMastered, toggleMastered, masteredCount } = useMastered('writing_mastered_v1')
 const { setProgress } = useProgress()
@@ -442,12 +444,12 @@ function nextPractice() {
 
       <!-- ============ 雅思大作文（Task 2） ============ -->
       <div v-else-if="activeTab === 'essay-big'">
-        <TaskTwo />
+        <AsyncWritingTask :loader="loadTaskTwo" />
       </div>
 
       <!-- ============ 雅思小作文（Task 1） ============ -->
       <div v-else-if="activeTab === 'essay-small'">
-        <TaskOne />
+        <AsyncWritingTask :loader="loadTaskOne" />
       </div>
     </div>
   </div>

@@ -32,6 +32,7 @@ export function validateStudyValue(base: string, value: unknown): void {
     valid = Array.isArray(value) && value.every(item => object(item)
       && fields(item, ['key', 'title', 'detail'])
       && isMistakeModule(item.module)
+      && (item.answers === undefined || (strings(item.answers) && item.answers.length > 0 && item.answers.every(answer => answer.trim().length > 0)))
       && integer(item.count) && item.count > 0 && number(item.firstAt) && number(item.lastAt)
       && (item.hint === undefined || typeof item.hint === 'string'))
   }
@@ -61,6 +62,10 @@ export function validateStudyValue(base: string, value: unknown): void {
       && fields(item, ['id', 'label', 'date']) && Number.isFinite(Date.parse(String(item.date)))
       && ['listening', 'reading'].includes(String(item.kind)) && integer(item.total)
       && integer(item.score) && item.score <= item.total && number(item.band, 9))
+  }
+  else if (/^task[12]_drafts_v1__item_/.test(base)) {
+    valid = value === null || (object(value) && typeof value.text === 'string'
+      && integer(value.secondsLeft, base.startsWith('task1_') ? 1200 : 2400) && number(value.updatedAt))
   }
   else if (base === 'task1_drafts_v1' || base === 'task2_drafts_v1') {
     valid = object(value) && Object.values(value).every(item => object(item)

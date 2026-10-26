@@ -155,7 +155,7 @@ it('uploads a flushed draft once without scheduling an identical follow-up snaps
   const { useSync } = await import('../src/composables/useSync')
   const { useEssayDraft } = await import('../src/composables/useEssayDraft')
   useAuth().currentUser.value = 'alice'
-  setToken('fixture')
+  setToken('fixture', 'alice')
   const sync = useSync()
   sync.ensureWired()
   const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ ok: true }) }))

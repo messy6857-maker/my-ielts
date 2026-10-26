@@ -2,11 +2,8 @@
 import type { CambridgeWritingTask } from '../cambridge'
 import type { GradeResult } from './grader'
 import type { Task1Prompt } from './prompts' 
-import { onBeforeLogout, readJson, useAuth, writeJson  } from '../../../composables/useAuth'
-import { useDeadlineCountdown } from '../../../composables/useDeadlineCountdown'
-import { useEssayDraft } from '../../../composables/useEssayDraft'
 import { usePersistentBool } from '../../../composables/usePersistentBool'
-import { nsKey } from '../../../composables/useStudyData'
+import { useEssayHistory, useWritingSession } from '../../../composables/useWritingSession'
 import AIGradePanel from '../AIGradePanel.vue'
 import { CAMBRIDGE_WRITING } from '../cambridge'
 import ModelEssayView from '../ModelEssayView.vue'
@@ -45,79 +42,11 @@ interface SavedEssay {
   createdAt: number
 }
 
-const ESSAY_KEY = 'task1_essays_v1'
 const TIME_LIMIT = 20 * 60
-
-// ---------- 视图状态 ----------
-const view = ref<'home' | 'write' | 'result'>('home')
 const showGuide = usePersistentBool('myielts_task1_guide_open')
 
-// ---------- 历史 ----------
-const history = ref<SavedEssay[]>([])
-function loadHistory() {
-  history.value = readJson<SavedEssay[]>(nsKey(ESSAY_KEY), [], ESSAY_KEY)
-}
-loadHistory()
-function saveEssay(e: SavedEssay) {
-  history.value = [e, ...history.value].slice(0, 50)
-  return writeJson(nsKey(ESSAY_KEY), history.value)
-}
-function removeEssay(id: number) {
-  history.value = history.value.filter(e => e.id !== id)
-  writeJson(nsKey(ESSAY_KEY), history.value)
-}
-
-// ---------- 写作 ----------
-const prompt = ref<AnyPrompt | null>(null)
-const essayText = ref('')
-const timeUp = ref(false)
-const clock = useDeadlineCountdown(() => { timeUp.value = true })
-clock.reset(TIME_LIMIT)
-const secondsLeft = clock.secondsLeft
-const timerOn = clock.running
-const draft = useEssayDraft(1, essayText, secondsLeft)
-const { currentUser } = useAuth()
-const offLogout = onBeforeLogout(() => { clock.pause(); draft.close() })
-watch(currentUser, () => {
-  // Close the old prompt before changing text; the draft store already switched owners.
-  clock.pause()
-  draft.discardActive()
-  essayText.value = ''
-  prompt.value = null
-  view.value = 'home'
-  loadHistory()
-}, { flush: 'sync' })
-onUnmounted(() => { clock.pause(); draft.close(); offLogout() })
-
-const wordCount = computed(() => essayText.value.trim().split(/\s+/).filter(Boolean).length)
-const timeText = computed(() => {
-  const s = Math.max(0, secondsLeft.value)
-  return `${`${Math.floor(s / 60)}`.padStart(2, '0')}:${`${s % 60}`.padStart(2, '0')}`
-})
-
-function startWrite(p: AnyPrompt) {
-  clock.pause()
-  draft.close()
-  prompt.value = p
-  draft.open(p.id, TIME_LIMIT)
-  timeUp.value = secondsLeft.value === 0
-  view.value = 'write'
-}
-
-function toggleTimer() {
-  if (timerOn.value) clock.pause()
-  else clock.resume()
-}
-function resetTimer() {
-  clock.reset(TIME_LIMIT)
-  timeUp.value = false
-}
-function backHome() {
-  clock.pause()
-  draft.close()
-  view.value = 'home'
-  loadHistory()
-}
+const { history, loadHistory, saveEssay, removeEssay } = useEssayHistory<SavedEssay>(1)
+const { view, prompt, essayText, timeUp, clock, secondsLeft, timerOn, draft, wordCount, timeText, startWrite, toggleTimer, resetTimer, backHome } = useWritingSession<AnyPrompt>(1, loadHistory)
 
 // ---------- 批改 ----------
 const result = ref<GradeResult | null>(null)

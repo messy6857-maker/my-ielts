@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { SYNC_API_BASE } from '../sync-config'
 import { parseAIGradeResult, parseAISpeakingResult } from '../utils/aiSchema'
 import { getToken } from './syncClient'
+import { useAuth } from './useAuth'
 
 // AI 批改设置：存在浏览器 localStorage（全局，不按账号隔离），key 只留用户自己浏览器
 export interface AISettings {
@@ -76,7 +77,7 @@ function extractJson(text: string): string {
 }
 
 async function callChatApi(settings: AISettings, system: string, user: string, signal?: AbortSignal): Promise<string> {
-  const token = getToken()
+  const token = getToken(useAuth().currentUser.value)
   if (!token)
     throw new Error('请先登录（AI 中转需要登录态）')
   const controller = new AbortController()

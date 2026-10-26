@@ -2,7 +2,7 @@
 // - 未配置同步服务器时：纯前端本地账号（密码加盐哈希存 localStorage，单机使用）
 // - 配置了 SYNC_API_BASE 时：走服务器注册/登录，学习数据多设备同步
 import { validateStudyValue } from '../utils/studySchema'
-import { apiLogin, apiPull, apiPush, apiRegister, applySyncData, collectSyncData, getToken, setToken, syncEnabled } from './syncClient'
+import { apiLogin, apiPull, apiPush, apiRegister, applySyncData, collectSyncData, getToken, setToken, syncEnabled, TOKEN_KEY } from './syncClient'
 
 export interface AccountRecord {
   salt: string
@@ -89,6 +89,7 @@ export function onBeforeLogout(callback: () => void) {
 
 export const useAuth = createGlobalState(() => {
   const currentUser = ref<string | null>(null)
+  const sessionRevision = ref(0)
 
   function readUsers(): Record<string, AccountRecord> {
     return readJson<Record<string, AccountRecord>>(USERS_KEY, {})
@@ -122,6 +123,7 @@ export const useAuth = createGlobalState(() => {
     catch {
       // 忽略
     }
+    sessionRevision.value++
   }
 
   // 服务器托管账号：在本地用户表留标记，保证会话恢复能通过
@@ -149,11 +151,11 @@ export const useAuth = createGlobalState(() => {
     }
     if (!r.ok || !r.token)
       return { ok: false, message: r.message || '注册失败' }
-    setToken(r.token)
+    setToken(r.token, username)
     ensureServerMarker(username)
     // 新账号：把本机现有数据（如果有）推到云端，完成迁移
     try {
-      await apiPush(collectSyncData(username))
+      await apiPush(collectSyncData(username), r.token)
     }
     catch {
       // 推送失败不阻塞注册，后续自动同步会补
@@ -188,7 +190,7 @@ export const useAuth = createGlobalState(() => {
         if (localKeys.length === 0) {
           // 本机没数据：直接用云端
           applySyncData(pull.data, username)
-          setToken(r.token)
+          setToken(r.token, username)
           ensureServerMarker(username)
           setSession(username, remember)
           currentUser.value = username
@@ -200,7 +202,7 @@ export const useAuth = createGlobalState(() => {
         const useServer = confirm(`云端已有学习数据（更新于 ${dt}），本机也有数据。\n\n点"确定"用云端数据覆盖本机，点"取消"把本机数据上传到云端。`)
         if (useServer) {
           applySyncData(pull.data, username)
-          setToken(r.token)
+          setToken(r.token, username)
           ensureServerMarker(username)
           setSession(username, remember)
           currentUser.value = username
@@ -221,7 +223,7 @@ export const useAuth = createGlobalState(() => {
     catch {
       return { ok: false, message: '同步数据失败，请重试' }
     }
-    setToken(r.token)
+    setToken(r.token, username)
     ensureServerMarker(username)
     setSession(username, remember)
     currentUser.value = username
@@ -277,7 +279,7 @@ export const useAuth = createGlobalState(() => {
   const logoutNotice = ref('')
   async function logout() {
     const user = currentUser.value
-    const credential = getToken()
+    const credential = getToken(user)
     let notice = ''
     logoutNotice.value = ''
     // Settle active study sessions before collecting the final upload.
@@ -300,12 +302,16 @@ export const useAuth = createGlobalState(() => {
       }
       finally { clearTimeout(timeout) }
     }
-    if (currentUser.value !== user || getToken() !== credential)
+    if (currentUser.value !== user || getToken(user) !== credential)
       return
     logoutNotice.value = notice
-    setToken(null)
+    // A different tab may own the shared credential now. Only clear our own.
+    if (!syncEnabled || credential)
+      setToken(null)
     try {
-      localStorage.removeItem(SESSION_KEY)
+      const shared = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null')
+      if (shared?.username === user)
+        localStorage.removeItem(SESSION_KEY)
       sessionStorage.removeItem(SESSION_KEY)
     }
     catch {
@@ -314,5 +320,19 @@ export const useAuth = createGlobalState(() => {
     currentUser.value = null
   }
 
-  return { currentUser, register, login, logout, logoutNotice, syncEnabled }
+  // Never adopt another tab's credentials while keeping this tab's answers.
+  // Invalidate the page session; local account watchers settle old-owner data.
+  useEventListener(window, 'storage', (event: StorageEvent) => {
+    if (event.storageArea !== localStorage || (event.key !== null && event.key !== TOKEN_KEY && event.key !== SESSION_KEY))
+      return
+    sessionRevision.value++
+    if (syncEnabled && currentUser.value && !getToken(currentUser.value)) {
+      beforeLogout.forEach((callback) => { try { callback() } catch { /* Keep the old account data local. */ } })
+      currentUser.value = null
+      try { sessionStorage.removeItem(SESSION_KEY) } catch { /* ignore */ }
+      logoutNotice.value = '账号已在其他页面变更，请重新登录此页面'
+    }
+  })
+
+  return { currentUser, sessionRevision, register, login, logout, logoutNotice, syncEnabled }
 })

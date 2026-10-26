@@ -43,7 +43,10 @@ export function useEssayDraft(task: 1 | 2, text: Ref<string>, seconds: Ref<numbe
     }
   }
   onScopeDispose(close)
-  const saveFailed = computed(() => storageFailures.value.includes(`${studyPrefix(currentUser.value)}task${task}_drafts_v1`))
+  const saveFailed = computed(() => {
+    const key = `${studyPrefix(currentUser.value)}task${task}_drafts_v1`
+    return storageFailures.value.some(failed => failed === key || failed.startsWith(`${key}__item_`))
+  })
   const savedAt = computed(() => active.value ? drafts.value[active.value]?.updatedAt : undefined)
   return { open, close, discard, saveFailed, saving: persistence.saving, discardActive: () => { active.value = null }, savedAt, restored }
 }

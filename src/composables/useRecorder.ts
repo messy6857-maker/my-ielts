@@ -19,7 +19,6 @@ export function useRecorder() {
   let stream: MediaStream | null = null
   let timer: ReturnType<typeof setInterval> | null = null
   let recognition: any = null
-  let finalText = ''
   let generation = 0
   let starting = false
   let disposed = false
@@ -28,13 +27,18 @@ export function useRecorder() {
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SR)
       return
-    finalText = ''
+    detachTranscription()
+    const ownGeneration = generation
+    let finalText = ''
     transcript.value = ''
-    recognition = new SR()
-    recognition.lang = 'en-US'
-    recognition.continuous = true
-    recognition.interimResults = true
-    recognition.onresult = (e: any) => {
+    const instance = new SR()
+    recognition = instance
+    instance.lang = 'en-US'
+    instance.continuous = true
+    instance.interimResults = true
+    instance.onresult = (e: any) => {
+      if (disposed || generation !== ownGeneration || recognition !== instance)
+        return
       let interim = ''
       for (let i = e.resultIndex; i < e.results.length; i++) {
         const t: string = e.results[i][0].transcript
@@ -45,18 +49,18 @@ export function useRecorder() {
       }
       transcript.value = (finalText + interim).trim()
     }
-    recognition.onerror = () => { /* 忽略，转写失败不影响录音 */ }
-    recognition.onend = () => {
+    instance.onerror = () => { /* 忽略，转写失败不影响录音 */ }
+    instance.onend = () => {
       // 录音中途识别中断则自动重启
-      if (isRecording.value && recognition) {
+      if (!disposed && generation === ownGeneration && isRecording.value && recognition === instance) {
         try {
-          recognition.start()
+          instance.start()
         }
         catch { /* ignore */ }
       }
     }
     try {
-      recognition.start()
+      instance.start()
     }
     catch { /* ignore */ }
   }
@@ -68,6 +72,16 @@ export function useRecorder() {
         recognition.stop()
       }
       catch { /* ignore */ }
+      // Keep this instance until clear/restart so its final current-session
+      // result can arrive after stop(). Old sessions are detached separately.
+    }
+  }
+
+  function detachTranscription() {
+    if (recognition) {
+      recognition.onresult = null
+      recognition.onerror = null
+      recognition.onend = null
       recognition = null
     }
   }
@@ -166,6 +180,7 @@ export function useRecorder() {
   function clear() {
     generation++
     stop()
+    detachTranscription()
     if (audioUrl.value)
       URL.revokeObjectURL(audioUrl.value)
     audioUrl.value = null

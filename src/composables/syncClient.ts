@@ -2,25 +2,39 @@
 import { SYNC_API_BASE } from '../sync-config'
 import { parseStudyValue } from '../utils/studySchema'
 import { collectStudySnapshot } from '../utils/studySnapshot'
-import { studyBaseOf, writeStudyBatch } from '../utils/studyStorage'
+import { draftRecordRemovals, studyBaseOf, writeStudyBatch } from '../utils/studyStorage'
 
 export const syncEnabled = SYNC_API_BASE.trim() !== ''
 
-const TOKEN_KEY = 'myielts_sync_token_v1'
+export const TOKEN_KEY = 'myielts_sync_token_v1'
 
-export function getToken(): string | null {
+export function getToken(owner?: string | null): string | null {
   try {
-    return localStorage.getItem(TOKEN_KEY)
+    const raw = localStorage.getItem(TOKEN_KEY)
+    if (!raw)
+      return null
+    const session: unknown = JSON.parse(raw)
+    if (!session || typeof session !== 'object')
+      return null
+    const { username, token } = session as Record<string, unknown>
+    if (typeof username !== 'string' || typeof token !== 'string' || !token
+      || (owner !== undefined && owner !== username))
+      return null
+    return token
   }
   catch {
     return null
   }
 }
 
-export function setToken(token: string | null) {
+export function setToken(token: null): void
+export function setToken(token: string, username: string): void
+export function setToken(token: string | null, username?: string) {
   try {
-    if (token)
-      localStorage.setItem(TOKEN_KEY, token)
+    if (token && username)
+      // One atomic value prevents cross-tab username/token mismatches. Legacy
+      // unbound tokens require login again rather than guessing their owner.
+      localStorage.setItem(TOKEN_KEY, JSON.stringify({ username, token }))
     else
       localStorage.removeItem(TOKEN_KEY)
   }
@@ -126,6 +140,6 @@ export function applySyncData(data: Record<string, string>, username: string): n
       throw new Error('同步数据包含其他账号或未知模块')
     parseStudyValue(base, value)
   }
-  writeStudyBatch(entries)
+  writeStudyBatch(entries, draftRecordRemovals(entries))
   return entries.length
 }

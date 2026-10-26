@@ -25,7 +25,7 @@ async function enableAI() {
   const { setToken } = await import('../src/composables/syncClient')
   const { saveAISettings } = await import('../src/composables/useAISettings')
   useAuth().currentUser.value = 'alice'
-  setToken('fixture')
+  setToken('fixture', 'alice')
   saveAISettings({ baseUrl: 'https://example.invalid', apiKey: 'fixture', model: 'fixture' })
 }
 

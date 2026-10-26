@@ -86,7 +86,7 @@ watch([selectedDate, currentUser], async ([date, user], _, onCleanup) => {
   })
   myVocabReading.value = null
   vocabLoading.value = false
-  const token = getToken()
+  const token = getToken(user)
   if (!user || !token || !date)
     return
   vocabLoading.value = true

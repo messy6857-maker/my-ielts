@@ -58,7 +58,7 @@ describe('3dda12e regressions', () => {
     const { useDeadlineCountdown } = await import('../src/composables/useDeadlineCountdown')
     const { ref } = await import('vue')
     useAuth().currentUser.value = 'alice'
-    setToken('fixture')
+    setToken('fixture', 'alice')
     const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ ok: true }) }))
     vi.stubGlobal('fetch', fetchMock)
     useSync().ensureWired()

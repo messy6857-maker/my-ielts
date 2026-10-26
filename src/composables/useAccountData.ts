@@ -1,5 +1,7 @@
 import type { Ref } from 'vue'
+import type { DraftCollection } from '../utils/draftStorage'
 import { onScopeDispose, ref, watch } from 'vue'
+import { isDraftCollection, mergeDraftChanges, readDraftCollection, writeDraftChanges } from '../utils/draftStorage'
 import { studyPrefix } from '../utils/studyStorage'
 import { registerStudyWriter } from '../utils/studyWriteQueue'
 import { onBeforeLogout, readJson, useAuth, writeJson } from './useAuth'
@@ -10,7 +12,12 @@ interface PersistenceOptions { debounceMs?: number; maxWaitMs?: number }
 export function createAccountData<T>(base: string, fallback: () => T, options: PersistenceOptions = {}) {
   const { currentUser } = useAuth()
   let ownerKey = studyPrefix(currentUser.value) + base
-  const state = ref(readJson<T>(ownerKey, fallback(), base)) as Ref<T>
+  const draftBase = isDraftCollection(base)
+  const load = (key: string): T => draftBase ? readDraftCollection(key, base) as T : readJson<T>(key, fallback(), base)
+  const clone = (value: T): T => JSON.parse(JSON.stringify(value))
+  const state = ref(load(ownerKey)) as Ref<T>
+  const baselines = new Map<string, T>()
+  if (draftBase) baselines.set(ownerKey, clone(state.value))
   const saving = ref(false)
   let loading = false
   let scheduled = false
@@ -27,8 +34,20 @@ export function createAccountData<T>(base: string, fallback: () => T, options: P
   function flush() {
     clearTimers()
     for (const [key, value] of pending) {
-      if (writeJson(key, value))
+      const saved = draftBase
+        ? writeDraftChanges(key, base, baselines.get(key) as DraftCollection, value as DraftCollection)
+        : writeJson(key, value)
+      if (saved) {
         pending.delete(key)
+        if (draftBase) {
+          baselines.set(key, clone(load(key)))
+          if (key === ownerKey) {
+            loading = true
+            state.value = clone(baselines.get(key)!)
+            loading = false
+          }
+        }
+      }
     }
     saving.value = pending.has(ownerKey)
   }
@@ -58,12 +77,26 @@ export function createAccountData<T>(base: string, fallback: () => T, options: P
     flush()
     ownerKey = studyPrefix(currentUser.value) + base
     loading = true
-    state.value = readJson<T>(ownerKey, fallback(), base)
+    state.value = pending.get(ownerKey) ?? load(ownerKey)
+    if (draftBase && !pending.has(ownerKey)) baselines.set(ownerKey, clone(state.value))
     loading = false
     saving.value = pending.has(ownerKey)
   }, { flush: 'sync' })
   const offWriter = registerStudyWriter(flush)
   const off = onBeforeLogout(flush)
+  const onStorage = (event: StorageEvent) => {
+    if (!draftBase || event.storageArea !== localStorage
+      || (event.key !== null && event.key !== ownerKey && !event.key.startsWith(`${ownerKey}__item_`)))
+      return
+    const latest = load(ownerKey)
+    const merged = mergeDraftChanges(clone(latest) as DraftCollection, baselines.get(ownerKey) as DraftCollection, state.value as DraftCollection) as T
+    baselines.set(ownerKey, clone(latest))
+    loading = true
+    state.value = merged
+    loading = false
+    if (pending.has(ownerKey)) pending.set(ownerKey, state.value)
+  }
+  window.addEventListener('storage', onStorage)
   window.addEventListener('pagehide', flush)
   const onVisibility = () => { if (document.visibilityState === 'hidden') flush() }
   document.addEventListener('visibilitychange', onVisibility)
@@ -73,6 +106,7 @@ export function createAccountData<T>(base: string, fallback: () => T, options: P
     off()
     offWriter()
     window.removeEventListener('pagehide', flush)
+    window.removeEventListener('storage', onStorage)
     document.removeEventListener('visibilitychange', onVisibility)
   })
   return { state, saving, flush, persistNow }

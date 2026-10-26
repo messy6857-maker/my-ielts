@@ -130,12 +130,14 @@ describe('audit regressions: expected correct behavior', () => {
   })
 
   it('r08: AI response missing criterion scores must be rejected before rendering', async () => {
+    const { useAuth } = await import('../src/composables/useAuth')
+    useAuth().currentUser.value = 'alice'
     const { setToken } = await import('../src/composables/syncClient')
-    setToken('fixture-token')
+    setToken('fixture-token', 'alice')
     const { saveAISettings, gradeEssayWithAI } = await import('../src/composables/useAISettings')
     saveAISettings({ baseUrl: 'https://example.invalid', apiKey: 'fixture', model: 'fixture' })
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ok: true, data: { choices: [{ message: { content: '{"scores":{"overall":6.5}}' } }] } }) })))
-    await expect(gradeEssayWithAI('task1', 'fixture question', Array.from({length: 25}).fill('word').join(' '))).rejects.toThrow()
+    await expect(gradeEssayWithAI('task1', 'fixture question', Array.from({length: 25}).fill('word').join(' '))).rejects.toThrow('AI 返回格式异常')
   })
 
   it('r09: listening 179 audio must resolve under the GitHub Pages project base', async () => {

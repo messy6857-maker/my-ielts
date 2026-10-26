@@ -2,6 +2,7 @@
 <script setup generic="T extends any, O extends any">
 import { resolveAudioUrl } from '../../composables/useAudio'
 import { chapters, initialChapter, useVocabularyChapter } from '../../composables/useVocabularyChapter'
+import { acceptsAnswer } from '../../utils/acceptedAnswers'
 
 const CHAPTER_KEY = 'vocabulary_chapter'
 
@@ -127,12 +128,13 @@ function onInputFocusOut(e, item) {
   }
   else {
     item.spellValue = spellValue
-    item.spellError = !item.word.map(v => v.toLowerCase().trim()).includes(spellValue)
+    item.spellError = !acceptsAnswer(spellValue, item.word)
     if (item.spellError) {
       // 拼写错误：记入错词本
       addMistake('vocabulary', {
         key: `vocabulary:${item.id}`,
         title: item.word.join(' / '),
+        answers: item.word,
         detail: `${item.pos} ${item.meaning}`,
         hint: item.example,
       })

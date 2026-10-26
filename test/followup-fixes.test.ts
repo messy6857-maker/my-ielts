@@ -124,11 +124,11 @@ describe('deadline clock and request deadlines', () => {
     const { setToken, getToken } = await import('../src/composables/syncClient')
     const auth = useAuth()
     auth.currentUser.value = 'alice'
-    setToken('alice-token')
+    setToken('alice-token', 'alice')
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
     const logout = auth.logout()
     auth.currentUser.value = 'bob'
-    setToken('bob-token')
+    setToken('bob-token', 'bob')
     await vi.advanceTimersByTimeAsync(5000)
     await logout
     expect(auth.currentUser.value).toBe('bob')

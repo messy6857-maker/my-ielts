@@ -22,7 +22,7 @@ describe('additional review regressions', () => {
     const { useAuth, writeJson } = await import('../src/composables/useAuth')
     const { setToken } = await import('../src/composables/syncClient')
     useAuth().currentUser.value = 'alice'
-    setToken('fixture')
+    setToken('fixture', 'alice')
     let finish!: (value: unknown) => void
     const fetchMock = vi.fn().mockImplementationOnce(() => new Promise((resolve) => {
       finish = resolve

@@ -5,7 +5,7 @@ import { onLocalWrite, useAuth } from './useAuth'
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error'
 
 export const useSync = createGlobalState(() => {
-  const { currentUser } = useAuth()
+  const { currentUser, sessionRevision } = useAuth()
   const status = ref<SyncStatus>('idle')
   const lastSyncAt = ref<number>(0)
   const errorMsg = ref('')
@@ -30,13 +30,16 @@ export const useSync = createGlobalState(() => {
   }
 
   // 已登录但没有服务器 token（老本地会话）：需要退出重登
-  const needsRelogin = computed(() => syncEnabled && !!currentUser.value && !getToken())
+  const needsRelogin = computed(() => {
+    void sessionRevision.value
+    return syncEnabled && !!currentUser.value && !getToken(currentUser.value)
+  })
 
   function pushNow(): Promise<boolean> {
     if (!syncEnabled || !currentUser.value)
       return Promise.resolve(false)
     const user = currentUser.value
-    const token = getToken()
+    const token = getToken(user)
     if (!token) {
       setStatus('error', '请先退出登录，再重新登录以启用云同步')
       return Promise.resolve(false)
@@ -46,7 +49,7 @@ export const useSync = createGlobalState(() => {
     if (inFlight)
       return inFlight
     const ownGeneration = generation
-    const isCurrent = () => generation === ownGeneration && currentUser.value === user && getToken() === credential
+    const isCurrent = () => generation === ownGeneration && currentUser.value === user && getToken(user) === credential
     async function upload(): Promise<boolean> {
       setStatus('syncing')
       try {
@@ -82,7 +85,7 @@ export const useSync = createGlobalState(() => {
   }
 
   function schedulePush() {
-    if (!syncEnabled || !currentUser.value || !getToken())
+    if (!syncEnabled || !currentUser.value || !getToken(currentUser.value))
       return
     revision++
     if (timer)
@@ -103,7 +106,7 @@ export const useSync = createGlobalState(() => {
     wired = true
     onLocalWrite(() => schedulePush())
     const flush = () => {
-      if (revision !== uploadedRevision && currentUser.value && getToken())
+      if (revision !== uploadedRevision && currentUser.value && getToken(currentUser.value))
         pushNow()
     }
     window.addEventListener('pagehide', flush)
@@ -113,7 +116,7 @@ export const useSync = createGlobalState(() => {
     })
   }
 
-  watch(currentUser, () => {
+  watch([currentUser, sessionRevision], () => {
     generation++
     clearScheduledPush()
     inFlight = null

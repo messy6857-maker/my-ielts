@@ -15,6 +15,7 @@ export interface MistakeItem {
   key: string // 全站唯一，如 `vocabulary:123`
   module: MistakeModule
   title: string // 单词本身
+  answers?: string[] // 合法拼写；展示标题不参与新记录的答案编码
   detail: string // 词性 + 释义
   hint?: string // 例句等提示
   count: number // 累计记错次数
@@ -50,12 +51,14 @@ export function nsKey(base: string): string {
 export const useMistakes = createGlobalState(() => {
   const mistakes = useAccountData<MistakeItem[]>('mistakes_v1', () => ([]))
 
-  function addMistake(module: MistakeModule, input: { key: string; title: string; detail?: string; hint?: string }) {
+  function addMistake(module: MistakeModule, input: { key: string; title: string; answers?: string[]; detail?: string; hint?: string }) {
     const now = Date.now()
     const exist = mistakes.value.find(m => m.key === input.key)
     if (exist) {
       exist.count += 1
       exist.lastAt = now
+      if (input.answers?.length)
+        exist.answers = [...input.answers]
       if (input.detail)
         exist.detail = input.detail
       if (input.hint)
@@ -66,6 +69,7 @@ export const useMistakes = createGlobalState(() => {
         key: input.key,
         module,
         title: input.title,
+        answers: input.answers ? [...input.answers] : undefined,
         detail: input.detail || '',
         hint: input.hint,
         count: 1,

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { MistakeItem } from '../composables/useStudyData'
 import type { MistakeModule } from '../utils/studyModules'
+import { acceptsAnswer } from '../utils/acceptedAnswers'
 
 const { grouped, totalCount, removeMistake, clearMistakes } = useMistakes()
 
@@ -49,9 +50,9 @@ function nextCard() {
 function submitAnswer() {
   if (!reviewItem.value || reviewState.value !== 'answering')
     return
-  const answer = reviewInput.value.trim().toLowerCase()
-  const expected = reviewItem.value.title.trim().toLowerCase()
-  if (answer && answer === expected) {
+  const item = reviewItem.value
+  const answers = item.answers ?? (item.module === 'vocabulary' ? item.title.split(/\s*\/\s*/) : [item.title])
+  if (acceptsAnswer(reviewInput.value, answers)) {
     // 答对：从错词本移除
     reviewState.value = 'correct'
     const key = reviewItem.value.key

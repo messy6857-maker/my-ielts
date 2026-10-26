@@ -11,6 +11,7 @@ const studyBases = new Set([
 
 export function isStudyBase(base: string): boolean {
   return studyBases.has(base)
+    || /^task[12]_drafts_v1__item_(?:[a-f\d]{4})+$/i.test(base)
     || /^study_time_v1_[a-z\d-]+$/i.test(base)
     || /^aigrade_v1_-?[a-z\d]+$/i.test(base)
 }
@@ -25,6 +26,15 @@ export function studyBaseOf(key: string, username: string | null): string | null
     return null
   const base = key.slice(prefix.length)
   return isStudyBase(base) ? base : null
+}
+
+/** Replacing a draft table also replaces its per-prompt records. This lets
+ * pre-record-format cloud snapshots/backups override newer local records. */
+export function draftRecordRemovals(entries: [string, string][]): string[] {
+  const supplied = new Set(entries.map(([key]) => key))
+  const tables = entries.map(([key]) => key).filter(key => /task[12]_drafts_v1$/.test(key))
+  return Object.keys(localStorage).filter(key => !supplied.has(key) && !key.endsWith('__recovery')
+    && tables.some(table => key.startsWith(`${table}__item_`)))
 }
 
 // Roll back the complete batch on quota/storage errors. Remove staged values

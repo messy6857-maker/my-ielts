@@ -1,6 +1,6 @@
 import { parseStudyValue } from '../utils/studySchema'
 import { collectStudySnapshot } from '../utils/studySnapshot'
-import { isStudyBase, studyBaseOf, studyPrefix, writeStudyBatch } from '../utils/studyStorage'
+import { draftRecordRemovals, isStudyBase, studyBaseOf, studyPrefix, writeStudyBatch } from '../utils/studyStorage'
 import { notifyLocalWrite, useAuth } from './useAuth'
 
 export const BACKUP_VERSION = 1
@@ -63,10 +63,11 @@ export async function importBackup(file: File): Promise<{ ok: boolean; message: 
       && !window.confirm('恢复备份将覆盖当前账号中对应模块的本地数据，确定继续吗？'))
       return { ok: false, message: '已取消恢复' }
     // Stage writes first; notify sync only after the full import succeeds.
-    writeStudyBatch([
+    const restored: [string, string][] = [
       ...entries.map(([base, value]): [string, string] => [prefix + base, value]),
       ...Object.entries(recovery).map(([base, raw]): [string, string] => [`${prefix + base  }__recovery`, raw]),
-    ])
+    ]
+    writeStudyBatch(restored, draftRecordRemovals(restored))
     if (entries.length)
       notifyLocalWrite()
     const recoveryCount = Object.keys(backup.recovery ?? {}).length
