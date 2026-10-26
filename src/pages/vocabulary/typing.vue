@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vocabularyWordAudio } from '../../composables/useAudio'
 import { chapters, initialChapter, useVocabularyChapter } from '../../composables/useVocabularyChapter'
 
 const CHAPTER_KEY = 'vocabulary_typing_chapter'
@@ -59,7 +60,7 @@ function reset() {
 
 function playAudio() {
   if (currentWord.value)
-    audioPlayer.play(`vocabulary/audio/${selectedChapter.value}/${currentWord.value}.mp3`)
+    audioPlayer.play(vocabularyWordAudio(selectedChapter.value, currentWord.value))
 }
 
 // Normalize whitespace: replace non-breaking spaces and other unicode spaces with regular space

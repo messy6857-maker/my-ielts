@@ -1,6 +1,6 @@
 <!-- eslint-disable eslint-comments/no-unlimited-disable -->
 <script setup generic="T extends any, O extends any">
-import { resolveAudioUrl } from '../../composables/useAudio'
+import { resolveAudioUrl, vocabularyChapterAudio, vocabularyWordAudio } from '../../composables/useAudio'
 import { chapters, initialChapter, useVocabularyChapter } from '../../composables/useVocabularyChapter'
 import { acceptsAnswer } from '../../utils/acceptedAnswers'
 
@@ -314,7 +314,7 @@ function copyAllError() {
                         </div>
                         <div class="justify-items-end">
                           <audio controls class="chapter">
-                            <source :src="resolveAudioUrl(`vocabulary/audio/${refVocabulary[category].audio}`)" type="audio/mpeg">
+                            <source :src="vocabularyChapterAudio(refVocabulary[category].audio)" type="audio/mpeg">
                           </audio>
                         </div>
                       </div>
@@ -333,7 +333,7 @@ function copyAllError() {
                       <td>
                         <i
                           class="i-ph-speaker-simple-high-bold inline-block cursor-pointer"
-                          @click="play(resolveAudioUrl(`vocabulary/audio/${category}/${item.word[0]}.mp3`))"
+                          @click="play(resolveAudioUrl(vocabularyWordAudio(category, item.word[0])))"
                         />
 
                         <template v-if="isTrainingModel">
@@ -345,7 +345,7 @@ function copyAllError() {
                             :id="item.id" autocomplete="off" :class="getInputStyleClass(item)"
                             type="text"
                             @focusout="onInputFocusOut($event, item)" 
-                            @focusin="onInputFocusIn($event, resolveAudioUrl(`vocabulary/audio/${category}/${item.word[0]}.mp3`))" 
+                            @focusin="onInputFocusIn($event, resolveAudioUrl(vocabularyWordAudio(category, item.word[0])))" 
                             @keydown="onInputKeydown"
                           >
                         </template>

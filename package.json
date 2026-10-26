@@ -6,7 +6,8 @@
     "node": ">=24.22.0 <25"
   },
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node scripts/stage-public.mjs",
+    "build:android": "vite build --mode android && node scripts/stage-public.mjs --android",
     "dev": "vite --port 3333 --open",
     "lint": "eslint .",
     "typecheck": "vue-tsc --noEmit",

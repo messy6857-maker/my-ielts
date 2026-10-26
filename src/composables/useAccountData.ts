@@ -1,7 +1,9 @@
 import type { Ref } from 'vue'
 import type { DraftCollection } from '../utils/draftStorage'
+import type { MistakeItem } from './useStudyData'
 import { onScopeDispose, ref, watch } from 'vue'
 import { isDraftCollection, mergeDraftChanges, readDraftCollection, writeDraftChanges } from '../utils/draftStorage'
+import { mergeMistakes, readMistakes, writeMistakes } from '../utils/mistakeStorage'
 import { studyPrefix } from '../utils/studyStorage'
 import { registerStudyWriter } from '../utils/studyWriteQueue'
 import { onBeforeLogout, readJson, useAuth, writeJson } from './useAuth'
@@ -13,11 +15,13 @@ export function createAccountData<T>(base: string, fallback: () => T, options: P
   const { currentUser } = useAuth()
   let ownerKey = studyPrefix(currentUser.value) + base
   const draftBase = isDraftCollection(base)
-  const load = (key: string): T => draftBase ? readDraftCollection(key, base) as T : readJson<T>(key, fallback(), base)
+  const mistakeBase = base === 'mistakes_v1'
+  const recordBase = draftBase || mistakeBase
+  const load = (key: string): T => draftBase ? readDraftCollection(key, base) as T : mistakeBase ? readMistakes(key) as T : readJson<T>(key, fallback(), base)
   const clone = (value: T): T => JSON.parse(JSON.stringify(value))
   const state = ref(load(ownerKey)) as Ref<T>
   const baselines = new Map<string, T>()
-  if (draftBase) baselines.set(ownerKey, clone(state.value))
+  if (recordBase) baselines.set(ownerKey, clone(state.value))
   const saving = ref(false)
   let loading = false
   let scheduled = false
@@ -36,10 +40,10 @@ export function createAccountData<T>(base: string, fallback: () => T, options: P
     for (const [key, value] of pending) {
       const saved = draftBase
         ? writeDraftChanges(key, base, baselines.get(key) as DraftCollection, value as DraftCollection)
-        : writeJson(key, value)
+        : mistakeBase ? writeMistakes(key, baselines.get(key) as MistakeItem[], value as MistakeItem[]) : writeJson(key, value)
       if (saved) {
         pending.delete(key)
-        if (draftBase) {
+        if (recordBase) {
           baselines.set(key, clone(load(key)))
           if (key === ownerKey) {
             loading = true
@@ -78,18 +82,20 @@ export function createAccountData<T>(base: string, fallback: () => T, options: P
     ownerKey = studyPrefix(currentUser.value) + base
     loading = true
     state.value = pending.get(ownerKey) ?? load(ownerKey)
-    if (draftBase && !pending.has(ownerKey)) baselines.set(ownerKey, clone(state.value))
+    if (recordBase && !pending.has(ownerKey)) baselines.set(ownerKey, clone(state.value))
     loading = false
     saving.value = pending.has(ownerKey)
   }, { flush: 'sync' })
   const offWriter = registerStudyWriter(flush)
   const off = onBeforeLogout(flush)
   const onStorage = (event: StorageEvent) => {
-    if (!draftBase || event.storageArea !== localStorage
-      || (event.key !== null && event.key !== ownerKey && !event.key.startsWith(`${ownerKey}__item_`)))
+    if (!recordBase || event.storageArea !== localStorage
+      || (event.key !== null && event.key !== ownerKey && !event.key.startsWith(`${ownerKey}__${draftBase ? 'item' : 'op'}_`)))
       return
     const latest = load(ownerKey)
-    const merged = mergeDraftChanges(clone(latest) as DraftCollection, baselines.get(ownerKey) as DraftCollection, state.value as DraftCollection) as T
+    const merged = (draftBase
+      ? mergeDraftChanges(clone(latest) as DraftCollection, baselines.get(ownerKey) as DraftCollection, state.value as DraftCollection)
+      : mergeMistakes(clone(latest) as MistakeItem[], baselines.get(ownerKey) as MistakeItem[], state.value as MistakeItem[])) as T
     baselines.set(ownerKey, clone(latest))
     loading = true
     state.value = merged

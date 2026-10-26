@@ -28,7 +28,22 @@ function date(value: unknown) {
 
 export function validateStudyValue(base: string, value: unknown): void {
   let valid = false
-  if (base === 'mistakes_v1') {
+  if (base.startsWith('mistakes_v1__op_')) {
+    valid = object(value) && typeof value.key === 'string' && integer(value.delta) && number(value.at)
+    if (valid && object(value)) {
+      for (const item of [value.item, value.seed]) {
+        if (item !== null) {
+          validateStudyValue('mistakes_v1', [item])
+          if (!object(item) || item.key !== value.key) valid = false
+        }
+      }
+    }
+  }
+  else if (/_daily_new_v1__part_/.test(base)) {
+    valid = object(value) && date(value.date) && integer(value.seed) && integer(value.count) && number(value.createdAt)
+      && strings(value.words)
+  }
+  else if (base === 'mistakes_v1') {
     valid = Array.isArray(value) && value.every(item => object(item)
       && fields(item, ['key', 'title', 'detail'])
       && isMistakeModule(item.module)

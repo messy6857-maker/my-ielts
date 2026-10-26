@@ -14,7 +14,7 @@ export interface DeckStores {
   dailyCount: Ref<number>
   remaining: ComputedRef<number>
   setGoal: (n: number) => void
-  recordNewWord: () => void
+  recordNewWord: (id?: string | number) => void
 }
 
 const cache = new Map<string, DeckStores>()

@@ -367,6 +367,8 @@ declare global {
   const useWindowSize: typeof import('@vueuse/core').useWindowSize
   const useWordSchedule: typeof import('./src/composables/useSpacedRepetition').useWordSchedule
   const useWritingSession: typeof import('./src/composables/useWritingSession').useWritingSession
+  const vocabularyChapterAudio: typeof import('./src/composables/useAudio').vocabularyChapterAudio
+  const vocabularyWordAudio: typeof import('./src/composables/useAudio').vocabularyWordAudio
   const watch: typeof import('vue').watch
   const watchArray: typeof import('@vueuse/core').watchArray
   const watchAtMost: typeof import('@vueuse/core').watchAtMost
@@ -786,6 +788,8 @@ declare module 'vue' {
     readonly useWindowSize: UnwrapRef<typeof import('@vueuse/core')['useWindowSize']>
     readonly useWordSchedule: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['useWordSchedule']>
     readonly useWritingSession: UnwrapRef<typeof import('./src/composables/useWritingSession')['useWritingSession']>
+    readonly vocabularyChapterAudio: UnwrapRef<typeof import('./src/composables/useAudio')['vocabularyChapterAudio']>
+    readonly vocabularyWordAudio: UnwrapRef<typeof import('./src/composables/useAudio')['vocabularyWordAudio']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
     readonly watchArray: UnwrapRef<typeof import('@vueuse/core')['watchArray']>
     readonly watchAtMost: UnwrapRef<typeof import('@vueuse/core')['watchAtMost']>

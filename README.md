@@ -91,7 +91,7 @@
 
 ### 口语
 
-TODO
+Part 1 / Part 2 / Part 3 题目练习、录音回放与语音转写；登录并配置 AI 后可使用文字评分。
 
 ### 阅读
 
@@ -137,3 +137,19 @@ pnpm run build
 ```
 
 ## 禁止将本项目用于任何商业目的！！！
+
+
+## 数据维护与部署
+
+开发环境：Node.js 24.22.x、pnpm 11.25.0。
+
+- 修改词库后执行 `pnpm data:split`，提交生成文件；CI 使用 `pnpm data:check` 校验。
+- 验证：`pnpm exec vitest run`、`pnpm typecheck`、`pnpm lint`。
+- 整章词汇音频直接从仓库原文件流式播放，不重复放入 Pages 发布目录；单词和模考音频仍随网站发布。
+- 网站构建：`pnpm build`；须从包含完整 public 资源的仓库构建，脚本会检查关键音频、题图和讲义。
+- Android 构建：`pnpm build:android` 后执行 `npx cap sync android`；音频从已部署站点加载，不复制进 APK，题图和讲义保留。
+- GitHub Pages 使用 gh-pages 根目录，必须一起发布 dist 中的页面、JS、样式和 public 资源。
+- 音频切分标签移至 maintenance/audio-tags，仅供素材维护，不参与发布。
+- 采用 Git tree 复用媒体 blob 的发布方式可使用 `MEDIA_FROM_GIT_TREE=1 pnpm build`；发布器必须同时验证所有媒体文件哈希，不能仅上传该目录的 JS 构建结果。
+
+旧 /ielts 地址会跳转到现用听力页面。错词变更使用独立操作记录，日计数使用独立页面分量并按词 ID 去重；新格式参与账号隔离、云同步和备份，旧格式备份仍可恢复。

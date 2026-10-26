@@ -5,6 +5,17 @@ import { Capacitor } from '@capacitor/core'
 
 const SITE_BASE = 'https://messy6857-maker.github.io/my-ielts'
 
+export function vocabularyChapterAudio(file: string): string {
+  return `https://raw.githubusercontent.com/messy6857-maker/my-ielts/master/public/vocabulary/audio/${encodeURIComponent(file)}`
+}
+
+/** chef has no local clip; use the same dictionary voice as reading practice. */
+export function vocabularyWordAudio(chapter: string, word: string): string {
+  return word.toLowerCase() === 'chef'
+    ? `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=1`
+    : `vocabulary/audio/${chapter}/${word}.mp3`
+}
+
 export function resolveAudioUrl(path: string): string {
   if (/^(?:https?:|blob:|data:|\/\/)/i.test(path))
     return path

@@ -117,7 +117,7 @@ function grade(g: 0 | 3 | 5) {
     stats.value.unknown++
   bestGrade.value[card.id] = Math.max(bestGrade.value[card.id] ?? -1, g)
   if (card.isNew && !card.counted) {
-    deck.recordNewWord()
+    deck.recordNewWord(card.id)
     card.counted = true
   }
   card.attempts++

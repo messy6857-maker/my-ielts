@@ -1,6 +1,8 @@
-# 说明
+# 词库维护
 
-由于词汇的输入主要来源于手打，为了方便手工输入做成了特殊格式 `vocabulary.txt`。但是最终页面上使用的是 `vocabulary.js`，其中的提取和转换通过 `parser.py` 实现。修改、编辑词汇的流程如下：
+1. 编辑 vocabulary.txt；在本目录执行 python3 parser.py，生成 vocabulary.js。
+2. 更新例句/同义词时使用仓库 scripts 中的维护脚本；相关缓存只供维护，不随网站发布。
+3. 在仓库根目录执行 pnpm data:split，更新 src/data/vocabulary 的 22 章、45 个生成文件。
+4. 执行 pnpm data:check、pnpm exec vitest run 和 pnpm typecheck。
 
-1. 编辑 `vocabulary.txt`
-2. 执行（先切换目录到当前目录）提取和转换 `python parser.py`，自动生成 `vocabulary.js` 文件，不要手工编辑 `vocabulary.js` 文件
+运行页面加载的是按章节拆分的数据；vocabulary.js、wordSentences.ts、synonymMeanings.ts、synonymPos.ts 是生成来源，不能仅因未直接进入页面包就删除。原书音频和单词音频仍由 public 提供；chef 使用字典发音备用地址。

@@ -1,8 +1,8 @@
-import type { MockTestPair } from '../pages/mock/registry'
+import type { MockTestSelection } from '../pages/mock/registry'
 import type { MockQuestion } from '../pages/mock/types'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { loadMockTest } from '../pages/mock/registry'
+import { loadMockTestPart } from '../pages/mock/registry'
 import { bandScore, isCorrect, multiSelectScore } from '../pages/mock/types'
 import { useAuth } from './useAuth'
 import { useDeadlineCountdown } from './useDeadlineCountdown'
@@ -12,7 +12,7 @@ export function useMockSession(kind: 'reading' | 'listening', resetPage: () => v
   const route = useRoute()
   const { currentUser } = useAuth()
   const testId = computed(() => typeof route.query.test === 'string' ? route.query.test : 'cam21-test1')
-  const testPair = ref<MockTestPair | null>(null)
+  const testPair = ref<MockTestSelection | null>(null)
   const loading = ref(true)
   const loadError = ref(false)
   const started = ref(false)
@@ -27,7 +27,7 @@ export function useMockSession(kind: 'reading' | 'listening', resetPage: () => v
     const pair = testPair.value
     if (!pair)
       return []
-    return kind === 'reading' ? pair.reading.passages.flatMap(p => p.questions) : pair.listening.parts.flatMap(p => p.questions)
+    return kind === 'reading' ? pair.reading?.passages.flatMap(p => p.questions) ?? [] : pair.listening?.parts.flatMap(p => p.questions) ?? []
   })
   // 满分题数（多选题按答案个数计）
   const scoredTotal = computed(() =>
@@ -100,7 +100,7 @@ export function useMockSession(kind: 'reading' | 'listening', resetPage: () => v
     loading.value = true
     loadError.value = false
     try {
-      const pair = await loadMockTest(testId.value)
+      const pair = await loadMockTestPart(testId.value, kind)
       if (seq === loadSeq && !disposed)
         testPair.value = pair
     }
@@ -118,7 +118,7 @@ export function useMockSession(kind: 'reading' | 'listening', resetPage: () => v
       return
     clearSession()
     started.value = true
-    clock.start(testPair.value[kind].timeLimit)
+    clock.start(testPair.value[kind]!.timeLimit)
   }
   function submit() {
     if (submitted.value || !started.value || owner !== currentUser.value)

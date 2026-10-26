@@ -1,14 +1,7 @@
 <svg id="kity_svg_6"
   xmlns="http://www.w3.org/2000/svg"
   xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" width="1552" height="5255" style="visibility: visible;" viewBox="0 0 1552 5255">
-  <style>
-    path {
-      fill: black;
-    }
-    @media (prefers-color-scheme: dark) {
-      path { fill: white; }
-    }
-  </style>
+  <style>path { fill: #111827; } text { fill: #111827 !important; }</style>
   <defs id="kity_defs_7">
     <linearGradient id="kity_linearGradient_17" x1="0" y1="0" x2="0" y2="1">
       <stop id="kity_stop_18" offset="0" stop-color="rgb(255, 255, 255)"></stop>

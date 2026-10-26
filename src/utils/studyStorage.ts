@@ -11,6 +11,8 @@ const studyBases = new Set([
 
 export function isStudyBase(base: string): boolean {
   return studyBases.has(base)
+    || /^mistakes_v1__op_[a-z\d-]+$/i.test(base)
+    || /^(?:flashcard|listening179|reading538)_daily_new_v1__part_[a-z\d-]+$/i.test(base)
     || /^task[12]_drafts_v1__item_(?:[a-f\d]{4})+$/i.test(base)
     || /^study_time_v1_[a-z\d-]+$/i.test(base)
     || /^aigrade_v1_-?[a-z\d]+$/i.test(base)
@@ -33,8 +35,10 @@ export function studyBaseOf(key: string, username: string | null): string | null
 export function draftRecordRemovals(entries: [string, string][]): string[] {
   const supplied = new Set(entries.map(([key]) => key))
   const tables = entries.map(([key]) => key).filter(key => /task[12]_drafts_v1$/.test(key))
+  const recordTables = entries.map(([key]) => key).filter(key => /(?:mistakes_v1|_daily_new_v1)$/.test(key))
   return Object.keys(localStorage).filter(key => !supplied.has(key) && !key.endsWith('__recovery')
-    && tables.some(table => key.startsWith(`${table}__item_`)))
+    && (tables.some(table => key.startsWith(`${table}__item_`))
+      || recordTables.some(table => key.startsWith(`${table}__op_`) || key.startsWith(`${table}__part_`))))
 }
 
 // Roll back the complete batch on quota/storage errors. Remove staged values

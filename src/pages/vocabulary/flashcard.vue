@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { WordInfo } from '../../composables/useWordInfo'
+import { vocabularyWordAudio } from '../../composables/useAudio'
 import { planQueue } from '../../composables/useDeckStore'
 import { gradeSchedule } from '../../composables/useSpacedRepetition'
 import { formatClock, formatDuration, useStudyTimer } from '../../composables/useStudyTimer'
@@ -129,7 +130,7 @@ const audioPlayer = useAudioPlayer()
 function playAudio(word?: string) {
   const w = word || current.value?.word || studying.value?.word
   if (w)
-    audioPlayer.play(`vocabulary/audio/${category.value}/${w}.mp3`)
+    audioPlayer.play(vocabularyWordAudio(category.value, w))
 }
 
 function toCard(w: any, isNew: boolean): Card {
@@ -184,7 +185,7 @@ function grade(g: 0 | 3 | 5) {
   bestGrade.value[card.id] = Math.max(bestGrade.value[card.id] ?? -1, g)
   // 新词计入今日学习量（一天只计一次）
   if (card.isNew && !card.counted) {
-    daily.recordNewWord()
+    daily.recordNewWord(card.id)
     card.counted = true
   }
   card.attempts++
