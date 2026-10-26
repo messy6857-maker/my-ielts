@@ -33,24 +33,52 @@ export function useVocabularyChapter(selected: Ref<string>, withInfo = false) {
   const info = shallowRef<ChapterInfo>({ sentences: {}, meanings: {}, positions: {} })
   const loading = ref(true)
   const error = ref('')
+  const infoLoading = ref(false)
+  const infoError = ref('')
   let seq = 0
+  let infoSeq = 0
   let disposed = false
+  async function reloadInfo() {
+    if (!withInfo) return
+    const request = ++infoSeq
+    const chapterRequest = seq
+    const name = selected.value
+    infoLoading.value = true
+    infoError.value = ''
+    try {
+      const resources = await loadChapterInfo(name)
+      if (!disposed && request === infoSeq && chapterRequest === seq)
+        info.value = resources
+    }
+    catch {
+      if (!disposed && request === infoSeq && chapterRequest === seq)
+        infoError.value = '例句与同义词资料加载失败，已使用本地词条'
+    }
+    finally {
+      if (!disposed && request === infoSeq && chapterRequest === seq)
+        infoLoading.value = false
+    }
+  }
   async function reload() {
     const request = ++seq
+    infoSeq++
     chapter.value = null
     info.value = { sentences: {}, meanings: {}, positions: {} }
     loading.value = true
     error.value = ''
+    infoError.value = ''
+    infoLoading.value = false
+    // Optional resources must not block the usable base chapter.
+    if (withInfo) void reloadInfo()
     try {
-      const [words, resources] = await Promise.all([loadVocabularyChapter(selected.value), withInfo ? loadChapterInfo(selected.value) : null])
-      if (request !== seq || disposed) return
-      info.value = resources ?? info.value
-      chapter.value = words
+      const words = await loadVocabularyChapter(selected.value)
+      if (request === seq && !disposed)
+        chapter.value = words
     }
     catch { if (request === seq && !disposed) error.value = '词库加载失败，请重试' }
     finally { if (request === seq && !disposed) loading.value = false }
   }
   watch(selected, reload, { immediate: true, flush: 'sync' })
-  onScopeDispose(() => { disposed = true; seq++ })
-  return { chapter, info, loading, error, reload }
+  onScopeDispose(() => { disposed = true; seq++; infoSeq++ })
+  return { chapter, info, loading, error, reload, infoLoading, infoError, reloadInfo }
 }

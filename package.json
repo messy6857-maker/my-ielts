@@ -14,7 +14,8 @@
     "test": "vitest",
     "up": "pnpm update --interactive --latest",
     "lint:critical": "eslint src/utils src/composables test",
-    "data:split": "node scripts/split-vocabulary.mjs"
+    "data:split": "node scripts/split-vocabulary.mjs",
+    "data:check": "node scripts/split-vocabulary.mjs --check"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

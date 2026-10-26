@@ -14,7 +14,15 @@ export const useSync = createGlobalState(() => {
   let generation = 0
   let inFlight: Promise<boolean> | null = null
   let timer: ReturnType<typeof setTimeout> | null = null
+  let maxWaitTimer: ReturnType<typeof setTimeout> | null = null
   let wired = false
+
+  function clearScheduledPush() {
+    if (timer) clearTimeout(timer)
+    if (maxWaitTimer) clearTimeout(maxWaitTimer)
+    timer = null
+    maxWaitTimer = null
+  }
 
   function setStatus(s: SyncStatus, msg = '') {
     status.value = s
@@ -34,6 +42,7 @@ export const useSync = createGlobalState(() => {
       return Promise.resolve(false)
     }
     const credential = token
+    clearScheduledPush()
     if (inFlight)
       return inFlight
     const ownGeneration = generation
@@ -42,8 +51,9 @@ export const useSync = createGlobalState(() => {
       setStatus('syncing')
       try {
         do {
+          const data = collectSyncData(user)
           const snapshotRevision = revision
-          const result = await apiPush(collectSyncData(user), credential)
+          const result = await apiPush(data, credential)
           if (!isCurrent())
             return false
           if (!result.ok) {
@@ -53,6 +63,7 @@ export const useSync = createGlobalState(() => {
           uploadedRevision = snapshotRevision
           lastSyncAt.value = Date.now()
         } while (revision !== uploadedRevision)
+        clearScheduledPush()
         setStatus('ok')
         return true
       }
@@ -76,11 +87,13 @@ export const useSync = createGlobalState(() => {
     revision++
     if (timer)
       clearTimeout(timer)
-    timer = setTimeout(() => {
-      timer = null
+    const flush = () => {
+      clearScheduledPush()
       if (revision !== uploadedRevision)
-        pushNow()
-    }, 8000)
+        void pushNow()
+    }
+    timer = setTimeout(flush, 8000)
+    maxWaitTimer ??= setTimeout(flush, 30000)
   }
 
   // 只接一次：本地写入 -> 8 秒后推送；页面隐藏/关闭 -> 立刻推送
@@ -102,9 +115,7 @@ export const useSync = createGlobalState(() => {
 
   watch(currentUser, () => {
     generation++
-    if (timer)
-      clearTimeout(timer)
-    timer = null
+    clearScheduledPush()
     inFlight = null
     revision = 0
     uploadedRevision = 0

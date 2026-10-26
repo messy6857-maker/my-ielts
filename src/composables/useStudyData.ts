@@ -2,10 +2,13 @@
 // 数据按账号隔离：未登录用 myielts_ 前缀（游客模式），
 // 登录后用 myielts_u_<用户名>_ 前缀，每个账号一套独立数据
 
+import type { MistakeModule } from '../utils/studyModules'
+import { MISTAKE_MODULE_LABEL } from '../utils/studyModules'
+
 import { useAccountData } from './useAccountData'
 import { useAuth } from './useAuth'
-
-export type MistakeModule = 'vocabulary' | 'typing' | 'listening' | 'reading'
+export { MISTAKE_MODULE_LABEL }
+export type { MistakeModule }
 export type ProgressModule = 'vocabulary' | 'flashcard' | 'typing' | 'listening' | 'reading' | 'writing' | 'listening_flashcard' | 'reading_flashcard'
 
 export interface MistakeItem {
@@ -23,13 +26,6 @@ export interface ModuleProgress {
   done: number
   total: number
   updatedAt: number
-}
-
-export const MISTAKE_MODULE_LABEL: Record<MistakeModule, string> = {
-  vocabulary: '词汇拼写',
-  typing: '打字练习',
-  listening: '听力 179',
-  reading: '阅读 538',
 }
 
 export const PROGRESS_MODULE_LABEL: Record<ProgressModule, string> = {

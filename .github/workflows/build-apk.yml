@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: npm -g install pnpm@11.25.0 && pnpm install --frozen-lockfile
 
+      - name: Verify generated vocabulary
+        run: pnpm run data:check
+
       - name: Build web app
         run: pnpm run build
 

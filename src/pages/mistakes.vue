@@ -1,30 +1,40 @@
 <script setup lang="ts">
 import type { MistakeItem } from '../composables/useStudyData'
+import type { MistakeModule } from '../utils/studyModules'
 
 const { grouped, totalCount, removeMistake, clearMistakes } = useMistakes()
 
 const isReviewing = ref(false)
 const reviewItem = ref<MistakeItem | null>(null)
 const reviewInput = ref('')
+let nextTimer: ReturnType<typeof setTimeout> | undefined
+const { currentUser } = useAuth()
+const reviewableCount = computed(() => allMistakes().length)
+function cancelNext() { clearTimeout(nextTimer); nextTimer = undefined }
+watch(currentUser, stopReview, { flush: 'sync' })
+onUnmounted(cancelNext)
+
 const reviewState = ref<'answering' | 'wrong' | 'correct'>('answering')
 
 function allMistakes(): MistakeItem[] {
-  return grouped.value.flatMap(g => g.items)
+  return grouped.value.filter(g => g.module !== 'writing').flatMap(g => g.items)
 }
 
 function startReview() {
-  if (totalCount.value === 0)
+  if (reviewableCount.value === 0)
     return
   isReviewing.value = true
   nextCard()
 }
 
 function stopReview() {
+  cancelNext()
   isReviewing.value = false
   reviewItem.value = null
 }
 
 function nextCard() {
+  cancelNext()
   const all = allMistakes().filter(m => m.key !== reviewItem.value?.key)
   const pool = all.length > 0 ? all : allMistakes()
   if (pool.length === 0) {
@@ -45,10 +55,9 @@ function submitAnswer() {
     // 答对：从错词本移除
     reviewState.value = 'correct'
     const key = reviewItem.value.key
-    setTimeout(() => {
-      removeMistake(key)
-      nextCard()
-    }, 800)
+    // Commit to the current owner now; only the visual transition is delayed.
+    removeMistake(key)
+    nextTimer = setTimeout(nextCard, 800)
   }
   else {
     reviewState.value = 'wrong'
@@ -60,9 +69,9 @@ function confirmClearAll() {
     clearMistakes()
 }
 
-function confirmClearModule(module: string, label: string) {
+function confirmClearModule(module: MistakeModule, label: string) {
   if (window.confirm(`确定要清空「${label}」的错词吗？`))
-    clearMistakes(module as any)
+    clearMistakes(module)
 }
 </script>
 
@@ -81,7 +90,7 @@ function confirmClearModule(module: string, label: string) {
         </div>
         <div class="flex items-center gap-2">
           <button
-            v-if="totalCount > 0 && !isReviewing"
+            v-if="reviewableCount > 0 && !isReviewing"
             type="button"
             class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
             @click="startReview"
@@ -155,6 +164,9 @@ function confirmClearModule(module: string, label: string) {
             <h4 class="text-lg font-bold text-gray-900 dark:text-white">
               {{ group.label }}（{{ group.items.length }}）
             </h4>
+            <RouterLink v-if="group.module === 'writing'" to="/writing?scope=mistakes" class="ml-auto mr-4 text-sm text-blue-600 underline">
+翻译错题重练
+</RouterLink>
             <button
               class="text-sm text-gray-400 underline hover:text-gray-600"
               @click="confirmClearModule(group.module, group.label)"

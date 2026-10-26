@@ -201,11 +201,14 @@ describe('storage failure visibility', () => {
     const draft = scoped(() => useEssayDraft(1, text, seconds))
     draft.open('fixture', 100)
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('full', 'QuotaExceededError') })
+    const { flushStudyWrites } = await import('../src/utils/studyWriteQueue')
     text.value = 'cannot fit'
+    flushStudyWrites()
     await nextTick()
     expect(draft.saveFailed.value).toBe(true)
     spy.mockRestore()
     text.value = 'now fits'
+    flushStudyWrites()
     await nextTick()
     expect(draft.saveFailed.value).toBe(false)
     expect(localStorage.getItem('myielts_task1_drafts_v1')).toContain('now fits')

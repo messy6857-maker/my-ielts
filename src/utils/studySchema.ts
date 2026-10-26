@@ -1,4 +1,5 @@
 import { parseAIGradeResult } from './aiSchema'
+import { isMistakeModule } from './studyModules'
 import { isStudyBase } from './studyStorage'
 
 function object(value: unknown): value is Record<string, unknown> {
@@ -30,7 +31,7 @@ export function validateStudyValue(base: string, value: unknown): void {
   if (base === 'mistakes_v1') {
     valid = Array.isArray(value) && value.every(item => object(item)
       && fields(item, ['key', 'title', 'detail'])
-      && ['vocabulary', 'typing', 'listening', 'reading'].includes(String(item.module))
+      && isMistakeModule(item.module)
       && integer(item.count) && item.count > 0 && number(item.firstAt) && number(item.lastAt)
       && (item.hint === undefined || typeof item.hint === 'string'))
   }

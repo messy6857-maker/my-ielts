@@ -187,16 +187,16 @@ describe('portable backups', () => {
 
 describe('study lifecycle and scoring', () => {
   it('migrates legacy visitor history without assigning it to a future guest account', async () => {
-    localStorage.setItem('myielts_u_guest_mock_history_v1', '[{"id":"fixture"}]')
+    localStorage.setItem('myielts_u_guest_mock_history_v1', '[{"id":"fixture","label":"fixture","date":"2026-10-26T00:00:00.000Z","kind":"reading","total":40,"score":20,"band":5.5}]')
     const { getMockHistory } = await import('../src/composables/useMockHistory')
     expect(getMockHistory()[0].id).toBe('fixture')
-    expect(localStorage.getItem('myielts_mock_history_v1')).toBe('[{"id":"fixture"}]')
+    expect(localStorage.getItem('myielts_mock_history_v1')).toBe('[{"id":"fixture","label":"fixture","date":"2026-10-26T00:00:00.000Z","kind":"reading","total":40,"score":20,"band":5.5}]')
     expect(localStorage.getItem('myielts_u_guest_mock_history_v1')).toBeNull()
   })
 
   it('does not migrate a real guest account history into visitor mode', async () => {
     localStorage.setItem('myielts_users_v1', '{"guest":{"hash":"fixture"}}')
-    localStorage.setItem('myielts_u_guest_mock_history_v1', '[{"id":"fixture"}]')
+    localStorage.setItem('myielts_u_guest_mock_history_v1', '[{"id":"fixture","label":"fixture","date":"2026-10-26T00:00:00.000Z","kind":"reading","total":40,"score":20,"band":5.5}]')
     const { getMockHistory } = await import('../src/composables/useMockHistory')
     expect(getMockHistory()).toEqual([])
     expect(localStorage.getItem('myielts_u_guest_mock_history_v1')).not.toBeNull()

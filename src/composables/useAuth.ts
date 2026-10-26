@@ -37,7 +37,7 @@ export function readJson<T>(key: string, fallback: T, studyBase?: string): T {
     return value as T
   }
   catch {
-    if (studyBase) {
+    if (studyBase && !key.endsWith('__recovery')) {
       try {
         const raw = localStorage.getItem(key)
         if (raw !== null && localStorage.getItem(`${key}__recovery`) === null)

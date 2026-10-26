@@ -32,6 +32,7 @@ declare global {
   const computedWithControl: typeof import('@vueuse/core').computedWithControl
   const controlledComputed: typeof import('@vueuse/core').controlledComputed
   const controlledRef: typeof import('@vueuse/core').controlledRef
+  const createAccountData: typeof import('./src/composables/useAccountData').createAccountData
   const createApp: typeof import('vue').createApp
   const createDailyCounter: typeof import('./src/composables/useDailyCounter').createDailyCounter
   const createDisposableDirective: typeof import('@vueuse/core').createDisposableDirective
@@ -405,7 +406,7 @@ declare global {
   export type { WordSchedule, Grade } from './src/composables/useSpacedRepetition'
   import('./src/composables/useSpacedRepetition')
   // @ts-ignore
-  export type { MistakeModule, ProgressModule, MistakeItem, ModuleProgress } from './src/composables/useStudyData'
+  export type { ProgressModule, MistakeItem, ModuleProgress, MistakeModule } from './src/composables/useStudyData'
   import('./src/composables/useStudyData')
   // @ts-ignore
   export type { SyncStatus } from './src/composables/useSync'
@@ -450,6 +451,7 @@ declare module 'vue' {
     readonly computedWithControl: UnwrapRef<typeof import('@vueuse/core')['computedWithControl']>
     readonly controlledComputed: UnwrapRef<typeof import('@vueuse/core')['controlledComputed']>
     readonly controlledRef: UnwrapRef<typeof import('@vueuse/core')['controlledRef']>
+    readonly createAccountData: UnwrapRef<typeof import('./src/composables/useAccountData')['createAccountData']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
     readonly createDailyCounter: UnwrapRef<typeof import('./src/composables/useDailyCounter')['createDailyCounter']>
     readonly createDisposableDirective: UnwrapRef<typeof import('@vueuse/core')['createDisposableDirective']>

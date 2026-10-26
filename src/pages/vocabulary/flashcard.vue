@@ -23,7 +23,7 @@ interface Card {
 
 const CHAPTER_KEY = 'vocabulary_flashcard_chapter'
 const category = ref(initialChapter(CHAPTER_KEY))
-const { chapter, info: chapterInfo, loading: chapterLoading, error: chapterError, reload } = useVocabularyChapter(category, true)
+const { chapter, info: chapterInfo, loading: chapterLoading, error: chapterError, reload, infoError, reloadInfo } = useVocabularyChapter(category, true)
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
 const scheduleStore = useWordSchedule()
@@ -224,11 +224,6 @@ function next() {
     playAudio(queue.value[0].word)
 }
 
-/** 自评前加载例句/同义词：查内置预抓取数据（本词 → 派生词），同步返回 */
-function loadWordInfo(card: Card) {
-  wordInfo.value = getWordInfoWithFallback([card.word, ...card.hintWords], chapterInfo.value.sentences)
-}
-
 function finishSession() {
   finished.value = true
   const known = Object.values(bestGrade.value).filter(v => v === 5).length
@@ -251,9 +246,9 @@ watch(category, (newVal) => {
 watch(chapter, () => { if (chapter.value) buildQueue() })
 
 // 卡片切换时预加载联网例句/同义词
-watch(current, (c) => {
-  if (c)
-    loadWordInfo(c)
+watch([current, studying, chapterInfo], ([card, expanded]) => {
+  const item = expanded ?? card
+  wordInfo.value = item ? getWordInfoWithFallback([item.word, ...item.hintWords], chapterInfo.value.sentences) : null
 })
 
 const { currentUser } = useAuth()
@@ -276,6 +271,11 @@ onMounted(() => {
   <p v-if="chapterError" role="alert" class="p-6">
 {{ chapterError }} <button @click="reload">
 重试
+</button>
+</p>
+  <p v-if="infoError" role="status" class="p-4 text-sm text-gray-500">
+{{ infoError }} <button class="underline" @click="reloadInfo">
+重试资料
 </button>
 </p>
   <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">

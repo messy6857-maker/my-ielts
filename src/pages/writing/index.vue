@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 import sentences from './100sentences'
 import TaskOne from './task1/TaskOne.vue'
 import TaskTwo from './task2/TaskTwo.vue'
@@ -19,7 +19,7 @@ const STOPWORDS = new Set([
   'more', 'most', 'much', 'many', 'some', 'any', 'all', 'both', 'each', 'every', 'other', 'into',
   'over', 'under', 'between', 'through', 'during', 'about', 'against', 'among', 'up', 'out', 'off',
 ])
-function extractKeywords(translation) {
+function extractKeywords(translation: string) {
   const words = (translation || '').toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || []
   const seen = new Set()
   const result = []
@@ -46,22 +46,23 @@ const TABS = [
 const practicing = ref(false)
 const practiceScope = ref('all') // all | unmastered | mistakes
 const practiceOrder = ref('seq') // seq | random
-const practiceQueue = ref([])
+type Sentence = Extract<(typeof sentences)[number], { no: number }>
+const practiceQueue = ref<Sentence[]>([])
 const practiceIndex = ref(0)
 const userAnswer = ref('')
 const revealed = ref(false)
-const graded = ref(null) // null | true | false
+const graded = ref<boolean | null>(null) // null | true | false
 const practiceStats = ref({ correct: 0, wrong: 0 })
 const practiceFinished = ref(false)
 const practiceEmptyMsg = ref('')
-const hintKeywords = ref([]) // 已揭示的关键词
+const hintKeywords = ref<string[]>([]) // 已揭示的关键词
 
 const currentPractice = computed(() => practiceQueue.value[practiceIndex.value] ?? null)
 const allKeywords = computed(() => currentPractice.value ? extractKeywords(currentPractice.value.translationFromBook) : [])
 
 function startPractice() {
-  const all = sentences.filter(s => s.no != null)
-  let queue
+  const all = sentences.filter((s): s is Sentence => s.no != null)
+  let queue: Sentence[]
   if (practiceScope.value === 'unmastered') {
     queue = all.filter(s => !isMastered(s.no))
     practiceEmptyMsg.value = '全部句子都已掌握，太棒了！'
@@ -111,7 +112,7 @@ function exitPractice() {
   practicing.value = false
 }
 
-function gradePractice(ok) {
+function gradePractice(ok: boolean) {
   const item = currentPractice.value
   if (!item || graded.value !== null)
     return
@@ -134,6 +135,15 @@ function gradePractice(ok) {
     })
   }
 }
+
+const route = useRoute()
+watch(() => route?.query.scope, (scope) => {
+  if (scope === 'mistakes') {
+    activeTab.value = 'sentences'
+    practiceScope.value = 'mistakes'
+    startPractice()
+  }
+}, { immediate: true })
 
 function nextPractice() {
   if (practiceIndex.value + 1 >= practiceQueue.value.length) {
@@ -376,7 +386,7 @@ function nextPractice() {
                 <div class="shadow sm:rounded-lg">
                   <table class="min-w-[620px] w-full divide-y divide-gray-200 dark:divide-gray-600">
                     <tbody class="bg-white dark:bg-gray-800 border-b-1">
-                      <template v-for="item of sentences" :key="item.no">
+                      <template v-for="item of sentences" :key="item.no ?? item.title">
                         <template v-if="item.no == null">
                           <tr class="border-t-1 border-x-1">
                             <td colspan="5" class="p-4 font-bold text-xl">

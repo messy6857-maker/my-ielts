@@ -22,7 +22,7 @@ export function getMockHistory(): MockRecord[] {
     const legacy = 'myielts_u_guest_mock_history_v1'
     if (!useAuth().currentUser.value && localStorage.getItem(key()) === null
       && !readJson<Record<string, unknown>>('myielts_users_v1', {}).guest) {
-      const old = readJson<MockRecord[] | null>(legacy, null)
+      const old = readJson<MockRecord[] | null>(legacy, null, 'mock_history_v1')
       if (Array.isArray(old) && writeJson(key(), old))
         localStorage.removeItem(legacy)
     }
@@ -30,7 +30,7 @@ export function getMockHistory(): MockRecord[] {
   catch {
     // Storage can be disabled by the browser; readJson below retains its fallback.
   }
-  const records = readJson<MockRecord[]>(key(), [])
+  const records = readJson<MockRecord[]>(key(), [], 'mock_history_v1')
   return Array.isArray(records) ? records : []
 }
 

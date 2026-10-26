@@ -16,6 +16,9 @@ const clock = useDeadlineCountdown(() => {
 })
 const countdown = clock.secondsLeft
 
+let session = 0
+let disposed = false
+
 const PREP_SECONDS = 60
 const TALK_SECONDS = 120
 
@@ -30,16 +33,20 @@ const phaseLabel = computed(() => ({
 
 function clearTimer() { clock.pause() }
 function startPrep() {
+  session++
   phase.value = 'prep'
   clock.start(PREP_SECONDS)
 }
 
 async function startTalk() {
+  const request = ++session
   clearTimer()
   phase.value = 'talk'
   countdown.value = TALK_SECONDS
   // 陈述开始自动录音
   const started = await recorder.start()
+  if (disposed || request !== session)
+    return
   if (!started) {
     phase.value = 'done'
     return
@@ -52,12 +59,14 @@ async function startTalk() {
 }
 
 function finishTalk() {
+  session++
   clearTimer()
   recorder.stop()
   phase.value = 'done'
 }
 
 function retry() {
+  session++
   clearTimer()
   recorder.clear()
   phase.value = 'ready'
@@ -65,12 +74,15 @@ function retry() {
 }
 
 function goBack() {
+  session++
   clearTimer()
   recorder.stop()
   emit('back')
 }
 
 onUnmounted(() => {
+  disposed = true
+  session++
   clearTimer()
   recorder.stop()
 })

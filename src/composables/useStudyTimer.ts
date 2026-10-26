@@ -1,7 +1,7 @@
 import { nextStudyDay, studyDate } from '../utils/studyDate'
 // 学习计时：进入自测卡片自动开始，退出时结算
 // 每日累计按账号隔离，目标每天 2 小时
-import { studyPrefix, writeStudyBatch } from '../utils/studyStorage'
+import { studyBaseOf, studyPrefix, writeStudyBatch } from '../utils/studyStorage'
 import { notifyLocalWrite, onBeforeLogout, readJson, useAuth } from './useAuth'
 
 export const DAILY_STUDY_GOAL = 2 * 3600 // 秒：每天 2 小时
@@ -110,9 +110,10 @@ export function useStudyTimer() {
     let others = 0
     try {
       const prefix = `${base}_`
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i)
-        if (!k || !k.startsWith(prefix))
+      // Snapshot keys before validated reads can append recovery records.
+      const keys = Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i))
+      for (const k of keys) {
+        if (!k || !k.startsWith(prefix) || studyBaseOf(k, owner) === null)
           continue
         const rec = readJson<{ date: string; seconds: number }>(k, { date: '', seconds: 0 }, KEY)
         const sec = rec.date === date ? rec.seconds : 0

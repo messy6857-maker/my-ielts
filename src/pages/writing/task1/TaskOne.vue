@@ -344,7 +344,7 @@ function formatDuration(s: number): string {
           </div>
 
           <p class="mb-2 text-xs text-gray-500" role="status">
-{{ draft.saveFailed.value ? '草稿暂未保存：浏览器存储空间不足，请先复制文章并释放空间' : ((draft.restored.value ? '已恢复此题草稿；' : '') + (draft.savedAt.value ? '草稿已自动保存在当前账号，可返回选题后继续' : '输入后自动保存草稿')) }}
+{{ draft.saveFailed.value ? '草稿暂未保存：浏览器存储空间不足，请先复制文章并释放空间' : draft.saving.value ? '正在保存草稿…' : ((draft.restored.value ? '已恢复此题草稿；' : '') + (draft.savedAt.value ? '草稿已自动保存在当前账号，可返回选题后继续' : '输入后自动保存草稿')) }}
 </p>
           <textarea
             v-model="essayText"
