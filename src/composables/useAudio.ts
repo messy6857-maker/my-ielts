@@ -16,14 +16,16 @@ export function vocabularyWordAudio(chapter: string, word: string): string {
     : `vocabulary/audio/${chapter}/${word}.mp3`
 }
 
-export function resolveAudioUrl(path: string): string {
-  if (/^(?:https?:|blob:|data:|\/\/)/i.test(path))
-    return path
+/** Packaged/static assets stay local in Capacitor as well as on the web. */
+export function resolveAssetUrl(path: string): string {
+  if (/^(?:https?:|blob:|data:|\/\/)/i.test(path)) return path
   const relative = path.replace(/^\/+/, '')
-  if (Capacitor.isNativePlatform())
-    return `${SITE_BASE}/${relative}`
-  if (typeof document === 'undefined')
-    return relative
+  if (typeof document === 'undefined') return relative
   const base = new URL(import.meta.env.BASE_URL || './', document.baseURI)
   return new URL(relative, base).href
+}
+
+export function resolveAudioUrl(path: string): string {
+  if (/^(?:https?:|blob:|data:|\/\/)/i.test(path)) return path
+  return Capacitor.isNativePlatform() ? `${SITE_BASE}/${path.replace(/^\/+/, '')}` : resolveAssetUrl(path)
 }

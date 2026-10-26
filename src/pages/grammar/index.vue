@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { isDark } from '../../composables/dark'
-import { resolveAudioUrl } from '../../composables/useAudio'
-const diagramUrl = computed(() => resolveAudioUrl(`grammar/雅思语法${isDark.value ? '-dark' : ''}.svg`))
+import { resolveAssetUrl } from '../../composables/useAudio'
+const diagramUrl = computed(() => resolveAssetUrl(`grammar/雅思语法${isDark.value ? '-dark' : ''}.svg`))
 </script>
 
 <template>

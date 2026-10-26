@@ -51,12 +51,12 @@ describe('concurrent account data', () => {
     expect((await mistakes()).state.value.find(m => m.key === 'a')?.count).toBe(2)
     expect((await mistakes()).state.value).toHaveLength(2)
   })
-  it('rolls back a failed operation batch and retries an increment exactly once', async () => {
+  it('retries a failed atomic operation batch exactly once', async () => {
     const a = await mistakes()
     a.state.value.push(item('a'))
     const set = Storage.prototype.setItem
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, k, v) {
-      if (k === 'myielts_mistakes_v1') throw new DOMException('fixture quota', 'QuotaExceededError')
+      if (k.startsWith('myielts_mistakes_v1__op_')) throw new DOMException('fixture quota', 'QuotaExceededError')
       set.call(this, k, v)
     })
     a.flush()
@@ -140,7 +140,7 @@ it('stages audio for the web, excludes it from Android and preserves images', as
     await stagePublic(source, join(root, 'android'), true, false)
     expect((await readdir(join(root, 'web', 'mock'))).sort()).toEqual(['clip.mp3', 'diagram.svg'])
     expect(await readdir(join(root, 'android', 'mock'))).toEqual(['diagram.svg'])
-    await expect(stagePublic(source, join(root, 'incomplete'), false)).rejects.toThrow('发布资源缺失')
+    await expect(stagePublic(source, join(root, 'incomplete'), false, true, ['favicon.png'])).rejects.toThrow('发布资源缺失')
   }
   finally { await rm(root, { recursive: true, force: true }) }
 })

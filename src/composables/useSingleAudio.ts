@@ -59,7 +59,7 @@ export function useAudioPlayer() {
     audio.pause()
     audio.src = resolveAudioUrl(path)
     audio.currentTime = 0
-    return audio.play().catch(() => {})
+    return audio.play().then(() => true, () => false)
   }
   if (getCurrentScope())
     onScopeDispose(dispose)

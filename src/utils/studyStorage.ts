@@ -11,6 +11,8 @@ const studyBases = new Set([
 
 export function isStudyBase(base: string): boolean {
   return studyBases.has(base)
+    || base === 'mistakes_v1__checkpoint'
+    || /^(?:progress_v1|sr_vocabulary_v1|listening179_sr_v1|reading538_sr_v1|reading_mastered_v1|writing_mastered_v1|flashcard_checkin_v1)__entry_(?:[a-f\d]{4})+$/i.test(base)
     || /^mistakes_v1__op_[a-z\d-]+$/i.test(base)
     || /^(?:flashcard|listening179|reading538)_daily_new_v1__part_[a-z\d-]+$/i.test(base)
     || /^task[12]_drafts_v1__item_(?:[a-f\d]{4})+$/i.test(base)
@@ -34,11 +36,11 @@ export function studyBaseOf(key: string, username: string | null): string | null
  * pre-record-format cloud snapshots/backups override newer local records. */
 export function draftRecordRemovals(entries: [string, string][]): string[] {
   const supplied = new Set(entries.map(([key]) => key))
-  const tables = entries.map(([key]) => key).filter(key => /task[12]_drafts_v1$/.test(key))
+  const tables = entries.map(([key]) => key).filter(key => /(?:task[12]_drafts_v1|progress_v1|sr_vocabulary_v1|listening179_sr_v1|reading538_sr_v1|reading_mastered_v1|writing_mastered_v1|flashcard_checkin_v1)$/.test(key))
   const recordTables = entries.map(([key]) => key).filter(key => /(?:mistakes_v1|_daily_new_v1)$/.test(key))
   return Object.keys(localStorage).filter(key => !supplied.has(key) && !key.endsWith('__recovery')
-    && (tables.some(table => key.startsWith(`${table}__item_`))
-      || recordTables.some(table => key.startsWith(`${table}__op_`) || key.startsWith(`${table}__part_`))))
+    && (tables.some(table => key.startsWith(`${table}__item_`) || key.startsWith(`${table}__entry_`))
+      || recordTables.some(table => key.startsWith(`${table}__op_`) || key.startsWith(`${table}__part_`) || key === `${table}__checkpoint`)))
 }
 
 // Roll back the complete batch on quota/storage errors. Remove staged values

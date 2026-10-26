@@ -138,6 +138,7 @@ declare global {
   const refManualReset: typeof import('@vueuse/core').refManualReset
   const refThrottled: typeof import('@vueuse/core').refThrottled
   const refWithControl: typeof import('@vueuse/core').refWithControl
+  const resolveAssetUrl: typeof import('./src/composables/useAudio').resolveAssetUrl
   const resolveAudioUrl: typeof import('./src/composables/useAudio').resolveAudioUrl
   const resolveComponent: typeof import('vue').resolveComponent
   const resolveRef: typeof import('@vueuse/core')['resolveRef']
@@ -562,6 +563,7 @@ declare module 'vue' {
     readonly refManualReset: UnwrapRef<typeof import('@vueuse/core')['refManualReset']>
     readonly refThrottled: UnwrapRef<typeof import('@vueuse/core')['refThrottled']>
     readonly refWithControl: UnwrapRef<typeof import('@vueuse/core')['refWithControl']>
+    readonly resolveAssetUrl: UnwrapRef<typeof import('./src/composables/useAudio')['resolveAssetUrl']>
     readonly resolveAudioUrl: UnwrapRef<typeof import('./src/composables/useAudio')['resolveAudioUrl']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly saveAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['saveAISettings']>

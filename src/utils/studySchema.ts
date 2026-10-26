@@ -1,4 +1,5 @@
 import { parseAIGradeResult } from './aiSchema'
+import { recordId, recordMaps, recordSets } from './recordStorage'
 import { isMistakeModule } from './studyModules'
 import { isStudyBase } from './studyStorage'
 
@@ -28,13 +29,38 @@ function date(value: unknown) {
 
 export function validateStudyValue(base: string, value: unknown): void {
   let valid = false
-  if (base.startsWith('mistakes_v1__op_')) {
-    valid = object(value) && typeof value.key === 'string' && integer(value.delta) && number(value.at)
-    if (valid && object(value)) {
-      for (const item of [value.item, value.seed]) {
-        if (item !== null) {
-          validateStudyValue('mistakes_v1', [item])
-          if (!object(item) || item.key !== value.key) valid = false
+  const entry = base.match(/^(.*)__entry_((?:[a-f\d]{4})+)$/i)
+  if (entry && (recordMaps.includes(entry[1]) || recordSets.includes(entry[1]))) {
+    const id = recordId(entry[2])!
+    valid = value === null
+    if (!valid && recordSets.includes(entry[1])) {
+      valid = value === true
+      if (valid) validateStudyValue(entry[1], [id])
+    }
+    else if (!valid) {
+      validateStudyValue(entry[1], { [id]: value })
+      valid = true
+    }
+  }
+  else if (base === 'mistakes_v1__checkpoint') {
+    valid = object(value) && strings(value.seeded) && strings(value.legacyOps) && number(value.at)
+      && object(value.clocks) && Object.entries(value.clocks).every(([id, seq]) => /^[a-z\d-]+$/i.test(id) && integer(seq))
+    if (valid && object(value)) validateStudyValue('mistakes_v1', value.items)
+  }
+  else if (base.startsWith('mistakes_v1__op_')) {
+    if (object(value) && 'operations' in value) {
+      valid = typeof value.actor === 'string' && /^[a-z\d-]+$/i.test(value.actor) && integer(value.sequence) && value.sequence > 0
+        && Array.isArray(value.operations) && value.operations.length > 0 && value.operations.every(op => object(op) && !('operations' in op))
+      if (valid && Array.isArray(value.operations)) value.operations.forEach(op => validateStudyValue('mistakes_v1__op_legacy', op))
+    }
+    else {
+      valid = object(value) && typeof value.key === 'string' && Number.isSafeInteger(value.delta) && number(value.at)
+      if (valid && object(value)) {
+        for (const item of [value.item, value.seed]) {
+          if (item !== null) {
+            validateStudyValue('mistakes_v1', [item])
+            if (!object(item) || item.key !== value.key) valid = false
+          }
         }
       }
     }

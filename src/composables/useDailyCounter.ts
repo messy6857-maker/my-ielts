@@ -1,7 +1,7 @@
 import type { DailyPart } from '../utils/dailyStorage'
 import { createGlobalState, useEventListener, useIntervalFn } from '@vueuse/core'
 import { computed, getCurrentScope, onScopeDispose, ref, watch } from 'vue'
-import { dailyTotal, readDailyParts } from '../utils/dailyStorage'
+import { cleanupDailyParts, dailyTotal, readDailyParts } from '../utils/dailyStorage'
 import { studyDate } from '../utils/studyDate'
 import { studyPrefix, writeStudyBatch  } from '../utils/studyStorage'
 import { registerStudyWriter } from '../utils/studyWriteQueue'
@@ -62,6 +62,7 @@ export function createDailyCounter(namespace: string) {
   }
   function resetForDay(today: string) {
     const key = countKey()
+    cleanupDailyParts(key, countBase, today)
     const data = snapshot(key, today)
     countDate = today
     count.value = dailyTotal([...data.parts.values()], data.fallback)

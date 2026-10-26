@@ -1,26 +1,26 @@
-<script setup>
+<script setup lang="ts">
+import { computed, ref } from 'vue'
+import { useAudioPlayer } from '../../composables/useSingleAudio'
 import chapterData from './spelling_convention'
 
 const audioPlayer = useAudioPlayer()
-function play(word) {
-  audioPlayer.play(`179_audios/${word}.mp3`)
+const audioError = ref('')
+async function play(words: string[]) {
+  audioError.value = ''
+  const word = words[0]
+  if (!await audioPlayer.play(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=1`))
+    audioError.value = '发音加载失败，请检查网络后重试'
 }
-
 const keyword = ref('')
 const chapter = ref('Chapter2 拼写规范')
-const chapters = [
-  'Chapter2 拼写规范',
-  'Chapter3 特别名词',
-  'Chapter4 形容词副词',
-]
-
+const chapters = ['Chapter2 拼写规范', 'Chapter3 特别名词', 'Chapter4 形容词副词']
 const curChapter = computed(() => {
-  const { rows } = chapterData[chapter.value]
-  rows.forEach((e) => {
-    if (typeof e[0] === 'string')
-      e[0] = e[0].split(', ')
-  })
-  return chapterData[chapter.value]
+  const data = chapterData[chapter.value as keyof typeof chapterData]
+  if (!data) return null
+  const needle = keyword.value.trim().toLocaleLowerCase()
+  return { ...data, rows: data.rows.map(row => ({
+    british: row[0].split(/,\s*/), american: row[1], meaning: row[2],
+  })).filter(row => `${row.british.join(' ')} ${row.american} ${row.meaning}`.toLocaleLowerCase().includes(needle)) }
 })
 </script>
 
@@ -66,7 +66,10 @@ const curChapter = computed(() => {
     </div>
   </div>
   <div class="mt-6">
-    <template v-if="chapter === 'Chapter2 拼写规范'">
+    <p v-if="audioError" role="alert" class="mb-4 text-red-600">
+{{ audioError }}
+</p>
+    <template v-if="curChapter">
       <div class="mb-4 mt-6 items-center justify-between lg:flex">
         <div class="mb-4 lg:mb-0">
           <h3 class="mb-2 font-bold text-gray-900 dark:text-white">
@@ -97,80 +100,39 @@ const curChapter = computed(() => {
         <tbody>
           <tr
             v-for="(row, index) in curChapter.rows"
-            :key="row[0]"
+            :key="row.british.join(',')"
             class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"
           >
             <td class="px-6 py-4">
-              {{ index }}
+              {{ index + 1 }}
             </td>
             <td class="px-6 py-4">
-              <a href="javascript:;" class="i-carbon-volume-up-filled block" @click="play(row[0])" />
+              <a href="javascript:;" class="i-carbon-volume-up-filled block" @click="play(row.british)" />
             </td>
             <th class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">
               <a
                 class="hover:underline"
-                :title="`在剑桥词典中查询 ${row[0][0]}`"
-                :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${row[0][0]}`"
+                :title="`在剑桥词典中查询 ${row.british[0]}`"
+                :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${row.british[0]}`"
                 target="_blank"
-              >{{ row[0].join(', ') }}</a>
+              >{{ row.british.join(', ') }}</a>
             </th>
             <td class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">
-              {{ row[1] }}
+              {{ row.american }}
             </td>
             <td class="whitespace-nowrap px-6 py-4">
-              {{ row[2] }}
+              {{ row.meaning }}
             </td>
           </tr>
         </tbody>
       </table>
       </div>
+      <p v-if="!curChapter.rows.length" role="status" class="p-4">
+没有匹配的词条，请更换关键词。
+</p>
     </template>
-    <!-- <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
-      <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
-        <tr>
-          <th class="w-0 px-6 py-3">
-            #
-          </th>
-          <th class="w-0 px-6 py-3" />
-          <th scope="col" class="w-0 px-6 py-3">
-            考点词
-          </th>
-          <th scope="col" class="w-0 px-6 py-3">
-            词性
-          </th>
-          <th scope="col" class="w-80 px-6 py-3">
-            词义
-          </th>
-          <th scope="col" class="px-6 py-3">
-            同义替换
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="w in ws" :key="w.index" class="border-b bg-white dark:border-gray-700 dark:bg-gray-800">
-          <td class="px-6 py-4">
-            {{ w.index }}
-          </td>
-          <td class="px-6 py-4">
-            <a href="javascript:;" class="i-carbon-volume-up-filled block" @click="play(w.word)" />
-          </td>
-          <th scope="row" class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">
-            <a
-              :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${w.word}`"
-              target="_blank"
-            >{{ w.word }}</a>
-          </th>
-          <td class="px-6 py-4 italic">
-            {{ w.type }}
-          </td>
-          <td class="px-6 py-4">
-            {{ w.meaning }}
-          </td>
-          <td class="px-6 py-4">
-            {{ w.replace.join(', ') }}
-          </td>
-        </tr>
-      </tbody>
-    </table> -->
+    <p v-else role="status" class="p-4">
+本章资料待补充，请先学习 Chapter2 拼写规范。
+</p>
   </div>
 </template>

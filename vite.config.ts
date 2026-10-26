@@ -7,6 +7,7 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import Pages from 'vite-plugin-pages'
 import { defineConfig } from 'vitest/config'
+import { publicAssetsPlugin } from './scripts/stage-public.mjs'
 
 export default defineConfig({
   base: '',
@@ -22,6 +23,7 @@ export default defineConfig({
   },
   plugins: [
     Vue(),
+    publicAssetsPlugin(),
 
     // https://github.com/hannoeru/vite-plugin-pages
     Pages({ extensions: ['vue'], exclude: ['**/[A-Z]*.vue'] }),

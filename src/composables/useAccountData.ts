@@ -4,9 +4,10 @@ import type { MistakeItem } from './useStudyData'
 import { onScopeDispose, ref, watch } from 'vue'
 import { isDraftCollection, mergeDraftChanges, readDraftCollection, writeDraftChanges } from '../utils/draftStorage'
 import { mergeMistakes, readMistakes, writeMistakes } from '../utils/mistakeStorage'
+import { isRecordCollection, mergeRecords, readRecords, writeRecords } from '../utils/recordStorage'
 import { studyPrefix } from '../utils/studyStorage'
 import { registerStudyWriter } from '../utils/studyWriteQueue'
-import { onBeforeLogout, readJson, useAuth, writeJson } from './useAuth'
+import { notifyLocalWrite, onBeforeLogout, readJson, storageFailures, useAuth, writeJson } from './useAuth'
 
 interface PersistenceOptions { debounceMs?: number; maxWaitMs?: number }
 
@@ -16,8 +17,9 @@ export function createAccountData<T>(base: string, fallback: () => T, options: P
   let ownerKey = studyPrefix(currentUser.value) + base
   const draftBase = isDraftCollection(base)
   const mistakeBase = base === 'mistakes_v1'
-  const recordBase = draftBase || mistakeBase
-  const load = (key: string): T => draftBase ? readDraftCollection(key, base) as T : mistakeBase ? readMistakes(key) as T : readJson<T>(key, fallback(), base)
+  const collectionBase = isRecordCollection(base)
+  const recordBase = draftBase || mistakeBase || collectionBase
+  const load = (key: string): T => draftBase ? readDraftCollection(key, base) as T : mistakeBase ? readMistakes(key) as T : collectionBase ? readRecords(key, base) as T : readJson<T>(key, fallback(), base)
   const clone = (value: T): T => JSON.parse(JSON.stringify(value))
   const state = ref(load(ownerKey)) as Ref<T>
   const baselines = new Map<string, T>()
@@ -35,12 +37,26 @@ export function createAccountData<T>(base: string, fallback: () => T, options: P
     idleTimer = undefined
     maxTimer = undefined
   }
+  function writeCollection(key: string, value: T) {
+    try {
+      const latest = writeRecords(key, base, baselines.get(key), value)
+      // Entries are durable before this optional legacy compatibility cache.
+      try { localStorage.setItem(key, JSON.stringify(latest)) } catch { /* Rebuild from entries on read. */ }
+      storageFailures.value = storageFailures.value.filter(k => k !== key)
+      notifyLocalWrite()
+      return true
+    }
+    catch {
+      if (!storageFailures.value.includes(key)) storageFailures.value = [...storageFailures.value, key]
+      return false
+    }
+  }
   function flush() {
     clearTimers()
     for (const [key, value] of pending) {
       const saved = draftBase
         ? writeDraftChanges(key, base, baselines.get(key) as DraftCollection, value as DraftCollection)
-        : mistakeBase ? writeMistakes(key, baselines.get(key) as MistakeItem[], value as MistakeItem[]) : writeJson(key, value)
+        : mistakeBase ? writeMistakes(key, baselines.get(key) as MistakeItem[], value as MistakeItem[]) : collectionBase ? writeCollection(key, value) : writeJson(key, value)
       if (saved) {
         pending.delete(key)
         if (recordBase) {
@@ -90,11 +106,12 @@ export function createAccountData<T>(base: string, fallback: () => T, options: P
   const off = onBeforeLogout(flush)
   const onStorage = (event: StorageEvent) => {
     if (!recordBase || event.storageArea !== localStorage
-      || (event.key !== null && event.key !== ownerKey && !event.key.startsWith(`${ownerKey}__${draftBase ? 'item' : 'op'}_`)))
+      || (event.key !== null && event.key !== ownerKey && !event.key.startsWith(`${ownerKey}__${draftBase ? 'item' : collectionBase ? 'entry' : 'op'}_`) && event.key !== `${ownerKey}__checkpoint`))
       return
     const latest = load(ownerKey)
     const merged = (draftBase
       ? mergeDraftChanges(clone(latest) as DraftCollection, baselines.get(ownerKey) as DraftCollection, state.value as DraftCollection)
+      : collectionBase ? mergeRecords(base, clone(latest), baselines.get(ownerKey), state.value)
       : mergeMistakes(clone(latest) as MistakeItem[], baselines.get(ownerKey) as MistakeItem[], state.value as MistakeItem[])) as T
     baselines.set(ownerKey, clone(latest))
     loading = true
