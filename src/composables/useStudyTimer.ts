@@ -5,6 +5,7 @@ import {
   readValue,
   saveEnvelope,
   saveRecord,
+  studyBaseOf,
 } from '../utils/storage'
 import { onBeforeLogout, useAuth } from './useAuth'
 import { nsKey, studyDay } from './useStudyData'
@@ -81,9 +82,13 @@ export function useStudyTimer() {
   let ticks = 0
   function migrate(user: string | null) {
     const base = nsKey('study_time_v1', user)
-    for (const oldKey of Object.keys(localStorage).filter(
-      k => k === base || k.startsWith(`${base}_`),
-    )) {
+    for (const oldKey of Object.keys(localStorage).filter((k) => {
+      const timerBase = studyBaseOf(k, user)
+      return (
+        k === base
+        || (!!timerBase && /^study_time_v1_[a-z\d-]+$/i.test(timerBase))
+      )
+    })) {
       const old = readValue<{
         date: string
         seconds: number

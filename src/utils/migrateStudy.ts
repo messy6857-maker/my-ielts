@@ -137,7 +137,11 @@ export function migrateStudy(owner: string | null) {
       seed('stats_parts_v2', 'legacy', { totals, days }, owner)
     const base = accountKey('study_time_v1', owner)
     for (const key of Object.keys(localStorage)) {
-      if (key !== base && !key.startsWith(`${base}_`))
+      const timerBase = studyBaseOf(key, owner)
+      if (
+        key !== base
+        && !(timerBase && /^study_time_v1_[a-z\d-]+$/i.test(timerBase))
+      )
         continue
       const old = readValue<any>(key, null)
       if (old?.date && Number.isFinite(old.seconds)) {

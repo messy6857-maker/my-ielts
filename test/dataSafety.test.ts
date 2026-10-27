@@ -376,3 +376,13 @@ it('preserves higher legacy totals when the cloud snapshot overlaps', () => {
   )
   expect(getAttempts()['2026-10-27'].vocabulary.known).toBe(7)
 })
+
+it('does not migrate another username that resembles a legacy timer key', () => {
+  const foreign = accountKey('study_time_v1', 'alice_study_time_v1')
+  localStorage.setItem(
+    foreign,
+    JSON.stringify({ date: '2026-10-27', seconds: 999 }),
+  )
+  migrateStudy('alice')
+  expect(Object.values(readRecords('timer_sessions_v2', 'alice'))).toEqual([])
+})
