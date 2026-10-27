@@ -1,0 +1,1 @@
+const r="https://messy6857-maker.github.io/my-ielts-media";function t(e){return`${r}/${e.replace(/^\/+/,"").split("/").map(o=>encodeURIComponent(o)).join("/")}`}function n(e){return t(e)}export{n as a,t as r};

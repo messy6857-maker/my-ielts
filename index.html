@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="icon" href="./favicon.png" type="image/svg+xml">
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <title>My IELTS</title>
   <meta name="description" content="Everything in my IELTS preparation">
-  <script type="module" crossorigin src="./assets/index-60ae2844.js"></script>
-  <link rel="stylesheet" href="./assets/index-7c25ca01.css">
+  <script type="module" crossorigin src="./assets/index-977343fc.js"></script>
+  <link rel="stylesheet" href="./assets/index-d8b89f6d.css">
 </head>
 <body>
   <div id="app"></div>
@@ -17,7 +17,8 @@
   <script>
     (function () {
       const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
-      const setting = localStorage.getItem('color-schema') || 'auto'
+      let setting = 'auto'
+      try { setting = localStorage.getItem('vueuse-color-scheme') || 'auto' } catch {}
       if (setting === 'dark' || (prefersDark && setting !== 'light'))
         document.documentElement.classList.toggle('dark', true)
     })()
