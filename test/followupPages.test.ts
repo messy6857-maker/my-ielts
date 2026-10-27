@@ -468,3 +468,68 @@ it.each(['reading', 'listening'])(
     expect(accountNotice.value).toBe('')
   },
 )
+
+// ---- 本轮修复回归：阻断解除后计时恢复 / 选项框 / 标题列表 / 输入框 ----
+it.each(['reading', 'listening'])(
+  '%s mock timer resumes after unblock',
+  async (kind) => {
+    const Page
+      = kind === 'reading'
+        ? (await import('../src/pages/mock/reading-test.vue')).default
+        : (await import('../src/pages/mock/listening-test.vue')).default
+    const session = await show(Page, `/mock/${kind}-test`)
+    session.state.startTest()
+    auth.currentUser.value = 'bob'
+    await nextTick()
+    expect(session.state.recovery.blocked.value).toBe(true)
+    const frozen = session.state.timeLeft
+    await new Promise(resolve => setTimeout(resolve, 1100))
+    expect(session.state.timeLeft).toBe(frozen)
+    auth.currentUser.value = 'alice'
+    await nextTick()
+    expect(session.state.recovery.blocked.value).toBe(false)
+    await new Promise(resolve => setTimeout(resolve, 1100))
+    expect(session.state.timeLeft).toBeLessThan(frozen)
+  },
+)
+
+it('listening map-label set shows its options box and allows multi-char input', async () => {
+  const Page = (await import('../src/pages/mock/listening-test.vue')).default
+  const session = await show(Page, '/mock/listening-test')
+  await session.router.push({ query: { test: 'cam20-test2' } })
+  // 等切题真正完成：只看 loading 会漏掉 watcher 尚未触发的窗口，
+  // 以 testPair.id 为准轮询。
+  for (let i = 0; i < 200 && session.state.testPair?.id !== 'cam20-test2'; i++) {
+    await nextTick()
+    await flushPromises()
+    await new Promise(resolve => setTimeout(resolve, 5))
+  }
+  expect(session.state.testPair?.id).toBe('cam20-test2')
+  session.state.startTest()
+  session.state.activePart = 2
+  await nextTick()
+  expect(session.w.html()).toContain('The information given about this was too vague.')
+  const inputs = session.w.findAll('input[placeholder="输入字母"]')
+  expect(inputs.length).toBeGreaterThan(0)
+  inputs.forEach((input: any) => expect(input.attributes('maxlength')).toBe('4'))
+})
+
+it('cam20-test3 reading shows its heading list', async () => {
+  const Page = (await import('../src/pages/mock/reading-test.vue')).default
+  const session = await show(Page, '/mock/reading-test')
+  await session.router.push({ query: { test: 'cam20-test3' } })
+  // 等切题真正完成：只看 loading 会漏掉 watcher 尚未触发的窗口，
+  // 以 testPair.id 为准轮询。
+  for (let i = 0; i < 200 && session.state.testPair?.id !== 'cam20-test3'; i++) {
+    await nextTick()
+    await flushPromises()
+    await new Promise(resolve => setTimeout(resolve, 5))
+  }
+  expect(session.state.testPair?.id).toBe('cam20-test3')
+  session.state.startTest()
+  session.state.activePassage = 1
+  await nextTick()
+  expect(session.w.html()).toContain('标题列表')
+  expect(session.w.html()).toContain('Tried and tested solutions')
+  expect(session.w.html()).toContain('A warning of further trouble ahead')
+})

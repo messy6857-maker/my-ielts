@@ -56,6 +56,18 @@ function pauseExam() {
     clearInterval(timer)
   timer = null
 }
+// 阻断解除后恢复计时：按暂停时冻结的 timeLeft 重建墙钟锚点与 interval
+function startTimer() {
+  if (timer)
+    clearInterval(timer)
+  // 墙钟锚点：后台节流导致 tick 稀疏时，剩余时间仍按真实时间重算
+  endAt = Date.now() + timeLeft.value * 1000
+  timer = setInterval(() => {
+    timeLeft.value = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
+    if (timeLeft.value <= 0)
+      submit()
+  }, 1000)
+}
 const recovery = useExamRecovery({
   kind: 'reading',
   testId,
@@ -72,6 +84,7 @@ const recovery = useExamRecovery({
     active: activePassage.value,
     highlights: [...highlights.value.entries()],
   }),
+  onUnblocked: startTimer,
 })
 
 // 异步加载选中的套题（按需加载）
@@ -151,15 +164,7 @@ function startTest() {
   selPopup.value = null
   started.value = true
   recovery.save()
-  if (timer)
-    clearInterval(timer)
-  // 墙钟锚点：后台节流导致 tick 稀疏时，剩余时间仍按真实时间重算
-  endAt = Date.now() + timeLeft.value * 1000
-  timer = setInterval(() => {
-    timeLeft.value = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
-    if (timeLeft.value <= 0)
-      submit()
-  }, 1000)
+  startTimer()
 }
 
 // 放弃当前草稿并重新开始：清掉本会话草稿后立刻全新开考，
@@ -620,6 +625,19 @@ function switchPassage(index: number) {
                 :alt="`${p.title} 示意图`"
                 class="mt-4 max-w-full border border-gray-200 rounded-lg dark:border-gray-700"
               >
+              <div
+                v-if="p.headings?.length"
+                class="mt-4 border border-gray-200 rounded-lg p-4 dark:border-gray-700"
+              >
+                <p class="mb-2 text-sm font-bold text-gray-900 dark:text-white">
+                  标题列表
+                </p>
+                <ul class="text-sm text-gray-700 space-y-1 dark:text-gray-300">
+                  <li v-for="(h, hi) in p.headings" :key="hi">
+                    {{ h }}
+                  </li>
+                </ul>
+              </div>
             </article>
 
             <!-- 右：题目（独立滚动） -->
@@ -867,6 +885,19 @@ function switchPassage(index: number) {
               :alt="`${test.passages[activePassage].title} 示意图`"
               class="mt-4 max-w-full border border-gray-200 rounded-lg dark:border-gray-700"
             >
+            <div
+              v-if="test.passages[activePassage].headings?.length"
+              class="mt-4 border border-gray-200 rounded-lg p-4 dark:border-gray-700"
+            >
+              <p class="mb-2 text-sm font-bold text-gray-900 dark:text-white">
+                标题列表
+              </p>
+              <ul class="text-sm text-gray-700 space-y-1 dark:text-gray-300">
+                <li v-for="(h, hi) in test.passages[activePassage].headings" :key="hi">
+                  {{ h }}
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>

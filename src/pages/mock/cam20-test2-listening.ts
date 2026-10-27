@@ -4,6 +4,16 @@ import type { ListeningMockTest } from './types'
  * 剑桥雅思 20 Test 2 听力（40 题）
  * 转录自 Cambridge IELTS 20 PDF (Test 2, pp.39-45)，答案来自书后 answer key (p.46)
  */
+/** Part 3 Q21-25 选项框（书上原文）：对人文地理各方面的看法，选 A-G */
+const HUMAN_GEO_OPTIONS = [
+  'The information given about this was too vague.',
+  'This may not be relevant to their course.',
+  'This will involve only a small number of statistics.',
+  'It will be easy to find facts about this.',
+  'The facts about this may not be reliable.',
+  'No useful research has been done on this.',
+  'The information provided about this was interesting.',
+]
 export const cam20Test2Listening: ListeningMockTest = {
   id: 'cam20-test2-listening',
   title: '剑20 Test 2 听力',
@@ -45,11 +55,11 @@ export const cam20Test2Listening: ListeningMockTest = {
       title: 'Part 3：人文地理讨论',
       audio: 'mock/cam20-test2-listening-part3.mp3',
       questions: [
-        { id: 'Q21', type: 'map-label', question: 'Population', answer: 'D' },
-        { id: 'Q22', type: 'map-label', question: 'Health', answer: 'G' },
-        { id: 'Q23', type: 'map-label', question: 'Economies', answer: 'B' },
-        { id: 'Q24', type: 'map-label', question: 'Culture', answer: 'A' },
-        { id: 'Q25', type: 'map-label', question: 'Poverty', answer: 'E' },
+        { id: 'Q21', type: 'map-label', question: 'Population', answer: 'D', options: HUMAN_GEO_OPTIONS },
+        { id: 'Q22', type: 'map-label', question: 'Health', answer: 'G', options: HUMAN_GEO_OPTIONS },
+        { id: 'Q23', type: 'map-label', question: 'Economies', answer: 'B', options: HUMAN_GEO_OPTIONS },
+        { id: 'Q24', type: 'map-label', question: 'Culture', answer: 'A', options: HUMAN_GEO_OPTIONS },
+        { id: 'Q25', type: 'map-label', question: 'Poverty', answer: 'E', options: HUMAN_GEO_OPTIONS },
         { id: 'Q26', type: 'multiple-choice', question: 'Rosie says that in her own city the main problem is', options: ['A crime.', 'B housing.', 'C unemployment.'], answer: 2 },
         { id: 'Q27', type: 'multiple-choice', question: 'What recent additions to the outskirts of their cities are both students happy about?', options: ['A conference centres', 'B sports centres', 'C retail centres'], answer: 0 },
         { id: 'Q28', type: 'multiple-choice', question: 'The students agree that developing disused industrial sites may', options: ['A have unexpected costs.', 'B damage the urban environment.', 'C destroy valuable historical buildings.'], answer: 0 },

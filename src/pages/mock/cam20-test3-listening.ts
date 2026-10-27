@@ -4,6 +4,15 @@ import type { ListeningMockTest } from './types'
  * 剑桥雅思 20 Test 3 听力（40 题）
  * 转录自 Cambridge IELTS 20 PDF，答案来自书后 answer key (PDF p.85)
  */
+/** Part 3 Q27-30 选项框（书上原文）：对各剧目节目册的评价，选 A-F */
+const THEATRE_OPTIONS = [
+  'Its origin is somewhat controversial.',
+  'It is historically significant for a country.',
+  'It was effective at attracting audiences.',
+  'It is included in a recent project.',
+  'It contains insights into the show.',
+  'It resembles an artwork.',
+]
 export const cam20Test3Listening: ListeningMockTest = {
   id: 'cam20-test3-listening',
   title: '剑20 Test 3 听力',
@@ -52,10 +61,10 @@ export const cam20Test3Listening: ListeningMockTest = {
         { id: 'Q24', type: 'multiple-choice', question: 'Maya feels their project should include an explanation of why companies of actors', options: ['A promoted their own plays.', 'B performed plays outdoors.', 'C had to tour with their plays.'], answer: 0 },
         { id: 'Q25', type: 'multiple-choice', question: 'Finn and Maya both think that, compared to nineteenth-century programmes, those from the eighteenth century', options: ['A were more original.', 'B were more colourful.', 'C were more informative.'], answer: 2 },
         { id: 'Q26', type: 'multiple-choice', question: 'Maya doesn\'t fully understand why, in the twentieth century,', options: ['A very few theatre programmes were printed in the USA.', 'B British theatre programmes failed to develop for so long.', 'C theatre programmes in Britain copied fashions from the USA.'], answer: 1 },
-        { id: 'Q27', type: 'map-label', question: 'Ruy Blas', answer: 'F' },
-        { id: 'Q28', type: 'map-label', question: 'Man of La Mancha', answer: 'E' },
-        { id: 'Q29', type: 'map-label', question: 'The Tragedy of Jane Shore', answer: 'B' },
-        { id: 'Q30', type: 'map-label', question: 'The Sailors\' Festival', answer: 'D' },
+        { id: 'Q27', type: 'map-label', question: 'Ruy Blas', answer: 'F', options: THEATRE_OPTIONS },
+        { id: 'Q28', type: 'map-label', question: 'Man of La Mancha', answer: 'E', options: THEATRE_OPTIONS },
+        { id: 'Q29', type: 'map-label', question: 'The Tragedy of Jane Shore', answer: 'B', options: THEATRE_OPTIONS },
+        { id: 'Q30', type: 'map-label', question: 'The Sailors\' Festival', answer: 'D', options: THEATRE_OPTIONS },
       ],
     },
     {

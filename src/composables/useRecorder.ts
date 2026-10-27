@@ -156,8 +156,12 @@ export function useRecorder() {
           }
           recognizer.onerror = (event: any) => {
             if (recognition === recognizer && isRecording.value) {
-              healthy = false
-              error.value = `语音转写失败（${event.error || '未知错误'}），录音仍可回放；停止后可重录`
+              // no-speech（静音停顿）与 aborted 属可恢复：不要置 healthy=false，
+              // 否则 onend 不再重启，本轮后续说话再也不转写。
+              if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                healthy = false
+                error.value = `语音转写失败（${event.error || '未知错误'}），录音仍可回放；停止后可重录`
+              }
             }
           }
           recognizer.onend = () => {

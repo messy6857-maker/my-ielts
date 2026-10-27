@@ -23,6 +23,7 @@ export function useExamRecovery(options: {
   pause: () => void
   remaining: () => number
   extra?: () => unknown
+  onUnblocked?: () => void
 }) {
   // owner 跟随考试生命周期：未开考或已交卷时跟随当前身份，切号不阻断开始；
   // 开考后锁定为开考身份，只有此时切号才阻断。上一版在 setup 捕获一次，
@@ -30,6 +31,7 @@ export function useExamRecovery(options: {
   const owner = ref(useAuth().currentUser.value)
   let activeTestId = options.testId.value
   let pauseMessage = ''
+  let wasBlocked = false
   const writer = writerId()
   const baseKey = (id = options.testId.value) =>
     accountKey(`mock_draft_v1_${options.kind}_${encodeURIComponent(id)}`, owner.value)
@@ -130,6 +132,7 @@ export function useExamRecovery(options: {
     error.value = message
     accountNotice.value = message
     options.pause()
+    wasBlocked = true
     return true
   }
   const stopOwner = watch(
@@ -143,6 +146,12 @@ export function useExamRecovery(options: {
       }
       if (mismatch())
         return
+      // 回到原身份、阻断解除：恢复计时。暂停时 timer 已清，只清提示会让
+      // 考试以冻结时钟继续作答、自动交卷永不触发，所以必须重建计时。
+      if (wasBlocked) {
+        wasBlocked = false
+        options.onUnblocked?.()
+      }
       // 回到原身份、阻断解除：清掉暂停提示（保存失败的提示不是暂停消息，保留）。
       if (error.value === pauseMessage)
         error.value = ''
@@ -181,6 +190,7 @@ export function useExamRecovery(options: {
     begin() {
       owner.value = useAuth().currentUser.value
       activeTestId = options.testId.value
+      wasBlocked = false
       error.value = ''
       if (accountNotice.value === pauseMessage)
         accountNotice.value = ''

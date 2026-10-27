@@ -52,6 +52,18 @@ function pauseExam() {
   timer = null
   pauseAllAudio()
 }
+// 阻断解除后恢复计时：按暂停时冻结的 timeLeft 重建墙钟锚点与 interval
+function startTimer() {
+  if (timer)
+    clearInterval(timer)
+  // 墙钟锚点：后台节流导致 tick 稀疏时，剩余时间仍按真实时间重算
+  endAt = Date.now() + timeLeft.value * 1000
+  timer = setInterval(() => {
+    timeLeft.value = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
+    if (timeLeft.value <= 0)
+      submit()
+  }, 1000)
+}
 const recovery = useExamRecovery({
   kind: 'listening',
   testId,
@@ -65,6 +77,7 @@ const recovery = useExamRecovery({
       ? Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
       : timeLeft.value,
   extra: () => ({ active: activePart.value }),
+  onUnblocked: startTimer,
 })
 
 // audio 的 ref 写在 v-for 里，Vue 会收成数组；逐个暂停
@@ -152,15 +165,7 @@ function startTest() {
   activePart.value = saved?.extra?.active ?? 0
   started.value = true
   recovery.save()
-  if (timer)
-    clearInterval(timer)
-  // 墙钟锚点：后台节流导致 tick 稀疏时，剩余时间仍按真实时间重算
-  endAt = Date.now() + timeLeft.value * 1000
-  timer = setInterval(() => {
-    timeLeft.value = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
-    if (timeLeft.value <= 0)
-      submit()
-  }, 1000)
+  startTimer()
 }
 
 // 放弃当前草稿并重新开始：清掉本会话草稿后立刻全新开考，
@@ -741,12 +746,27 @@ function submit() {
                     "
                   >
 
+                  <!-- 配对/标注题的选项框（如 Q21-25 的 A-G，印在卷面上，作答时可见） -->
+                  <div
+                    v-if="q.type === 'map-label' && q.options?.length"
+                    class="mb-2 border border-gray-200 rounded-lg bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-800"
+                  >
+                    <p class="mb-1 font-bold">
+                      选项
+                    </p>
+                    <ul class="space-y-0.5">
+                      <li v-for="(opt, oi) in q.options" :key="oi">
+                        {{ String.fromCharCode(65 + oi) }}. {{ opt }}
+                      </li>
+                    </ul>
+                  </div>
+
                   <input
                     v-if="q.type === 'map-label'"
                     :disabled="submitted"
                     :value="answers[q.id] ?? ''"
-                    placeholder="输入字母 A-H"
-                    maxlength="1"
+                    placeholder="输入字母"
+                    maxlength="4"
                     class="w-24 border border-gray-300 rounded-lg px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     @input="
                       setAnswer(q.id, ($event.target as HTMLInputElement).value)

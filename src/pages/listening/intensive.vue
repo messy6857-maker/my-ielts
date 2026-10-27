@@ -239,6 +239,7 @@ function setRate(r: number) {
         @error="mediaError = '音频加载失败，请检查网络后重试'"
         @loadeddata="mediaError = ''"
         @loadedmetadata="setRate(playbackRate)"
+        @play="stopSentence()"
       />
       <div class="mt-2 flex items-center gap-2">
         <span class="text-xs text-gray-500">语速：</span>
@@ -279,6 +280,9 @@ function setRate(r: number) {
           加载中…
         </div>
         <div v-else-if="sentences.length" class="space-y-1">
+          <p class="px-2 pb-1 text-xs text-gray-400">
+            🔊 点读为浏览器语音朗读，非原录音分句，音色与上方录音不同。
+          </p>
           <div
             v-for="(s, i) in sentences"
             :key="i"

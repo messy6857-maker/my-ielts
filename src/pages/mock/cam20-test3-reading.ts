@@ -52,6 +52,15 @@ Today, the US frozen food industry has a turnover of over $67 billion annually, 
     },
     {
       title: "Passage 2：Can the planet's coral reefs be saved?",
+      headings: [
+        'i. Tried and tested solutions',
+        'ii. Cooperation beneath the waves',
+        'iii. Working to lessen the problems',
+        'iv. Disagreement about the accuracy of a certain phrase',
+        'v. Two clear educational goals',
+        'vi. Promoting hope',
+        'vii. A warning of further trouble ahead',
+      ],
       passage: `A
 Conservationists have put the final touches to a giant artificial reef they have been assembling at the world-renowned Zoological Society of London (London Zoo). Samples of the planet's most spectacular corals - vivid green branching coral, yellow scroll, blue ridge and many more species - have been added to the giant tank along with fish that thrive in their presence: blue tang, clownfish and many others. The reef is in the zoo's new gallery, Tiny Giants, which is dedicated to the minuscule invertebrate creatures that sustain life across the planet. The coral reef tank and its seven-metre-wide window form the core of the exhibition.
 

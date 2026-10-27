@@ -21,6 +21,8 @@ export interface ReadingPassage {
   questions: MockQuestion[]
   /** 可选：题目相关图片（如选项框、示意图） */
   image?: string
+  /** 可选：标题列表文本版（如剑 20 Test 3 Passage 2 的 i–vii；有图时用图，无图时用此文本） */
+  headings?: string[]
 }
 
 export interface ReadingMockTest {
