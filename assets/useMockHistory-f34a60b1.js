@@ -1,1 +1,0 @@
-import{q as r,B as o,R as n}from"./index-6a995e57.js";function s(){const{currentUser:t}=r();return`myielts_u_${t.value??"guest"}_mock_history_v1`}function c(){try{return JSON.parse(localStorage.getItem(s())??"[]")}catch{return[]}}function a(t){const e=c();e.unshift({...t,date:new Date().toISOString()}),o(s(),e.slice(0,100))}function i(){n(s())}export{i as c,c as g,a as s};
