@@ -44,7 +44,7 @@ const category = ref(
   chapters.includes(storedChapter ?? '') ? storedChapter! : chapters[0],
 )
 const { addMistake, decrementMistake } = useMistakes()
-const { setProgress } = useProgress()
+const { setProgress, clearChapterProgress } = useProgress()
 const scheduleStore = useWordSchedule()
 const daily = useDailyGoal()
 const router = useRouter()
@@ -449,7 +449,11 @@ function loadWordInfo(card: Card) {
 function finishSession() {
   finished.value = true
   const known = Object.values(bestGrade.value).filter(v => v === 5).length
-  setProgress('flashcard', known, initialTotal.value)
+  setProgress(
+    `flashcard:${crossChapter.value ? '全库到期复习' : category.value}`,
+    known,
+    initialTotal.value,
+  )
   // 完成一轮学习即打卡
   if (Object.keys(bestGrade.value).length > 0)
     doCheckin()
@@ -469,6 +473,7 @@ function resetMemory() {
   if (!ok)
     return
   scheduleStore.clear()
+  clearChapterProgress()
   setProgress('flashcard', 0, 0)
   daily.resetDaily()
   timer.pause()

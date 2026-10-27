@@ -20,7 +20,7 @@ export function getMockHistory(): MockRecord[] {
 }
 export function saveMockRecord(r: Omit<MockRecord, 'date'>) {
   const record = { ...r, date: new Date().toISOString() }
-  saveRecord(
+  const saved = saveRecord(
     'mock_history_v1',
     `${r.kind}:${r.id}:${record.date}:${crypto.randomUUID()}`,
     record,
@@ -32,6 +32,7 @@ export function saveMockRecord(r: Omit<MockRecord, 'date'>) {
     .sort((a, b) => b[1].date.localeCompare(a[1].date))
     .slice(100))
     saveRecord('mock_history_v1', old[0], undefined, owner())
+  return saved
 }
 export function clearMockHistory() {
   clearRecords('mock_history_v1', owner())

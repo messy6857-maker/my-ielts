@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
-import { onBeforeLogout } from '../../composables/useAuth'
+import { useExamRecovery } from '../../composables/useExamRecovery'
 
 import { loadMockTest, mockTestList } from './registry'
 import type { MockTestPair } from './registry'
@@ -44,6 +44,30 @@ let timer: ReturnType<typeof setInterval> | null = null
 let loadSeq = 0
 let endAt = 0
 
+function pauseExam() {
+  if (endAt)
+    timeLeft.value = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
+  endAt = 0
+  if (timer)
+    clearInterval(timer)
+  timer = null
+  pauseAllAudio()
+}
+const recovery = useExamRecovery({
+  kind: 'listening',
+  testId,
+  started,
+  submitted,
+  answers,
+  timeLeft,
+  pause: pauseExam,
+  remaining: () =>
+    endAt
+      ? Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
+      : timeLeft.value,
+  extra: () => ({ active: activePart.value }),
+})
+
 // audio 的 ref 写在 v-for 里，Vue 会收成数组；逐个暂停
 function pauseAllAudio() {
   const els = audioEl.value as unknown as
@@ -58,6 +82,9 @@ function pauseAllAudio() {
 // 异步加载选中的套题（按需加载，不一次全载入）
 // loadSeq 防止快速切换时旧的加载覆盖新的；try/finally 保证 loading 一定复位
 async function loadTest() {
+  recovery.save()
+  pauseExam()
+  started.value = false
   // 非法 test id（如手写 URL / 过期书签）不再静默 fallback：把 URL 参数规范化为默认套题，
   // 与实际加载内容一致，书签也被修复；replace 不产生多余历史记录，随后 watcher 以新 id 重载
   if (!mockTestList.some(t => t.id === testId.value)) {
@@ -72,13 +99,14 @@ async function loadTest() {
   pauseAllAudio()
   try {
     const pair = await loadMockTest(testId.value)
-    if (seq !== loadSeq)
+    if (seq !== loadSeq || recovery.blocked.value)
       return // 已被更新的加载取代
     testPair.value = pair
     answers.value = {}
     submitted.value = false
     activePart.value = 0
     started.value = false
+    recovery.refresh()
   }
   catch {
     if (seq !== loadSeq)
@@ -93,13 +121,20 @@ async function loadTest() {
 
 // 点"开始测试"才重置状态并开始计时
 function startTest() {
+  if (recovery.mismatch())
+    return
   if (!testPair.value || started.value)
     return
-  started.value = true
-  timeLeft.value = testPair.value.listening.timeLimit
-  answers.value = {}
+  const saved = recovery.draft.value
+  recovery.begin()
+  timeLeft.value = saved
+    ? Math.min(Math.max(0, saved.timeLeft), testPair.value.listening.timeLimit)
+    : testPair.value.listening.timeLimit
+  answers.value = saved?.answers ?? {}
   submitted.value = false
-  activePart.value = 0
+  activePart.value = saved?.extra?.active ?? 0
+  started.value = true
+  recovery.save()
   if (timer)
     clearInterval(timer)
   // 墙钟锚点：后台节流导致 tick 稀疏时，剩余时间仍按真实时间重算
@@ -217,16 +252,6 @@ function onZoomWheel(e: WheelEvent) {
   adjustZoom(e.deltaY < 0 ? 0.25 : -0.25)
 }
 
-watch(
-  useAuth().currentUser,
-  () => {
-    if (timer)
-      clearInterval(timer)
-    started.value = false
-  },
-  { flush: 'sync' },
-)
-
 const allQuestions = computed<MockQuestion[]>(
   () => test.value?.parts.flatMap(p => p.questions) ?? [],
 )
@@ -262,11 +287,15 @@ const correctCount = computed(() => {
 const band = computed(() => bandScore(correctCount.value, scoredTotal.value))
 
 function setAnswer(qid: string, val: string) {
+  if (recovery.mismatch())
+    return
   if (!submitted.value)
     answers.value[qid] = val
 }
 
 function toggleMultiSelect(qid: string, idx: number) {
+  if (recovery.mismatch())
+    return
   if (submitted.value)
     return
   const current = new Set((answers.value[qid] ?? '').split(',').filter(Boolean))
@@ -294,7 +323,7 @@ const hasAnswers = computed(() =>
 function onTestChange(e: Event) {
   const target = (e.target as HTMLSelectElement).value
   if (started.value && !submitted.value && hasAnswers.value) {
-    if (!window.confirm('切换套题将丢失当前进度，确定吗？'))
+    if (!window.confirm('切换套题将暂停并保留当前作答草稿，确定吗？'))
       return
   }
 
@@ -323,10 +352,10 @@ onBeforeRouteLeave(
     useAuth().currentUser.value !== testOwner
     || !started.value
     || submitted.value
-    || window.confirm('尚未交卷，离开将丢失本次作答，确定吗？'),
+    || window.confirm('尚未交卷，离开将暂停计时并保留本机草稿，确定吗？'),
 )
 function submit() {
-  if (useAuth().currentUser.value !== testOwner)
+  if (recovery.mismatch())
     return
   if (submitted.value)
     return
@@ -344,7 +373,7 @@ function submit() {
         : 1),
     0,
   )
-  saveMockRecord({
+  const saved = saveMockRecord({
     id: testId.value,
     label: testPair.value?.label ?? testId.value,
     kind: 'listening',
@@ -352,16 +381,20 @@ function submit() {
     total,
     band: band.value,
   })
+  if (saved)
+    recovery.clear()
 }
-const offLogout = onBeforeLogout(() => {
-  if (timer)
-    clearInterval(timer)
-})
-onUnmounted(offLogout)
 </script>
 
 <template>
   <div ref="mediaRoot" class="mx-auto max-w-5xl px-4 pt-6 2xl:px-0">
+    <p
+      v-if="recovery.error.value"
+      role="alert"
+      class="my-3 rounded-lg bg-amber-50 p-3 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+    >
+      {{ recovery.error.value }}
+    </p>
     <p
       v-if="mediaError"
       role="alert"
@@ -432,7 +465,11 @@ onUnmounted(offLogout)
           class="rounded-xl bg-blue-600 px-10 py-3 text-lg font-bold text-white hover:bg-blue-700"
           @click="startTest"
         >
-          ▶ 开始测试
+          {{
+            recovery.draft.value
+              ? '继续上次作答（从剩余时间计时）'
+              : '▶ 开始测试'
+          }}
         </button>
       </div>
       <div v-else>

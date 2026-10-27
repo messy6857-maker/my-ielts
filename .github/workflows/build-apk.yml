@@ -25,7 +25,7 @@ jobs:
         run: npm -g install pnpm@8.6.10 && pnpm i --frozen-lockfile
 
       - name: Verify
-        run: pnpm test:run && pnpm typecheck
+        run: pnpm test:run && pnpm typecheck && pnpm lint
 
       - name: Build web app
         run: pnpm run build

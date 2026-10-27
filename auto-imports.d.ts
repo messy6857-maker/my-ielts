@@ -7,13 +7,14 @@ export {}
 declare global {
   const ATTEMPT_MODULE_LABEL: typeof import('./src/composables/useStats')['ATTEMPT_MODULE_LABEL']
   const AUTH_PENDING_PUSH_KEY: typeof import('./src/composables/syncClient')['AUTH_PENDING_PUSH_KEY']
-  const BACKUP_VERSION: typeof import('./src/composables/useBackup')['BACKUP_VERSION']
+  const BACKUP_VERSION: (typeof import('./src/composables/useBackup'))['BACKUP_VERSION']
   const DAILY_STUDY_GOAL: typeof import('./src/composables/useStudyTimer')['DAILY_STUDY_GOAL']
   const EffectScope: typeof import('vue')['EffectScope']
   const MEDIA_BASE: typeof import('./src/composables/useAudio')['MEDIA_BASE']
   const MISTAKE_MODULE_LABEL: typeof import('./src/composables/useStudyData')['MISTAKE_MODULE_LABEL']
   const PROGRESS_MODULE_LABEL: typeof import('./src/composables/useStudyData')['PROGRESS_MODULE_LABEL']
   const SYNC_PENDING_KEY: typeof import('./src/composables/syncClient')['SYNC_PENDING_KEY']
+  const accountNotice: typeof import('./src/composables/useAuth')['accountNotice']
   const aiSettingsState: typeof import('./src/composables/useAISettings')['aiSettingsState']
   const apiLogin: typeof import('./src/composables/syncClient')['apiLogin']
   const apiPull: typeof import('./src/composables/syncClient')['apiPull']
@@ -24,7 +25,7 @@ declare global {
   const attemptModuleLabel: typeof import('./src/composables/useStats')['attemptModuleLabel']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
   const clearMockHistory: typeof import('./src/composables/useMockHistory')['clearMockHistory']
-  const collectBackupData: typeof import('./src/composables/useBackup')['collectBackupData']
+  const collectBackupData: (typeof import('./src/composables/useBackup'))['collectBackupData']
   const collectSyncData: typeof import('./src/composables/syncClient')['collectSyncData']
   const computed: typeof import('vue')['computed']
   const computedAsync: typeof import('@vueuse/core')['computedAsync']
@@ -53,8 +54,9 @@ declare global {
   const diffWords: typeof import('./src/composables/useWordDiff')['diffWords']
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
-  const exportBackup: typeof import('./src/composables/useBackup')['exportBackup']
+  const exportBackup: (typeof import('./src/composables/useBackup'))['exportBackup']
   const extendRef: typeof import('@vueuse/core')['extendRef']
+  const finishGuestMigration: typeof import('./src/composables/useAuth')['finishGuestMigration']
   const formatClock: typeof import('./src/composables/useStudyTimer')['formatClock']
   const formatDate: typeof import('./src/composables/useStudyData')['formatDate']
   const formatDuration: typeof import('./src/composables/useStudyTimer')['formatDuration']
@@ -75,9 +77,10 @@ declare global {
   const gradeSpeakingWithAI: typeof import('./src/composables/useAISettings')['gradeSpeakingWithAI']
   const h: typeof import('vue')['h']
   const hasAISettings: typeof import('./src/composables/useAISettings')['hasAISettings']
+  const hasPendingGuestMigration: typeof import('./src/composables/useAuth')['hasPendingGuestMigration']
   const hashString: typeof import('./src/composables/syncClient')['hashString']
   const ignorableWatch: typeof import('@vueuse/core')['ignorableWatch']
-  const importBackup: typeof import('./src/composables/useBackup')['importBackup']
+  const importBackup: (typeof import('./src/composables/useBackup'))['importBackup']
   const initSingleAudio: typeof import('./src/composables/useSingleAudio')['initSingleAudio']
   const inject: typeof import('vue')['inject']
   const isBandScore: typeof import('./src/composables/useAISettings')['isBandScore']
@@ -89,9 +92,11 @@ declare global {
   const isRef: typeof import('vue')['isRef']
   const isValidEssayGrade: typeof import('./src/composables/useAISettings')['isValidEssayGrade']
   const knownRate: typeof import('./src/composables/useStats')['knownRate']
+  const legacyTimerSeconds: typeof import('./src/composables/useStudyTimer')['legacyTimerSeconds']
   const makeDestructurable: typeof import('@vueuse/core')['makeDestructurable']
   const markRaw: typeof import('vue')['markRaw']
   const mergeCounts: typeof import('./src/composables/useStats')['mergeCounts']
+  const migrateGuestData: typeof import('./src/composables/useAuth')['migrateGuestData']
   const migrateMistakes: typeof import('./src/composables/useStudyData')['migrateMistakes']
   const nextTick: typeof import('vue')['nextTick']
   const normalizeTask2Grade: typeof import('./src/composables/useAISettings')['normalizeTask2Grade']
@@ -181,7 +186,7 @@ declare global {
   const unref: typeof import('vue')['unref']
   const unrefElement: typeof import('@vueuse/core')['unrefElement']
   const until: typeof import('@vueuse/core')['until']
-  const useAccountData: typeof import('./src/composables/useRecordData')['useAccountData']
+  const useAccountData: (typeof import('./src/composables/useRecordData'))['useAccountData']
   const useActiveElement: typeof import('@vueuse/core')['useActiveElement']
   const useAnimate: typeof import('@vueuse/core')['useAnimate']
   const useArrayDifference: typeof import('@vueuse/core')['useArrayDifference']
@@ -243,6 +248,7 @@ declare global {
   const useEventBus: typeof import('@vueuse/core')['useEventBus']
   const useEventListener: typeof import('@vueuse/core')['useEventListener']
   const useEventSource: typeof import('@vueuse/core')['useEventSource']
+  const useExamRecovery: typeof import('./src/composables/useExamRecovery')['useExamRecovery']
   const useEyeDropper: typeof import('@vueuse/core')['useEyeDropper']
   const useFavicon: typeof import('@vueuse/core')['useFavicon']
   const useFetch: typeof import('@vueuse/core')['useFetch']
@@ -394,6 +400,7 @@ declare module 'vue' {
     readonly MISTAKE_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['MISTAKE_MODULE_LABEL']>
     readonly PROGRESS_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['PROGRESS_MODULE_LABEL']>
     readonly SYNC_PENDING_KEY: UnwrapRef<typeof import('./src/composables/syncClient')['SYNC_PENDING_KEY']>
+    readonly accountNotice: UnwrapRef<typeof import('./src/composables/useAuth')['accountNotice']>
     readonly aiSettingsState: UnwrapRef<typeof import('./src/composables/useAISettings')['aiSettingsState']>
     readonly apiLogin: UnwrapRef<typeof import('./src/composables/syncClient')['apiLogin']>
     readonly apiPull: UnwrapRef<typeof import('./src/composables/syncClient')['apiPull']>
@@ -433,6 +440,7 @@ declare module 'vue' {
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
+    readonly finishGuestMigration: UnwrapRef<typeof import('./src/composables/useAuth')['finishGuestMigration']>
     readonly formatClock: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatClock']>
     readonly formatDate: UnwrapRef<typeof import('./src/composables/useStudyData')['formatDate']>
     readonly formatDuration: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatDuration']>
@@ -453,6 +461,7 @@ declare module 'vue' {
     readonly gradeSpeakingWithAI: UnwrapRef<typeof import('./src/composables/useAISettings')['gradeSpeakingWithAI']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly hasAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['hasAISettings']>
+    readonly hasPendingGuestMigration: UnwrapRef<typeof import('./src/composables/useAuth')['hasPendingGuestMigration']>
     readonly hashString: UnwrapRef<typeof import('./src/composables/syncClient')['hashString']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
     readonly initSingleAudio: UnwrapRef<typeof import('./src/composables/useSingleAudio')['initSingleAudio']>
@@ -466,9 +475,11 @@ declare module 'vue' {
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly isValidEssayGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['isValidEssayGrade']>
     readonly knownRate: UnwrapRef<typeof import('./src/composables/useStats')['knownRate']>
+    readonly legacyTimerSeconds: UnwrapRef<typeof import('./src/composables/useStudyTimer')['legacyTimerSeconds']>
     readonly makeDestructurable: UnwrapRef<typeof import('@vueuse/core')['makeDestructurable']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly mergeCounts: UnwrapRef<typeof import('./src/composables/useStats')['mergeCounts']>
+    readonly migrateGuestData: UnwrapRef<typeof import('./src/composables/useAuth')['migrateGuestData']>
     readonly migrateMistakes: UnwrapRef<typeof import('./src/composables/useStudyData')['migrateMistakes']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeTask2Grade: UnwrapRef<typeof import('./src/composables/useAISettings')['normalizeTask2Grade']>
@@ -558,7 +569,6 @@ declare module 'vue' {
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly unrefElement: UnwrapRef<typeof import('@vueuse/core')['unrefElement']>
     readonly until: UnwrapRef<typeof import('@vueuse/core')['until']>
-    readonly useAccountData: UnwrapRef<typeof import('./src/composables/useRecordData')['useAccountData']>
     readonly useActiveElement: UnwrapRef<typeof import('@vueuse/core')['useActiveElement']>
     readonly useAnimate: UnwrapRef<typeof import('@vueuse/core')['useAnimate']>
     readonly useArrayDifference: UnwrapRef<typeof import('@vueuse/core')['useArrayDifference']>
@@ -620,6 +630,7 @@ declare module 'vue' {
     readonly useEventBus: UnwrapRef<typeof import('@vueuse/core')['useEventBus']>
     readonly useEventListener: UnwrapRef<typeof import('@vueuse/core')['useEventListener']>
     readonly useEventSource: UnwrapRef<typeof import('@vueuse/core')['useEventSource']>
+    readonly useExamRecovery: UnwrapRef<typeof import('./src/composables/useExamRecovery')['useExamRecovery']>
     readonly useEyeDropper: UnwrapRef<typeof import('@vueuse/core')['useEyeDropper']>
     readonly useFavicon: UnwrapRef<typeof import('@vueuse/core')['useFavicon']>
     readonly useFetch: UnwrapRef<typeof import('@vueuse/core')['useFetch']>
@@ -765,6 +776,7 @@ declare module '@vue/runtime-core' {
     readonly MISTAKE_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['MISTAKE_MODULE_LABEL']>
     readonly PROGRESS_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['PROGRESS_MODULE_LABEL']>
     readonly SYNC_PENDING_KEY: UnwrapRef<typeof import('./src/composables/syncClient')['SYNC_PENDING_KEY']>
+    readonly accountNotice: UnwrapRef<typeof import('./src/composables/useAuth')['accountNotice']>
     readonly aiSettingsState: UnwrapRef<typeof import('./src/composables/useAISettings')['aiSettingsState']>
     readonly apiLogin: UnwrapRef<typeof import('./src/composables/syncClient')['apiLogin']>
     readonly apiPull: UnwrapRef<typeof import('./src/composables/syncClient')['apiPull']>
@@ -804,6 +816,7 @@ declare module '@vue/runtime-core' {
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
+    readonly finishGuestMigration: UnwrapRef<typeof import('./src/composables/useAuth')['finishGuestMigration']>
     readonly formatClock: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatClock']>
     readonly formatDate: UnwrapRef<typeof import('./src/composables/useStudyData')['formatDate']>
     readonly formatDuration: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatDuration']>
@@ -824,6 +837,7 @@ declare module '@vue/runtime-core' {
     readonly gradeSpeakingWithAI: UnwrapRef<typeof import('./src/composables/useAISettings')['gradeSpeakingWithAI']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly hasAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['hasAISettings']>
+    readonly hasPendingGuestMigration: UnwrapRef<typeof import('./src/composables/useAuth')['hasPendingGuestMigration']>
     readonly hashString: UnwrapRef<typeof import('./src/composables/syncClient')['hashString']>
     readonly ignorableWatch: UnwrapRef<typeof import('@vueuse/core')['ignorableWatch']>
     readonly initSingleAudio: UnwrapRef<typeof import('./src/composables/useSingleAudio')['initSingleAudio']>
@@ -837,9 +851,11 @@ declare module '@vue/runtime-core' {
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly isValidEssayGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['isValidEssayGrade']>
     readonly knownRate: UnwrapRef<typeof import('./src/composables/useStats')['knownRate']>
+    readonly legacyTimerSeconds: UnwrapRef<typeof import('./src/composables/useStudyTimer')['legacyTimerSeconds']>
     readonly makeDestructurable: UnwrapRef<typeof import('@vueuse/core')['makeDestructurable']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly mergeCounts: UnwrapRef<typeof import('./src/composables/useStats')['mergeCounts']>
+    readonly migrateGuestData: UnwrapRef<typeof import('./src/composables/useAuth')['migrateGuestData']>
     readonly migrateMistakes: UnwrapRef<typeof import('./src/composables/useStudyData')['migrateMistakes']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeTask2Grade: UnwrapRef<typeof import('./src/composables/useAISettings')['normalizeTask2Grade']>
@@ -929,7 +945,6 @@ declare module '@vue/runtime-core' {
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly unrefElement: UnwrapRef<typeof import('@vueuse/core')['unrefElement']>
     readonly until: UnwrapRef<typeof import('@vueuse/core')['until']>
-    readonly useAccountData: UnwrapRef<typeof import('./src/composables/useRecordData')['useAccountData']>
     readonly useActiveElement: UnwrapRef<typeof import('@vueuse/core')['useActiveElement']>
     readonly useAnimate: UnwrapRef<typeof import('@vueuse/core')['useAnimate']>
     readonly useArrayDifference: UnwrapRef<typeof import('@vueuse/core')['useArrayDifference']>
@@ -991,6 +1006,7 @@ declare module '@vue/runtime-core' {
     readonly useEventBus: UnwrapRef<typeof import('@vueuse/core')['useEventBus']>
     readonly useEventListener: UnwrapRef<typeof import('@vueuse/core')['useEventListener']>
     readonly useEventSource: UnwrapRef<typeof import('@vueuse/core')['useEventSource']>
+    readonly useExamRecovery: UnwrapRef<typeof import('./src/composables/useExamRecovery')['useExamRecovery']>
     readonly useEyeDropper: UnwrapRef<typeof import('@vueuse/core')['useEyeDropper']>
     readonly useFavicon: UnwrapRef<typeof import('@vueuse/core')['useFavicon']>
     readonly useFetch: UnwrapRef<typeof import('@vueuse/core')['useFetch']>

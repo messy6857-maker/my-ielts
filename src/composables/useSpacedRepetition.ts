@@ -108,9 +108,7 @@ export const useWordSchedule = createGlobalState(() => {
   const set = (id: string | number, value: WordSchedule) =>
     store.set(keyOf(id), value)
   const remove = (id: string | number) => store.set(keyOf(id), undefined)
-  const clear = () => {
-    for (const id of Object.keys(store.state.value)) store.set(id, undefined)
-  }
+  const clear = () => store.clear()
   return {
     schedules: store.state,
     get,

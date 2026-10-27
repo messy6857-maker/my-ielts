@@ -55,3 +55,18 @@ it('band conversion is monotonic and full marks remain 9', () => {
   }
   expect(bandScore(40)).toBe(9)
 })
+it('the four formerly duplicated-blank prompts expose exactly one blank each', async () => {
+  const a = await loadMockTest('cam20-test3')
+  const b = await loadMockTest('cam18-test3')
+  for (const [pair, ids] of [
+    [a, ['Q5', 'Q9', 'Q10']],
+    [b, ['Q32']],
+  ] as const) {
+    for (const id of ids) {
+      const q = pair.listening.parts
+        .flatMap(p => p.questions)
+        .find(q => q.id === id)!
+      expect(q.question.match(/_{2,}/g)).toHaveLength(1)
+    }
+  }
+})

@@ -8,13 +8,32 @@ export function studyBackup(user: string | null) {
         key === accountKey(`${task}_draft_v1`, user)
         || key.startsWith(`${accountKey(`${task}_draft_v1`, user)}__prompt_`),
     )
-    if (studyBaseOf(key, user) || draft)
+    const guestDraft
+      = user !== null
+      && ['task1', 'task2'].some(
+        task =>
+          key === accountKey(`${task}_draft_v1`, null)
+          || key.startsWith(`${accountKey(`${task}_draft_v1`, null)}__prompt_`),
+      )
+    const examDraft = [user, null].some(owner =>
+      ['reading', 'listening'].some(kind =>
+        key.startsWith(accountKey(`mock_draft_v1_${kind}_`, owner)),
+      ),
+    )
+    if (
+      studyBaseOf(key, user)
+      || (user !== null && studyBaseOf(key, null))
+      || draft
+      || guestDraft
+      || examDraft
+    )
       data[key] = localStorage.getItem(key)!
   }
   return {
     format: 'my-ielts-backup',
     version: 2,
     username: user,
+    includesGuestOriginals: user !== null,
     exportedAt: new Date().toISOString(),
     data,
   }

@@ -70,6 +70,7 @@ interface SavedTask2 {
   text: string
   wordCount: number
   secondsUsed: number
+  overtime?: boolean
   createdAt: number
 }
 
@@ -107,6 +108,7 @@ const essayText = ref('')
 const secondsLeft = ref(TIME_LIMIT)
 const timerOn = ref(false)
 const timeUp = ref(false)
+const overtime = ref(false)
 let timerId: ReturnType<typeof setInterval> | null = null
 // 倒计时锚点：开始时记下截止时间戳，每 tick 用墙钟重算，避免后台节流导致限时变慢
 let timerEndAt = 0
@@ -137,6 +139,7 @@ function saveDraftNow(): boolean {
       promptId: prompt.value.id,
       text: essayText.value,
       secondsLeft: secondsLeft.value,
+      overtime: overtime.value,
     })
     : (deleteDraft('task2', draftOwner, prompt.value.id), true)
   drafts.value = listDrafts('task2', draftOwner)
@@ -204,6 +207,7 @@ function restoreDraft() {
             : TIME_LIMIT
         secondsLeft.value = Math.min(Math.max(0, savedSeconds), TIME_LIMIT)
         timeUp.value = secondsLeft.value <= 0
+        overtime.value = !!d.overtime
         view.value = 'write'
         return
       }
@@ -215,6 +219,7 @@ function restoreDraft() {
   prompt.value = null
   essayText.value = ''
   secondsLeft.value = TIME_LIMIT
+  overtime.value = false
   timeUp.value = false
   view.value = 'home'
 }
@@ -232,13 +237,23 @@ function startWrite(p: CambridgeWritingTask) {
   essayText.value = saved?.text ?? ''
   secondsLeft.value = saved?.secondsLeft ?? TIME_LIMIT
   timeUp.value = secondsLeft.value <= 0
+  overtime.value = !!saved?.overtime
   timerOn.value = false
   if (timerId)
     clearInterval(timerId)
   view.value = 'write'
 }
 
+function continueOvertime() {
+  overtime.value = true
+  timerOn.value = false
+  if (timerId)
+    clearInterval(timerId)
+  saveDraftNow()
+}
 function toggleTimer() {
+  if (timeUp.value || overtime.value)
+    return
   if (timerOn.value) {
     timerOn.value = false
     // 暂停前先按锚点重算一次，避免最后不足 1 秒的漂移
@@ -276,6 +291,7 @@ function resetTimer() {
   if (timerId)
     clearInterval(timerId)
   timerOn.value = false
+  overtime.value = false
   timeUp.value = false
   secondsLeft.value = TIME_LIMIT
 }
@@ -352,6 +368,7 @@ function submitEssay() {
       text: essayText.value,
       wordCount: stats.value.words,
       secondsUsed: secondsUsed.value,
+      overtime: overtime.value,
       createdAt: Date.now(),
     })
   }
@@ -368,6 +385,7 @@ function reviewEssay(e: SavedTask2) {
   essayText.value = e.text
   stats.value = analyzeEssay(e.text)
   secondsUsed.value = e.secondsUsed
+  overtime.value = !!e.overtime
   view.value = 'result'
 }
 
@@ -512,7 +530,8 @@ function resumeDraft(promptId: string) {
               {{ e.promptTitleCn }}
             </div>
             <div class="text-xs text-gray-400">
-              {{ e.wordCount }} 词 · 用时 {{ formatDuration(e.secondsUsed) }} ·
+              {{ e.wordCount }} 词 · 用时 {{ formatDuration(e.secondsUsed)
+              }}{{ e.overtime ? '（含不限时续写）' : '' }} ·
               {{ formatDate(e.createdAt) }}
             </div>
           </div>
@@ -573,6 +592,7 @@ function resumeDraft(promptId: string) {
             </div>
             <button
               class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm dark:border-gray-600 dark:text-white"
+              :disabled="timeUp || overtime"
               @click="toggleTimer"
             >
               {{ timerOn ? '⏸ 暂停' : '▶ 开始' }}
@@ -604,10 +624,28 @@ function resumeDraft(promptId: string) {
             />
           </div>
 
+          <p
+            v-if="timeUp"
+            role="status"
+            class="mb-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+          >
+            {{
+              overtime
+                ? '当前为不限时续写：保留原稿和已结束的限时计时，提交记录标为不限时续写。'
+                : '限时时间已到。可以提交，或在原稿上不限时续写；续写不会重置倒计时。'
+            }}
+            <button
+              v-if="!overtime"
+              class="ml-2 underline"
+              @click="continueOvertime"
+            >
+              不限时续写
+            </button>
+          </p>
           <textarea
             v-model="essayText"
             rows="18"
-            :disabled="timeUp"
+            :disabled="timeUp && !overtime"
             placeholder="在这里写你的大作文（英文，至少 250 词）…&#10;&#10;建议结构：&#10;第1段：改写题目 + 表明立场&#10;第2-3段：分论点 + 论据/例子&#10;最后一段：重申立场"
             class="mb-4 block w-full border border-gray-300 rounded-xl bg-white p-4 text-sm leading-7 text-gray-900 dark:border-gray-600 focus:border-purple-500 dark:bg-gray-700 dark:text-white focus:ring-purple-500"
           />
@@ -638,7 +676,8 @@ function resumeDraft(promptId: string) {
       >
         <div class="mb-4 text-sm text-gray-400">
           {{ resultPrompt ? promptTitleCn(resultPrompt) : '' }} ·
-          {{ stats.words }} 词 · 用时 {{ formatDuration(secondsUsed) }}
+          {{ stats.words }} 词 · 用时 {{ formatDuration(secondsUsed)
+          }}{{ overtime ? '（另含不限时续写）' : '' }}
         </div>
         <h4 class="mb-3 font-bold dark:text-white">
           ✅ 写作自查清单

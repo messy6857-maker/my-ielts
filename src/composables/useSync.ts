@@ -10,7 +10,12 @@ import {
   setAuthPendingPush,
   syncEnabled,
 } from './syncClient'
-import { onLocalWrite, useAuth } from './useAuth'
+import {
+  finishGuestMigration,
+  hasPendingGuestMigration,
+  onLocalWrite,
+  useAuth,
+} from './useAuth'
 
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error'
 export const useSync = createGlobalState(() => {
@@ -45,6 +50,8 @@ export const useSync = createGlobalState(() => {
   async function pushNow(force = false): Promise<boolean> {
     const owner = currentUser.value
     if (!syncEnabled || !owner || !getToken(owner))
+      return false
+    if (hasPendingGuestMigration(owner) && !(await pullNow()))
       return false
     if (inFlight) {
       await inFlight
@@ -111,6 +118,7 @@ export const useSync = createGlobalState(() => {
     // Entries are versioned; writes made while this request was in flight win.
     if (result.data)
       applySyncData(result.data, owner)
+    finishGuestMigration(owner)
     return true
   }
   function schedulePush(key?: string) {
@@ -150,10 +158,11 @@ export const useSync = createGlobalState(() => {
       else if (document.visibilityState === 'visible')
         void pullNow()
     })
-    window.addEventListener('online', () => {
+    window.addEventListener('online', async () => {
       if (currentUser.value) {
         clearAuthError()
-        void pushNow(true)
+        if (await pullNow())
+          await pushNow(true)
       }
     })
     watch(currentUser, (owner) => {

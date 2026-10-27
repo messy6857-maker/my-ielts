@@ -1,5 +1,5 @@
 <script setup>
-import { storageFailures, useAuth } from './composables/useAuth'
+import { accountNotice, storageFailures, useAuth } from './composables/useAuth'
 import { initSingleAudio, stopAllAudio } from './composables/useSingleAudio'
 
 // 全站单音频：同一时间只播放一个音频，点新的自动暂停旧的
@@ -18,6 +18,16 @@ watch(currentUser, (user, previous) => {
 
 <template>
   <TheHeader />
+  <div
+    v-if="accountNotice"
+    role="alert"
+    class="mx-4 mt-16 border border-amber-300 rounded bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900 dark:text-amber-100"
+  >
+    {{ accountNotice }}
+    <button class="ml-2 underline" @click="accountNotice = ''">
+      知道了
+    </button>
+  </div>
   <div
     v-if="storageFailures.length"
     role="alert"

@@ -68,6 +68,21 @@ interface TimerSegment {
   end?: number
   legacySeconds?: number
 }
+/** The old single counter was folded into a device counter before its deletion. */
+export function legacyTimerSeconds(
+  parts: TimerSegment[],
+  base: string,
+  date: string,
+) {
+  const single = parts
+    .filter(p => p.date === date && p.device === base)
+    .reduce((n, p) => Math.max(n, p.legacySeconds ?? 0), 0)
+  const devices = parts
+    .filter(p => p.date === date && p.device !== base)
+    .reduce((n, p) => n + Math.max(0, p.legacySeconds ?? 0), 0)
+  // Original counters remain available in exports; the untraceable overlap is not counted twice.
+  return Math.max(single, devices)
+}
 export function useStudyTimer() {
   const { currentUser } = useAuth()
   const dailySeconds = ref(0)
@@ -121,13 +136,13 @@ export function useStudyTimer() {
     migrate(user)
     const date = studyDay()
     const groups = new Map<string, TimerSegment[]>()
-    let total = 0
-    for (const part of Object.values(
+    const parts = Object.values(
       readRecords<TimerSegment>('timer_sessions_v2', user),
-    )) {
+    )
+    let total = legacyTimerSeconds(parts, nsKey('study_time_v1', user), date)
+    for (const part of parts) {
       if (part.date !== date)
         continue
-      total += Math.max(0, part.legacySeconds ?? 0)
       if (part.start !== undefined && part.end !== undefined)
         groups.set(part.device, [...(groups.get(part.device) ?? []), part])
     }

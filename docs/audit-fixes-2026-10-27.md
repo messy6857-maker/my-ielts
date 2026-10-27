@@ -1,5 +1,7 @@
 # my-ielts 修复交付记录
 
+后续 M15、M06、M08 和模考身份切换等增量修复，以 [补充核验记录](audit-followup-2026-10-27.md) 为准；下列测试数量保留为上一轮交付历史。
+
 前端目标：`messy6857-maker/my-ielts/master`。后端目标：`messy6857-maker/my-ielts-sync/main`。本次不部署 VPS；源码提交带 `[skip ci]`，避免本次触发 Pages 发布。
 
 ## 修复与验收

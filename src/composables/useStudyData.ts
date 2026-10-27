@@ -255,21 +255,45 @@ export const useMistakes = createGlobalState(() => {
 })
 export const useProgress = createGlobalState(() => {
   const store = useRecordMap<ModuleProgress>('progress_v1')
-  function setProgress(module: ProgressModule, done: number, total: number) {
+  function setProgress(
+    module: ProgressModule | `flashcard:${string}`,
+    done: number,
+    total: number,
+  ) {
     store.set(module, { done, total, updatedAt: Date.now() })
   }
   const getProgress = (module: ProgressModule) =>
     store.state.value[module] || { done: 0, total: 0, updatedAt: 0 }
-  const modules = computed(() =>
-    (Object.keys(PROGRESS_MODULE_LABEL) as ProgressModule[]).map(module => ({
-      module,
-      label: PROGRESS_MODULE_LABEL[module],
-      ...getProgress(module),
-    })),
+  const chapterModules = computed(() =>
+    Object.entries(store.state.value)
+      .filter(([key]) => key.startsWith('flashcard:'))
+      .map(([module, value]) => ({
+        module,
+        label: `单词自测 · ${module.slice(10)}（该章最近一轮）`,
+        ...value,
+      })),
   )
+  const modules = computed(() => [
+    ...(Object.keys(PROGRESS_MODULE_LABEL) as ProgressModule[])
+      .filter(
+        module => module !== 'flashcard' || chapterModules.value.length === 0,
+      )
+      .map(module => ({
+        module,
+        label: PROGRESS_MODULE_LABEL[module],
+        ...getProgress(module),
+      })),
+    ...chapterModules.value,
+  ])
   return {
     progress: store.state,
     setProgress,
+    clearChapterProgress() {
+      for (const key of Object.keys(store.state.value)) {
+        if (key.startsWith('flashcard:'))
+          store.set(key, undefined)
+      }
+    },
     getProgress,
     modules,
     hasAnyProgress: computed(() => Object.keys(store.state.value).length > 0),

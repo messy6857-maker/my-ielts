@@ -4,6 +4,7 @@ export interface WritingDraft {
   promptId: string
   text: string
   secondsLeft: number
+  overtime?: boolean
   updatedAt?: number
 }
 function legacy(task: 'task1' | 'task2', owner: string | null) {

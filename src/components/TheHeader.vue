@@ -261,16 +261,16 @@ async function onManualSync() {
           </router-link>
         </li>
         <li v-else class="block border-b dark:border-gray-700">
-          <a
+          <button
+            type="button"
             class="block px-4 py-3 text-gray-900 lg:px-0 lg:py-0 dark:text-white lg:hover:underline"
-            href="javascript:;"
             :disabled="loggingOut"
             @click="onLogout"
           >
             <i class="i-carbon-logout mr-1 inline-block" /> 退出（{{
               currentUser
             }}）
-          </a>
+          </button>
         </li>
       </ul>
     </nav>

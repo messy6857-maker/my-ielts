@@ -293,6 +293,44 @@ export function applySyncData(data: Record<string, string>, username: string) {
           continue
         }
         const previousRaw = localStorage.getItem(key)
+        if (base === 'archive_retention_v2') {
+          const previous = previousRaw ? envelope(previousRaw) : undefined
+          const cuts = [
+            (previous?.value as any)?.cutoff,
+            (incoming.value as any)?.cutoff,
+          ].filter(
+            c =>
+              Array.isArray(c)
+              && c.length === 3
+              && Number.isFinite(c[0])
+              && typeof c[1] === 'string'
+              && typeof c[2] === 'string',
+          ) as Array<[number, string, string]>
+          cuts.sort(
+            (a, b) =>
+              a[0] - b[0]
+              || a[1].localeCompare(b[1])
+              || a[2].localeCompare(b[2]),
+          )
+          const cutoff = cuts.at(-1)
+          if (cutoff) {
+            const latest
+              = previous && compareStamp(previous, incoming) > 0
+                ? previous
+                : incoming
+            const merged = {
+              __ielts: 2 as const,
+              stamp: latest.stamp,
+              value: { cutoff },
+            }
+            if (
+              JSON.stringify(previous) !== JSON.stringify(merged)
+              && saveEnvelope(key, merged, 'remote')
+            )
+              count++
+            continue
+          }
+        }
         if (previousRaw && incoming.stamp[0] === 0) {
           const previous = envelope(previousRaw)
           if (

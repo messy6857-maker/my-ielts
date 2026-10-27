@@ -15,6 +15,9 @@ const abbreviations = new Set([
   'p.m',
   'u.s',
   'u.k',
+  'u.s.a',
+  'ph.d',
+  'ph',
 ])
 export function splitSentences(text: string): string[] {
   const result: string[] = []
@@ -138,4 +141,16 @@ export function extractJson(text: string): string {
     }
   }
   throw new Error('AI 返回格式异常，请重试')
+}
+
+/** A selected phrase must belong to one paragraph in the passage, including nested marks. */
+export function selectionInOneParagraph(selection: Selection): boolean {
+  if (selection.rangeCount !== 1)
+    return false
+  const range = selection.getRangeAt(0)
+  const element = (node: Node) =>
+    node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement
+  const first = element(range.startContainer)?.closest('p')
+  const last = element(range.endContainer)?.closest('p')
+  return !!first && first === last && !!first.closest('[data-passage]')
 }

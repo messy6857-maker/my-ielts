@@ -15,7 +15,23 @@ let batchSource: 'local' | 'remote' | null = null
 let clock = 0
 let actor = ''
 export function writerId() {
-  actor ||= crypto.randomUUID()
+  if (!actor) {
+    // Reuse a part on reload; a new/duplicated tab receives its own counter writer.
+    const navigation = performance.getEntriesByType?.('navigation')[0] as
+      | PerformanceNavigationTiming
+      | undefined
+    try {
+      actor
+        = navigation?.type === 'reload'
+          ? sessionStorage.getItem('myielts_writer_id_v2') || ''
+          : ''
+      actor ||= crypto.randomUUID()
+      sessionStorage.setItem('myielts_writer_id_v2', actor)
+    }
+    catch {
+      actor ||= crypto.randomUUID()
+    }
+  }
   return actor
 }
 export const mapBases = [
@@ -334,8 +350,10 @@ export function saveRecord(
   return saveValue(entryKey(base, id, user), value, value === undefined)
 }
 export function clearRecords(base: string, user: string | null) {
-  for (const id of Object.keys(readRecords(base, user)))
-    saveRecord(base, id, undefined, user)
+  batchStorage(() => {
+    for (const id of Object.keys(readRecords(base, user)))
+      saveRecord(base, id, undefined, user)
+  })
 }
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (event) => {

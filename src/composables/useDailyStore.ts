@@ -112,7 +112,10 @@ function createDaily(ns: string) {
   }
   function resetDaily() {
     refreshDay()
-    resets.set(`${ns}|${day.value}`, { epoch: crypto.randomUUID() })
+    resets.set(`${ns}|${day.value}`, {
+      epoch: crypto.randomUUID(),
+      date: day.value,
+    } as { epoch: string })
   }
   function setGoal(n: number) {
     if (Number.isFinite(n)) {

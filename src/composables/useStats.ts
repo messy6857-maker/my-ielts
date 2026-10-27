@@ -1,3 +1,4 @@
+import { compactStatsParts } from '../utils/migrateStudy'
 import { dateTime } from '../utils/legacyMerge'
 
 // 学习数据统计：自测卡片每次自评按日累计，供统计仪表盘使用
@@ -111,6 +112,7 @@ export function getAttempts(): AttemptRecord {
       )
     }
   }
+  compactStatsParts(user)
   const result: AttemptRecord = {}
   const totals: Record<string, AttemptCount> = {}
   const recent: Record<string, AttemptCount> = {}

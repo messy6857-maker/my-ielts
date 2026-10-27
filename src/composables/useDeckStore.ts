@@ -13,9 +13,7 @@ function createDeck(ns: string) {
       store.set(`${ns}:${id}`, value),
     removeSchedule: (id: string | number) =>
       store.set(`${ns}:${id}`, undefined),
-    clear: () => {
-      for (const id of Object.keys(store.state.value)) store.set(id, undefined)
-    },
+    clear: () => store.clear(),
     ...daily,
     reload: () => {
       store.reload()

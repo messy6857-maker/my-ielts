@@ -3,9 +3,11 @@ import {
   accountKey,
   batchStorage,
   entryKey,
+  envelope,
   readRecords,
   readValue,
   saveEnvelope,
+  saveValue,
   studyBaseOf,
 } from './storage'
 
@@ -153,6 +155,7 @@ export function migrateStudy(owner: string | null) {
         )
       }
     }
+    compactStatsParts(owner)
     migrateCheckins(owner)
     const oldCutoff = Date.now() - 14 * 86400000
     for (const key of Object.keys(localStorage)) {
@@ -161,7 +164,7 @@ export function migrateStudy(owner: string | null) {
         continue
       const value = readValue<any>(key, null)
       if (value?.date && dateTime(value.date) < oldCutoff)
-        localStorage.removeItem(key)
+        saveValue(key, undefined, true)
     }
   })
 }
@@ -187,16 +190,53 @@ export function migrateCheckins(owner: string | null) {
     if (Number.isFinite(day))
       (additions[year] ??= new Set(years[year] ?? [])).add(day)
   }
+  let archived = true
   for (const [year, values] of Object.entries(additions)) {
     const value = [...values].sort((a, b) => a - b)
     const key = entryKey('checkin_years_v2', year, owner)
-    if (JSON.stringify(value) !== JSON.stringify(years[year]))
-      saveEnvelope(key, { __ielts: 2, stamp: [0, 'legacy'], value }, 'remote')
+    if (JSON.stringify(value) !== JSON.stringify(years[year])) {
+      archived
+        = saveEnvelope(
+          key,
+          { __ielts: 2, stamp: [0, 'legacy'], value },
+          'remote',
+        ) && archived
+    }
   }
+  if (!archived)
+    return
   // The yearly sets preserve lifetime totals and long streaks; only the 90-day date index is retained.
   const cutoff = Date.now() - 90 * 86400000
   for (const date of Object.keys(records)) {
     if (dateTime(date) < cutoff)
-      localStorage.removeItem(entryKey('flashcard_checkin_v1', date, owner))
+      saveValue(entryKey('flashcard_checkin_v1', date, owner), undefined, true)
   }
+}
+
+/** Trimming metadata never changes historical totals or their version. */
+export function compactStatsParts(owner: string | null) {
+  const cutoff = new Date()
+  cutoff.setHours(0, 0, 0, 0)
+  cutoff.setDate(cutoff.getDate() - 13)
+  batchStorage(() => {
+    for (const id of Object.keys(readRecords<any>('stats_parts_v2', owner))) {
+      const key = entryKey('stats_parts_v2', id, owner)
+      const raw = localStorage.getItem(key)
+      if (!raw)
+        continue
+      const record = envelope(raw)
+      const part = record.value as any
+      if (!part?.days)
+        continue
+      let changed = false
+      for (const date of Object.keys(part.days)) {
+        if (dateTime(date) < cutoff.getTime()) {
+          delete part.days[date]
+          changed = true
+        }
+      }
+      if (changed)
+        saveEnvelope(key, { ...record, value: part }, 'remote')
+    }
+  })
 }

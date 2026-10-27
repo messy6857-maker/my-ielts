@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { onBeforeLogout } from '../../composables/useAuth'
+import { selectionInOneParagraph } from '../../utils/text'
+import { useExamRecovery } from '../../composables/useExamRecovery'
 
 import TextHighlights from '../../components/TextHighlights.vue'
 import { loadMockTest, mockTestList } from './registry'
@@ -43,24 +44,44 @@ const activePassage = ref(0)
 const showPassageModal = ref(false)
 // 划词高亮：passageIndex -> 高亮词组列表
 const highlights = ref<Map<number, string[]>>(new Map())
+const selectionHint = ref('')
 const selPopup = ref<{ x: number; y: number; text: string } | null>(null)
 let timer: ReturnType<typeof setInterval> | null = null
 let loadSeq = 0
 let endAt = 0
 
-watch(
-  useAuth().currentUser,
-  () => {
-    if (timer)
-      clearInterval(timer)
-    started.value = false
-  },
-  { flush: 'sync' },
-)
+function pauseExam() {
+  if (endAt)
+    timeLeft.value = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
+  endAt = 0
+  if (timer)
+    clearInterval(timer)
+  timer = null
+}
+const recovery = useExamRecovery({
+  kind: 'reading',
+  testId,
+  started,
+  submitted,
+  answers,
+  timeLeft,
+  pause: pauseExam,
+  remaining: () =>
+    endAt
+      ? Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
+      : timeLeft.value,
+  extra: () => ({
+    active: activePassage.value,
+    highlights: [...highlights.value.entries()],
+  }),
+})
 
 // 异步加载选中的套题（按需加载）
 // loadSeq 防止快速切换时旧的加载覆盖新的；try/finally 保证 loading 一定复位
 async function loadTest() {
+  recovery.save()
+  pauseExam()
+  started.value = false
   // 非法 test id（如手写 URL / 过期书签）不再静默 fallback：把 URL 参数规范化为默认套题，
   // 与实际加载内容一致，书签也被修复；replace 不产生多余历史记录，随后 watcher 以新 id 重载
   if (!mockTestList.some(t => t.id === testId.value)) {
@@ -74,7 +95,7 @@ async function loadTest() {
     clearInterval(timer)
   try {
     const pair = await loadMockTest(testId.value)
-    if (seq !== loadSeq)
+    if (seq !== loadSeq || recovery.blocked.value)
       return // 已被更新的加载取代
     testPair.value = pair
     answers.value = {}
@@ -83,6 +104,7 @@ async function loadTest() {
     highlights.value = new Map()
     selPopup.value = null
     started.value = false
+    recovery.refresh()
   }
   catch {
     if (seq !== loadSeq)
@@ -97,15 +119,22 @@ async function loadTest() {
 
 // 点"开始测试"才重置状态并开始计时
 function startTest() {
+  if (recovery.mismatch())
+    return
   if (!testPair.value || started.value)
     return
-  started.value = true
-  timeLeft.value = testPair.value.reading.timeLimit
-  answers.value = {}
+  const saved = recovery.draft.value
+  recovery.begin()
+  timeLeft.value = saved
+    ? Math.min(Math.max(0, saved.timeLeft), testPair.value.reading.timeLimit)
+    : testPair.value.reading.timeLimit
+  answers.value = saved?.answers ?? {}
   submitted.value = false
-  activePassage.value = 0
-  highlights.value = new Map()
+  activePassage.value = saved?.extra?.active ?? 0
+  highlights.value = new Map(saved?.extra?.highlights ?? [])
   selPopup.value = null
+  started.value = true
+  recovery.save()
   if (timer)
     clearInterval(timer)
   // 墙钟锚点：后台节流导致 tick 稀疏时，剩余时间仍按真实时间重算
@@ -160,11 +189,15 @@ const correctCount = computed(() => {
 const band = computed(() => bandScore(correctCount.value, scoredTotal.value))
 
 function setAnswer(qid: string, val: string) {
+  if (recovery.mismatch())
+    return
   if (!submitted.value)
     answers.value[qid] = val
 }
 
 function toggleMultiSelect(qid: string, idx: number) {
+  if (recovery.mismatch())
+    return
   if (submitted.value)
     return
   const current = new Set((answers.value[qid] ?? '').split(',').filter(Boolean))
@@ -192,7 +225,7 @@ const hasAnswers = computed(() =>
 function onTestChange(e: Event) {
   const target = (e.target as HTMLSelectElement).value
   if (started.value && !submitted.value && hasAnswers.value) {
-    if (!window.confirm('切换套题将丢失当前进度，确定吗？'))
+    if (!window.confirm('切换套题将暂停并保留当前作答草稿，确定吗？'))
       return
   }
 
@@ -226,6 +259,12 @@ function handleSelect(pi: number) {
       selPopup.value = null
       return
     }
+    if (!selectionInOneParagraph(sel)) {
+      selectionHint.value = '请在同一个段落内选择词组后高亮，跨段选择不会保存。'
+      selPopup.value = null
+      return
+    }
+    selectionHint.value = ''
     const text = sel.toString().trim()
     // 只处理文章区内的选中
     const anchorEl = sel.anchorNode?.parentElement
@@ -249,6 +288,15 @@ function addHighlight() {
     return
   const pi = (selPopup.value as any).pi as number
   const text = selPopup.value.text
+  if (
+    !test.value?.passages[pi]?.passage
+      .split(/\n\n/)
+      .some(p => p.includes(text))
+  ) {
+    selectionHint.value = '所选词组不在单一段落内，请重新选择。'
+    selPopup.value = null
+    return
+  }
   const list = highlights.value.get(pi) ?? []
   if (!list.includes(text)) {
     list.push(text)
@@ -280,10 +328,10 @@ onBeforeRouteLeave(
     useAuth().currentUser.value !== testOwner
     || !started.value
     || submitted.value
-    || window.confirm('尚未交卷，离开将丢失本次作答，确定吗？'),
+    || window.confirm('尚未交卷，离开将暂停计时并保留本机草稿，确定吗？'),
 )
 function submit() {
-  if (useAuth().currentUser.value !== testOwner)
+  if (recovery.mismatch())
     return
   if (submitted.value)
     return
@@ -300,7 +348,7 @@ function submit() {
         : 1),
     0,
   )
-  saveMockRecord({
+  const saved = saveMockRecord({
     id: testId.value,
     label: testPair.value?.label ?? testId.value,
     kind: 'reading',
@@ -308,12 +356,10 @@ function submit() {
     total,
     band: band.value,
   })
+  if (saved)
+    recovery.clear()
 }
-const offLogout = onBeforeLogout(() => {
-  if (timer)
-    clearInterval(timer)
-})
-onUnmounted(offLogout)
+
 function switchPassage(index: number) {
   activePassage.value = index
   selPopup.value = null
@@ -322,6 +368,20 @@ function switchPassage(index: number) {
 
 <template>
   <div class="mx-auto max-w-7xl px-4 pt-6 2xl:px-0">
+    <p
+      v-if="selectionHint"
+      role="status"
+      class="my-3 text-sm text-amber-700 dark:text-amber-300"
+    >
+      {{ selectionHint }}
+    </p>
+    <p
+      v-if="recovery.error.value"
+      role="alert"
+      class="my-3 rounded-lg bg-amber-50 p-3 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
+    >
+      {{ recovery.error.value }}
+    </p>
     <div v-if="loading" class="py-20 text-center text-gray-500">
       加载中…
     </div>
@@ -384,10 +444,14 @@ function switchPassage(index: number) {
           class="rounded-xl bg-blue-600 px-10 py-3 text-lg font-bold text-white hover:bg-blue-700"
           @click="startTest"
         >
-          ▶ 开始测试
+          {{
+            recovery.draft.value
+              ? '继续上次作答（从剩余时间计时）'
+              : '▶ 开始测试'
+          }}
         </button>
       </div>
-      <div v-else>
+      <div v-else :inert="recovery.blocked.value ? true : undefined">
         <!-- 顶栏：标题 + 计时器 -->
         <div class="mb-6 flex items-center justify-between">
           <div class="flex items-center gap-3">

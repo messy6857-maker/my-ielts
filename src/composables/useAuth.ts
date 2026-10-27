@@ -30,6 +30,7 @@ import {
 } from './syncClient'
 
 export { storageFailures }
+export const accountNotice = ref('')
 export interface AccountRecord {
   salt: string
   hash: string
@@ -68,7 +69,7 @@ export function removeJson(key: string) {
 // 让各 store 的 watch 随后读到迁移后的数据。
 // 不迁移：会话/token/用户表/AI 设置（含 Key，绝不能进可同步的 u_ 前缀）/
 // 设备标识/界面状态 key/推送失败标志。
-function migrateGuestData(username: string) {
+export function migrateGuestData(username: string) {
   batchStorage(() => {
     for (const key of Object.keys(localStorage)) {
       const base = studyBaseOf(key, null)
@@ -105,6 +106,19 @@ function migrateGuestData(username: string) {
         saveValue(accountKey('mock_history_v1', username), history)
     }
   })
+}
+function guestMigrationKey(username: string) {
+  return `myielts_local_guest_migration:${username}`
+}
+export function hasPendingGuestMigration(username: string) {
+  return localStorage.getItem(guestMigrationKey(username)) === '1'
+}
+export function finishGuestMigration(username: string) {
+  if (!hasPendingGuestMigration(username))
+    return
+  migrateGuestData(username)
+  if (!storageFailures.value.some(key => studyBaseOf(key, username)))
+    localStorage.removeItem(guestMigrationKey(username))
 }
 function randomSalt(): string {
   const bytes = new Uint8Array(16)
@@ -244,6 +258,7 @@ export const useAuth = createGlobalState(() => {
     username = r.username || username
     setToken(r.token, username)
     ensureServerMarker(username)
+    localStorage.setItem(guestMigrationKey(username), '1')
     // 先把游客数据迁进账号 key：迁移后的数据计入"本机数据"，参与下面的冲突判断
     // （以前是本机没数据→直接用云端，游客数据就此静默丢失）
     // 拉取云端数据并与本地合并
@@ -256,7 +271,7 @@ export const useAuth = createGlobalState(() => {
       if (pull.ok && pull.data)
         applySyncData(pull.data, username)
       if (pull.ok)
-        migrateGuestData(username)
+        finishGuestMigration(username)
       // Merge independently versioned entries; never choose one whole table over another.
       const pushed = pull.ok
         ? await apiPush(collectSyncData(username), username)
@@ -357,13 +372,32 @@ export const useAuth = createGlobalState(() => {
       return serverLogin(username, password, remember)
     return localLogin(username, password, remember)
   }
-  async function logout(): Promise<{
-    pushOk: boolean
-  }> {
+  let logoutJob: Promise<{ pushOk: boolean }> | null = null
+  function logout(): Promise<{ pushOk: boolean }> {
+    if (logoutJob)
+      return logoutJob
+    const job = performLogout()
+    logoutJob = job
+    void job
+      .finally(() => {
+        if (logoutJob === job)
+          logoutJob = null
+      })
+      .catch(() => {})
+    return job
+  }
+  async function performLogout(): Promise<{ pushOk: boolean }> {
     const owner = currentUser.value
     const tokenAtStart = owner ? getToken(owner) : null
     loggingOut.value = true
-    beforeLogout.forEach(cb => cb())
+    beforeLogout.forEach((cb) => {
+      try {
+        cb()
+      }
+      catch (error) {
+        console.error('Save before logout failed', error)
+      }
+    })
     // 退出前尽力把最新数据推到云端。推送失败时：返回值带给调用方（TheHeader 目前忽略
     // 返回值），同时记补推标记，下次登录成功时由 useSync 补推一次。
     let pushOk = true
