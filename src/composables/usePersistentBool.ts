@@ -11,12 +11,16 @@ export function usePersistentBool(key: string, defaultValue = false) {
     if (saved !== null)
       state.value = saved === '1'
   }
-  catch { /* ignore */ }
+  catch {
+    /* ignore */
+  }
   watch(state, (v) => {
     try {
       localStorage.setItem(key, v ? '1' : '0')
     }
-    catch { /* ignore */ }
+    catch {
+      /* ignore */
+    }
   })
   return state
 }

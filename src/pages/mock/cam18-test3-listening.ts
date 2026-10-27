@@ -64,7 +64,7 @@ export const cam18Test3Listening: ListeningMockTest = {
       audio: 'mock/cam18-test3-listening-part4.mp3',
       questions: [
         { id: 'Q31', type: 'fill-blank', question: 'would aim to set up legal and 31 ____ ways of improving safety.', answer: 'technical' },
-        { id: 'Q32', type: 'fill-blank', question: 'Satellites are now quite 32 ____ and therefore more widespread (e.g. there are constellations made up of 33 ____ of satellites).', answer: 'cheap' },
+        { id: 'Q32', type: 'fill-blank', question: 'Satellites are now quite 32 ____ and therefore more widespread.', answer: 'cheap' },
         { id: 'Q33', type: 'fill-blank', question: 'there are constellations made up of 33 ____ of satellites', answer: 'thousands' },
         { id: 'Q34', type: 'fill-blank', question: 'At present, satellites are not required to transmit information to help with their 34 ____.', answer: 'identification' },
         { id: 'Q35', type: 'fill-blank', question: 'There are few systems for 35 ____ satellites.', answer: 'tracking' },

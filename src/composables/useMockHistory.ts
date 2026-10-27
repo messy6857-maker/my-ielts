@@ -1,4 +1,5 @@
-import { removeJson, useAuth, writeJson } from './useAuth'
+import { clearRecords, readRecords, saveRecord } from '../utils/storage'
+import { useAuth } from './useAuth'
 
 export interface MockRecord {
   id: string // test id, e.g. 'cam19-test1'
@@ -9,29 +10,29 @@ export interface MockRecord {
   band: number // 换算分
   date: string // ISO
 }
-
-function key(): string {
-  const { currentUser } = useAuth()
-  const user = currentUser.value ?? 'guest'
-  return `myielts_u_${user}_mock_history_v1`
+function owner() {
+  return useAuth().currentUser.value
 }
-
 export function getMockHistory(): MockRecord[] {
-  try {
-    return JSON.parse(localStorage.getItem(key()) ?? '[]')
-  } catch {
-    return []
-  }
+  return Object.values(
+    readRecords<MockRecord>('mock_history_v1', owner()),
+  ).sort((a, b) => b.date.localeCompare(a.date))
 }
-
-export function saveMockRecord(r: Omit<MockRecord, 'date'>): void {
-  const list = getMockHistory()
-  list.unshift({ ...r, date: new Date().toISOString() })
-  // 只保留最近 100 条；经 writeJson 触发同步，做完就关页也不丢
-  writeJson(key(), list.slice(0, 100))
+export function saveMockRecord(r: Omit<MockRecord, 'date'>) {
+  const record = { ...r, date: new Date().toISOString() }
+  saveRecord(
+    'mock_history_v1',
+    `${r.kind}:${r.id}:${record.date}:${crypto.randomUUID()}`,
+    record,
+    owner(),
+  )
+  for (const old of Object.entries(
+    readRecords<MockRecord>('mock_history_v1', owner()),
+  )
+    .sort((a, b) => b[1].date.localeCompare(a[1].date))
+    .slice(100))
+    saveRecord('mock_history_v1', old[0], undefined, owner())
 }
-
-export function clearMockHistory(): void {
-  // 经 removeJson 触发删除通知，同步层收到后标记 dirty 参与推送
-  removeJson(key())
+export function clearMockHistory() {
+  clearRecords('mock_history_v1', owner())
 }

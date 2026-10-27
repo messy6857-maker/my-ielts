@@ -1,69 +1,85 @@
-// 云同步底层客户端：纯函数 + token 存取，不依赖 useAuth（避免循环引用）
+import { mergeLegacy } from '../utils/legacyMerge'
+import { migrateStudy } from '../utils/migrateStudy'
+import { pruneArchives } from '../utils/archives'
 import { SYNC_API_BASE } from '../sync-config'
+import {
+  accountKey,
+  batchStorage,
+  collectionBases,
+  compareStamp,
+  envelope,
+  importTable,
+  isEnvelope,
+  notifyStorage,
+  readRecords,
+  readValue,
+  saveEnvelope,
+  saveValue,
+  storageFailures,
+  studyBaseOf,
+  subscribeStorage,
+} from '../utils/storage'
 
 export const syncEnabled = SYNC_API_BASE.trim() !== ''
-
-const TOKEN_KEY = 'myielts_sync_token_v1'
-const SESSION_KEY = 'myielts_session_v1'
-
-// 推送失败标志（localStorage）：失败置位、成功清除；拉取时以此判断本地是否有未推数据
 export const SYNC_PENDING_KEY = 'myielts_sync_pending_push'
-
-// 注册/登录/退出时直接 apiPush 失败留下的补推标记（不进同步前缀，本身不同步）。
-// useSync 在登录成功/ensureWired 时读到标记就清标记并补推一次。
 export const AUTH_PENDING_PUSH_KEY = 'myielts_pending_push_v1'
-
-export function getAuthPendingPush(): boolean {
-  try {
-    return localStorage.getItem(AUTH_PENDING_PUSH_KEY) === '1'
-  }
-  catch {
-    return false
-  }
+const TOKEN_KEY = 'myielts_sync_token_v1'
+interface SessionToken {
+  token: string
+  username: string
 }
-
-export function setAuthPendingPush(v: boolean) {
+function storedToken(): SessionToken | null {
   try {
-    if (v)
-      localStorage.setItem(AUTH_PENDING_PUSH_KEY, '1')
-    else
-      localStorage.removeItem(AUTH_PENDING_PUSH_KEY)
-  }
-  catch {
-    // 忽略
-  }
-}
-
-// 小型稳定哈希（djb2 转 16 进制）：墓碑用，不做安全用途；同一字符串恒得同一结果
-export function hashString(s: string): string {
-  let h = 5381
-  for (let i = 0; i < s.length; i++)
-    h = ((h << 5) + h + s.charCodeAt(i)) >>> 0
-  return h.toString(16)
-}
-
-export function getToken(): string | null {
-  try {
-    return localStorage.getItem(TOKEN_KEY)
+    const raw = localStorage.getItem(TOKEN_KEY)
+    if (!raw)
+      return null
+    try {
+      const v = JSON.parse(raw)
+      if (typeof v.token === 'string' && typeof v.username === 'string')
+        return v
+    }
+    catch {
+      /* Migrate old JWT strings. */
+    }
+    const payload = JSON.parse(
+      atob(raw.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')),
+    )
+    return typeof payload.username === 'string'
+      ? { token: raw, username: payload.username }
+      : null
   }
   catch {
     return null
   }
 }
-
-export function setToken(token: string | null) {
-  try {
-    if (token)
-      localStorage.setItem(TOKEN_KEY, token)
-    else
-      localStorage.removeItem(TOKEN_KEY)
-  }
-  catch {
-    // 忽略
-  }
+export function getTokenOwner() {
+  return storedToken()?.username ?? null
 }
-
-interface ApiResult {
+export function getToken(username?: string | null) {
+  const v = storedToken()
+  return v && (username === undefined || v.username === username)
+    ? v.token
+    : null
+}
+export function setToken(token: string | null, username?: string) {
+  if (token && username)
+    localStorage.setItem(TOKEN_KEY, JSON.stringify({ token, username }))
+  else localStorage.removeItem(TOKEN_KEY)
+}
+export function getAuthPendingPush() {
+  return localStorage.getItem(AUTH_PENDING_PUSH_KEY) === '1'
+}
+export function setAuthPendingPush(v: boolean) {
+  if (v)
+    localStorage.setItem(AUTH_PENDING_PUSH_KEY, '1')
+  else localStorage.removeItem(AUTH_PENDING_PUSH_KEY)
+}
+export function hashString(s: string) {
+  let h = 5381
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0
+  return h.toString(16)
+}
+export interface ApiResult {
   ok: boolean
   status: number
   message?: string
@@ -71,127 +87,272 @@ interface ApiResult {
   username?: string
   data?: Record<string, string> | null
   updatedAt?: number
+  protocolVersion?: number
 }
-
-async function api(path: string, method: string, body?: unknown, token?: string | null): Promise<ApiResult> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  const t = token ?? getToken()
-  if (t)
-    headers.Authorization = `Bearer ${t}`
-  const res = await fetch(`${SYNC_API_BASE}${path}`, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
-  })
-  const json = await res.json().catch(() => ({}))
-  // status 透出给调用方做 401 专项处理（status 写在展开之后，避免被服务端同名字段覆盖）
-  return { ok: res.ok && json.ok !== false, ...json, status: res.status }
-}
-
-export async function apiRegister(username: string, password: string): Promise<ApiResult> {
-  return api('/register', 'POST', { username, password })
-}
-
-export async function apiLogin(username: string, password: string): Promise<ApiResult> {
-  return api('/login', 'POST', { username, password })
-}
-
-export async function apiPull(): Promise<ApiResult> {
-  return api('/sync', 'GET')
-}
-
-export async function apiPush(data: Record<string, string>): Promise<ApiResult> {
-  return api('/sync', 'PUT', { data })
-}
-
-// 收集当前账号需要同步的本地数据（只收 myielts_u_<username>_ 前缀的 key）。
-// 写作草稿（*_draft_v1）只存本机、不同步：草稿 key 按账号隔离后也带用户前缀，
-// 若不排除会被收进同步 payload，删掉的草稿会在另一设备拉取/推送后复活。
-export function collectSyncData(username: string): Record<string, string> {
-  const data: Record<string, string> = {}
-  const prefix = `myielts_u_${username}_`
+const capabilities = new Map<string, number>()
+async function api(
+  path: string,
+  method: string,
+  body?: unknown,
+  username?: string | null,
+): Promise<ApiResult> {
+  const token = username ? getToken(username) : null
+  if (username && !token)
+    return { ok: false, status: 401, message: '账号会话已变化，请重新登录' }
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000)
   try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key && key.startsWith(prefix) && key !== SESSION_KEY && key !== TOKEN_KEY && !key.endsWith('_draft_v1')) {
-        const value = localStorage.getItem(key)
-        if (value !== null)
-          data[key] = value
-      }
-    }
-  }
-  catch {
-    // 忽略
-  }
-  return data
-}
-
-// 云端数据应用后通知：各 store 借此 reload 内存，避免旧内存覆盖新数据。
-// 监听在各 store 创建时注册一次（单例），applySyncData 写满 ≥1 个 key 后触发。
-const syncAppliedListeners = new Set<() => void>()
-export function onSyncApplied(cb: () => void) {
-  syncAppliedListeners.add(cb)
-}
-
-function notifySyncApplied() {
-  syncAppliedListeners.forEach((cb) => {
+    const response = await fetch(`${SYNC_API_BASE}${path}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
+    })
+    let json: any
     try {
-      cb()
+      json = await response.json()
     }
     catch {
-      // 单个监听失败不影响其他 store
-    }
-  })
-}
-
-// 把云端数据写回本地，然后通知各 store reload 内存。
-// 收紧：只写当前账号的同步前缀 key。旧实现写所有 myielts_ 开头的 key，
-// 一旦服务端返回了非预期 key（如会话、token、含 API Key 的设置），就会写进本地，
-// 其中 ai-settings 一旦进了 u_ 前缀还会被下一轮推送传上云端。
-// 墓碑：云端数据里若有 tombstones key 且解析出数组则采用。应用云端条目时，
-// 跳过“在墓碑表中且云端 value 哈希等于墓碑哈希”的条目（合并型 PUT 下云端残留的旧删除值）；
-// 应用完后，对本地 key：凡在墓碑表中且本地 value 哈希等于墓碑哈希的，直接删除
-// （直接 removeItem，不再重复记墓碑，避免递归）。墓碑表本身按云端版本整体写回。
-export function applySyncData(data: Record<string, string>, username: string): number {
-  const prefix = `myielts_u_${username}_`
-  const tombKey = `${prefix}tombstones_v1`
-  let count = 0
-  try {
-    let tombs: Array<{ k: string, h: string }> = []
-    const rawTombs = data[tombKey]
-    if (rawTombs) {
-      try {
-        const parsed: unknown = JSON.parse(rawTombs)
-        if (Array.isArray(parsed)) {
-          tombs = parsed.filter((t): t is { k: string, h: string } =>
-            !!t && typeof (t as { k?: unknown }).k === 'string' && typeof (t as { h?: unknown }).h === 'string')
-        }
-      }
-      catch {
-        // 云端墓碑损坏则按无墓碑处理
+      return {
+        ok: false,
+        status: response.status,
+        message: '同步服务器返回了非 JSON 响应，请稍后重试',
       }
     }
-    const tombMap = new Map(tombs.map(t => [t.k, t.h]))
-    for (const [k, v] of Object.entries(data)) {
-      if (!k.startsWith(prefix))
-        continue
-      if (tombMap.has(k) && tombMap.get(k) === hashString(v))
-        continue
-      localStorage.setItem(k, v)
-      count++
+    if (
+      !json
+      || typeof json !== 'object'
+      || Array.isArray(json)
+      || json.ok !== true
+      || !response.ok
+    ) {
+      return {
+        ok: false,
+        status: response.status,
+        message:
+          typeof json?.message === 'string'
+            ? json.message
+            : '同步服务器响应异常，请重试',
+      }
     }
-    for (const [k, h] of tombMap) {
-      if (k === tombKey)
-        continue
-      const local = localStorage.getItem(k)
-      if (local !== null && hashString(local) === h)
-        localStorage.removeItem(k)
+    if (
+      path === '/sync'
+      && method === 'GET'
+      && !(
+        json.data === null
+        || (json.data
+          && typeof json.data === 'object'
+          && !Array.isArray(json.data)
+          && Object.values(json.data).every(v => typeof v === 'string'))
+      )
+    ) {
+      return {
+        ok: false,
+        status: response.status,
+        message: '同步数据格式异常，已保留本机记录',
+      }
     }
+    return { ...json, ok: true, status: response.status }
   }
   catch {
-    // 忽略
+    return {
+      ok: false,
+      status: 0,
+      message: controller.signal.aborted
+        ? '同步请求超时，请重试'
+        : '无法连接同步服务器',
+    }
   }
-  if (count > 0)
-    notifySyncApplied()
+  finally {
+    clearTimeout(timeout)
+  }
+}
+export function apiRegister(username: string, password: string) {
+  return api('/register', 'POST', { username, password })
+}
+export function apiLogin(username: string, password: string) {
+  return api('/login', 'POST', { username, password })
+}
+export async function apiPull(username = getTokenOwner() ?? '') {
+  const result = await api('/sync', 'GET', undefined, username)
+  if (result.ok)
+    capabilities.set(username, result.protocolVersion ?? 1)
+  return result
+}
+let pushQueue = Promise.resolve()
+export function apiPush(
+  data: Record<string, string>,
+  username = getTokenOwner() ?? '',
+): Promise<ApiResult> {
+  const token = getToken(username)
+  const task = pushQueue.then(async () => {
+    if (!token || token !== getToken(username)) {
+      return {
+        ok: false,
+        status: 401,
+        message: '账号会话已变化，未上传旧账号记录',
+      }
+    }
+    if (capabilities.get(username) !== 2) {
+      const probe = await apiPull(username)
+      if (!probe.ok)
+        return probe
+      if (probe.protocolVersion !== 2) {
+        return {
+          ok: false,
+          status: 426,
+          message: '同步服务需要更新后才能安全上传；学习记录已保存在本机',
+        }
+      }
+    }
+    return api('/sync', 'PUT', { protocolVersion: 2, data }, username)
+  })
+  pushQueue = task.then(
+    () => {},
+    () => {},
+  )
+  return task
+}
+export function collectSyncData(username: string): Record<string, string> {
+  migrateStudy(username)
+  pruneArchives(username)
+  batchStorage(() => {
+    for (const base of collectionBases) readRecords(base, username)
+  })
+  if (!storageFailures.value.some(key => studyBaseOf(key, username)))
+    saveValue(accountKey('migration_version_v2', username), 2)
+  const result: Record<string, string> = Object.create(null)
+  for (const key of Object.keys(localStorage)) {
+    const base = studyBaseOf(key, username)
+    if (
+      !base
+      || collectionBases.includes(base)
+      || [
+        'mistakes_v1',
+        'stats_attempts_v1',
+        'study_time_v1',
+        'tombstones_v1',
+      ].includes(base)
+      || base.endsWith('_daily_new_v1')
+      || base.startsWith('study_time_v1_')
+    )
+      continue
+    const raw = localStorage.getItem(key)
+    if (raw === null)
+      continue
+    try {
+      result[key] = JSON.stringify(envelope(raw))
+    }
+    catch {
+      /* Invalid originals remain available in the local backup export. */
+    }
+  }
+  return result
+}
+export function onSyncApplied(cb: () => void) {
+  return subscribeStorage((_key, source) => {
+    if (source === 'remote')
+      cb()
+  })
+}
+export function applySyncData(data: Record<string, string>, username: string) {
+  let count = 0
+  batchStorage(() => {
+    for (const [key, raw] of Object.entries(data)) {
+      const base = studyBaseOf(key, username)
+      if (!base || typeof raw !== 'string')
+        continue
+      try {
+        const incoming = envelope(raw)
+        if (collectionBases.includes(base)) {
+          if (!incoming.deleted)
+            importTable(base, incoming.value, username)
+          continue
+        }
+        if (
+          base.startsWith('checkin_years_v2__entry_')
+          && !incoming.deleted
+          && Array.isArray(incoming.value)
+        ) {
+          const old = readValue<number[]>(key, [])
+          const merged = [...new Set([...old, ...incoming.value])].sort(
+            (a, b) => Number(a) - Number(b),
+          )
+          const previous = localStorage.getItem(key)
+          const latest
+            = previous && compareStamp(envelope(previous), incoming) > 0
+              ? envelope(previous)
+              : incoming
+          if (JSON.stringify(old) !== JSON.stringify(merged)) {
+            saveEnvelope(key, { ...latest, value: merged }, 'remote')
+            count++
+          }
+          continue
+        }
+        const previousRaw = localStorage.getItem(key)
+        if (previousRaw && incoming.stamp[0] === 0) {
+          const previous = envelope(previousRaw)
+          if (
+            previous.stamp[0] === 0
+            && !previous.deleted
+            && !incoming.deleted
+          ) {
+            const merged = mergeLegacy(base, previous.value, incoming.value)
+            if (JSON.stringify(merged) !== JSON.stringify(previous.value)) {
+              saveEnvelope(key, { ...incoming, value: merged }, 'remote')
+              count++
+            }
+            continue
+          }
+        }
+        if (
+          previousRaw !== null
+          && compareStamp(incoming, envelope(previousRaw)) <= 0
+        )
+          continue
+        if (saveEnvelope(key, incoming, 'remote'))
+          count++
+      }
+      catch {
+        /* Ignore malformed remote entries without replacing local records. */
+      }
+    }
+    const tombs = readValue<
+      Array<{
+        k: string
+        h: string
+      }>
+    >(accountKey('tombstones_v1', username), [])
+    if (Array.isArray(tombs)) {
+      for (const tomb of tombs) {
+        if (!studyBaseOf(tomb.k, username))
+          continue
+        const raw = localStorage.getItem(tomb.k)
+        try {
+          if (
+            raw
+            && !isEnvelope(JSON.parse(raw))
+            && hashString(raw) === tomb.h
+          ) {
+            saveEnvelope(
+              tomb.k,
+              { __ielts: 2, stamp: [0, 'legacy-delete'], deleted: true },
+              'remote',
+            )
+          }
+        }
+        catch {
+          /* Preserve malformed originals. */
+        }
+      }
+    }
+    migrateStudy(username)
+    pruneArchives(username)
+    if (count)
+      notifyStorage('', 'remote')
+  })
   return count
 }

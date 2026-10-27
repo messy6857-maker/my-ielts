@@ -2,7 +2,6 @@
  * 单词例句 + 同义词：查内置预抓取数据（构建时由 scripts/fetch-examples.mjs 生成），
  * 运行时零联网、零等待。查不到时返回 null，调用方用本地例句降级。
  */
-
 import { wordSentences } from '../pages/vocabulary/wordSentences'
 import type { WordSentence } from '../pages/vocabulary/wordSentences'
 
@@ -12,7 +11,6 @@ export interface WordInfo {
   examples: string[]
   synonyms: string[]
 }
-
 /** 纯函数：从内置数据查词（data 参数便于单测注入） */
 export function getWordInfo(
   rawWord: string,
@@ -30,7 +28,6 @@ export function getWordInfo(
     synonyms: hit.syn.slice(0, 8),
   }
 }
-
 /**
  * 按顺序尝试多个词（本词 → 派生词），返回第一个有例句的；
  * 都没有例句时返回第一个有同义词的；都没有则返回 null。

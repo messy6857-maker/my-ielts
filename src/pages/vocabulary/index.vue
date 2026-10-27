@@ -1,7 +1,18 @@
 <!-- eslint-disable eslint-comments/no-unlimited-disable -->
-<script setup generic="T extends any, O extends any">
-import vocabulary from './vocabulary'
+<script setup>
+import { useAudioGroup } from '../../composables/useAudioGroup'
+
 import { resolveAudioUrl } from '../../composables/useAudio'
+import vocabulary from './vocabulary'
+
+const mediaError = ref('')
+const mediaRoot = ref(null)
+function retryMedia() {
+  mediaError.value = ''
+  mediaRoot.value?.querySelectorAll('audio').forEach(audio => audio.load())
+}
+
+const managedAudio = useAudioGroup()
 
 const CHAPTER_KEY = 'vocabulary_chapter'
 
@@ -13,43 +24,18 @@ const isFinishTraining = ref(false)
 const isShowSource = ref(false)
 
 const trainingStats = ref('')
-const keyword = ref('')
 const chapters = Object.keys(vocabulary)
-const category = ref(localStorage.getItem(CHAPTER_KEY) || chapters[0])
+const storedChapter = localStorage.getItem(CHAPTER_KEY)
+const category = ref(
+  chapters.includes(storedChapter || '') ? storedChapter : chapters[0],
+)
 
 const loaded = ref(false)
-const refVocabulary = reactive(vocabulary)
+const refVocabulary = reactive(structuredClone(vocabulary))
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
-const wordList = computed(() => {
-  const result = structuredClone(vocabulary) // deep clone
-  // const keywordValue = keyword.value.trim().toLowerCase()
-  const categoryValue = category.value
 
-  if (categoryValue !== '') {
-    // for (const key in result) {
-    //   if (key !== categoryValue)
-    //     delete result[key]
-    // }
-    return { [categoryValue]: result[categoryValue] }
-  }
-
-  /* if (keywordValue !== '') {
-    for (const key in result) {
-      const category = result[key]
-      const words = []
-      category.words.forEach((group) => {
-        words.push(group.filter((item) => {
-          return item.word.toLowerCase().includes(keywordValue)
-        }))
-      })
-      category.words = words
-    }
-  } */
-  return {}
-})
-
-watch(category, (newVal, oldVal) => {
+watch(category, (newVal) => {
   // console.log(newVal, oldVal)
   localStorage.setItem(CHAPTER_KEY, newVal)
   syncProgress()
@@ -67,10 +53,11 @@ function calcStats() {
         if (item.spellValue) {
           if (item.spellError)
             error++
-          else
-            correct++
+          else correct++
         }
-        else { missing++ }
+        else {
+          missing++
+        }
       }
     }
   }
@@ -93,18 +80,19 @@ onMounted(() => {
   }
 })
 
-onUpdated(() => {
-  // 音频再切换 SRC 之后需要调用一下 load() 不然看不到效果
-  for (const el of document.getElementsByTagName('audio'))
-    el.load()
-})
-
 // 音频快捷键：方向键快进/退、空格播放/暂停。
 // 只在非输入场景生效（输入框里打空格、移光标不受影响），
 // 且离开词汇页时卸载，避免监听常驻全站、每次进页叠加。
 function onAudioKeydown(ev) {
   const t = ev.target
-  if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.tagName === 'BUTTON' || t.isContentEditable))
+  if (
+    t
+    && (t.tagName === 'INPUT'
+      || t.tagName === 'TEXTAREA'
+      || t.tagName === 'SELECT'
+      || t.tagName === 'BUTTON'
+      || t.isContentEditable)
+  )
     return
   if (!['ArrowLeft', 'ArrowRight', ' '].includes(ev.key))
     return
@@ -123,8 +111,7 @@ function onAudioKeydown(ev) {
     if (ev.key === ' ') {
       if (audioTag.paused)
         audioTag.play()
-      else
-        audioTag.pause()
+      else audioTag.pause()
     }
   }
 }
@@ -138,7 +125,7 @@ function play(audioPath) {
     audio.pause()
     audio.currentTime = 0
   }
-  audio = document.createElement('audio')
+  audio = managedAudio.create()
   audio.src = audioPath
   audio.play()
 }
@@ -175,7 +162,9 @@ function onInputFocusOut(e, item) {
   }
   else {
     item.spellValue = spellValue
-    item.spellError = !item.word.map(v => v.toLowerCase().trim()).includes(spellValue)
+    item.spellError = !item.word
+      .map(v => v.toLowerCase().trim())
+      .includes(spellValue)
     if (item.spellError) {
       // 只有本次输入与聚焦时不一致才记入错词本，同一错词反复失焦不重复计数
       if (spellValue !== focusSpellValues[target.id]) {
@@ -210,9 +199,12 @@ function syncProgress() {
 
 function getInputStyleClass(item) {
   const cls = {
-    error: 'ml-4 bg-red-50 border border-red-500 text-red-900 placeholder-red-700 text-sm rounded-lg focus:ring-red-500 dark:bg-gray-700 focus:border-red-500 inline-block p-2.5 dark:text-red-500 dark:placeholder-red-500 dark:border-red-500',
-    normal: 'ml-4 inline-block border border-gray-300 rounded-lg bg-gray-50 p-2.5 text-sm text-gray-900 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500 dark:placeholder-gray-400',
-    success: 'ml-4 bg-green-50 border border-green-500 text-green-900 dark:text-green-400 placeholder-green-700 dark:placeholder-green-500 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 inline-block p-2.5 dark:bg-gray-700 dark:border-green-500',
+    error:
+      'ml-4 bg-red-50 border border-red-500 text-red-900 placeholder-red-700 text-sm rounded-lg focus:ring-red-500 dark:bg-gray-700 focus:border-red-500 inline-block p-2.5 dark:text-red-500 dark:placeholder-red-500 dark:border-red-500',
+    normal:
+      'ml-4 inline-block border border-gray-300 rounded-lg bg-gray-50 p-2.5 text-sm text-gray-900 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500 dark:placeholder-gray-400',
+    success:
+      'ml-4 bg-green-50 border border-green-500 text-green-900 dark:text-green-400 placeholder-green-700 dark:placeholder-green-500 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 inline-block p-2.5 dark:bg-gray-700 dark:border-green-500',
   }
   if (isFinishTraining.value) {
     if (item.spellError)
@@ -237,8 +229,20 @@ function copyAllError() {
 </script>
 
 <template>
-  <div class="px-4 pt-6 2xl:px-0">
-    <div class="border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
+  <div ref="mediaRoot" class="px-4 pt-6 2xl:px-0">
+    <p
+      v-if="mediaError"
+      role="alert"
+      class="my-3 border border-amber-300 rounded p-3 text-sm text-amber-800 dark:text-amber-300"
+    >
+      {{ mediaError }}
+      <button class="underline" @click="retryMedia">
+        重试
+      </button>
+    </p>
+    <div
+      class="border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
+    >
       <!-- Card header -->
       <div class="items-center justify-between lg:flex">
         <div class="mb-4 lg:mb-0">
@@ -274,11 +278,17 @@ function copyAllError() {
                 placeholder="Search">
             </div> -->
             <label class="ml-2 inline-flex cursor-pointer items-center">
-              <input v-model="isTrainingModel" type="checkbox" class="peer sr-only">
+              <input
+                v-model="isTrainingModel"
+                type="checkbox"
+                class="peer sr-only"
+              >
               <div
                 class="peer relative h-6 w-11 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:border-gray-300 dark:border-gray-600 after:rounded-full after:bg-white dark:bg-gray-700 peer-checked:bg-blue-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-focus:ring-blue-800 rtl:peer-checked:after:-translate-x-full"
               />
-              <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">练习模式</span>
+              <span
+                class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300"
+              >练习模式</span>
             </label>
             <router-link
               to="/vocabulary/flashcard"
@@ -286,26 +296,53 @@ function copyAllError() {
             >
               自测卡片
             </router-link>
-            <label v-if="isTrainingModel" class="ml-2 inline-flex cursor-pointer items-center">
-              <input v-model="isShowMeaning" type="checkbox" class="peer sr-only">
+            <label
+              v-if="isTrainingModel"
+              class="ml-2 inline-flex cursor-pointer items-center"
+            >
+              <input
+                v-model="isShowMeaning"
+                type="checkbox"
+                class="peer sr-only"
+              >
               <div
                 class="peer relative h-6 w-11 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:border-gray-300 dark:border-gray-600 after:rounded-full after:bg-white dark:bg-gray-700 peer-checked:bg-blue-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-focus:ring-blue-800 rtl:peer-checked:after:-translate-x-full"
               />
-              <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">释义</span>
+              <span
+                class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300"
+              >释义</span>
             </label>
-            <label v-if="isTrainingModel" class="ml-2 inline-flex cursor-pointer items-center">
-              <input v-model="isShowSource" type="checkbox" class="peer sr-only">
+            <label
+              v-if="isTrainingModel"
+              class="ml-2 inline-flex cursor-pointer items-center"
+            >
+              <input
+                v-model="isShowSource"
+                type="checkbox"
+                class="peer sr-only"
+              >
               <div
                 class="peer relative h-6 w-11 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:border-gray-300 dark:border-gray-600 after:rounded-full after:bg-white dark:bg-gray-700 peer-checked:bg-blue-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-focus:ring-blue-800 rtl:peer-checked:after:-translate-x-full"
               />
-              <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">原词</span>
+              <span
+                class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300"
+              >原词</span>
             </label>
-            <label v-if="isTrainingModel" class="ml-2 inline-flex cursor-pointer items-center">
-              <input v-model="isAutoPlayWordAudio" type="checkbox" class="peer sr-only">
+            <label
+              v-if="isTrainingModel"
+              class="ml-2 inline-flex cursor-pointer items-center"
+            >
+              <input
+                v-model="isAutoPlayWordAudio"
+                type="checkbox"
+                class="peer sr-only"
+              >
               <div
                 class="peer relative h-6 w-11 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:border-gray-300 dark:border-gray-600 after:rounded-full after:bg-white dark:bg-gray-700 peer-checked:bg-blue-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-focus:ring-blue-800 rtl:peer-checked:after:-translate-x-full"
               />
-              <span class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">自动播放</span>
+              <span
+                class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300"
+              >自动播放</span>
             </label>
           </div>
         </div>
@@ -315,28 +352,44 @@ function copyAllError() {
         <div class="overflow-x-auto rounded-lg">
           <div class="inline-block min-w-full align-middle">
             <div class="shadow sm:rounded-lg">
-              <table class="min-w-[620px] w-full divide-y divide-gray-200 dark:divide-gray-600">
+              <table
+                class="min-w-[620px] w-full divide-y divide-gray-200 dark:divide-gray-600"
+              >
                 <thead class="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white">
+                    <th
+                      class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white"
+                    >
                       #
                     </th>
-                    <th class="p-4 text-xs font-medium tracking-wider text-gray-500 dark:text-white">
+                    <th
+                      class="p-4 text-xs font-medium tracking-wider text-gray-500 dark:text-white"
+                    >
                       <br>
                     </th>
-                    <th class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white">
+                    <th
+                      class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white"
+                    >
                       词
                     </th>
-                    <th class="w-0 text-left text-xs font-medium text-gray-500 dark:text-white">
+                    <th
+                      class="w-0 text-left text-xs font-medium text-gray-500 dark:text-white"
+                    >
                       词性
                     </th>
-                    <th class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white">
+                    <th
+                      class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white"
+                    >
                       词义
                     </th>
-                    <th class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white">
+                    <th
+                      class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white"
+                    >
                       例句
                     </th>
-                    <th class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white">
+                    <th
+                      class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white"
+                    >
                       拓展
                     </th>
                   </tr>
@@ -350,22 +403,49 @@ function copyAllError() {
                       <div class="flex flex-row">
                         <div class="flex flex-1 items-center">
                           <span class="text-lg">{{ category }}</span>
-                          （ {{ refVocabulary[category].groupCount }} 组 {{ refVocabulary[category].wordCount }} 个词 ）
+                          （ {{ refVocabulary[category].groupCount }} 组
+                          {{ refVocabulary[category].wordCount }} 个词 ）
                         </div>
                         <div class="justify-items-end">
-                          <audio controls class="chapter">
-                            <source :src="resolveAudioUrl(`vocabulary/audio/${refVocabulary[category].audio}`)" type="audio/mpeg">
+                          <audio
+                            controls
+                            class="chapter"
+                            @error="
+                              mediaError = '章节音频加载失败，请检查网络后重试'
+                            "
+                            @loadeddata="mediaError = ''"
+                          >
+                            <source
+                              :src="
+                                resolveAudioUrl(
+                                  `vocabulary/audio/${refVocabulary[category].audio}`,
+                                )
+                              "
+                              type="audio/mpeg"
+                            >
                           </audio>
                         </div>
                       </div>
                     </td>
                   </tr>
-                  <template v-for="(wordGroup, i) of refVocabulary[category].words" :key="wordGroup.label">
+                  <template
+                    v-for="(wordGroup, i) of refVocabulary[category].words"
+                    :key="wordGroup.label"
+                  >
                     <tr
                       v-for="item of wordGroup"
-                      v-show="(isTrainingModel && (isOnlyShowErrors ? item.spellError : true)) || !isTrainingModel" :id="`tr_${item.id}`"
+                      v-show="
+                        (isTrainingModel
+                          && (isOnlyShowErrors ? item.spellError : true))
+                          || !isTrainingModel
+                      "
+                      :id="`tr_${item.id}`"
                       :key="item.id"
-                      :class="{ 'bg-gray-50 dark:bg-gray-700': item.id % 2 === 0, [`group-color-${i % 15}`]: true }" class="text-sm text-gray-900 dark:text-white"
+                      :class="{
+                        'bg-gray-50 dark:bg-gray-700': item.id % 2 === 0,
+                        [`group-color-${i % 15}`]: true,
+                      }"
+                      class="text-sm text-gray-900 dark:text-white"
                     >
                       <td class="p-4">
                         {{ item.id }}
@@ -373,28 +453,55 @@ function copyAllError() {
                       <td>
                         <i
                           class="i-ph-speaker-simple-high-bold inline-block cursor-pointer"
-                          @click="play(resolveAudioUrl(`vocabulary/audio/${category}/${item.word[0]}.mp3`))"
+                          @click="
+                            play(
+                              resolveAudioUrl(
+                                `vocabulary/audio/${category}/${item.word[0]}.mp3`,
+                              ),
+                            )
+                          "
                         />
 
                         <template v-if="isTrainingModel">
                           <i
                             :class="`${item.showSource ? 'i-ph-eye-slash-bold' : 'i-ph-eye-bold'} inline-block cursor-pointer ml-4`"
-                            title="显示原词" @click="item.showSource = !item.showSource"
+                            title="显示原词"
+                            @click="item.showSource = !item.showSource"
                           />
                           <input
-                            :id="item.id" autocomplete="off" :class="getInputStyleClass(item)"
+                            :id="item.id"
+                            autocomplete="off"
+                            :class="getInputStyleClass(item)"
                             type="text"
-                            @focusout="onInputFocusOut($event, item)" 
-                            @focusin="onInputFocusIn($event, resolveAudioUrl(`vocabulary/audio/${category}/${item.word[0]}.mp3`))" 
+                            @focusout="onInputFocusOut($event, item)"
+                            @focusin="
+                              onInputFocusIn(
+                                $event,
+                                resolveAudioUrl(
+                                  `vocabulary/audio/${category}/${item.word[0]}.mp3`,
+                                ),
+                              )
+                            "
                             @keydown="onInputKeydown"
                           >
                         </template>
                       </td>
                       <td class="group relative whitespace-nowrap p-4">
-                        <div v-if="!isTrainingModel || item.showSource || (isTrainingModel && isOnlyShowErrors && item.spellError) || isShowSource">
+                        <div
+                          v-if="
+                            !isTrainingModel
+                              || item.showSource
+                              || (isTrainingModel
+                                && isOnlyShowErrors
+                                && item.spellError)
+                              || isShowSource
+                          "
+                        >
                           <p v-for="w in item.word" :key="w">
                             <a
-                              class="hover:underline" :title="`在剑桥词典中查询 ${w}`" target="_blank"
+                              class="hover:underline"
+                              :title="`在剑桥词典中查询 ${w}`"
+                              target="_blank"
                               :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${w}`"
                             >{{ w }}</a>
                           </p>
@@ -407,7 +514,7 @@ function copyAllError() {
                           </div>
                         </div>
                       </td>
-                      <td style="font-style: italic; font-family: times;">
+                      <td style="font-style: italic; font-family: times">
                         {{ item.pos }}
                       </td>
                       <td class="whitespace-nowrap p-4">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import raw from './reading538words'
 import type { DeckCard } from '../../components/KeywordFlashcard.vue'
+import raw from './reading538words'
 
 defineOptions({ name: 'ReadingFlashcardPage' })
 
@@ -19,12 +19,14 @@ const cards: DeckCard[] = (raw as unknown as RawCat[]).flatMap(cat =>
   })),
 )
 
-const audioFor = (word: string) => `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=1`
+function audioFor(word: string) {
+  return `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=1`
+}
 </script>
 
 <template>
-  <div class="bg-gray-50 dark:bg-gray-900 px-4 pt-6 sm:px-6 lg:px-8">
-    <div class="max-w-2xl mx-auto">
+  <div class="bg-gray-50 px-4 pt-6 dark:bg-gray-900 lg:px-8 sm:px-6">
+    <div class="mx-auto max-w-2xl">
       <ReadingTabs />
     </div>
   </div>

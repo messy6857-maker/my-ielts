@@ -1,18 +1,34 @@
 <script setup lang="ts">
-import { mockTestList, loadMockTest } from './registry'
+import { useRoute, useRouter } from 'vue-router'
+import { onBeforeLogout } from '../../composables/useAuth'
+
+import { loadMockTest, mockTestList } from './registry'
 import type { MockTestPair } from './registry'
-import { bandScore, formatCountdown, isCorrect, multiSelectScore } from './types'
+import {
+  bandScore,
+  formatCountdown,
+  isCorrect,
+  multiSelectScore,
+} from './types'
 import type { MockQuestion } from './types'
-import { useRouter, useRoute } from 'vue-router'
 import { saveMockRecord } from '~/composables/useMockHistory'
 import { resolveMediaUrl } from '~/composables/useAudio'
 import { useGoBack } from '~/composables/useGoBack'
 import ListeningTabs from '~/components/ListeningTabs.vue'
 
+const mediaError = ref('')
+const mediaRoot = ref<HTMLElement | null>(null)
+function retryMedia() {
+  mediaError.value = ''
+  mediaRoot.value?.querySelectorAll('audio').forEach(audio => audio.load())
+}
+
 const { goBack } = useGoBack('/listening')
 
 const router = useRouter()
 const route = useRoute()
+const testOwner = useAuth().currentUser.value
+
 const testId = computed(() => (route.query.test as string) || 'cam21-test1')
 const testPair = ref<MockTestPair | null>(null)
 const test = computed(() => testPair.value?.listening)
@@ -30,11 +46,13 @@ let endAt = 0
 
 // audio 的 ref 写在 v-for 里，Vue 会收成数组；逐个暂停
 function pauseAllAudio() {
-  const els = audioEl.value as unknown as HTMLAudioElement | HTMLAudioElement[] | null
+  const els = audioEl.value as unknown as
+    | HTMLAudioElement
+    | HTMLAudioElement[]
+    | null
   if (Array.isArray(els))
     els.forEach(el => el?.pause?.())
-  else
-    els?.pause?.()
+  else els?.pause?.()
 }
 
 // 异步加载选中的套题（按需加载，不一次全载入）
@@ -131,7 +149,10 @@ function closeZoom() {
 }
 
 function adjustZoom(delta: number) {
-  zoomScale.value = Math.min(4, Math.max(1, +(zoomScale.value + delta).toFixed(2)))
+  zoomScale.value = Math.min(
+    4,
+    Math.max(1, +(zoomScale.value + delta).toFixed(2)),
+  )
   if (zoomScale.value === 1)
     zoomPos.value = { x: 0, y: 0 }
 }
@@ -148,7 +169,7 @@ function toggleZoom() {
 
 let pinchBase = 0
 let pinchScale = 1
-let panBase: { x: number, y: number } | null = null
+let panBase: { x: number; y: number } | null = null
 
 function onZoomTouchStart(e: TouchEvent) {
   if (e.touches.length === 2) {
@@ -170,7 +191,10 @@ function onZoomTouchMove(e: TouchEvent) {
     const t1 = e.touches[0]
     const t2 = e.touches[1]
     const dist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY)
-    zoomScale.value = Math.min(4, Math.max(1, +(pinchScale * dist / pinchBase).toFixed(2)))
+    zoomScale.value = Math.min(
+      4,
+      Math.max(1, +((pinchScale * dist) / pinchBase).toFixed(2)),
+    )
     if (zoomScale.value === 1)
       zoomPos.value = { x: 0, y: 0 }
   }
@@ -193,33 +217,30 @@ function onZoomWheel(e: WheelEvent) {
   adjustZoom(e.deltaY < 0 ? 0.25 : -0.25)
 }
 
-function submit() {
-  if (submitted.value)
-    return
-  submitted.value = true
-  if (timer)
-    clearInterval(timer)
-  pauseAllAudio()
-  // 保存做题记录
-  const qs = allQuestions.value
-  const total = qs.reduce((s, q) => s + (q.type === 'multi-select' && Array.isArray(q.answer) ? q.answer.length : 1), 0)
-  saveMockRecord({
-    id: testId.value,
-    label: testPair.value?.label ?? testId.value,
-    kind: 'listening',
-    score: correctCount.value,
-    total,
-    band: band.value,
-  })
-}
+watch(
+  useAuth().currentUser,
+  () => {
+    if (timer)
+      clearInterval(timer)
+    started.value = false
+  },
+  { flush: 'sync' },
+)
 
-const allQuestions = computed<MockQuestion[]>(() =>
-  test.value?.parts.flatMap(p => p.questions) ?? [],
+const allQuestions = computed<MockQuestion[]>(
+  () => test.value?.parts.flatMap(p => p.questions) ?? [],
 )
 
 // 满分题数（多选题按答案个数计）
 const scoredTotal = computed(() =>
-  allQuestions.value.reduce((s, q) => s + (q.type === 'multi-select' && Array.isArray(q.answer) ? q.answer.length : 1), 0),
+  allQuestions.value.reduce(
+    (s, q) =>
+      s
+      + (q.type === 'multi-select' && Array.isArray(q.answer)
+        ? q.answer.length
+        : 1),
+    0,
+  ),
 )
 
 const correctCount = computed(() => {
@@ -227,7 +248,14 @@ const correctCount = computed(() => {
     return 0
   return allQuestions.value.reduce((sum, q) => {
     const ans = answers.value[q.id] ?? ''
-    return sum + (q.type === 'multi-select' ? multiSelectScore(q, ans) : (isCorrect(q, ans) ? 1 : 0))
+    return (
+      sum
+      + (q.type === 'multi-select'
+        ? multiSelectScore(q, ans)
+        : isCorrect(q, ans)
+          ? 1
+          : 0)
+    )
   }, 0)
 })
 
@@ -249,7 +277,8 @@ function toggleMultiSelect(qid: string, idx: number) {
   else {
     // 多选题最多选该题答案个数（Choose TWO 即 2 个），多出的拒绝加入，防止全选刷分
     const q = allQuestions.value.find(q => q.id === qid)
-    const max = q && Array.isArray(q.answer) ? q.answer.length : Infinity
+    const max
+      = q && Array.isArray(q.answer) ? q.answer.length : Number.POSITIVE_INFINITY
     if (current.size >= max)
       return
     current.add(s)
@@ -259,17 +288,22 @@ function toggleMultiSelect(qid: string, idx: number) {
 
 // 切换套题：已开始且未交卷且已有答案时先确认，避免误触丢进度；
 // select 是 :value 绑定，取消时 testId 未变，选择框会自动复原
-const hasAnswers = computed(() => Object.values(answers.value).some(v => v.trim() !== ''))
+const hasAnswers = computed(() =>
+  Object.values(answers.value).some(v => v.trim() !== ''),
+)
 function onTestChange(e: Event) {
   const target = (e.target as HTMLSelectElement).value
   if (started.value && !submitted.value && hasAnswers.value) {
     if (!window.confirm('切换套题将丢失当前进度，确定吗？'))
       return
   }
+
   router.push({ path: '/mock/listening-test', query: { test: target } })
 }
 
-function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'unanswered' {
+function questionStatus(
+  q: MockQuestion,
+): 'correct' | 'wrong' | 'partial' | 'unanswered' {
   if (!submitted.value)
     return 'unanswered'
   const userAns = answers.value[q.id] ?? ''
@@ -284,16 +318,70 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
   }
   return isCorrect(q, userAns) ? 'correct' : 'wrong'
 }
+onBeforeRouteLeave(
+  () =>
+    useAuth().currentUser.value !== testOwner
+    || !started.value
+    || submitted.value
+    || window.confirm('尚未交卷，离开将丢失本次作答，确定吗？'),
+)
+function submit() {
+  if (useAuth().currentUser.value !== testOwner)
+    return
+  if (submitted.value)
+    return
+  submitted.value = true
+  if (timer)
+    clearInterval(timer)
+  pauseAllAudio()
+  // 保存做题记录
+  const qs = allQuestions.value
+  const total = qs.reduce(
+    (s, q) =>
+      s
+      + (q.type === 'multi-select' && Array.isArray(q.answer)
+        ? q.answer.length
+        : 1),
+    0,
+  )
+  saveMockRecord({
+    id: testId.value,
+    label: testPair.value?.label ?? testId.value,
+    kind: 'listening',
+    score: correctCount.value,
+    total,
+    band: band.value,
+  })
+}
+const offLogout = onBeforeLogout(() => {
+  if (timer)
+    clearInterval(timer)
+})
+onUnmounted(offLogout)
 </script>
 
 <template>
-  <div class="mx-auto max-w-5xl px-4 pt-6 2xl:px-0">
+  <div ref="mediaRoot" class="mx-auto max-w-5xl px-4 pt-6 2xl:px-0">
+    <p
+      v-if="mediaError"
+      role="alert"
+      class="my-3 border border-amber-300 rounded p-3 text-sm text-amber-800 dark:text-amber-300"
+    >
+      {{ mediaError }}
+      <button class="underline" @click="retryMedia">
+        重试
+      </button>
+    </p>
     <div v-if="loading" class="py-20 text-center text-gray-500">
       加载中…
     </div>
     <div v-else-if="loadError" class="py-20 text-center">
-      <p class="mb-4 text-4xl">😢</p>
-      <p class="mb-4 text-gray-500 dark:text-gray-400">题目加载失败，可能是网络抖动</p>
+      <p class="mb-4 text-4xl">
+        😢
+      </p>
+      <p class="mb-4 text-gray-500 dark:text-gray-400">
+        题目加载失败，可能是网络抖动
+      </p>
       <button
         class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
         @click="loadTest"
@@ -302,240 +390,336 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
       </button>
     </div>
     <template v-else-if="test">
-    <!-- 开始屏：点开始才计时 -->
-    <div v-if="!started" class="mx-auto max-w-2xl py-16 text-center">
-      <ListeningTabs />
-      <div class="mb-6 text-left">
-        <button
-          type="button"
-          class="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-          @click="goBack"
-        >
-          ← 返回
-        </button>
-      </div>
-      <p class="mb-4 text-5xl">🎧</p>
-      <h2 class="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
-        {{ test.title }}
-      </h2>
-      <p class="mb-2 text-gray-500 dark:text-gray-400">
-        共 {{ test.parts.length }} 个 Part · {{ allQuestions.length }} 道题 · 满分 {{ scoredTotal }} 分 · 限时 {{ Math.round(test.timeLimit / 60) }} 分钟
-      </p>
-      <p class="mb-8 text-sm text-gray-400 dark:text-gray-500">
-        点击开始后计时启动，时间到自动交卷
-      </p>
-      <div class="mb-6 flex items-center justify-center gap-3">
-        <span class="text-sm text-gray-500 dark:text-gray-400">选择套题：</span>
-        <select
-          :value="testId"
-          class="rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          @change="onTestChange"
-        >
-          <option v-for="t in mockTestList" :key="t.id" :value="t.id">
-            {{ t.label }}
-          </option>
-        </select>
-      </div>
-      <button
-        class="rounded-xl bg-blue-600 px-10 py-3 text-lg font-bold text-white hover:bg-blue-700"
-        @click="startTest"
-      >
-        ▶ 开始测试
-      </button>
-    </div>
-    <div v-else>
-    <div class="mb-6 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
-          🎧 {{ test.title }}
-        </h2>
-        <select
-          :value="testId"
-          class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700"
-          @change="onTestChange"
-        >
-          <option v-for="t in mockTestList" :key="t.id" :value="t.id">
-            {{ t.label }}
-          </option>
-        </select>
-      </div>
-      <div class="flex items-center gap-4">
-        <span
-          class="rounded-lg px-4 py-2 font-mono text-xl font-bold"
-          :class="timeLeft < 300 ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'"
-        >
-          ⏱ {{ formatCountdown(timeLeft) }}
-        </span>
-        <button
-          v-if="!submitted"
-          class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
-          @click="submit"
-        >
-          交卷
-        </button>
-      </div>
-    </div>
-
-    <div v-if="submitted" class="mb-8 rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800">
-      <p class="mb-2 text-5xl font-black text-blue-600 dark:text-blue-400">
-        {{ band.toFixed(1) }}
-      </p>
-      <p class="text-gray-600 dark:text-gray-400">
-        答对 {{ correctCount }} / {{ scoredTotal }} 分
-      </p>
-    </div>
-
-    <div v-if="!submitted" class="mb-6 flex gap-2">
-      <button
-        v-for="(_, i) in test.parts"
-        :key="i"
-        class="rounded-lg px-4 py-2 text-sm font-bold"
-        :class="activePart === i ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'"
-        @click="activePart = i"
-      >
-        Part {{ i + 1 }}
-      </button>
-    </div>
-
-    <div v-for="(p, pi) in test.parts" :key="pi" v-show="submitted || activePart === pi" class="mb-8">
-      <article class="mb-6 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-        <h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
-          {{ p.title }}
-        </h3>
-        <audio
-          v-if="!submitted"
-          ref="audioEl"
-          controls
-          :src="resolveMediaUrl(p.audio)"
-          class="w-full"
-        />
-        <p v-if="submitted && p.transcript" class="mt-4 whitespace-pre-line text-sm text-gray-600 dark:text-gray-400">
-          {{ p.transcript }}
+      <!-- 开始屏：点开始才计时 -->
+      <div v-if="!started" class="mx-auto max-w-2xl py-16 text-center">
+        <ListeningTabs />
+        <div class="mb-6 text-left">
+          <button
+            type="button"
+            class="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+            @click="goBack"
+          >
+            ← 返回
+          </button>
+        </div>
+        <p class="mb-4 text-5xl">
+          🎧
         </p>
-      </article>
-
-      <!-- 有图的 Part：图片吸顶，滑到题目时一直看得见 -->
-      <div :class="p.image ? 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-6' : ''">
-        <div v-if="p.image" class="sticky top-20 z-10 mb-6 lg:mb-0 lg:top-24">
-          <div class="rounded-xl border border-gray-200 bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-            <img
-              :src="resolveMediaUrl(p.image)"
-              alt="题目示意图"
-              class="w-full cursor-zoom-in rounded-lg lg:max-h-[70vh] lg:object-contain"
-              @click="openZoom(resolveMediaUrl(p.image))"
-            />
-            <button
-              class="mt-2 w-full rounded-lg bg-gray-100 py-2 text-sm font-bold text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
-              @click="openZoom(resolveMediaUrl(p.image))"
-            >
-              🔍 点击放大查看
-            </button>
-          </div>
+        <h2 class="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
+          {{ test.title }}
+        </h2>
+        <p class="mb-2 text-gray-500 dark:text-gray-400">
+          共 {{ test.parts.length }} 个 Part · {{ allQuestions.length }} 道题 ·
+          满分 {{ scoredTotal }} 分 · 限时
+          {{ Math.round(test.timeLimit / 60) }} 分钟
+        </p>
+        <p class="mb-8 text-sm text-gray-400 dark:text-gray-500">
+          点击开始后计时启动，时间到自动交卷
+        </p>
+        <div class="mb-6 flex items-center justify-center gap-3">
+          <span class="text-sm text-gray-500 dark:text-gray-400">选择套题：</span>
+          <select
+            :value="testId"
+            class="border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            @change="onTestChange"
+          >
+            <option v-for="t in mockTestList" :key="t.id" :value="t.id">
+              {{ t.label }}
+            </option>
+          </select>
         </div>
-        <div>
-          <div class="space-y-4">
-        <div
-          v-for="q in p.questions"
-          :key="q.id"
-          class="rounded-xl border p-4 dark:border-gray-700"
-          :class="questionStatus(q) === 'correct' ? 'border-green-300 bg-green-50 dark:bg-green-900/20' : questionStatus(q) === 'wrong' ? 'border-red-300 bg-red-50 dark:bg-red-900/20' : 'border-gray-200 bg-white dark:bg-gray-800'"
+        <button
+          class="rounded-xl bg-blue-600 px-10 py-3 text-lg font-bold text-white hover:bg-blue-700"
+          @click="startTest"
         >
-          <p class="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200">
-            <span class="mr-2 rounded bg-gray-100 px-2 py-0.5 text-xs font-bold dark:bg-gray-700">{{ q.id }}</span>
-            {{ q.question }}
+          ▶ 开始测试
+        </button>
+      </div>
+      <div v-else>
+        <div class="mb-6 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+              🎧 {{ test.title }}
+            </h2>
+            <select
+              :value="testId"
+              class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700"
+              @change="onTestChange"
+            >
+              <option v-for="t in mockTestList" :key="t.id" :value="t.id">
+                {{ t.label }}
+              </option>
+            </select>
+          </div>
+          <div class="flex items-center gap-4">
+            <span
+              class="rounded-lg px-4 py-2 text-xl font-bold font-mono"
+              :class="
+                timeLeft < 300
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                  : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+              "
+            >
+              ⏱ {{ formatCountdown(timeLeft) }}
+            </span>
+            <button
+              v-if="!submitted"
+              class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
+              @click="submit"
+            >
+              交卷
+            </button>
+          </div>
+        </div>
+
+        <div
+          v-if="submitted"
+          class="mb-8 border border-gray-200 rounded-2xl bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800"
+        >
+          <p class="mb-2 text-5xl font-black text-blue-600 dark:text-blue-400">
+            {{ band.toFixed(1) }}
           </p>
-
-          <div v-if="q.type === 'multiple-choice' || q.type === 'tfng'" class="space-y-2">
-            <button
-              v-for="(opt, oi) in q.options"
-              :key="oi"
-              :disabled="submitted"
-              class="block w-full rounded-lg border px-4 py-2 text-left text-sm"
-              :class="submitted
-                ? oi === q.answer
-                  ? 'border-green-500 bg-green-100 font-bold dark:bg-green-900/40'
-                  : answers[q.id] === String(oi)
-                    ? 'border-red-500 bg-red-100 dark:bg-red-900/40'
-                    : 'border-gray-200 opacity-60 dark:border-gray-700'
-                : answers[q.id] === String(oi)
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                  : 'border-gray-200 hover:border-blue-400 dark:border-gray-700'"
-              @click="setAnswer(q.id, String(oi))"
-            >
-              {{ opt }}
-            </button>
-          </div>
-
-          <!-- 多选题（Choose TWO） -->
-          <div v-if="q.type === 'multi-select'" class="space-y-2">
-            <button
-              v-for="(opt, oi) in q.options"
-              :key="oi"
-              :disabled="submitted"
-              class="block w-full rounded-lg border px-4 py-2 text-left text-sm"
-              :class="submitted
-                ? (q.answer as number[]).includes(oi)
-                  ? 'border-green-500 bg-green-100 font-bold dark:bg-green-900/40'
-                  : (answers[q.id] ?? '').split(',').includes(String(oi))
-                    ? 'border-red-500 bg-red-100 dark:bg-red-900/40'
-                    : 'border-gray-200 opacity-60 dark:border-gray-700'
-                : (answers[q.id] ?? '').split(',').includes(String(oi))
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                  : 'border-gray-200 hover:border-blue-400 dark:border-gray-700'"
-              @click="toggleMultiSelect(q.id, oi)"
-            >
-              <span class="mr-2 inline-block h-4 w-4 rounded border text-center text-xs leading-3" :class="(answers[q.id] ?? '').split(',').includes(String(oi)) ? 'bg-blue-600 text-white border-blue-600' : 'border-gray-400'">
-                {{ (answers[q.id] ?? '').split(',').includes(String(oi)) ? '✓' : '' }}
-              </span>
-              {{ opt }}
-            </button>
-          </div>
-
-          <input
-            v-if="q.type === 'fill-blank'"
-            :disabled="submitted"
-            :value="answers[q.id] ?? ''"
-            placeholder="输入答案"
-            class="w-full rounded-lg border border-gray-300 px-4 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            @input="setAnswer(q.id, ($event.target as HTMLInputElement).value)"
-          />
-
-          <input
-            v-if="q.type === 'map-label'"
-            :disabled="submitted"
-            :value="answers[q.id] ?? ''"
-            placeholder="输入字母 A-H"
-            maxlength="1"
-            class="w-24 rounded-lg border border-gray-300 px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            @input="setAnswer(q.id, ($event.target as HTMLInputElement).value)"
-          />
-
-          <p v-if="submitted && questionStatus(q) !== 'correct'" class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            正确答案：{{ q.type === 'multi-select' ? (q.answer as number[]).map(i => q.options?.[i]).join(' / ') : q.type === 'fill-blank' ? (Array.isArray(q.answer) ? q.answer.join(' / ') : q.answer) : q.type === 'map-label' ? q.answer : q.options?.[q.answer as number] }}
+          <p class="text-gray-600 dark:text-gray-400">
+            答对 {{ correctCount }} / {{ scoredTotal }} 分
           </p>
         </div>
+
+        <div v-if="!submitted" class="mb-6 flex gap-2">
+          <button
+            v-for="(_, i) in test.parts"
+            :key="i"
+            class="rounded-lg px-4 py-2 text-sm font-bold"
+            :class="
+              activePart === i
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
+            "
+            @click="activePart = i"
+          >
+            Part {{ i + 1 }}
+          </button>
+        </div>
+
+        <div
+          v-for="(p, pi) in test.parts"
+          v-show="submitted || activePart === pi"
+          :key="pi"
+          class="mb-8"
+        >
+          <article
+            class="mb-6 border border-gray-200 rounded-2xl bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+          >
+            <h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
+              {{ p.title }}
+            </h3>
+            <audio
+              v-if="!submitted"
+              ref="audioEl"
+              controls
+              :src="resolveMediaUrl(p.audio)"
+              class="w-full"
+              @error="mediaError = '音频加载失败，请检查网络后重试'"
+              @loadeddata="mediaError = ''"
+            />
+            <p
+              v-if="submitted && p.transcript"
+              class="mt-4 whitespace-pre-line text-sm text-gray-600 dark:text-gray-400"
+            >
+              {{ p.transcript }}
+            </p>
+          </article>
+
+          <!-- 有图的 Part：图片吸顶，滑到题目时一直看得见 -->
+          <div
+            :class="
+              p.image ? 'lg:grid lg:grid-cols-2 lg:items-start lg:gap-6' : ''
+            "
+          >
+            <div
+              v-if="p.image"
+              class="sticky top-20 z-10 mb-6 lg:top-24 lg:mb-0"
+            >
+              <div
+                class="border border-gray-200 rounded-xl bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+              >
+                <img
+                  :src="resolveMediaUrl(p.image)"
+                  alt="题目示意图"
+                  class="w-full cursor-zoom-in rounded-lg lg:max-h-[70vh] lg:object-contain"
+                  @click="openZoom(resolveMediaUrl(p.image))"
+                >
+                <button
+                  class="mt-2 w-full rounded-lg bg-gray-100 py-2 text-sm font-bold text-gray-700 dark:bg-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-600"
+                  @click="openZoom(resolveMediaUrl(p.image))"
+                >
+                  🔍 点击放大查看
+                </button>
+              </div>
+            </div>
+            <div>
+              <div class="space-y-4">
+                <div
+                  v-for="q in p.questions"
+                  :key="q.id"
+                  class="border rounded-xl p-4 dark:border-gray-700"
+                  :class="
+                    questionStatus(q) === 'correct'
+                      ? 'border-green-300 bg-green-50 dark:bg-green-900/20'
+                      : questionStatus(q) === 'wrong'
+                        ? 'border-red-300 bg-red-50 dark:bg-red-900/20'
+                        : questionStatus(q) === 'partial'
+                          ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20'
+                          : 'border-gray-200 bg-white dark:bg-gray-800'
+                  "
+                >
+                  <p
+                    class="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200"
+                  >
+                    <span
+                      class="mr-2 rounded bg-gray-100 px-2 py-0.5 text-xs font-bold dark:bg-gray-700"
+                    >{{ q.id }}</span>
+                    {{ q.question }}
+                  </p>
+
+                  <div
+                    v-if="q.type === 'multiple-choice' || q.type === 'tfng'"
+                    class="space-y-2"
+                  >
+                    <button
+                      v-for="(opt, oi) in q.options"
+                      :key="oi"
+                      :disabled="submitted"
+                      class="block w-full border rounded-lg px-4 py-2 text-left text-sm"
+                      :class="
+                        submitted
+                          ? oi === q.answer
+                            ? 'border-green-500 bg-green-100 font-bold dark:bg-green-900/40'
+                            : answers[q.id] === String(oi)
+                              ? 'border-red-500 bg-red-100 dark:bg-red-900/40'
+                              : 'border-gray-200 opacity-60 dark:border-gray-700'
+                          : answers[q.id] === String(oi)
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                            : 'border-gray-200 hover:border-blue-400 dark:border-gray-700'
+                      "
+                      @click="setAnswer(q.id, String(oi))"
+                    >
+                      {{ opt }}
+                    </button>
+                  </div>
+
+                  <!-- 多选题（Choose TWO） -->
+                  <div v-if="q.type === 'multi-select'" class="space-y-2">
+                    <button
+                      v-for="(opt, oi) in q.options"
+                      :key="oi"
+                      :disabled="submitted"
+                      class="block w-full border rounded-lg px-4 py-2 text-left text-sm"
+                      :class="
+                        submitted
+                          ? (q.answer as number[]).includes(oi)
+                            ? 'border-green-500 bg-green-100 font-bold dark:bg-green-900/40'
+                            : (answers[q.id] ?? '')
+                              .split(',')
+                              .includes(String(oi))
+                              ? 'border-red-500 bg-red-100 dark:bg-red-900/40'
+                              : 'border-gray-200 opacity-60 dark:border-gray-700'
+                          : (answers[q.id] ?? '')
+                            .split(',')
+                            .includes(String(oi))
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                            : 'border-gray-200 hover:border-blue-400 dark:border-gray-700'
+                      "
+                      @click="toggleMultiSelect(q.id, oi)"
+                    >
+                      <span
+                        class="mr-2 inline-block h-4 w-4 border rounded text-center text-xs leading-3"
+                        :class="
+                          (answers[q.id] ?? '').split(',').includes(String(oi))
+                            ? 'bg-blue-600 text-white border-blue-600'
+                            : 'border-gray-400'
+                        "
+                      >
+                        {{
+                          (answers[q.id] ?? '').split(',').includes(String(oi))
+                            ? '✓'
+                            : ''
+                        }}
+                      </span>
+                      {{ opt }}
+                    </button>
+                  </div>
+
+                  <input
+                    v-if="q.type === 'fill-blank'"
+                    :disabled="submitted"
+                    :value="answers[q.id] ?? ''"
+                    placeholder="输入答案"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    @input="
+                      setAnswer(q.id, ($event.target as HTMLInputElement).value)
+                    "
+                  >
+
+                  <input
+                    v-if="q.type === 'map-label'"
+                    :disabled="submitted"
+                    :value="answers[q.id] ?? ''"
+                    placeholder="输入字母 A-H"
+                    maxlength="1"
+                    class="w-24 border border-gray-300 rounded-lg px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                    @input="
+                      setAnswer(q.id, ($event.target as HTMLInputElement).value)
+                    "
+                  >
+
+                  <p
+                    v-if="submitted && questionStatus(q) !== 'correct'"
+                    class="mt-2 text-sm text-gray-500 dark:text-gray-400"
+                  >
+                    <span
+                      v-if="questionStatus(q) === 'partial'"
+                      class="font-bold text-amber-700"
+                    >部分正确（{{
+                      multiSelectScore(q, answers[q.id] ?? '')
+                    }}
+                      / {{ Array.isArray(q.answer) ? q.answer.length : 1 }} 分）
+                      · </span>正确答案：{{
+                      q.type === 'multi-select'
+                        ? (q.answer as number[])
+                          .map((i) => q.options?.[i])
+                          .join(' / ')
+                        : q.type === 'fill-blank'
+                          ? Array.isArray(q.answer)
+                            ? q.answer.join(' / ')
+                            : q.answer
+                          : q.type === 'map-label'
+                            ? q.answer
+                            : q.options?.[q.answer as number]
+                    }}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pb-12 text-center">
+          <button
+            type="button"
+            class="border border-gray-300 rounded-lg px-6 py-2 text-sm text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+            @click="router.push('/listening')"
+          >
+            ← 返回听力
+          </button>
+          <button
+            type="button"
+            class="border border-gray-300 rounded-lg px-6 py-2 text-sm text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+            @click="router.push('/mock/history')"
+          >
+            📊 做题记录
+          </button>
         </div>
       </div>
-    </div>
-  </div>
-
-    <div class="pb-12 text-center">
-      <button
-        type="button"
-        class="rounded-lg border border-gray-300 px-6 py-2 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-        @click="router.push('/listening')"
-      >
-        ← 返回听力
-      </button>
-      <button
-        type="button"
-        class="rounded-lg border border-gray-300 px-6 py-2 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-        @click="router.push('/mock/history')"
-      >
-        📊 做题记录
-      </button>
-    </div>
-    </div>
     </template>
   </div>
 
@@ -546,18 +730,24 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
         <button
           class="h-9 w-9 rounded-full bg-white/15 text-xl font-bold text-white active:bg-white/30"
           @click="adjustZoom(-0.5)"
-        >−</button>
+        >
+          −
+        </button>
         <span class="w-14 text-center text-sm text-white/80">{{ Math.round(zoomScale * 100) }}%</span>
         <button
           class="h-9 w-9 rounded-full bg-white/15 text-xl font-bold text-white active:bg-white/30"
           @click="adjustZoom(0.5)"
-        >＋</button>
+        >
+          ＋
+        </button>
       </div>
       <span class="hidden text-xs text-white/50 sm:inline">双指缩放 · 拖动平移 · 双击放大/还原</span>
       <button
         class="rounded-full bg-white/15 px-4 py-2 text-sm text-white active:bg-white/30"
         @click="closeZoom"
-      >✕ 关闭</button>
+      >
+        ✕ 关闭
+      </button>
     </div>
     <div
       class="flex flex-1 touch-none items-center justify-center overflow-hidden"
@@ -571,9 +761,11 @@ function questionStatus(q: MockQuestion): 'correct' | 'wrong' | 'partial' | 'una
         :src="zoomImage"
         alt="题目示意图"
         class="max-h-full max-w-full rounded-lg"
-        :style="{ transform: `translate(${zoomPos.x}px, ${zoomPos.y}px) scale(${zoomScale})` }"
+        :style="{
+          transform: `translate(${zoomPos.x}px, ${zoomPos.y}px) scale(${zoomScale})`,
+        }"
         draggable="false"
-      />
+      >
     </div>
   </div>
 </template>

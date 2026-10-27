@@ -1,4 +1,4 @@
-<script setup lang="ts" generic="T extends any, O extends any">
+<script setup lang="ts">
 import { RouterLink } from 'vue-router'
 
 defineOptions({
@@ -67,13 +67,20 @@ const menus = reactive([
 
 <template>
   <div class="px-4 pt-6 2xl:px-0">
-    <section class="mb-4 border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
+    <section
+      class="mb-4 border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
+    >
       <div class="mx-auto max-w-screen-xl px-4 py-8 lg:px-6 sm:py-16">
-        <h1 style="font-family: Charmonman;" class="mb-16 text-center text-6xl text-gray-900 dark:text-white">
+        <h1
+          style="font-family: Charmonman"
+          class="mb-16 text-center text-6xl text-gray-900 dark:text-white"
+        >
           Salvation lies within <span class="font-bold text-#f00">IELTS</span>
         </h1>
         <div class="mb-8 max-w-screen-md lg:mb-16">
-          <h2 class="mb-4 text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+          <h2
+            class="mb-4 text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white"
+          >
             我的 IELTS 备考中心
           </h2>
           <p class="text-gray-500 sm:text-xl dark:text-gray-400">
@@ -81,7 +88,10 @@ const menus = reactive([
           </p>
         </div>
         <!-- 学习进度 -->
-        <div v-if="hasAnyProgress || mistakeCount > 0" class="mb-12 rounded-xl border border-gray-200 bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-900">
+        <div
+          v-if="hasAnyProgress || mistakeCount > 0"
+          class="mb-12 border border-gray-200 rounded-xl bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-900"
+        >
           <div class="mb-4 flex items-center justify-between">
             <h3 class="text-xl font-bold text-gray-900 dark:text-white">
               学习进度
@@ -97,13 +107,17 @@ const menus = reactive([
               错词本（{{ mistakeCount }}）→
             </RouterLink>
           </div>
-          <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <div class="grid gap-4 lg:grid-cols-3 md:grid-cols-2">
             <div v-for="m in modules" :key="m.module">
               <div class="mb-1 flex items-center justify-between text-sm">
-                <span class="font-medium text-gray-700 dark:text-gray-300">{{ m.label }}</span>
+                <span class="font-medium text-gray-700 dark:text-gray-300">{{
+                  m.label
+                }}</span>
                 <span class="text-gray-500 dark:text-gray-400">{{ m.done }} / {{ m.total }}</span>
               </div>
-              <div class="h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700">
+              <div
+                class="h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700"
+              >
                 <div
                   class="h-2.5 rounded-full bg-blue-600 transition-all"
                   :style="{ width: `${percent(m.done, m.total)}%` }"
@@ -112,15 +126,22 @@ const menus = reactive([
             </div>
           </div>
         </div>
-        <div class="md:grid lg:grid-cols-3 md:grid-cols-2 md:gap-12 space-y-8 md:space-y-0">
+        <div
+          class="md:grid lg:grid-cols-3 md:grid-cols-2 md:gap-12 space-y-8 md:space-y-0"
+        >
           <RouterLink
             v-for="m in menus"
             :key="m.label"
             :to="m.link"
             class="block"
           >
-            <div class="mb-4 h-10 w-10 flex items-center justify-center rounded-full bg-primary-100 lg:h-12 lg:w-12 dark:bg-primary-900">
-              <i class="block h-5 w-5 text-primary-600 lg:h-6 lg:w-6 dark:text-primary-300" :class="m.icon" />
+            <div
+              class="mb-4 h-10 w-10 flex items-center justify-center rounded-full bg-primary-100 lg:h-12 lg:w-12 dark:bg-primary-900"
+            >
+              <i
+                class="block h-5 w-5 text-primary-600 lg:h-6 lg:w-6 dark:text-primary-300"
+                :class="m.icon"
+              />
             </div>
             <h3 class="mb-2 text-xl font-bold dark:text-white">
               {{ m.label }}

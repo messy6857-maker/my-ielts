@@ -1,35 +1,46 @@
-name: Build and Deploy
+name: Verify and deploy
 on:
   push:
-    branches:
-      - master
+    branches: [master]
   pull_request:
-    branches:
-      - master
+    branches: [master]
   workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: web-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  test-build-deploy:
+  verify:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
         with:
-          node-version: lts/Hydrogen
-      
-      - name: Install Dependencies
-        run: npm -g install pnpm@8.6.10 && pnpm i
-
-      # - name: Run Tests
-      #   run: yarn test
-
-      - name: Run Build
-        run: pnpm run build
-
-      - name: Deploy
-        uses: JamesIves/github-pages-deploy-action@v4.2.5
+          node-version: 24
+      - run: npm install -g pnpm@8.6.10
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test:run
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: website
+          path: dist
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/download-artifact@v4
+        with:
+          name: website
+          path: dist
+      - uses: JamesIves/github-pages-deploy-action@v4
         with:
           branch: gh-pages
           folder: dist

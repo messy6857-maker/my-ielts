@@ -1,20 +1,19 @@
 <!-- 通用考点词自测卡片：听力 179 / 阅读 538 共用
      与词汇自测卡片（/vocabulary/flashcard）是独立入口、独立进度 -->
 <script setup lang="ts">
+import { speechLanguage, useAudioGroup } from '../composables/useAudioGroup'
+import { studyDay } from '../composables/useStudyData'
+
 import { gradeSchedule } from '../composables/useSpacedRepetition'
 import { decrementAttempt, recordAttempt } from '../composables/useStats'
 import { planQueue, useDeckStore } from '../composables/useDeckStore'
-import { formatClock, formatDuration, useStudyTimer } from '../composables/useStudyTimer'
+import {
+  formatClock,
+  formatDuration,
+  useStudyTimer,
+} from '../composables/useStudyTimer'
 import { useGoBack } from '../composables/useGoBack'
 import type { MistakeModule, ProgressModule } from '../composables/useStudyData'
-
-export interface DeckCard {
-  id: string | number
-  word: string
-  pos: string
-  meaning: string
-  synonyms: string[]
-}
 
 const props = defineProps<{
   /** 存储隔离命名空间，如 listening179 / reading538 */
@@ -29,6 +28,16 @@ const props = defineProps<{
   mistakeModule: MistakeModule
   progressModule: ProgressModule
 }>()
+
+const managedAudio = useAudioGroup()
+
+export interface DeckCard {
+  id: string | number
+  word: string
+  pos: string
+  meaning: string
+  synonyms: string[]
+}
 
 interface Card extends DeckCard {
   attempts: number
@@ -57,7 +66,11 @@ function confirmExit() {
 }
 const { addMistake, decrementMistake } = useMistakes()
 const { setProgress } = useProgress()
-const { streak: checkinStreak, weekDots: checkinWeekDots, checkin: doCheckin } = useCheckin()
+const {
+  streak: checkinStreak,
+  weekDots: checkinWeekDots,
+  checkin: doCheckin,
+} = useCheckin()
 
 const goalProxy = computed({
   get: () => deck.goal.value,
@@ -75,7 +88,9 @@ const finished = ref(false)
 const studying = ref<Card | null>(null)
 const lastGrade = ref<0 | 3 | 5 | null>(null)
 
-const current = computed(() => (!studying.value ? queue.value[0] ?? null : null))
+const current = computed(() =>
+  !studying.value ? (queue.value[0] ?? null) : null,
+)
 const remaining = computed(() => queue.value.length)
 
 let audio: HTMLAudioElement | null = null
@@ -90,7 +105,7 @@ function playAudio(word?: string) {
       audio.pause()
       audio.currentTime = 0
     }
-    audio = document.createElement('audio')
+    audio = managedAudio.create()
     audio.src = props.audioFor(w)
     // MP3 不存在时用浏览器朗读兜底（onerror 与 play().catch 只触发一次）
     let fellBack = false
@@ -99,7 +114,7 @@ function playAudio(word?: string) {
         return
       fellBack = true
       const u = new SpeechSynthesisUtterance(w)
-      u.lang = 'en-US'
+      u.lang = speechLanguage()
       speechSynthesis.speak(u)
     }
     audio.onerror = fallback
@@ -114,10 +129,20 @@ function toCard(c: DeckCard, isNew: boolean): Card {
   return { ...c, attempts: 0, isNew, counted: false }
 }
 
+const gradeHistory = ref<GradeHistoryEntry[]>([])
+
 function buildQueue() {
   // 复习配额 = 3 × 每日新词目标（1:3）：到期优先，不足时从已学词里补；新词按今日剩余名额取
-  const plan = planQueue(props.cards, id => deck.getSchedule(id), deck.goal.value, deck.remaining.value)
-  queue.value = [...plan.newWords.map(c => toCard(c, true)), ...plan.reviews.map(c => toCard(c, false))]
+  const plan = planQueue(
+    props.cards,
+    id => deck.getSchedule(id),
+    deck.goal.value,
+    deck.remaining.value,
+  )
+  queue.value = [
+    ...plan.newWords.map(c => toCard(c, true)),
+    ...plan.reviews.map(c => toCard(c, false)),
+  ]
   initialTotal.value = queue.value.length
   reviewCount.value = plan.reviews.length
   dueCount.value = plan.dueCount
@@ -142,8 +167,8 @@ interface GradeHistoryEntry {
   prevBest: number | undefined
   prevAttempts: number
   countedNew: boolean
+  date: string
 }
-const gradeHistory = ref<GradeHistoryEntry[]>([])
 
 // 先自评：认识 / 不认识 / 模糊
 function grade(g: 0 | 3 | 5) {
@@ -160,6 +185,7 @@ function grade(g: 0 | 3 | 5) {
     prevBest: bestGrade.value[card.id],
     prevAttempts: card.attempts,
     countedNew,
+    date: studyDay(),
   })
   deck.setSchedule(card.id, nextSchedule)
   recordAttempt(props.ns, g)
@@ -167,11 +193,10 @@ function grade(g: 0 | 3 | 5) {
     stats.value.known++
   else if (g === 3)
     stats.value.vague++
-  else
-    stats.value.unknown++
+  else stats.value.unknown++
   bestGrade.value[card.id] = Math.max(bestGrade.value[card.id] ?? -1, g)
   if (countedNew) {
-    deck.recordNewWord()
+    deck.recordNewWord(card.id)
     card.counted = true
   }
   card.attempts++
@@ -185,7 +210,8 @@ function grade(g: 0 | 3 | 5) {
       hint: card.synonyms.slice(0, 4).join(' / '),
     })
     if (card.attempts < 3) {
-      const insertAt = g === 3 ? Math.min(5, queue.value.length) : queue.value.length
+      const insertAt
+        = g === 3 ? Math.min(5, queue.value.length) : queue.value.length
       queue.value.splice(insertAt, 0, card)
     }
   }
@@ -199,30 +225,37 @@ function goBackOne() {
   const entry = gradeHistory.value.pop()
   if (!entry)
     return
-  const { card, grade: g, prevSchedule, postSchedule, prevBest, prevAttempts, countedNew } = entry
+  const {
+    card,
+    grade: g,
+    prevSchedule,
+    postSchedule,
+    prevBest,
+    prevAttempts,
+    countedNew,
+  } = entry
   // 拉取重载可能已把该词调度换成他设备的新值：当前值与评分后快照不一致时，
   // 跳过调度恢复（只恢复计数类项目），避免旧快照覆盖他设备的新值
-  if (JSON.stringify(deck.getSchedule(card.id)) === JSON.stringify(postSchedule)) {
+  if (
+    JSON.stringify(deck.getSchedule(card.id)) === JSON.stringify(postSchedule)
+  ) {
     if (prevSchedule)
       deck.setSchedule(card.id, prevSchedule)
-    else
-      deck.removeSchedule(card.id)
+    else deck.removeSchedule(card.id)
   }
   if (prevBest === undefined)
     delete bestGrade.value[card.id]
-  else
-    bestGrade.value[card.id] = prevBest
+  else bestGrade.value[card.id] = prevBest
   if (g === 5)
     stats.value.known = Math.max(0, stats.value.known - 1)
   else if (g === 3)
     stats.value.vague = Math.max(0, stats.value.vague - 1)
-  else
-    stats.value.unknown = Math.max(0, stats.value.unknown - 1)
-  decrementAttempt(props.ns, g)
+  else stats.value.unknown = Math.max(0, stats.value.unknown - 1)
+  decrementAttempt(props.ns, g, entry.date)
   if (g !== 5)
-    decrementMistake(`${props.ns}:${card.id}`)
+    decrementMistake(`${props.ns}:${card.id}`, entry.date)
   if (countedNew) {
-    deck.decrementNewWord()
+    deck.decrementNewWord(card.id, entry.date)
     card.counted = false
   }
   card.attempts = prevAttempts
@@ -248,8 +281,7 @@ function next() {
   lastGrade.value = null
   if (queue.value.length === 0)
     finishSession()
-  else
-    playAudio(queue.value[0].word)
+  else playAudio(queue.value[0].word)
 }
 
 function finishSession() {
@@ -279,6 +311,18 @@ function resetMemory() {
   timer.resume()
 }
 
+const { currentUser: sessionUser } = useAuth()
+watch(
+  sessionUser,
+  () => {
+    queue.value = []
+    gradeHistory.value = []
+    studying.value = null
+    finished.value = true
+    timer.pause()
+  },
+  { flush: 'sync' },
+)
 onMounted(() => {
   buildQueue()
   timer.start()
@@ -295,20 +339,29 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900 py-8 px-4 sm:px-6 lg:px-8">
-    <div class="max-w-2xl mx-auto">
+  <div
+    class="min-h-screen bg-gray-50 px-4 py-8 dark:bg-gray-900 lg:px-8 sm:px-6"
+  >
+    <div class="mx-auto max-w-2xl">
       <!-- Header -->
-      <div class="flex flex-wrap justify-between items-center gap-3 mb-2">
+      <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
           <button
-            class="shrink-0 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            class="shrink-0 border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm text-gray-600 dark:border-gray-600 dark:bg-gray-800 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
             @click="handleBack"
           >
             ← {{ backLabel || '返回' }}
           </button>
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">{{ title }}</h1>
-            <p v-if="subtitle" class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ subtitle }}</p>
+            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">
+              {{ title }}
+            </h1>
+            <p
+              v-if="subtitle"
+              class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+            >
+              {{ subtitle }}
+            </p>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -318,12 +371,12 @@ onUnmounted(() => {
             min="1"
             max="500"
             title="每日学习数量（可自定义，下轮生效）"
-            class="block w-20 border border-gray-300 rounded-lg bg-white p-2.5 text-sm text-center dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-blue-500"
+            class="block w-20 border border-gray-300 rounded-lg bg-white p-2.5 text-center text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-blue-500"
           >
           <span class="text-sm text-gray-500 dark:text-gray-400">个/天</span>
           <button
             title="重置记忆：全部单词回到新词，从 0 开始"
-            class="shrink-0 rounded-lg border border-red-300 bg-white px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 dark:border-red-800 dark:bg-gray-800 dark:text-red-400 dark:hover:bg-red-900/20"
+            class="shrink-0 border border-red-300 rounded-lg bg-white px-3 py-2.5 text-sm text-red-600 dark:border-red-800 dark:bg-gray-800 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
             @click="resetMemory"
           >
             🔄 重置记忆
@@ -333,18 +386,35 @@ onUnmounted(() => {
       <!-- 打卡 + 今日计划 -->
       <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p class="text-xs text-gray-400">
-          今日计划：复习 {{ reviewCount }}（到期 {{ dueCount }}） · 新词 {{ newCount }} ｜
-          今日新词 {{ deck.dailyCount }} / {{ deck.goal }}
+          今日计划：复习 {{ reviewCount }}（到期 {{ dueCount }}） · 新词
+          {{ newCount }} ｜ 今日新词 {{ deck.dailyCount }} / {{ deck.goal }}
         </p>
         <div class="flex items-center gap-2">
-          <span class="rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-xs font-bold text-blue-600 dark:bg-blue-900/20 dark:border-blue-800 dark:text-blue-300" title="本次学习计时">
+          <span
+            class="border border-blue-200 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-600 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
+            title="本次学习计时"
+          >
             ⏱ {{ formatClock(timer.elapsed.value) }}
           </span>
-          <span class="text-xs text-gray-400" title="今日累计学习时长（目标 2 小时）">
+          <span
+            class="text-xs text-gray-400"
+            title="今日累计学习时长（目标 2 小时）"
+          >
             今日 {{ formatDuration(timer.dailySeconds.value) }}
           </span>
-          <div class="w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden" title="今日目标 2 小时">
-            <div class="h-full bg-green-500 rounded-full transition-all" :style="{ width: Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) + '%' }" />
+          <div
+            class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+            title="今日目标 2 小时"
+          >
+            <div
+              class="h-full rounded-full bg-green-500 transition-all"
+              :style="{
+                width: `${Math.min(
+                  100,
+                  (timer.dailySeconds.value / timer.dailyGoal) * 100,
+                )}%`,
+              }"
+            />
           </div>
           <span class="text-xs font-bold text-orange-500">🔥 连续打卡 {{ checkinStreak }} 天</span>
           <div class="flex gap-1">
@@ -352,57 +422,91 @@ onUnmounted(() => {
               v-for="(d, i) in checkinWeekDots"
               :key="i"
               :title="d.label"
-              class="inline-block w-3 h-3 rounded-full"
-              :class="d.checked ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'"
+              class="inline-block h-3 w-3 rounded-full"
+              :class="
+                d.checked ? 'bg-green-500' : 'bg-gray-200 dark:bg-gray-700'
+              "
             />
           </div>
         </div>
       </div>
 
       <!-- Session stats -->
-      <div v-if="!finished" class="grid grid-cols-4 gap-3 mb-6 text-center">
-        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">本轮剩余</div>
-          <div class="text-lg font-bold dark:text-white">{{ remaining }}</div>
+      <div v-if="!finished" class="grid grid-cols-4 mb-6 gap-3 text-center">
+        <div
+          class="border border-gray-200 rounded-xl bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
+        >
+          <div class="mb-1 text-xs text-gray-500">
+            本轮剩余
+          </div>
+          <div class="text-lg font-bold dark:text-white">
+            {{ remaining }}
+          </div>
         </div>
-        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">认识</div>
-          <div class="text-lg font-bold text-green-600">{{ stats.known }}</div>
+        <div
+          class="border border-gray-200 rounded-xl bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
+        >
+          <div class="mb-1 text-xs text-gray-500">
+            认识
+          </div>
+          <div class="text-lg font-bold text-green-600">
+            {{ stats.known }}
+          </div>
         </div>
-        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">不认识</div>
-          <div class="text-lg font-bold text-red-600">{{ stats.unknown }}</div>
+        <div
+          class="border border-gray-200 rounded-xl bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
+        >
+          <div class="mb-1 text-xs text-gray-500">
+            不认识
+          </div>
+          <div class="text-lg font-bold text-red-600">
+            {{ stats.unknown }}
+          </div>
         </div>
-        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700">
-          <div class="text-xs text-gray-500 mb-1">模糊</div>
-          <div class="text-lg font-bold text-yellow-600">{{ stats.vague }}</div>
+        <div
+          class="border border-gray-200 rounded-xl bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
+        >
+          <div class="mb-1 text-xs text-gray-500">
+            模糊
+          </div>
+          <div class="text-lg font-bold text-yellow-600">
+            {{ stats.vague }}
+          </div>
         </div>
       </div>
 
       <!-- Finish screen -->
-      <div v-if="finished" class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 text-center">
-        <h2 class="text-2xl font-bold mb-4 dark:text-white">
+      <div
+        v-if="finished"
+        class="border border-gray-200 rounded-2xl bg-white p-8 text-center shadow-lg dark:border-gray-700 dark:bg-gray-800"
+      >
+        <h2 class="mb-4 text-2xl font-bold dark:text-white">
           {{ initialTotal === 0 ? '今日目标已完成 🎉' : '本轮完成 🎉' }}
         </h2>
-        <div v-if="initialTotal > 0" class="flex justify-center gap-6 mb-6 text-sm">
-          <span class="text-green-600 font-bold">认识 {{ finishStats.known }}</span>
-          <span class="text-red-600 font-bold">不认识 {{ finishStats.unknown }}</span>
-          <span class="text-yellow-600 font-bold">模糊 {{ finishStats.vague }}</span>
+        <div
+          v-if="initialTotal > 0"
+          class="mb-6 flex justify-center gap-6 text-sm"
+        >
+          <span class="font-bold text-green-600">认识 {{ finishStats.known }}</span>
+          <span class="font-bold text-red-600">不认识 {{ finishStats.unknown }}</span>
+          <span class="font-bold text-yellow-600">模糊 {{ finishStats.vague }}</span>
         </div>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6">
-          {{ initialTotal === 0
-            ? `今日新词已学完（${deck.dailyCount} / ${deck.goal}），到期复习会按时出现`
-            : '没掌握的词已按记忆曲线安排复现，并记入错词本' }}
+        <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">
+          {{
+            initialTotal === 0
+              ? `今日新词已学完（${deck.dailyCount} / ${deck.goal}），到期复习会按时出现`
+              : '没掌握的词已按记忆曲线安排复现，并记入错词本'
+          }}
         </p>
         <div class="flex justify-center gap-3">
           <button
-            class="rounded-lg bg-blue-700 px-6 py-2.5 text-sm font-medium text-white hover:bg-blue-800 dark:bg-blue-600"
+            class="rounded-lg bg-blue-700 px-6 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800"
             @click="restart"
           >
             再来一轮
           </button>
           <button
-            class="rounded-lg bg-gray-200 px-6 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200"
+            class="rounded-lg bg-gray-200 px-6 py-2.5 text-sm font-medium text-gray-700 dark:bg-gray-700 hover:bg-gray-300 dark:text-gray-200"
             @click="handleBack"
           >
             {{ backLabel || '返回' }}
@@ -411,41 +515,54 @@ onUnmounted(() => {
       </div>
 
       <!-- 自评卡片：先显示三个选项 -->
-      <div v-else-if="current" class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div
+        v-else-if="current"
+        class="overflow-hidden border border-gray-200 rounded-2xl bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+      >
         <div class="p-8 text-center">
           <div class="mb-2">
             <span
               class="inline-block rounded-full px-3 py-1 text-xs font-bold"
-              :class="current.isNew
-                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
-                : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'"
+              :class="
+                current.isNew
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                  : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
+              "
             >
               {{ current.isNew ? '新词' : '复习' }}
             </span>
           </div>
-          <div class="flex items-center justify-center gap-3 mb-2">
-            <span class="text-4xl sm:text-5xl font-black tracking-tight text-gray-900 dark:text-white">{{ current.word }}</span>
-            <button class="p-2 text-gray-400 hover:text-blue-500" title="播放发音" @click="playAudio()">
-              <i class="i-ph-speaker-high-bold text-2xl block" />
+          <div class="mb-2 flex items-center justify-center gap-3">
+            <span
+              class="text-4xl font-black tracking-tight text-gray-900 sm:text-5xl dark:text-white"
+            >{{ current.word }}</span>
+            <button
+              class="p-2 text-gray-400 hover:text-blue-500"
+              title="播放发音"
+              @click="playAudio()"
+            >
+              <i class="i-ph-speaker-high-bold block text-2xl" />
             </button>
           </div>
 
-          <p class="text-sm text-gray-400 mt-4 mb-6">看到这个词，第一感觉是？</p>
+          <p class="mb-6 mt-4 text-sm text-gray-400">
+            看到这个词，第一感觉是？
+          </p>
           <div class="grid grid-cols-3 gap-3">
             <button
-              class="rounded-xl bg-red-50 border border-red-200 py-4 text-red-700 font-bold hover:bg-red-100 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300"
+              class="border border-red-200 rounded-xl bg-red-50 py-4 font-bold text-red-700 dark:border-red-800 dark:bg-red-900/20 hover:bg-red-100 dark:text-red-300"
               @click="grade(0)"
             >
               不认识
             </button>
             <button
-              class="rounded-xl bg-yellow-50 border border-yellow-200 py-4 text-yellow-700 font-bold hover:bg-yellow-100 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-300"
+              class="border border-yellow-200 rounded-xl bg-yellow-50 py-4 font-bold text-yellow-700 dark:border-yellow-800 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:text-yellow-300"
               @click="grade(3)"
             >
               模糊
             </button>
             <button
-              class="rounded-xl bg-green-50 border border-green-200 py-4 text-green-700 font-bold hover:bg-green-100 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300"
+              class="border border-green-200 rounded-xl bg-green-50 py-4 font-bold text-green-700 dark:border-green-800 dark:bg-green-900/20 hover:bg-green-100 dark:text-green-300"
               @click="grade(5)"
             >
               认识
@@ -455,47 +572,79 @@ onUnmounted(() => {
       </div>
 
       <!-- 词条学习：按选择展示 -->
-      <div v-else-if="studying" class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div
+        v-else-if="studying"
+        class="overflow-hidden border border-gray-200 rounded-2xl bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+      >
         <div class="p-8">
-          <div class="text-center mb-2">
+          <div class="mb-2 text-center">
             <span
               class="inline-block rounded-full px-3 py-1 text-xs font-bold"
-              :class="lastGrade === 5
-                ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                : lastGrade === 0
-                  ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                  : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300'"
+              :class="
+                lastGrade === 5
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                  : lastGrade === 0
+                    ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                    : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300'
+              "
             >
-              {{ lastGrade === 5 ? '认识 · 确认一下' : lastGrade === 0 ? '不认识 · 记一下' : '模糊 · 再看看' }}
+              {{
+                lastGrade === 5
+                  ? '认识 · 确认一下'
+                  : lastGrade === 0
+                    ? '不认识 · 记一下'
+                    : '模糊 · 再看看'
+              }}
             </span>
           </div>
-          <div class="flex items-center justify-center gap-3 mb-4">
-            <span class="text-3xl font-black text-gray-900 dark:text-white">{{ studying.word }}</span>
-            <button class="p-2 text-gray-400 hover:text-blue-500" title="播放发音" @click="playAudio()">
-              <i class="i-ph-speaker-high-bold text-xl block" />
+          <div class="mb-4 flex items-center justify-center gap-3">
+            <span class="text-3xl font-black text-gray-900 dark:text-white">{{
+              studying.word
+            }}</span>
+            <button
+              class="p-2 text-gray-400 hover:text-blue-500"
+              title="播放发音"
+              @click="playAudio()"
+            >
+              <i class="i-ph-speaker-high-bold block text-xl" />
             </button>
           </div>
-          <div class="text-center mb-4">
-            <span v-if="studying.pos" class="text-sm italic text-gray-400 mr-2" style="font-family: times;">{{ studying.pos }}</span>
-            <span class="text-xl font-medium text-gray-800 dark:text-gray-200">{{ studying.meaning }}</span>
+          <div class="mb-4 text-center">
+            <span
+              v-if="studying.pos"
+              class="mr-2 text-sm italic text-gray-400"
+              style="font-family: times"
+            >{{ studying.pos }}</span>
+            <span
+              class="text-xl font-medium text-gray-800 dark:text-gray-200"
+            >{{ studying.meaning }}</span>
           </div>
 
           <!-- 同义替换 -->
-          <div v-if="studying.synonyms.length > 0" class="mb-6 rounded-xl bg-teal-50 border border-teal-200 p-4 dark:bg-teal-900/20 dark:border-teal-800">
-            <div class="mb-2 text-sm font-bold text-teal-700 dark:text-teal-300">🔗 同义替换</div>
-            <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">{{ studying.synonyms.join(' · ') }}</p>
+          <div
+            v-if="studying.synonyms.length > 0"
+            class="mb-6 border border-teal-200 rounded-xl bg-teal-50 p-4 dark:border-teal-800 dark:bg-teal-900/20"
+          >
+            <div
+              class="mb-2 text-sm font-bold text-teal-700 dark:text-teal-300"
+            >
+              🔗 同义替换
+            </div>
+            <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+              {{ studying.synonyms.join(' · ') }}
+            </p>
           </div>
 
           <div class="flex gap-3">
             <button
               v-if="gradeHistory.length > 0"
-              class="flex-1 rounded-xl border border-gray-300 py-3 text-gray-600 text-sm font-bold hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              class="flex-1 border border-gray-300 rounded-xl py-3 text-sm font-bold text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               @click="goBackOne"
             >
               ↩ 返回上一个，重新测试
             </button>
             <button
-              class="flex-1 rounded-xl bg-blue-600 py-3 text-white text-sm font-bold hover:bg-blue-700"
+              class="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700"
               @click="next"
             >
               下一个
@@ -505,20 +654,46 @@ onUnmounted(() => {
       </div>
 
       <!-- 退出结算弹窗 -->
-      <div v-if="showExitModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="cancelExit">
-        <div class="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl dark:bg-gray-800">
-          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">本次学习结束</h3>
-          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">{{ formatDuration(lastSessionSec) }}</p>
-          <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">今日累计 {{ formatDuration(timer.dailySeconds.value) }}</p>
-          <div class="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
-            <div class="h-full rounded-full bg-green-500 transition-all" :style="{ width: Math.min(100, timer.dailySeconds.value / timer.dailyGoal * 100) + '%' }" />
+      <div
+        v-if="showExitModal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+        @click.self="cancelExit"
+      >
+        <div
+          class="max-w-sm w-full rounded-2xl bg-white p-6 text-center shadow-xl dark:bg-gray-800"
+        >
+          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">
+            本次学习结束
+          </h3>
+          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">
+            {{ formatDuration(lastSessionSec) }}
+          </p>
+          <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">
+            今日累计 {{ formatDuration(timer.dailySeconds.value) }}
+          </p>
+          <div
+            class="mb-2 h-2 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
+          >
+            <div
+              class="h-full rounded-full bg-green-500 transition-all"
+              :style="{
+                width: `${Math.min(
+                  100,
+                  (timer.dailySeconds.value / timer.dailyGoal) * 100,
+                )}%`,
+              }"
+            />
           </div>
           <p class="mb-4 text-xs text-gray-400">
-            {{ timer.dailySeconds.value >= timer.dailyGoal ? '今日目标已达成 🎉' : `距离今日目标 2 小时还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}` }}
+            {{
+              timer.dailySeconds.value >= timer.dailyGoal
+                ? '今日目标已达成 🎉'
+                : `距离今日目标 2 小时还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}`
+            }}
           </p>
           <div class="flex gap-3">
             <button
-              class="flex-1 rounded-xl border border-gray-300 py-2.5 text-sm font-bold text-gray-600 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              class="flex-1 border border-gray-300 rounded-xl py-2.5 text-sm font-bold text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               @click="cancelExit"
             >
               继续学习

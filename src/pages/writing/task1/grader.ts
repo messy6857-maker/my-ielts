@@ -1,3 +1,5 @@
+import { splitSentences } from '../../../utils/text'
+
 // 雅思学术类小作文（Task 1）规则批改引擎
 // 依据公开的四项评分标准：TA / CC / LR / GRA
 // 注意：这是基于规则的练习用估分，不是官方评分
@@ -34,7 +36,7 @@ export interface GradeResult {
   stats: EssayStats
 }
 
-const CRITERION_META: Record<CriterionKey, { label: string, labelCn: string }> = {
+const CRITERION_META: Record<CriterionKey, { label: string; labelCn: string }> = {
   ta: { label: 'Task Achievement', labelCn: '任务完成度' },
   cc: { label: 'Coherence & Cohesion', labelCn: '连贯与衔接' },
   lr: { label: 'Lexical Resource', labelCn: '词汇资源' },
@@ -45,14 +47,6 @@ const CRITERION_META: Record<CriterionKey, { label: string, labelCn: string }> =
 
 function tokenize(text: string): string[] {
   return (text.toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || [])
-}
-
-function splitSentences(text: string): string[] {
-  return text
-    .replace(/\n+/g, ' ')
-    .split(/(?<=[.!?])\s+/)
-    .map(s => s.trim())
-    .filter(s => s.length > 0)
 }
 
 function splitParagraphs(text: string): string[] {
@@ -404,7 +398,7 @@ export function gradeTask1(text: string): GradeResult {
 }
 
 // 供 UI 展示的四项标准说明
-export const CRITERION_GUIDE: { key: CriterionKey, title: string, points: string[] }[] = [
+export const CRITERION_GUIDE: { key: CriterionKey; title: string; points: string[] }[] = [
   {
     key: 'ta',
     title: '任务完成度 Task Achievement',

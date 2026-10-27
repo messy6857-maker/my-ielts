@@ -9,7 +9,8 @@ In 2020, approximately 95% of households in Country A had internet access, which
 
 Although Country E lagged behind considerably, its figure had risen dramatically from just 20% in 2010, indicating rapid growth. Furthermore, the gap between the highest and lowest countries reached 50 percentage points, which underscores the persistent digital divide between wealthy and poorer regions.`
 
-const POOR_ESSAY = `the chart show internet. country A is 95%. country B is 90%. country C is 75%. country D is 68%. country E is 45%. A is high. E is low.`
+const POOR_ESSAY
+  = 'the chart show internet. country A is 95%. country B is 90%. country C is 75%. country D is 68%. country E is 45%. A is high. E is low.'
 
 describe('analyzeEssay', () => {
   it('统计词数、段落、句子', () => {

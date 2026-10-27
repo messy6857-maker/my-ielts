@@ -1,21 +1,27 @@
 <script setup>
-import words from './listening179.json'
-import { resolveAudioUrl } from '../../composables/useAudio'
+import { speechLanguage, useAudioGroup } from '../../composables/useAudioGroup'
 
-const ws = reactive(words.map((v) => {
-  const item = {
-    ...v,
-    form: {
-      word: '',
-      replaceStr: '',
-    },
-    result: {
-      checked: false,
-      errorWords: [],
-    },
-  }
-  return item
-}))
+import { resolveAudioUrl } from '../../composables/useAudio'
+import words from './listening179.json'
+
+const managedAudio = useAudioGroup()
+
+const ws = reactive(
+  words.map((v) => {
+    const item = {
+      ...v,
+      form: {
+        word: '',
+        replaceStr: '',
+      },
+      result: {
+        checked: false,
+        errorWords: [],
+      },
+    }
+    return item
+  }),
+)
 
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
@@ -35,7 +41,7 @@ function play(word) {
     audio.pause()
     audio.currentTime = 0
   }
-  audio = document.createElement('audio')
+  audio = managedAudio.create()
   audio.src = resolveAudioUrl(`179_audios/${word}.mp3`)
   let fellBack = false
   const fallback = () => {
@@ -43,7 +49,7 @@ function play(word) {
       return
     fellBack = true
     const u = new SpeechSynthesisUtterance(word)
-    u.lang = 'en-US'
+    u.lang = speechLanguage()
     speechSynthesis.speak(u)
   }
   audio.onerror = fallback
@@ -58,16 +64,22 @@ function next(index) {
 
   // 处理词
   const practiceWord = cw.form.word.trim().toLowerCase()
-  const practiceReplace = cw.form.replaceStr.split(/[,，]/).map(v => v.trim().toLowerCase().replace(/\s+/g, ' '))
+  const practiceReplace = cw.form.replaceStr
+    .split(/[,，]/)
+    .map(v => v.trim().toLowerCase().replace(/\s+/g, ' '))
   // window.console.log(practiceReplace, practiceWord)
 
   const errorWords = []
-  if (practiceWord !== cw.word)
+  if (practiceWord !== cw.word.trim().toLowerCase())
     errorWords.push(cw.word)
 
-  errorWords.push(...cw.replace.filter((w) => {
-    return !practiceReplace.includes(w)
-  }))
+  errorWords.push(
+    ...cw.replace.filter((w) => {
+      return !practiceReplace.includes(
+        w.trim().toLowerCase().replace(/\s+/g, ' '),
+      )
+    }),
+  )
   cw.result.checked = true
   cw.result.errorWords = errorWords
 
@@ -100,10 +112,26 @@ function next(index) {
         <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
           听力 179 考点词练习
         </h3>
-        <ul class="ml-4 list-decimal text-sm font-normal text-gray-500 dark:text-gray-400">
-          <li>同义替换多个词使用英文逗号 <kbd class="rounded-lg bg-gray-100 px-2 text-xs font-semibold text-gray-800 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-100">,</kbd> 分割</li>
-          <li>音频会在切换下一个词、点击喇叭图表、按键 <kbd class="rounded-lg bg-gray-100 px-2 text-xs font-semibold text-gray-800 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-100">`</kbd>（数字 1 左边那个）播放</li>
-          <li>输入完考点词按 Tab 切换到同义词，输入完同义词按 Enter 自动检查并切换到下一个词</li>
+        <ul
+          class="ml-4 list-decimal text-sm font-normal text-gray-500 dark:text-gray-400"
+        >
+          <li>
+            同义替换多个词使用英文逗号
+            <kbd
+              class="rounded-lg bg-gray-100 px-2 text-xs font-semibold text-gray-800 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-100"
+            >,</kbd>
+            分割
+          </li>
+          <li>
+            音频会在切换下一个词、点击喇叭图表、按键
+            <kbd
+              class="rounded-lg bg-gray-100 px-2 text-xs font-semibold text-gray-800 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-100"
+            >`</kbd>（数字 1 左边那个）播放
+          </li>
+          <li>
+            输入完考点词按 Tab 切换到同义词，输入完同义词按 Enter
+            自动检查并切换到下一个词
+          </li>
           <li>单词之间多个空格，逗号后是否有空格不影响结果判断</li>
         </ul>
       </div>
@@ -112,7 +140,11 @@ function next(index) {
           <button
             type="button"
             class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-            @click="() => { play(words[0].word) }"
+            @click="
+              () => {
+                play(words[0].word)
+              }
+            "
           >
             开始
           </button>
@@ -121,7 +153,9 @@ function next(index) {
     </div>
     <div class="relative mt-4 overflow-x-auto">
       <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
-        <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+        <thead
+          class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"
+        >
           <tr>
             <th class="w-0 px-6 py-3">
               #
@@ -142,7 +176,11 @@ function next(index) {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(w, i) in ws" :key="w.index" class="border-b bg-white dark:border-gray-700 dark:bg-gray-800">
+          <tr
+            v-for="(w, i) in ws"
+            :key="w.index"
+            class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"
+          >
             <td class="px-6 py-4">
               {{ w.index }}
             </td>
@@ -185,7 +223,10 @@ function next(index) {
               >
             </td>
             <td class="px-6 py-4">
-              <i v-if="w.result.checked && w.result.errorWords.length < 1" class="i-carbon-checkmark block text-green-700" />
+              <i
+                v-if="w.result.checked && w.result.errorWords.length < 1"
+                class="i-carbon-checkmark block text-green-700"
+              />
               <p v-if="w.result.checked && w.result.errorWords.length > 0">
                 {{ w.result.errorWords.join(', ') }}
               </p>

@@ -12,9 +12,8 @@ declare module 'vue' {
     ReadingTabs: typeof import('./src/components/ReadingTabs.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
-    TheCounter: typeof import('./src/components/TheCounter.vue')['default']
+    TextHighlights: typeof import('./src/components/TextHighlights.vue')['default']
     TheFooter: typeof import('./src/components/TheFooter.vue')['default']
     TheHeader: typeof import('./src/components/TheHeader.vue')['default']
-    TheInput: typeof import('./src/components/TheInput.vue')['default']
   }
 }

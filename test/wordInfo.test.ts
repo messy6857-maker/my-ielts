@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { getWordInfo, getWordInfoWithFallback } from '../src/composables/useWordInfo'
+import {
+  getWordInfo,
+  getWordInfoWithFallback,
+} from '../src/composables/useWordInfo'
 import type { WordSentence } from '../src/pages/vocabulary/wordSentences'
 
 const DATA: Record<string, WordSentence> = {
@@ -20,7 +23,9 @@ describe('getWordInfo', () => {
   it('命中返回例句和同义词', () => {
     const info = getWordInfo('atmosphere', DATA)
     expect(info).not.toBeNull()
-    expect(info!.examples).toEqual(['The atmosphere for the football match was great.'])
+    expect(info!.examples).toEqual([
+      'The atmosphere for the football match was great.',
+    ])
     expect(info!.synonyms).toEqual(['ambiance', 'air'])
     expect(info!.word).toBe('atmosphere')
   })

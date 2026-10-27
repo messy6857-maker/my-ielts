@@ -3,7 +3,6 @@ import {
   presetAttributify,
   presetIcons,
   presetUno,
-  presetWebFonts,
 } from 'unocss'
 
 export default defineConfig({
@@ -39,15 +38,6 @@ export default defineConfig({
         carbon: () => import('@iconify-json/carbon/icons.json').then(i => i.default),
         simpleIcons: () => import('@iconify-json/simple-icons/icons.json').then(i => i.default),
         ph: () => import('@iconify-json/ph/icons.json').then(i => i.default),
-      },
-    }),
-    presetWebFonts({
-      provider: 'bunny',
-      fonts: {
-        sans: 'DM Sans',
-        serif: 'DM Serif Display',
-        mono: 'DM Mono',
-        Charmonman: 'Charmonman',
       },
     }),
   ],

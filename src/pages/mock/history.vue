@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
-import { getMockHistory, clearMockHistory } from '~/composables/useMockHistory'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { clearMockHistory, getMockHistory } from '~/composables/useMockHistory'
 import { onSyncApplied } from '~/composables/syncClient'
 import { useAuth } from '~/composables/useAuth'
 import type { MockRecord } from '~/composables/useMockHistory'
@@ -14,7 +14,7 @@ onMounted(() => {
 
 // 拉取重载只写 localStorage、不通知本页时列表会滞后：订阅同步应用通知后重读
 // （与各 store 的做法一致，不另设反注册机制）
-onSyncApplied(() => {
+const offSync = onSyncApplied(() => {
   records.value = getMockHistory()
 })
 
@@ -23,6 +23,8 @@ onSyncApplied(() => {
 watch(currentUser, () => {
   records.value = getMockHistory()
 })
+
+onUnmounted(offSync)
 
 function formatDate(iso: string): string {
   const d = new Date(iso)
@@ -45,14 +47,17 @@ function handleClear() {
       </h2>
       <button
         v-if="records.length"
-        class="rounded-lg border border-gray-300 px-3 py-1.5 text-sm text-gray-500 dark:border-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+        class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-500 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
         @click="handleClear"
       >
         清空记录
       </button>
     </div>
 
-    <div v-if="!records.length" class="rounded-2xl border border-gray-200 bg-white p-12 text-center text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
+    <div
+      v-if="!records.length"
+      class="border border-gray-200 rounded-2xl bg-white p-12 text-center text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+    >
       还没有模考记录，去做一套吧！
     </div>
 
@@ -60,7 +65,7 @@ function handleClear() {
       <div
         v-for="(r, i) in records"
         :key="i"
-        class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-4 dark:border-gray-700 dark:bg-gray-800"
+        class="flex items-center justify-between border border-gray-200 rounded-xl bg-white px-5 py-4 dark:border-gray-700 dark:bg-gray-800"
       >
         <div>
           <div class="font-medium text-gray-900 dark:text-white">
@@ -72,7 +77,8 @@ function handleClear() {
         </div>
         <div class="text-right">
           <div class="text-lg font-bold text-gray-900 dark:text-white">
-            {{ r.score }}<span class="text-sm font-normal text-gray-500">/{{ r.total }}</span>
+            {{ r.score
+            }}<span class="text-sm font-normal text-gray-500">/{{ r.total }}</span>
           </div>
           <div class="text-sm text-purple-600 dark:text-purple-400">
             {{ r.band.toFixed(1) }} 分

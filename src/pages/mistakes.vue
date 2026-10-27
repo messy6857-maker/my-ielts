@@ -68,7 +68,9 @@ function confirmClearModule(module: string, label: string) {
 
 <template>
   <div class="px-4 pt-6 2xl:px-0">
-    <div class="border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
+    <div
+      class="border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
+    >
       <!-- header -->
       <div class="items-center justify-between lg:flex">
         <div class="mb-4 lg:mb-0">
@@ -91,7 +93,7 @@ function confirmClearModule(module: string, label: string) {
           <button
             v-if="totalCount > 0"
             type="button"
-            class="rounded-lg bg-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 dark:bg-gray-700 hover:bg-gray-300 dark:text-gray-200 dark:hover:bg-gray-600 focus:outline-none focus:ring-4 focus:ring-gray-300"
+            class="rounded-lg bg-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 dark:bg-gray-700 hover:bg-gray-300 dark:text-gray-200 focus:outline-none focus:ring-4 focus:ring-gray-300 dark:hover:bg-gray-600"
             @click="confirmClearAll"
           >
             清空全部
@@ -101,23 +103,33 @@ function confirmClearModule(module: string, label: string) {
 
       <!-- 复习模式 -->
       <div v-if="isReviewing && reviewItem" class="mt-6">
-        <div class="mx-auto max-w-xl rounded-xl border border-gray-200 bg-gray-50 p-8 text-center dark:border-gray-700 dark:bg-gray-900">
-          <div class="mb-2 text-xs text-gray-500 uppercase tracking-wider">
+        <div
+          class="mx-auto max-w-xl border border-gray-200 rounded-xl bg-gray-50 p-8 text-center dark:border-gray-700 dark:bg-gray-900"
+        >
+          <div class="mb-2 text-xs tracking-wider uppercase text-gray-500">
             剩余 {{ totalCount }} 个
           </div>
           <div class="mb-1 text-lg text-gray-700 dark:text-gray-300">
             {{ reviewItem.detail }}
           </div>
-          <div v-if="reviewItem.hint" class="mb-6 text-sm text-gray-400 italic">
+          <div v-if="reviewItem.hint" class="mb-6 text-sm italic text-gray-400">
             {{ reviewItem.hint }}
           </div>
-          <div v-if="reviewState === 'wrong'" class="mb-4 rounded-lg bg-red-50 p-3 text-red-700 dark:bg-red-900/30 dark:text-red-300">
-            不对，正确答案是：<span class="font-bold">{{ reviewItem.title }}</span>
+          <div
+            v-if="reviewState === 'wrong'"
+            class="mb-4 rounded-lg bg-red-50 p-3 text-red-700 dark:bg-red-900/30 dark:text-red-300"
+          >
+            不对，正确答案是：<span class="font-bold">{{
+              reviewItem.title
+            }}</span>
             <button class="ml-3 underline" @click="nextCard">
               下一个
             </button>
           </div>
-          <div v-if="reviewState === 'correct'" class="mb-4 rounded-lg bg-green-50 p-3 font-bold text-green-700 dark:bg-green-900/30 dark:text-green-300">
+          <div
+            v-if="reviewState === 'correct'"
+            class="mb-4 rounded-lg bg-green-50 p-3 font-bold text-green-700 dark:bg-green-900/30 dark:text-green-300"
+          >
             答对了，已从错词本移除 ✓
           </div>
           <div v-if="reviewState === 'answering'" class="flex gap-2">
@@ -127,7 +139,7 @@ function confirmClearModule(module: string, label: string) {
               autocomplete="off"
               spellcheck="false"
               placeholder="输入这个单词"
-              class="flex-1 border border-gray-300 rounded-lg bg-white p-2.5 text-gray-900 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:border-blue-500 focus:ring-blue-500"
+              class="flex-1 border border-gray-300 rounded-lg bg-white p-2.5 text-gray-900 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500"
               @keydown.enter="submitAnswer"
             >
             <button
@@ -138,7 +150,10 @@ function confirmClearModule(module: string, label: string) {
               确认
             </button>
           </div>
-          <button class="mt-6 text-sm text-gray-400 underline" @click="stopReview">
+          <button
+            class="mt-6 text-sm text-gray-400 underline"
+            @click="stopReview"
+          >
             退出复习
           </button>
         </div>
@@ -147,8 +162,10 @@ function confirmClearModule(module: string, label: string) {
       <!-- 列表模式 -->
       <div v-else class="mt-6">
         <div v-if="totalCount === 0" class="py-16 text-center text-gray-400">
-          <i class="i-carbon-notebook block text-5xl mx-auto mb-4" />
-          <p>错词本还是空的，去词汇 / 打字 / 听力练习里做错几道题就会自动收录啦</p>
+          <i class="i-carbon-notebook mx-auto mb-4 block text-5xl" />
+          <p>
+            错词本还是空的，去词汇 / 打字 / 听力练习里做错几道题就会自动收录啦
+          </p>
         </div>
         <template v-for="group in grouped" :key="group.module">
           <div class="mb-2 mt-6 flex items-center justify-between">
@@ -163,8 +180,12 @@ function confirmClearModule(module: string, label: string) {
             </button>
           </div>
           <div class="overflow-x-auto rounded-lg">
-            <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
-              <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
+            <table
+              class="w-full text-left text-sm text-gray-500 dark:text-gray-400"
+            >
+              <thead
+                class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"
+              >
                 <tr>
                   <th class="px-6 py-3">
                     单词
@@ -187,14 +208,18 @@ function confirmClearModule(module: string, label: string) {
                   :key="item.key"
                   class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"
                 >
-                  <td class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">
+                  <td
+                    class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white"
+                  >
                     {{ item.title }}
                   </td>
                   <td class="px-6 py-4">
                     {{ item.detail }}
                   </td>
                   <td class="px-6 py-4">
-                    <span class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                    <span
+                      class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                    >
                       {{ item.count }}
                     </span>
                   </td>

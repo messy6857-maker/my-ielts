@@ -58,6 +58,7 @@ declare global {
   const formatClock: typeof import('./src/composables/useStudyTimer')['formatClock']
   const formatDate: typeof import('./src/composables/useStudyData')['formatDate']
   const formatDuration: typeof import('./src/composables/useStudyTimer')['formatDuration']
+  const formatRecordingClock: typeof import('./src/composables/useRecorder')['formatRecordingClock']
   const getAISettings: typeof import('./src/composables/useAISettings')['getAISettings']
   const getAttempts: typeof import('./src/composables/useStats')['getAttempts']
   const getAuthPendingPush: typeof import('./src/composables/syncClient')['getAuthPendingPush']
@@ -66,6 +67,7 @@ declare global {
   const getDeviceId: typeof import('./src/composables/useStudyTimer')['getDeviceId']
   const getMockHistory: typeof import('./src/composables/useMockHistory')['getMockHistory']
   const getToken: typeof import('./src/composables/syncClient')['getToken']
+  const getTokenOwner: typeof import('./src/composables/syncClient')['getTokenOwner']
   const getWordInfo: typeof import('./src/composables/useWordInfo')['getWordInfo']
   const getWordInfoWithFallback: typeof import('./src/composables/useWordInfo')['getWordInfoWithFallback']
   const gradeEssayWithAI: typeof import('./src/composables/useAISettings')['gradeEssayWithAI']
@@ -90,10 +92,12 @@ declare global {
   const makeDestructurable: typeof import('@vueuse/core')['makeDestructurable']
   const markRaw: typeof import('vue')['markRaw']
   const mergeCounts: typeof import('./src/composables/useStats')['mergeCounts']
+  const migrateMistakes: typeof import('./src/composables/useStudyData')['migrateMistakes']
   const nextTick: typeof import('vue')['nextTick']
   const normalizeTask2Grade: typeof import('./src/composables/useAISettings')['normalizeTask2Grade']
   const nsKey: typeof import('./src/composables/useStudyData')['nsKey']
   const onActivated: typeof import('vue')['onActivated']
+  const onBeforeLogout: typeof import('./src/composables/useAuth')['onBeforeLogout']
   const onBeforeMount: typeof import('vue')['onBeforeMount']
   const onBeforeRouteLeave: typeof import('vue-router')['onBeforeRouteLeave']
   const onBeforeRouteUpdate: typeof import('vue-router')['onBeforeRouteUpdate']
@@ -133,6 +137,7 @@ declare global {
   const refDefault: typeof import('@vueuse/core')['refDefault']
   const refThrottled: typeof import('@vueuse/core')['refThrottled']
   const refWithControl: typeof import('@vueuse/core')['refWithControl']
+  const registerAudio: typeof import('./src/composables/useSingleAudio')['registerAudio']
   const removeJson: typeof import('./src/composables/useAuth')['removeJson']
   const repairSavedGrade: typeof import('./src/composables/useAISettings')['repairSavedGrade']
   const resolveAudioUrl: typeof import('./src/composables/useAudio')['resolveAudioUrl']
@@ -147,7 +152,10 @@ declare global {
   const shallowReactive: typeof import('vue')['shallowReactive']
   const shallowReadonly: typeof import('vue')['shallowReadonly']
   const shallowRef: typeof import('vue')['shallowRef']
+  const speechLanguage: typeof import('./src/composables/useAudioGroup')['speechLanguage']
   const stopAllAudio: typeof import('./src/composables/useSingleAudio')['stopAllAudio']
+  const storageFailures: typeof import('./src/composables/useAuth')['storageFailures']
+  const studyDay: typeof import('./src/composables/useStudyData')['studyDay']
   const sumCount: typeof import('./src/composables/useStats')['sumCount']
   const sumDeviceTimerRecords: typeof import('./src/composables/useStudyTimer')['sumDeviceTimerRecords']
   const syncEnabled: typeof import('./src/composables/syncClient')['syncEnabled']
@@ -173,6 +181,7 @@ declare global {
   const unref: typeof import('vue')['unref']
   const unrefElement: typeof import('@vueuse/core')['unrefElement']
   const until: typeof import('@vueuse/core')['until']
+  const useAccountData: typeof import('./src/composables/useRecordData')['useAccountData']
   const useActiveElement: typeof import('@vueuse/core')['useActiveElement']
   const useAnimate: typeof import('@vueuse/core')['useAnimate']
   const useArrayDifference: typeof import('@vueuse/core')['useArrayDifference']
@@ -190,6 +199,7 @@ declare global {
   const useAsyncQueue: typeof import('@vueuse/core')['useAsyncQueue']
   const useAsyncState: typeof import('@vueuse/core')['useAsyncState']
   const useAttrs: typeof import('vue')['useAttrs']
+  const useAudioGroup: typeof import('./src/composables/useAudioGroup')['useAudioGroup']
   const useAuth: typeof import('./src/composables/useAuth')['useAuth']
   const useBase64: typeof import('@vueuse/core')['useBase64']
   const useBattery: typeof import('@vueuse/core')['useBattery']
@@ -210,6 +220,7 @@ declare global {
   const useCurrentElement: typeof import('@vueuse/core')['useCurrentElement']
   const useCycleList: typeof import('@vueuse/core')['useCycleList']
   const useDailyGoal: typeof import('./src/composables/useSpacedRepetition')['useDailyGoal']
+  const useDailyStore: typeof import('./src/composables/useDailyStore')['useDailyStore']
   const useDark: typeof import('@vueuse/core')['useDark']
   const useDateFormat: typeof import('@vueuse/core')['useDateFormat']
   const useDebounce: typeof import('@vueuse/core')['useDebounce']
@@ -291,6 +302,7 @@ declare global {
   const usePrevious: typeof import('@vueuse/core')['usePrevious']
   const useProgress: typeof import('./src/composables/useStudyData')['useProgress']
   const useRafFn: typeof import('@vueuse/core')['useRafFn']
+  const useRecordMap: typeof import('./src/composables/useRecordData')['useRecordMap']
   const useRecorder: typeof import('./src/composables/useRecorder')['useRecorder']
   const useRefHistory: typeof import('@vueuse/core')['useRefHistory']
   const useResizeObserver: typeof import('@vueuse/core')['useResizeObserver']
@@ -424,6 +436,7 @@ declare module 'vue' {
     readonly formatClock: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatClock']>
     readonly formatDate: UnwrapRef<typeof import('./src/composables/useStudyData')['formatDate']>
     readonly formatDuration: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatDuration']>
+    readonly formatRecordingClock: UnwrapRef<typeof import('./src/composables/useRecorder')['formatRecordingClock']>
     readonly getAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['getAISettings']>
     readonly getAttempts: UnwrapRef<typeof import('./src/composables/useStats')['getAttempts']>
     readonly getAuthPendingPush: UnwrapRef<typeof import('./src/composables/syncClient')['getAuthPendingPush']>
@@ -432,6 +445,7 @@ declare module 'vue' {
     readonly getDeviceId: UnwrapRef<typeof import('./src/composables/useStudyTimer')['getDeviceId']>
     readonly getMockHistory: UnwrapRef<typeof import('./src/composables/useMockHistory')['getMockHistory']>
     readonly getToken: UnwrapRef<typeof import('./src/composables/syncClient')['getToken']>
+    readonly getTokenOwner: UnwrapRef<typeof import('./src/composables/syncClient')['getTokenOwner']>
     readonly getWordInfo: UnwrapRef<typeof import('./src/composables/useWordInfo')['getWordInfo']>
     readonly getWordInfoWithFallback: UnwrapRef<typeof import('./src/composables/useWordInfo')['getWordInfoWithFallback']>
     readonly gradeEssayWithAI: UnwrapRef<typeof import('./src/composables/useAISettings')['gradeEssayWithAI']>
@@ -455,10 +469,12 @@ declare module 'vue' {
     readonly makeDestructurable: UnwrapRef<typeof import('@vueuse/core')['makeDestructurable']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly mergeCounts: UnwrapRef<typeof import('./src/composables/useStats')['mergeCounts']>
+    readonly migrateMistakes: UnwrapRef<typeof import('./src/composables/useStudyData')['migrateMistakes']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeTask2Grade: UnwrapRef<typeof import('./src/composables/useAISettings')['normalizeTask2Grade']>
     readonly nsKey: UnwrapRef<typeof import('./src/composables/useStudyData')['nsKey']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
+    readonly onBeforeLogout: UnwrapRef<typeof import('./src/composables/useAuth')['onBeforeLogout']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
     readonly onBeforeRouteLeave: UnwrapRef<typeof import('vue-router')['onBeforeRouteLeave']>
     readonly onBeforeRouteUpdate: UnwrapRef<typeof import('vue-router')['onBeforeRouteUpdate']>
@@ -498,6 +514,7 @@ declare module 'vue' {
     readonly refDefault: UnwrapRef<typeof import('@vueuse/core')['refDefault']>
     readonly refThrottled: UnwrapRef<typeof import('@vueuse/core')['refThrottled']>
     readonly refWithControl: UnwrapRef<typeof import('@vueuse/core')['refWithControl']>
+    readonly registerAudio: UnwrapRef<typeof import('./src/composables/useSingleAudio')['registerAudio']>
     readonly removeJson: UnwrapRef<typeof import('./src/composables/useAuth')['removeJson']>
     readonly repairSavedGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['repairSavedGrade']>
     readonly resolveAudioUrl: UnwrapRef<typeof import('./src/composables/useAudio')['resolveAudioUrl']>
@@ -512,7 +529,10 @@ declare module 'vue' {
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly speechLanguage: UnwrapRef<typeof import('./src/composables/useAudioGroup')['speechLanguage']>
     readonly stopAllAudio: UnwrapRef<typeof import('./src/composables/useSingleAudio')['stopAllAudio']>
+    readonly storageFailures: UnwrapRef<typeof import('./src/composables/useAuth')['storageFailures']>
+    readonly studyDay: UnwrapRef<typeof import('./src/composables/useStudyData')['studyDay']>
     readonly sumCount: UnwrapRef<typeof import('./src/composables/useStats')['sumCount']>
     readonly sumDeviceTimerRecords: UnwrapRef<typeof import('./src/composables/useStudyTimer')['sumDeviceTimerRecords']>
     readonly syncEnabled: UnwrapRef<typeof import('./src/composables/syncClient')['syncEnabled']>
@@ -538,6 +558,7 @@ declare module 'vue' {
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly unrefElement: UnwrapRef<typeof import('@vueuse/core')['unrefElement']>
     readonly until: UnwrapRef<typeof import('@vueuse/core')['until']>
+    readonly useAccountData: UnwrapRef<typeof import('./src/composables/useRecordData')['useAccountData']>
     readonly useActiveElement: UnwrapRef<typeof import('@vueuse/core')['useActiveElement']>
     readonly useAnimate: UnwrapRef<typeof import('@vueuse/core')['useAnimate']>
     readonly useArrayDifference: UnwrapRef<typeof import('@vueuse/core')['useArrayDifference']>
@@ -555,6 +576,7 @@ declare module 'vue' {
     readonly useAsyncQueue: UnwrapRef<typeof import('@vueuse/core')['useAsyncQueue']>
     readonly useAsyncState: UnwrapRef<typeof import('@vueuse/core')['useAsyncState']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
+    readonly useAudioGroup: UnwrapRef<typeof import('./src/composables/useAudioGroup')['useAudioGroup']>
     readonly useAuth: UnwrapRef<typeof import('./src/composables/useAuth')['useAuth']>
     readonly useBase64: UnwrapRef<typeof import('@vueuse/core')['useBase64']>
     readonly useBattery: UnwrapRef<typeof import('@vueuse/core')['useBattery']>
@@ -575,6 +597,7 @@ declare module 'vue' {
     readonly useCurrentElement: UnwrapRef<typeof import('@vueuse/core')['useCurrentElement']>
     readonly useCycleList: UnwrapRef<typeof import('@vueuse/core')['useCycleList']>
     readonly useDailyGoal: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['useDailyGoal']>
+    readonly useDailyStore: UnwrapRef<typeof import('./src/composables/useDailyStore')['useDailyStore']>
     readonly useDark: UnwrapRef<typeof import('@vueuse/core')['useDark']>
     readonly useDateFormat: UnwrapRef<typeof import('@vueuse/core')['useDateFormat']>
     readonly useDebounce: UnwrapRef<typeof import('@vueuse/core')['useDebounce']>
@@ -656,6 +679,7 @@ declare module 'vue' {
     readonly usePrevious: UnwrapRef<typeof import('@vueuse/core')['usePrevious']>
     readonly useProgress: UnwrapRef<typeof import('./src/composables/useStudyData')['useProgress']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
+    readonly useRecordMap: UnwrapRef<typeof import('./src/composables/useRecordData')['useRecordMap']>
     readonly useRecorder: UnwrapRef<typeof import('./src/composables/useRecorder')['useRecorder']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>
@@ -783,6 +807,7 @@ declare module '@vue/runtime-core' {
     readonly formatClock: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatClock']>
     readonly formatDate: UnwrapRef<typeof import('./src/composables/useStudyData')['formatDate']>
     readonly formatDuration: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatDuration']>
+    readonly formatRecordingClock: UnwrapRef<typeof import('./src/composables/useRecorder')['formatRecordingClock']>
     readonly getAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['getAISettings']>
     readonly getAttempts: UnwrapRef<typeof import('./src/composables/useStats')['getAttempts']>
     readonly getAuthPendingPush: UnwrapRef<typeof import('./src/composables/syncClient')['getAuthPendingPush']>
@@ -791,6 +816,7 @@ declare module '@vue/runtime-core' {
     readonly getDeviceId: UnwrapRef<typeof import('./src/composables/useStudyTimer')['getDeviceId']>
     readonly getMockHistory: UnwrapRef<typeof import('./src/composables/useMockHistory')['getMockHistory']>
     readonly getToken: UnwrapRef<typeof import('./src/composables/syncClient')['getToken']>
+    readonly getTokenOwner: UnwrapRef<typeof import('./src/composables/syncClient')['getTokenOwner']>
     readonly getWordInfo: UnwrapRef<typeof import('./src/composables/useWordInfo')['getWordInfo']>
     readonly getWordInfoWithFallback: UnwrapRef<typeof import('./src/composables/useWordInfo')['getWordInfoWithFallback']>
     readonly gradeEssayWithAI: UnwrapRef<typeof import('./src/composables/useAISettings')['gradeEssayWithAI']>
@@ -814,10 +840,12 @@ declare module '@vue/runtime-core' {
     readonly makeDestructurable: UnwrapRef<typeof import('@vueuse/core')['makeDestructurable']>
     readonly markRaw: UnwrapRef<typeof import('vue')['markRaw']>
     readonly mergeCounts: UnwrapRef<typeof import('./src/composables/useStats')['mergeCounts']>
+    readonly migrateMistakes: UnwrapRef<typeof import('./src/composables/useStudyData')['migrateMistakes']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeTask2Grade: UnwrapRef<typeof import('./src/composables/useAISettings')['normalizeTask2Grade']>
     readonly nsKey: UnwrapRef<typeof import('./src/composables/useStudyData')['nsKey']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>
+    readonly onBeforeLogout: UnwrapRef<typeof import('./src/composables/useAuth')['onBeforeLogout']>
     readonly onBeforeMount: UnwrapRef<typeof import('vue')['onBeforeMount']>
     readonly onBeforeRouteLeave: UnwrapRef<typeof import('vue-router')['onBeforeRouteLeave']>
     readonly onBeforeRouteUpdate: UnwrapRef<typeof import('vue-router')['onBeforeRouteUpdate']>
@@ -857,6 +885,7 @@ declare module '@vue/runtime-core' {
     readonly refDefault: UnwrapRef<typeof import('@vueuse/core')['refDefault']>
     readonly refThrottled: UnwrapRef<typeof import('@vueuse/core')['refThrottled']>
     readonly refWithControl: UnwrapRef<typeof import('@vueuse/core')['refWithControl']>
+    readonly registerAudio: UnwrapRef<typeof import('./src/composables/useSingleAudio')['registerAudio']>
     readonly removeJson: UnwrapRef<typeof import('./src/composables/useAuth')['removeJson']>
     readonly repairSavedGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['repairSavedGrade']>
     readonly resolveAudioUrl: UnwrapRef<typeof import('./src/composables/useAudio')['resolveAudioUrl']>
@@ -871,7 +900,10 @@ declare module '@vue/runtime-core' {
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
+    readonly speechLanguage: UnwrapRef<typeof import('./src/composables/useAudioGroup')['speechLanguage']>
     readonly stopAllAudio: UnwrapRef<typeof import('./src/composables/useSingleAudio')['stopAllAudio']>
+    readonly storageFailures: UnwrapRef<typeof import('./src/composables/useAuth')['storageFailures']>
+    readonly studyDay: UnwrapRef<typeof import('./src/composables/useStudyData')['studyDay']>
     readonly sumCount: UnwrapRef<typeof import('./src/composables/useStats')['sumCount']>
     readonly sumDeviceTimerRecords: UnwrapRef<typeof import('./src/composables/useStudyTimer')['sumDeviceTimerRecords']>
     readonly syncEnabled: UnwrapRef<typeof import('./src/composables/syncClient')['syncEnabled']>
@@ -897,6 +929,7 @@ declare module '@vue/runtime-core' {
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly unrefElement: UnwrapRef<typeof import('@vueuse/core')['unrefElement']>
     readonly until: UnwrapRef<typeof import('@vueuse/core')['until']>
+    readonly useAccountData: UnwrapRef<typeof import('./src/composables/useRecordData')['useAccountData']>
     readonly useActiveElement: UnwrapRef<typeof import('@vueuse/core')['useActiveElement']>
     readonly useAnimate: UnwrapRef<typeof import('@vueuse/core')['useAnimate']>
     readonly useArrayDifference: UnwrapRef<typeof import('@vueuse/core')['useArrayDifference']>
@@ -914,6 +947,7 @@ declare module '@vue/runtime-core' {
     readonly useAsyncQueue: UnwrapRef<typeof import('@vueuse/core')['useAsyncQueue']>
     readonly useAsyncState: UnwrapRef<typeof import('@vueuse/core')['useAsyncState']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
+    readonly useAudioGroup: UnwrapRef<typeof import('./src/composables/useAudioGroup')['useAudioGroup']>
     readonly useAuth: UnwrapRef<typeof import('./src/composables/useAuth')['useAuth']>
     readonly useBase64: UnwrapRef<typeof import('@vueuse/core')['useBase64']>
     readonly useBattery: UnwrapRef<typeof import('@vueuse/core')['useBattery']>
@@ -934,6 +968,7 @@ declare module '@vue/runtime-core' {
     readonly useCurrentElement: UnwrapRef<typeof import('@vueuse/core')['useCurrentElement']>
     readonly useCycleList: UnwrapRef<typeof import('@vueuse/core')['useCycleList']>
     readonly useDailyGoal: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['useDailyGoal']>
+    readonly useDailyStore: UnwrapRef<typeof import('./src/composables/useDailyStore')['useDailyStore']>
     readonly useDark: UnwrapRef<typeof import('@vueuse/core')['useDark']>
     readonly useDateFormat: UnwrapRef<typeof import('@vueuse/core')['useDateFormat']>
     readonly useDebounce: UnwrapRef<typeof import('@vueuse/core')['useDebounce']>
@@ -1015,6 +1050,7 @@ declare module '@vue/runtime-core' {
     readonly usePrevious: UnwrapRef<typeof import('@vueuse/core')['usePrevious']>
     readonly useProgress: UnwrapRef<typeof import('./src/composables/useStudyData')['useProgress']>
     readonly useRafFn: UnwrapRef<typeof import('@vueuse/core')['useRafFn']>
+    readonly useRecordMap: UnwrapRef<typeof import('./src/composables/useRecordData')['useRecordMap']>
     readonly useRecorder: UnwrapRef<typeof import('./src/composables/useRecorder')['useRecorder']>
     readonly useRefHistory: UnwrapRef<typeof import('@vueuse/core')['useRefHistory']>
     readonly useResizeObserver: UnwrapRef<typeof import('@vueuse/core')['useResizeObserver']>

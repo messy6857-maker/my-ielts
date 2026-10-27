@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import indexData from './daily/index.json'
+import { speechLanguage } from '../../composables/useAudioGroup'
+
+import TextHighlights from '../../components/TextHighlights.vue'
 import { useAuth } from '../../composables/useAuth'
 import { getToken } from '../../composables/syncClient'
 import { SYNC_API_BASE } from '../../sync-config'
 import { wordPhonetics } from '../vocabulary/wordPhonetics'
 import { stopAllAudio } from '../../composables/useSingleAudio'
+import indexData from './daily/index.json'
 
 const { currentUser } = useAuth()
 
@@ -35,10 +38,14 @@ interface DailyData {
 }
 
 // 加载所有日期数据（构建时打包）
-const modules = import.meta.glob('./daily/[0-9]*.json', { eager: true }) as Record<string, { default: DailyData }>
+const modules = import.meta.glob('./daily/[0-9]*.json', {
+  eager: true,
+}) as Record<string, { default: DailyData }>
 
 const dates = computed(() => {
-  const list = (indexData.dates as string[]).filter(d => modules[`./daily/${d}.json`])
+  const list = (indexData.dates as string[]).filter(
+    d => modules[`./daily/${d}.json`],
+  )
   return [...list].sort().reverse()
 })
 
@@ -55,26 +62,67 @@ const vocabLoading = ref(false)
 const vocabError = ref(false)
 // 请求序号：快速切日期时，旧日期的慢响应不覆盖新日期
 let vocabReqSeq = 0
+let vocabController: AbortController | null = null
 async function loadMyVocabReading() {
+  const seq = ++vocabReqSeq
+  vocabController?.abort()
+  vocabController = new AbortController()
   myVocabReading.value = null
   vocabError.value = false
-  const t = getToken()
+  vocabLoading.value = false
+  const owner = currentUser.value
+  const t = getToken(owner)
   if (!currentUser.value || !t || !selectedDate.value)
     return
-  const seq = ++vocabReqSeq
   vocabLoading.value = true
   try {
-    const resp = await fetch(`${SYNC_API_BASE}/daily-reading?date=${selectedDate.value}`, {
-      headers: { Authorization: `Bearer ${t}` },
-    })
-    if (seq !== vocabReqSeq)
+    const resp = await fetch(
+      `${SYNC_API_BASE}/daily-reading?date=${selectedDate.value}`,
+      {
+        headers: { Authorization: `Bearer ${t}` },
+        signal: vocabController.signal,
+      },
+    )
+    if (
+      seq !== vocabReqSeq
+      || owner !== currentUser.value
+      || t !== getToken(owner)
+    )
       return
     if (!resp.ok)
       throw new Error(`HTTP ${resp.status}`)
     const data = await resp.json()
-    if (seq !== vocabReqSeq)
+    if (
+      seq !== vocabReqSeq
+      || owner !== currentUser.value
+      || t !== getToken(owner)
+    )
       return
-    if (data.ok && data.reading)
+    if (
+      data.ok
+      && data.reading
+      && typeof data.reading.title === 'string'
+      && typeof data.reading.passage === 'string'
+      && Array.isArray(data.reading.notes)
+      && Array.isArray(data.reading.questions)
+      && data.reading.notes.every(
+        (n: WordNote) =>
+          n
+          && typeof n.word === 'string'
+          && typeof n.meaning === 'string'
+          && typeof n.pos === 'string',
+      )
+      && data.reading.questions.every(
+        (q: Question) =>
+          q
+          && typeof q.q === 'string'
+          && Array.isArray(q.options)
+          && q.options.every(o => typeof o === 'string')
+          && Number.isInteger(q.answer)
+          && q.answer >= 0
+          && q.answer < q.options.length,
+      )
+    )
       myVocabReading.value = data.reading
   }
   catch {
@@ -88,9 +136,20 @@ async function loadMyVocabReading() {
   }
 }
 watch([selectedDate, currentUser], loadMyVocabReading, { immediate: true })
+onUnmounted(() => {
+  vocabReqSeq++
+  vocabController?.abort()
+})
 
 // 生词注释：点击展开/收起中文（复用自测卡片的彩色样式）
-const dotColors = ['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-orange-500', 'bg-teal-500', 'bg-indigo-500']
+const dotColors = [
+  'bg-blue-500',
+  'bg-purple-500',
+  'bg-pink-500',
+  'bg-orange-500',
+  'bg-teal-500',
+  'bg-indigo-500',
+]
 const textColors = [
   'text-blue-600 dark:text-blue-400',
   'text-purple-600 dark:text-purple-400',
@@ -103,8 +162,7 @@ const expandedNotes = ref(new Set<string>())
 function toggleNote(key: string) {
   if (expandedNotes.value.has(key))
     expandedNotes.value.delete(key)
-  else
-    expandedNotes.value.add(key)
+  else expandedNotes.value.add(key)
 }
 
 // 选择题：记录每题所选选项
@@ -115,17 +173,34 @@ function selectOption(key: string, idx: number) {
     return
   answers.value[key] = idx
 }
-function optionClass(articleKey: string, qIdx: number, optIdx: number, correctIdx: number) {
+function optionClass(
+  articleKey: string,
+  qIdx: number,
+  optIdx: number,
+  correctIdx: number,
+) {
   const key = `${articleKey}-${qIdx}`
   const chosen = answers.value[key]
-  const base = 'block w-full rounded-lg border px-4 py-2.5 text-left text-sm transition-colors '
-  if (chosen === undefined)
-    return base + 'border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500 dark:hover:bg-blue-900/20'
-  if (optIdx === correctIdx)
-    return base + 'border-green-500 bg-green-50 text-green-800 dark:border-green-500 dark:bg-green-900/30 dark:text-green-300'
-  if (optIdx === chosen)
-    return base + 'border-red-500 bg-red-50 text-red-800 dark:border-red-500 dark:bg-red-900/30 dark:text-red-300'
-  return base + 'border-gray-200 bg-white opacity-60 dark:border-gray-700 dark:bg-gray-800'
+  const base
+    = 'block w-full rounded-lg border px-4 py-2.5 text-left text-sm transition-colors '
+  if (chosen === undefined) {
+    return `${
+      base
+    }border-gray-200 bg-white hover:border-blue-400 hover:bg-blue-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-500 dark:hover:bg-blue-900/20`
+  }
+  if (optIdx === correctIdx) {
+    return `${
+      base
+    }border-green-500 bg-green-50 text-green-800 dark:border-green-500 dark:bg-green-900/30 dark:text-green-300`
+  }
+  if (optIdx === chosen) {
+    return `${
+      base
+    }border-red-500 bg-red-50 text-red-800 dark:border-red-500 dark:bg-red-900/30 dark:text-red-300`
+  }
+  return `${
+    base
+  }border-gray-200 bg-white opacity-60 dark:border-gray-700 dark:bg-gray-800`
 }
 
 watch(selectedDate, () => {
@@ -135,7 +210,7 @@ watch(selectedDate, () => {
 
 // 右下角阅读索引：点击直接跳到对应文章（词汇阅读 + 热点阅读按顺序编号）
 const readingIndex = computed(() => {
-  const items: { id: string, label: string }[] = []
+  const items: { id: string; label: string }[] = []
   if (myVocabReading.value)
     items.push({ id: 'reading-vocab', label: '阅读1' })
   const n = daily.value?.newsReadings.length ?? 0
@@ -144,7 +219,9 @@ const readingIndex = computed(() => {
   return items
 })
 function jumpTo(id: string) {
-  document.getElementById(id)?.scrollIntoView({ behavior: 'instant', block: 'start' })
+  document
+    .getElementById(id)
+    ?.scrollIntoView({ behavior: 'instant', block: 'start' })
 }
 
 // 词汇注释：音标 + 朗读
@@ -157,7 +234,7 @@ function speak(word: string) {
     const synth = window.speechSynthesis
     synth.cancel()
     const u = new SpeechSynthesisUtterance(word)
-    u.lang = 'en-US'
+    u.lang = speechLanguage()
     u.rate = 0.85
     synth.speak(u)
   }
@@ -167,26 +244,10 @@ function speak(word: string) {
 }
 
 function paragraphs(passage: string): string[] {
-  return passage.split('\n\n').map(p => p.trim()).filter(Boolean)
-}
-
-// 正文中的生词用注释同色高亮，一眼能看到
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-function highlightedParagraph(text: string, notes: WordNote[]): string {
-  if (!notes.length)
-    return text
-  // 按词长降序，避免短词先匹配长词的一部分
-  const sorted = [...notes].sort((a, b) => b.word.length - a.word.length)
-  let html = text
-  sorted.forEach((n) => {
-    const idx = notes.indexOf(n)
-    const color = textColors[idx % textColors.length]
-    const re = new RegExp(`\\b(${escapeRegExp(n.word)})\\b`, 'gi')
-    html = html.replace(re, `<span class="font-bold ${color}">$1</span>`)
-  })
-  return html
+  return passage
+    .split('\n\n')
+    .map(p => p.trim())
+    .filter(Boolean)
 }
 </script>
 
@@ -199,7 +260,7 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
       </h2>
       <button
         type="button"
-        class="rounded-lg border border-gray-300 px-4 py-1.5 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+        class="border border-gray-300 rounded-lg px-4 py-1.5 text-sm text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
         @click="$router.push('/reading')"
       >
         ← 返回
@@ -209,9 +270,9 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
     <!-- 无数据 -->
     <div
       v-if="dates.length === 0"
-      class="rounded-2xl border border-gray-200 bg-white p-12 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800"
+      class="border border-gray-200 rounded-2xl bg-white p-12 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800"
     >
-      <p class="text-4xl mb-4">
+      <p class="mb-4 text-4xl">
         🌙
       </p>
       <p class="text-lg text-gray-600 dark:text-gray-300">
@@ -222,10 +283,12 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
     <template v-else>
       <!-- 日期选择 -->
       <div class="mb-6">
-        <label class="mb-2 block text-sm font-medium text-gray-600 dark:text-gray-400">选择日期</label>
+        <label
+          class="mb-2 block text-sm font-medium text-gray-600 dark:text-gray-400"
+        >选择日期</label>
         <select
           v-model="selectedDate"
-          class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+          class="border border-gray-300 rounded-lg bg-white px-4 py-2 text-sm text-gray-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
         >
           <option v-for="d in dates" :key="d" :value="d">
             {{ d }}
@@ -238,13 +301,21 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
         <section v-if="myVocabReading" class="mb-8">
           <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">
             📖 词汇阅读
-            <span class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">基于你昨天学过的单词</span>
+            <span
+              class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400"
+            >基于你昨天学过的单词</span>
           </h3>
-          <article id="reading-vocab" class="scroll-mt-20 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+          <article
+            id="reading-vocab"
+            class="scroll-mt-20 border border-gray-200 rounded-2xl bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+          >
             <h4 class="mb-3 text-xl font-bold text-gray-900 dark:text-white">
               {{ myVocabReading.title }}
             </h4>
-            <div v-if="myVocabReading.basedOn?.length" class="mb-4 flex flex-wrap gap-2">
+            <div
+              v-if="myVocabReading.basedOn?.length"
+              class="mb-4 flex flex-wrap gap-2"
+            >
               <span
                 v-for="w in myVocabReading.basedOn"
                 :key="w"
@@ -253,26 +324,50 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
                 {{ w }}
               </span>
             </div>
-            <div class="mb-4 space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
-              <p v-for="(p, i) in paragraphs(myVocabReading.passage)" :key="i" v-html="highlightedParagraph(p, myVocabReading.notes)" />
+            <div
+              class="mb-4 leading-relaxed text-gray-700 space-y-4 dark:text-gray-300"
+            >
+              <p v-for="(p, i) in paragraphs(myVocabReading.passage)" :key="i">
+                <TextHighlights
+                  :text="p"
+                  :words="myVocabReading.notes.map((n) => n.word)"
+                  :colors="textColors"
+                />
+              </p>
             </div>
 
             <!-- 生词注释 -->
-            <div v-if="myVocabReading.notes.length" class="mb-4 rounded-xl bg-gray-50 p-4 dark:bg-gray-900/50">
-              <p class="mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">
-                生词注释 <span class="font-normal text-gray-400">（点击单词查看中文）</span>
+            <div
+              v-if="myVocabReading.notes.length"
+              class="mb-4 rounded-xl bg-gray-50 p-4 dark:bg-gray-900/50"
+            >
+              <p
+                class="mb-2 text-sm font-bold text-gray-700 dark:text-gray-300"
+              >
+                生词注释
+                <span class="font-normal text-gray-400">（点击单词查看中文）</span>
               </p>
               <ul class="space-y-1.5">
-                <li v-for="(n, i) in myVocabReading.notes" :key="i" class="text-sm">
-                  <span class="mr-1.5 inline-block h-2 w-2 rounded-full" :class="dotColors[i % dotColors.length]" />
+                <li
+                  v-for="(n, i) in myVocabReading.notes"
+                  :key="i"
+                  class="text-sm"
+                >
+                  <span
+                    class="mr-1.5 inline-block h-2 w-2 rounded-full"
+                    :class="dotColors[i % dotColors.length]"
+                  />
                   <button
-                    class="font-bold underline decoration-dotted underline-offset-2"
+                    class="font-bold underline underline-offset-2 decoration-dotted"
                     :class="textColors[i % textColors.length]"
                     @click="toggleNote(`${selectedDate}-vocab-${i}`)"
                   >
                     {{ n.word }}
                   </button>
-                  <span v-if="phoneticOf(n.word)" class="ml-1.5 text-xs text-gray-400 dark:text-gray-500">{{ phoneticOf(n.word) }}</span>
+                  <span
+                    v-if="phoneticOf(n.word)"
+                    class="ml-1.5 text-xs text-gray-400 dark:text-gray-500"
+                  >{{ phoneticOf(n.word) }}</span>
                   <button
                     type="button"
                     class="ml-1.5 text-xs opacity-70 hover:opacity-100"
@@ -281,30 +376,57 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
                   >
                     🔊
                   </button>
-                  <span v-if="n.pos" class="ml-1 italic text-gray-500 dark:text-gray-400" style="font-family: times;">{{ n.pos }}</span>
-                  <span v-if="expandedNotes.has(`${selectedDate}-vocab-${i}`)" class="ml-2 text-gray-600 dark:text-gray-400">{{ n.meaning }}</span>
+                  <span
+                    v-if="n.pos"
+                    class="ml-1 italic text-gray-500 dark:text-gray-400"
+                    style="font-family: times"
+                  >{{ n.pos }}</span>
+                  <span
+                    v-if="expandedNotes.has(`${selectedDate}-vocab-${i}`)"
+                    class="ml-2 text-gray-600 dark:text-gray-400"
+                  >{{ n.meaning }}</span>
                 </li>
               </ul>
             </div>
 
             <!-- 选择题 -->
             <div v-if="myVocabReading.questions.length" class="space-y-4">
-              <div v-for="(qs, qi) in myVocabReading.questions" :key="qi" class="rounded-xl border border-gray-100 p-4 dark:border-gray-700">
-                <p class="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200">
+              <div
+                v-for="(qs, qi) in myVocabReading.questions"
+                :key="qi"
+                class="border border-gray-100 rounded-xl p-4 dark:border-gray-700"
+              >
+                <p
+                  class="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200"
+                >
                   {{ qi + 1 }}. {{ qs.q }}
                 </p>
                 <div class="space-y-2">
                   <button
                     v-for="(opt, oi) in qs.options"
                     :key="oi"
-                    :class="optionClass(`${selectedDate}-vocab`, qi, oi, qs.answer)"
+                    :class="
+                      optionClass(`${selectedDate}-vocab`, qi, oi, qs.answer)
+                    "
                     @click="selectOption(`${selectedDate}-vocab-${qi}`, oi)"
                   >
                     {{ opt }}
                   </button>
                 </div>
-                <p v-if="`${selectedDate}-vocab-${qi}` in answers" class="mt-2 text-sm" :class="answers[`${selectedDate}-vocab-${qi}`] === qs.answer ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                  {{ answers[`${selectedDate}-vocab-${qi}`] === qs.answer ? '✓ 回答正确' : `✗ 答错了，正确答案是 ${qs.options[qs.answer]}` }}
+                <p
+                  v-if="`${selectedDate}-vocab-${qi}` in answers"
+                  class="mt-2 text-sm"
+                  :class="
+                    answers[`${selectedDate}-vocab-${qi}`] === qs.answer
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                  "
+                >
+                  {{
+                    answers[`${selectedDate}-vocab-${qi}`] === qs.answer
+                      ? '✓ 回答正确'
+                      : `✗ 答错了，正确答案是 ${qs.options[qs.answer]}`
+                  }}
                 </p>
               </div>
             </div>
@@ -312,7 +434,9 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
         </section>
         <!-- 词汇阅读加载态 -->
         <section v-else-if="currentUser && vocabLoading" class="mb-8">
-          <div class="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-800">
+          <div
+            class="border border-gray-200 rounded-2xl bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-800"
+          >
             <p class="text-sm text-gray-500 dark:text-gray-400">
               📖 词汇阅读加载中…
             </p>
@@ -320,7 +444,9 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
         </section>
         <!-- 词汇阅读加载失败 -->
         <section v-else-if="currentUser && vocabError" class="mb-8">
-          <div class="rounded-2xl border border-gray-200 bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-800">
+          <div
+            class="border border-gray-200 rounded-2xl bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-800"
+          >
             <p class="text-sm text-gray-500 dark:text-gray-400">
               📖 词汇阅读加载失败，请稍后重试
             </p>
@@ -328,7 +454,9 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
         </section>
         <!-- 登录用户本日暂无词汇阅读 -->
         <section v-else-if="currentUser" class="mb-8">
-          <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center dark:border-gray-600 dark:bg-gray-800/50">
+          <div
+            class="border border-gray-300 rounded-2xl border-dashed bg-gray-50 p-6 text-center dark:border-gray-600 dark:bg-gray-800/50"
+          >
             <p class="text-sm text-gray-500 dark:text-gray-400">
               📖 本日暂无词汇阅读
             </p>
@@ -336,10 +464,17 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
         </section>
         <!-- 游客提示：登录后可看个性化词汇阅读 -->
         <section v-else-if="!currentUser" class="mb-8">
-          <div class="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center dark:border-gray-600 dark:bg-gray-800/50">
+          <div
+            class="border border-gray-300 rounded-2xl border-dashed bg-gray-50 p-6 text-center dark:border-gray-600 dark:bg-gray-800/50"
+          >
             <p class="text-sm text-gray-500 dark:text-gray-400">
               📖 词汇阅读是按你的学词记录个性化生成的，
-              <router-link to="/login" class="text-blue-600 underline underline-offset-2 dark:text-blue-400">登录</router-link>
+              <router-link
+                to="/login"
+                class="text-blue-600 underline underline-offset-2 dark:text-blue-400"
+              >
+                登录
+              </router-link>
               后可见
             </p>
           </div>
@@ -349,13 +484,15 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
         <section v-if="daily.newsReadings.length" class="mb-8">
           <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">
             📰 热点阅读
-            <span class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400">{{ daily.newsReadings.length }} 篇</span>
+            <span
+              class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400"
+            >{{ daily.newsReadings.length }} 篇</span>
           </h3>
           <article
             v-for="(art, ai) in daily.newsReadings"
-            :key="ai"
             :id="`reading-news-${ai}`"
-            class="mb-6 scroll-mt-20 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+            :key="ai"
+            class="mb-6 scroll-mt-20 border border-gray-200 rounded-2xl bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
           >
             <h4 class="mb-1 text-xl font-bold text-gray-900 dark:text-white">
               {{ art.title }}
@@ -363,49 +500,98 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
             <p v-if="art.source" class="mb-3 text-xs text-gray-400">
               来源：{{ art.source }}
             </p>
-            <div class="mb-4 space-y-4 text-gray-700 leading-relaxed dark:text-gray-300">
-              <p v-for="(p, i) in paragraphs(art.passage)" :key="i" v-html="highlightedParagraph(p, art.notes)" />
+            <div
+              class="mb-4 leading-relaxed text-gray-700 space-y-4 dark:text-gray-300"
+            >
+              <p v-for="(p, i) in paragraphs(art.passage)" :key="i">
+                <TextHighlights
+                  :text="p"
+                  :words="art.notes.map((n) => n.word)"
+                  :colors="textColors"
+                />
+              </p>
             </div>
 
             <!-- 生词注释 -->
-            <div v-if="art.notes.length" class="mb-4 rounded-xl bg-gray-50 p-4 dark:bg-gray-900/50">
-              <p class="mb-2 text-sm font-bold text-gray-700 dark:text-gray-300">
-                生词注释 <span class="font-normal text-gray-400">（点击单词查看中文）</span>
+            <div
+              v-if="art.notes.length"
+              class="mb-4 rounded-xl bg-gray-50 p-4 dark:bg-gray-900/50"
+            >
+              <p
+                class="mb-2 text-sm font-bold text-gray-700 dark:text-gray-300"
+              >
+                生词注释
+                <span class="font-normal text-gray-400">（点击单词查看中文）</span>
               </p>
               <ul class="space-y-1.5">
                 <li v-for="(n, i) in art.notes" :key="i" class="text-sm">
-                  <span class="mr-1.5 inline-block h-2 w-2 rounded-full" :class="dotColors[i % dotColors.length]" />
+                  <span
+                    class="mr-1.5 inline-block h-2 w-2 rounded-full"
+                    :class="dotColors[i % dotColors.length]"
+                  />
                   <button
-                    class="font-bold underline decoration-dotted underline-offset-2"
+                    class="font-bold underline underline-offset-2 decoration-dotted"
                     :class="textColors[i % textColors.length]"
                     @click="toggleNote(`${selectedDate}-news${ai}-${i}`)"
                   >
                     {{ n.word }}
                   </button>
-                  <span v-if="n.pos" class="ml-1 italic text-gray-500 dark:text-gray-400" style="font-family: times;">{{ n.pos }}</span>
-                  <span v-if="expandedNotes.has(`${selectedDate}-news${ai}-${i}`)" class="ml-2 text-gray-600 dark:text-gray-400">{{ n.meaning }}</span>
+                  <span
+                    v-if="n.pos"
+                    class="ml-1 italic text-gray-500 dark:text-gray-400"
+                    style="font-family: times"
+                  >{{ n.pos }}</span>
+                  <span
+                    v-if="expandedNotes.has(`${selectedDate}-news${ai}-${i}`)"
+                    class="ml-2 text-gray-600 dark:text-gray-400"
+                  >{{ n.meaning }}</span>
                 </li>
               </ul>
             </div>
 
             <!-- 选择题 -->
             <div v-if="art.questions.length" class="space-y-4">
-              <div v-for="(qs, qi) in art.questions" :key="qi" class="rounded-xl border border-gray-100 p-4 dark:border-gray-700">
-                <p class="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200">
+              <div
+                v-for="(qs, qi) in art.questions"
+                :key="qi"
+                class="border border-gray-100 rounded-xl p-4 dark:border-gray-700"
+              >
+                <p
+                  class="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200"
+                >
                   {{ qi + 1 }}. {{ qs.q }}
                 </p>
                 <div class="space-y-2">
                   <button
                     v-for="(opt, oi) in qs.options"
                     :key="oi"
-                    :class="optionClass(`${selectedDate}-news${ai}`, qi, oi, qs.answer)"
+                    :class="
+                      optionClass(
+                        `${selectedDate}-news${ai}`,
+                        qi,
+                        oi,
+                        qs.answer,
+                      )
+                    "
                     @click="selectOption(`${selectedDate}-news${ai}-${qi}`, oi)"
                   >
                     {{ opt }}
                   </button>
                 </div>
-                <p v-if="`${selectedDate}-news${ai}-${qi}` in answers" class="mt-2 text-sm" :class="answers[`${selectedDate}-news${ai}-${qi}`] === qs.answer ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'">
-                  {{ answers[`${selectedDate}-news${ai}-${qi}`] === qs.answer ? '✓ 回答正确' : `✗ 答错了，正确答案是 ${qs.options[qs.answer]}` }}
+                <p
+                  v-if="`${selectedDate}-news${ai}-${qi}` in answers"
+                  class="mt-2 text-sm"
+                  :class="
+                    answers[`${selectedDate}-news${ai}-${qi}`] === qs.answer
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400'
+                  "
+                >
+                  {{
+                    answers[`${selectedDate}-news${ai}-${qi}`] === qs.answer
+                      ? '✓ 回答正确'
+                      : `✗ 答错了，正确答案是 ${qs.options[qs.answer]}`
+                  }}
                 </p>
               </div>
             </div>
@@ -424,7 +610,7 @@ function highlightedParagraph(text: string, notes: WordNote[]): string {
         v-for="item in readingIndex"
         :key="item.id"
         type="button"
-        class="rounded-full border border-gray-200 bg-white/90 px-3.5 py-1.5 text-xs font-medium text-gray-600 shadow-md backdrop-blur transition-colors hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700 dark:border-gray-600 dark:bg-gray-800/90 dark:text-gray-300 dark:hover:border-blue-500 dark:hover:bg-blue-900/40 dark:hover:text-blue-300"
+        class="border border-gray-200 rounded-full bg-white/90 px-3.5 py-1.5 text-xs font-medium text-gray-600 shadow-md backdrop-blur transition-colors dark:border-gray-600 hover:border-blue-400 dark:bg-gray-800/90 hover:bg-blue-50 dark:text-gray-300 hover:text-blue-700 dark:hover:border-blue-500 dark:hover:bg-blue-900/40 dark:hover:text-blue-300"
         @click="jumpTo(item.id)"
       >
         {{ item.label }}

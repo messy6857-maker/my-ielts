@@ -1,6 +1,10 @@
 <script setup>
-import words from './listening179.json'
+import { speechLanguage, useAudioGroup } from '../../composables/useAudioGroup'
+
 import { resolveAudioUrl } from '../../composables/useAudio'
+import words from './listening179.json'
+
+const managedAudio = useAudioGroup()
 
 const ws = reactive(words)
 let audio = null
@@ -11,7 +15,7 @@ function play(word) {
     audio.pause()
     audio.currentTime = 0
   }
-  audio = document.createElement('audio')
+  audio = managedAudio.create()
   audio.src = resolveAudioUrl(`179_audios/${word}.mp3`)
   let fellBack = false
   const fallback = () => {
@@ -19,7 +23,7 @@ function play(word) {
       return
     fellBack = true
     const u = new SpeechSynthesisUtterance(word)
-    u.lang = 'en-US'
+    u.lang = speechLanguage()
     speechSynthesis.speak(u)
   }
   audio.onerror = fallback
@@ -32,8 +36,11 @@ const filteredWs = computed(() => {
   const kw = keyword.value.trim().toLowerCase()
   if (!kw)
     return ws
-  return ws.filter(w =>
-    w.word.toLowerCase().includes(kw) || (w.meaning || '').toLowerCase().includes(kw),
+  return ws.filter(
+    w =>
+      w.word.toLowerCase().includes(kw)
+      || (w.meaning || '').toLowerCase().includes(kw)
+      || w.replace.some(v => v.toLowerCase().includes(kw)),
   )
 })
 </script>
@@ -65,15 +72,30 @@ const filteredWs = computed(() => {
         </button>
         <!-- <input type="text" name="email" class="ml-3 block w-full border border-gray-300 rounded-lg bg-gray-50 p-2.5 text-gray-900 dark:border-gray-600 focus:border-primary-500 dark:bg-gray-700 sm:text-sm dark:text-white focus:ring-primary-500 dark:focus:border-primary-500 dark:focus:ring-primary-500 dark:placeholder-gray-400" placeholder="关键词"> -->
         <div class="relative ml-2 flex-1">
-          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+          <div
+            class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+          >
+            <svg
+              class="h-4 w-4 text-gray-500 dark:text-gray-400"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 20 20"
+            >
+              <path
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"
+              />
             </svg>
           </div>
           <input
             v-model="keyword"
             type="search"
-            class="block w-full border border-gray-300 rounded-lg bg-gray-50 p-2.5 pl-10 text-sm text-gray-900 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500 dark:placeholder-gray-400" placeholder="Search"
+            class="block w-full border border-gray-300 rounded-lg bg-gray-50 p-2.5 pl-10 text-sm text-gray-900 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500 dark:placeholder-gray-400"
+            placeholder="Search"
           >
         </div>
       </div>
@@ -81,55 +103,70 @@ const filteredWs = computed(() => {
   </div>
   <div class="mt-6">
     <div class="overflow-x-auto rounded-lg">
-    <table class="w-full min-w-[640px] text-left text-sm text-gray-500 dark:text-gray-400">
-      <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
-        <tr>
-          <th class="w-0 px-6 py-3">
-            #
-          </th>
-          <th class="w-0 px-6 py-3" />
-          <th scope="col" class="w-0 px-6 py-3">
-            考点词
-          </th>
-          <th scope="col" class="w-0 px-6 py-3">
-            词性
-          </th>
-          <th scope="col" class="w-80 px-6 py-3">
-            词义
-          </th>
-          <th scope="col" class="px-6 py-3">
-            同义替换
-          </th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="w in filteredWs" :key="w.index" class="border-b bg-white dark:border-gray-700 dark:bg-gray-800">
-          <td class="px-6 py-4">
-            {{ w.index }}
-          </td>
-          <td class="px-6 py-4">
-            <a href="javascript:;" class="i-carbon-volume-up-filled block" @click="play(w.word)" />
-          </td>
-          <th scope="row" class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">
-            <a
-              class="hover:underline"
-              :title="`在剑桥词典中查询 ${w.word}`"
-              :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${w.word}`"
-              target="_blank"
-            >{{ w.word }}</a>
-          </th>
-          <td class="px-6 py-4 italic">
-            {{ w.type }}
-          </td>
-          <td class="px-6 py-4">
-            {{ w.meaning }}
-          </td>
-          <td class="px-6 py-4">
-            {{ w.replace.join(', ') }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
+      <table
+        class="min-w-[640px] w-full text-left text-sm text-gray-500 dark:text-gray-400"
+      >
+        <thead
+          class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"
+        >
+          <tr>
+            <th class="w-0 px-6 py-3">
+              #
+            </th>
+            <th class="w-0 px-6 py-3" />
+            <th scope="col" class="w-0 px-6 py-3">
+              考点词
+            </th>
+            <th scope="col" class="w-0 px-6 py-3">
+              词性
+            </th>
+            <th scope="col" class="w-80 px-6 py-3">
+              词义
+            </th>
+            <th scope="col" class="px-6 py-3">
+              同义替换
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="w in filteredWs"
+            :key="w.index"
+            class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"
+          >
+            <td class="px-6 py-4">
+              {{ w.index }}
+            </td>
+            <td class="px-6 py-4">
+              <a
+                href="javascript:;"
+                class="i-carbon-volume-up-filled block"
+                @click="play(w.word)"
+              />
+            </td>
+            <th
+              scope="row"
+              class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white"
+            >
+              <a
+                class="hover:underline"
+                :title="`在剑桥词典中查询 ${w.word}`"
+                :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${w.word}`"
+                target="_blank"
+              >{{ w.word }}</a>
+            </th>
+            <td class="px-6 py-4 italic">
+              {{ w.type }}
+            </td>
+            <td class="px-6 py-4">
+              {{ w.meaning }}
+            </td>
+            <td class="px-6 py-4">
+              {{ w.replace.join(', ') }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </template>

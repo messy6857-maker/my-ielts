@@ -19,12 +19,12 @@ export interface ExtraEntry {
 const POS = '(?:adj|adv|n|vi|vt|v|prep|conj|pron|num|art|interj)'
 // 词性必须是空白分隔的独立 token，避免把 phenomenon 词尾的 n 误判成词性
 const ENTRY_RE = new RegExp(
-  `^([A-Za-z][A-Za-z'.\\-/() ]*?)(?:\\s+(${POS})\\.?)?\\s*([\u4e00-\u9fa5\uff00-\uffef\u3000-\u303f].*)$`,
+  `^([A-Za-z][A-Za-z'.\\-/() ]*?)(?:\\s+(${POS})\\.?)?\\s*([\u4E00-\u9FA5\uFF00-\uFFEF\u3000-\u303F].*)$`,
 )
 
 /** 去掉 "/词的" 这类跟在英文后的中文备注残留（保留 film/movie 这种英文内的斜杠） */
 function cleanPiece(piece: string): string {
-  return piece.replace(/\/[\u4e00-\u9fa5]+/g, '')
+  return piece.replace(/\/[\u4E00-\u9FA5]+/g, '')
 }
 
 export function parseExtra(extra: string | undefined | null): ExtraEntry[] {
@@ -52,7 +52,7 @@ export function parseExtra(extra: string | undefined | null): ExtraEntry[] {
       else if (
         entries.length > 0
         // 中文开头的无词头片段 → 视为上一词条的补充释义；含冒号的是备注，直接丢弃
-        && /^[\u4e00-\u9fa5（(]/.test(piece)
+        && /^[\u4E00-\u9FA5（(]/.test(piece)
         && !/[:：]/.test(piece)
       ) {
         entries[entries.length - 1].meaning += `；${piece}`

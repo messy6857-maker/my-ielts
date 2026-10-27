@@ -2,14 +2,14 @@ export interface DiffToken {
   type: 'same' | 'del' | 'ins'
   text: string
 }
-
 const isWs = (s: string) => /^\s+$/.test(s)
-
 /** 把各类 unicode 空格统一成普通空格，避免不换行空格导致溢出 */
 function normalize(text: string): string {
-  return text.replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000\ufeff]/g, ' ')
+  return text.replace(
+    /[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF]/g,
+    ' ',
+  )
 }
-
 /**
  * 单词级 diff（LCS），用于对照原文和改写后文章，标出改动处。
  * 保留空白符 token（换行/段落不丢失），空白符之间视为相等。
@@ -22,10 +22,14 @@ export function diffWords(oldText: string, newText: string): DiffToken[] {
   const n = b.length
   const same = (x: string, y: string) => x === y || (isWs(x) && isWs(y))
   // dp[i][j] = a[i:] 与 b[j:] 的 LCS 长度
-  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0))
+  const dp: number[][] = Array.from({ length: m + 1 }, () =>
+    Array.from({ length: n + 1 }, () => 0),
+  )
   for (let i = m - 1; i >= 0; i--) {
     for (let j = n - 1; j >= 0; j--) {
-      dp[i][j] = same(a[i], b[j]) ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1])
+      dp[i][j] = same(a[i], b[j])
+        ? dp[i + 1][j + 1] + 1
+        : Math.max(dp[i + 1][j], dp[i][j + 1])
     }
   }
   const out: DiffToken[] = []
@@ -47,9 +51,7 @@ export function diffWords(oldText: string, newText: string): DiffToken[] {
       j++
     }
   }
-  while (i < m)
-    out.push({ type: 'del', text: a[i++] })
-  while (j < n)
-    out.push({ type: 'ins', text: b[j++] })
+  while (i < m) out.push({ type: 'del', text: a[i++] })
+  while (j < n) out.push({ type: 'ins', text: b[j++] })
   return out
 }

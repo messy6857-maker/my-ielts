@@ -3,11 +3,13 @@
 // 经 GitHub Pages 对外提供，不再随站点仓库发布。
 // 网页版与安卓 App 统一走媒体站绝对地址；本地开发时同样走线上媒体站。
 export const MEDIA_BASE = 'https://messy6857-maker.github.io/my-ielts-media'
-
 export function resolveMediaUrl(path: string): string {
-  return `${MEDIA_BASE}/${path}`
+  return `${MEDIA_BASE}/${path
+    .replace(/^\/+/, '')
+    .split('/')
+    .map(segment => encodeURIComponent(segment))
+    .join('/')}`
 }
-
 // 旧名保留：现有词汇/179 音频调用方不用改。
 export function resolveAudioUrl(path: string): string {
   return resolveMediaUrl(path)

@@ -6,13 +6,24 @@ const NOW = 1_000_000_000_000
 const DAY = 86_400_000
 
 function sched(partial: Partial<WordSchedule>): WordSchedule {
-  return { ease: 2.5, interval: 1, dueAt: NOW + DAY, reps: 1, lapses: 0, ...partial }
+  return {
+    ease: 2.5,
+    interval: 1,
+    dueAt: NOW + DAY,
+    reps: 1,
+    lapses: 0,
+    ...partial,
+  }
 }
 
 const cards = [
-  { id: 'due1' }, { id: 'due2' },
-  { id: 'learned1' }, { id: 'learned2' },
-  { id: 'fresh1' }, { id: 'fresh2' }, { id: 'fresh3' },
+  { id: 'due1' },
+  { id: 'due2' },
+  { id: 'learned1' },
+  { id: 'learned2' },
+  { id: 'fresh1' },
+  { id: 'fresh2' },
+  { id: 'fresh3' },
 ]
 
 describe('planQueue（复习:新词 = 1:3）', () => {

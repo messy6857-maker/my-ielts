@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import corpusData from './spelling_convention'
 import type { DeckCard } from '../../components/KeywordFlashcard.vue'
 import { resolveAudioUrl } from '../../composables/useAudio'
+import corpusData from './spelling_convention'
 
 defineOptions({ name: 'CorpusFlashcardPage' })
 
@@ -9,7 +9,7 @@ const cards: DeckCard[] = []
 
 // Chapter2: [British, American, Meaning]，取第一个拼写为主词
 // r[0] 可能是字符串或数组（语料库页改写后），两种都兼容
-const firstCell = (r: any): string => {
+function firstCell(r: any): string {
   const v = Array.isArray(r[0]) ? r[0][0] : r[0]
   return typeof v === 'string' ? v : ''
 }
@@ -68,7 +68,7 @@ const audioFor = (word: string) => resolveAudioUrl(`179_audios/${word}.mp3`)
     back-label="返回语料库"
     :cards="cards"
     :audio-for="audioFor"
-    mistake-module="listening"
+    mistake-module="corpus"
     progress-module="corpus_flashcard"
   />
 </template>

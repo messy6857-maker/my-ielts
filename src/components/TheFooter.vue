@@ -1,11 +1,14 @@
 <script setup>
-const year = (new Date()).getFullYear()
+const year = new Date().getFullYear()
 </script>
 
 <template>
-  <footer class="px-4 py-6 md:flex md:items-center md:justify-between dark:bg-gray-800 2xl:px-0 md:py-10">
+  <footer
+    class="px-4 py-6 md:flex md:items-center md:justify-between dark:bg-gray-800 2xl:px-0 md:py-10"
+  >
     <p class="mb-4 flex-1 text-center text-sm text-gray-500 md:mb-0">
-      &copy; {{ year }} · <span class="text-xs">本站改自开源作品源码，仅用于雅思学习</span>
+      &copy; {{ year }} ·
+      <span class="text-xs">本站改自开源作品源码，仅用于雅思学习</span>
     </p>
     <!-- <ul class="flex flex-wrap items-center justify-center">
       <li><a href="#" class="mr-4 text-sm font-normal text-gray-500 md:mr-6 dark:text-gray-400 hover:underline">Terms</a></li>

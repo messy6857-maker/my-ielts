@@ -1,6 +1,6 @@
 // 模考通用类型定义
 
-export type MockQuestionType = 'multiple-choice' | 'multi-select' | 'tfng' | 'fill-blank' | 'matching' | 'map-label'
+export type MockQuestionType = 'multiple-choice' | 'multi-select' | 'tfng' | 'fill-blank' | 'map-label'
 
 export interface MockQuestion {
   /** 题号，如 "Q1" */
@@ -54,19 +54,32 @@ export interface ListeningMockTest {
 export function bandScore(correct: number, total = 40): number {
   const t = total > 0 ? total : 40
   const at = (base: number) => Math.ceil((base / 40) * t)
-  if (correct >= at(39)) return 9.0
-  if (correct >= at(37)) return 8.5
-  if (correct >= at(35)) return 8.0
-  if (correct >= at(33)) return 7.5
-  if (correct >= at(30)) return 7.0
-  if (correct >= at(27)) return 6.5
-  if (correct >= at(23)) return 6.0
-  if (correct >= at(20)) return 5.5
-  if (correct >= at(16)) return 5.0
-  if (correct >= at(13)) return 4.5
-  if (correct >= at(10)) return 4.0
-  if (correct >= at(8)) return 3.5
-  if (correct >= at(6)) return 3.0
+  if (correct >= at(39))
+    return 9.0
+  if (correct >= at(37))
+    return 8.5
+  if (correct >= at(35))
+    return 8.0
+  if (correct >= at(33))
+    return 7.5
+  if (correct >= at(30))
+    return 7.0
+  if (correct >= at(27))
+    return 6.5
+  if (correct >= at(23))
+    return 6.0
+  if (correct >= at(20))
+    return 5.5
+  if (correct >= at(16))
+    return 5.0
+  if (correct >= at(13))
+    return 4.5
+  if (correct >= at(10))
+    return 4.0
+  if (correct >= at(8))
+    return 3.5
+  if (correct >= at(6))
+    return 3.0
   return 2.5
 }
 

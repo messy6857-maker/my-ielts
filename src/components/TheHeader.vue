@@ -1,4 +1,4 @@
-<script setup lang="ts" generic="T extends any, O extends any">
+<script setup lang="ts">
 const menus = reactive([
   {
     label: '首页',
@@ -48,8 +48,18 @@ const menus = reactive([
 ])
 const showMobileMenu = ref(false)
 const { totalCount: mistakeCount } = useMistakes()
-const { currentUser, logout } = useAuth()
-const { syncEnabled, status, statusText, errorMsg, needsRelogin, pushNow, pullNow, ensureWired, clearAuthError } = useSync()
+const { currentUser, loggingOut, logout } = useAuth()
+const {
+  syncEnabled,
+  status,
+  statusText,
+  errorMsg,
+  needsRelogin,
+  pushNow,
+  pullNow,
+  ensureWired,
+  clearAuthError,
+} = useSync()
 ensureWired()
 // 登录成功后清除上一会话的 401/pending 残留状态（登出时 currentUser 变空，不触发）
 watch(currentUser, (u, prev) => {
@@ -61,10 +71,14 @@ const route = useRoute()
 
 const syncDotClass = computed(() => {
   switch (status.value) {
-    case 'syncing': return 'bg-yellow-500 animate-pulse'
-    case 'ok': return 'bg-green-500'
-    case 'error': return 'bg-red-500'
-    default: return 'bg-gray-400'
+    case 'syncing':
+      return 'bg-yellow-500 animate-pulse'
+    case 'ok':
+      return 'bg-green-500'
+    case 'error':
+      return 'bg-red-500'
+    default:
+      return 'bg-gray-400'
   }
 })
 
@@ -87,31 +101,39 @@ async function onManualSync() {
     return
   }
   // 手动同步：先推后拉，推成功才拉，避免拉取覆盖未推数据
-  if (await pushNow())
+  if (await pushNow(true))
     await pullNow()
 }
 </script>
 
 <template>
   <header>
-    <nav class="fixed z-30 w-full border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+    <nav
+      class="fixed z-30 w-full border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800"
+    >
       <div class="mx-auto max-w-screen-2xl flex items-center justify-between">
         <div class="flex items-center justify-start">
           <router-link to="/" class="mr-14 flex">
-            <span class="self-center whitespace-nowrap text-xl font-semibold sm:text-2xl dark:text-white">My
+            <span
+              class="self-center whitespace-nowrap text-xl font-semibold sm:text-2xl dark:text-white"
+            >My
               <span class="ml-1 text-red-600"> IELTS™</span>
             </span>
-
           </router-link>
           <!-- Desktop menu -->
-          <div class="hidden w-full items-center justify-between lg:order-1 lg:w-auto lg:flex">
-            <ul class="mt-4 flex flex-col items-center justify-items-center text-center align-middle text-sm font-medium lg:mt-0 lg:flex-row space-x-6 xl:space-x-8">
-              <li
-                v-for="m in menus"
-                :key="m.label"
-              >
+          <div
+            class="hidden w-full items-center justify-between lg:order-1 lg:w-auto lg:flex"
+          >
+            <ul
+              class="mt-4 flex flex-col items-center justify-items-center text-center align-middle text-sm font-medium lg:mt-0 lg:flex-row space-x-6 xl:space-x-8"
+            >
+              <li v-for="m in menus" :key="m.label">
                 <router-link
-                  :class="$route.path === m.link ? 'block flex flex-row items-center rounded text-primary-700 dark:text-primary-500' : 'block flex flex-row items-center text-gray-700 dark:text-gray-400 hover:text-primary-700 dark:hover:text-white'"
+                  :class="
+                    $route.path === m.link
+                      ? 'block flex flex-row items-center rounded text-primary-700 dark:text-primary-500'
+                      : 'block flex flex-row items-center text-gray-700 dark:text-gray-400 hover:text-primary-700 dark:hover:text-white'
+                  "
                   :to="m.link"
                 >
                   <i class="mr-1 inline-block" :class="m.icon" /> {{ m.label }}
@@ -128,16 +150,28 @@ async function onManualSync() {
           <template v-if="currentUser">
             <button
               v-if="syncEnabled"
-              class="mr-1 hidden items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-200 sm:inline-flex dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
-              :title="needsRelogin ? '点我退出并重新登录，以启用云同步' : (errorMsg || '点击立即同步')"
+              class="mr-1 hidden items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-600 sm:inline-flex dark:bg-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-600"
+              :title="
+                needsRelogin
+                  ? '点我退出并重新登录，以启用云同步'
+                  : errorMsg || '点击立即同步'
+              "
               @click="onManualSync"
             >
-              <span class="inline-block h-2 w-2 rounded-full" :class="needsRelogin ? 'bg-orange-500 animate-pulse' : syncDotClass" />
+              <span
+                class="inline-block h-2 w-2 rounded-full"
+                :class="
+                  needsRelogin ? 'bg-orange-500 animate-pulse' : syncDotClass
+                "
+              />
               {{ needsRelogin ? '请重新登录' : statusText }}
             </button>
-            <span class="mr-1 hidden text-sm text-gray-700 sm:inline dark:text-gray-300">{{ currentUser }}</span>
+            <span
+              class="mr-1 hidden text-sm text-gray-700 sm:inline dark:text-gray-300"
+            >{{ currentUser }}</span>
             <button
               class="rounded-lg px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-400 hover:text-gray-900 focus:ring-4 focus:ring-gray-300 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-600"
+              :disabled="loggingOut"
               @click="onLogout"
             >
               退出
@@ -146,7 +180,7 @@ async function onManualSync() {
           <router-link
             v-else
             to="/login"
-            class="mr-1 rounded-lg bg-blue-700 px-3 py-2 text-sm font-medium text-white hover:bg-blue-800 dark:bg-blue-600 dark:hover:bg-blue-700"
+            class="mr-1 rounded-lg bg-blue-700 px-3 py-2 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-700"
           >
             登录
           </router-link>
@@ -164,7 +198,10 @@ async function onManualSync() {
           >
             <div i-simple-icons-github />
           </a>
-          <button class="ml-2 rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 hover:text-gray-900 focus:ring-4 focus:ring-gray-300 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-600" @click="toggleDark()">
+          <button
+            class="ml-2 rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 hover:text-gray-900 focus:ring-4 focus:ring-gray-300 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-600"
+            @click="toggleDark()"
+          >
             <div i-carbon-sun dark:i-carbon-moon />
           </button>
 
@@ -174,7 +211,19 @@ async function onManualSync() {
             @click="showMobileMenu = !showMobileMenu"
           >
             <span class="sr-only">Open menu</span>
-            <svg class="h-6 w-6" aria-hidden="true" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" /></svg>
+            <svg
+              class="h-6 w-6"
+              aria-hidden="true"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                clip-rule="evenodd"
+              />
+            </svg>
           </button>
         </div>
       </div>
@@ -208,16 +257,19 @@ async function onManualSync() {
             to="/login"
             @click="showMobileMenu = false"
           >
-            <i class="mr-1 inline-block i-carbon-login" /> 登录
+            <i class="i-carbon-login mr-1 inline-block" /> 登录
           </router-link>
         </li>
         <li v-else class="block border-b dark:border-gray-700">
           <a
             class="block px-4 py-3 text-gray-900 lg:px-0 lg:py-0 dark:text-white lg:hover:underline"
             href="javascript:;"
+            :disabled="loggingOut"
             @click="onLogout"
           >
-            <i class="mr-1 inline-block i-carbon-logout" /> 退出（{{ currentUser }}）
+            <i class="i-carbon-logout mr-1 inline-block" /> 退出（{{
+              currentUser
+            }}）
           </a>
         </li>
       </ul>

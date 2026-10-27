@@ -11,12 +11,16 @@ export function usePersistentString(key: string, defaultValue = '') {
     if (saved !== null)
       state.value = saved
   }
-  catch { /* ignore */ }
+  catch {
+    /* ignore */
+  }
   watch(state, (v) => {
     try {
       localStorage.setItem(key, v)
     }
-    catch { /* ignore */ }
+    catch {
+      /* ignore */
+    }
   })
   return state
 }

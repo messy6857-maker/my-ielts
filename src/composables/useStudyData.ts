@@ -1,40 +1,59 @@
-// 学习进度 + 错词本：统一的 localStorage 数据层
-// 数据按账号隔离：未登录用 myielts_ 前缀（游客模式），
-// 登录后用 myielts_u_<用户名>_ 前缀，每个账号一套独立数据
+import { computed, watch } from 'vue'
+import { dateTime } from '../utils/legacyMerge'
+import {
+  accountKey,
+  batchStorage,
+  entryKey,
+  readRecords,
+  readValue,
+  saveEnvelope,
+  writerId,
+} from '../utils/storage'
+import { useAuth } from './useAuth'
+import { useRecordMap } from './useRecordData'
 
-import { readJson, useAuth, writeJson } from './useAuth'
-import { onSyncApplied } from './syncClient'
-
-export type MistakeModule = 'vocabulary' | 'typing' | 'listening' | 'reading'
-export type ProgressModule = 'vocabulary' | 'flashcard' | 'typing' | 'listening' | 'reading' | 'writing' | 'listening_flashcard' | 'reading_flashcard' | 'corpus_flashcard'
-
+export type MistakeModule =
+  | 'vocabulary'
+  | 'typing'
+  | 'listening'
+  | 'reading'
+  | 'corpus'
+export type ProgressModule =
+  | 'vocabulary'
+  | 'flashcard'
+  | 'typing'
+  | 'listening'
+  | 'reading'
+  | 'writing'
+  | 'listening_flashcard'
+  | 'reading_flashcard'
+  | 'corpus_flashcard'
 export interface MistakeItem {
-  key: string // 全站唯一，如 `vocabulary:123`
+  key: string
   module: MistakeModule
-  title: string // 单词本身
-  detail: string // 词性 + 释义
-  hint?: string // 例句等提示
-  count: number // 累计记错次数
+  title: string
+  detail: string
+  hint?: string
+  count: number
   firstAt: number
   lastAt: number
+  failureDays?: number
 }
-
 export interface ModuleProgress {
   done: number
   total: number
   updatedAt: number
 }
-
 export const MISTAKE_MODULE_LABEL: Record<MistakeModule, string> = {
   vocabulary: '词汇拼写',
   typing: '打字练习',
   listening: '听力 179',
   reading: '阅读 538',
+  corpus: '听力语料库',
 }
-
 export const PROGRESS_MODULE_LABEL: Record<ProgressModule, string> = {
   vocabulary: '词汇拼写',
-  flashcard: '单词自测',
+  flashcard: '单词自测（最近一轮）',
   typing: '打字练习',
   listening: '听力',
   reading: '阅读',
@@ -43,163 +62,237 @@ export const PROGRESS_MODULE_LABEL: Record<ProgressModule, string> = {
   reading_flashcard: '阅读自测',
   corpus_flashcard: '语料库自测',
 }
-
-// 按账号拼出实际存储 key；显式传 user（含 null 表示游客）时用该身份，缺省走当前登录身份
-export function nsKey(base: string, user?: string | null): string {
-  const u = user !== undefined ? user : useAuth().currentUser.value
-  return u ? `myielts_u_${u}_${base}` : `myielts_${base}`
+export function nsKey(base: string, user?: string | null) {
+  return accountKey(
+    base,
+    user === undefined ? useAuth().currentUser.value : user,
+  )
 }
-
-// 用全局单例，保证导航栏徽标和各页面看到的是同一份响应式数据
+export function studyDay(date = new Date()) {
+  return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
+}
+interface MistakePart extends MistakeItem {
+  epoch: string
+  days: Record<string, number>
+}
+export function migrateMistakes(user: string | null) {
+  const marker = `myielts_local_mistakes_migrated:${nsKey('mistakes_v1', user)}`
+  if (localStorage.getItem(marker))
+    return
+  const items = readValue<MistakeItem[]>(nsKey('mistakes_v1', user), [])
+  if (!Array.isArray(items))
+    return
+  batchStorage(() => {
+    for (const item of items) {
+      if (!item || typeof item.key !== 'string' || !Number.isFinite(item.count))
+        continue
+      const key = entryKey('mistake_parts_v2', `${item.key}|legacy`, user)
+      if (localStorage.getItem(key) === null) {
+        saveEnvelope(
+          key,
+          {
+            __ielts: 2,
+            stamp: [0, 'legacy'],
+            value: {
+              ...item,
+              module: item.key.startsWith('corpus:') ? 'corpus' : item.module,
+              epoch: '',
+              days: {},
+            },
+          },
+          'remote',
+        )
+      }
+    }
+    localStorage.setItem(marker, '1')
+  })
+}
 export const useMistakes = createGlobalState(() => {
   const { currentUser } = useAuth()
-  const mistakes = ref<MistakeItem[]>([])
-
-  function load() {
-    mistakes.value = readJson<MistakeItem[]>(nsKey('mistakes_v1'), [])
-  }
-  load()
-
-  // 切换账号时重新加载该账号的数据
-  watch(currentUser, load)
-  // 拉取后 reload：云端新数据写进 localStorage 后，内存里的旧快照不能再写回覆盖它
-  onSyncApplied(load)
-  watch(mistakes, v => writeJson(nsKey('mistakes_v1'), v), { deep: true })
-
-  function addMistake(module: MistakeModule, input: { key: string, title: string, detail?: string, hint?: string }) {
-    const now = Date.now()
-    const exist = mistakes.value.find(m => m.key === input.key)
-    if (exist) {
-      exist.count += 1
-      exist.lastAt = now
-      if (input.detail)
-        exist.detail = input.detail
-      if (input.hint)
-        exist.hint = input.hint
-    }
-    else {
-      mistakes.value.unshift({
-        key: input.key,
-        module,
-        title: input.title,
-        detail: input.detail || '',
-        hint: input.hint,
-        count: 1,
-        firstAt: now,
-        lastAt: now,
+  migrateMistakes(currentUser.value)
+  const parts = useRecordMap<MistakePart>('mistake_parts_v2')
+  const resets = useRecordMap<{
+    epoch: string
+  }>('mistake_resets_v2')
+  watch(
+    currentUser,
+    () => {
+      migrateMistakes(currentUser.value)
+      parts.reload()
+    },
+    { flush: 'sync' },
+  )
+  const mistakes = computed<MistakeItem[]>(() => {
+    const result = new Map<
+      string,
+      MistakeItem & {
+        dates: Set<string>
+      }
+    >()
+    for (const part of Object.values(parts.state.value)) {
+      if (
+        !part
+        || part.count <= 0
+        || part.epoch !== (resets.state.value[part.key]?.epoch ?? '')
+      )
+        continue
+      const previous = result.get(part.key)
+      const dates = previous?.dates ?? new Set<string>()
+      for (const [day, count] of Object.entries(part.days ?? {})) {
+        if (count > 0 && dateTime(day) >= Date.now() - 90 * 86400000)
+          dates.add(day)
+      }
+      result.set(part.key, {
+        ...part,
+        count: (previous?.count ?? 0) + part.count,
+        firstAt: Math.min(previous?.firstAt ?? part.firstAt, part.firstAt),
+        lastAt: Math.max(previous?.lastAt ?? 0, part.lastAt),
+        dates,
       })
     }
-  }
-
-  function removeMistake(key: string) {
-    mistakes.value = mistakes.value.filter(m => m.key !== key)
-  }
-
-  // 返回上一个时用：记错次数减一，减到 0 就从错词本移除
-  function decrementMistake(key: string) {
-    const item = mistakes.value.find(m => m.key === key)
-    if (!item)
-      return
-    if (item.count > 1)
-      item.count -= 1
-    else
-      mistakes.value = mistakes.value.filter(m => m.key !== key)
-  }
-
-  function clearMistakes(module?: MistakeModule) {
-    mistakes.value = module ? mistakes.value.filter(m => m.module !== module) : []
-  }
-
-  const totalCount = computed(() => mistakes.value.length)
-
-  const countByModule = computed(() => {
-    const map = {} as Record<MistakeModule, number>
-    for (const m of mistakes.value)
-      map[m.module] = (map[m.module] || 0) + 1
-    return map
+    return [...result.values()]
+      .map(({ dates, ...item }) => ({ ...item, failureDays: dates.size }))
+      .sort((a, b) => b.lastAt - a.lastAt)
   })
+  function addMistake(
+    module: MistakeModule,
+    input: {
+      key: string
+      title: string
+      detail?: string
+      hint?: string
+    },
+  ) {
+    const now = Date.now()
+    const day = studyDay()
+    const id = `${input.key}|${writerId()}`
+    const epoch
+      = readRecords<{
+        epoch: string
+      }>('mistake_resets_v2', currentUser.value)[input.key]?.epoch ?? ''
+    const old = readRecords<MistakePart>('mistake_parts_v2', currentUser.value)[
+      id
+    ]
+    const previous = old?.epoch === epoch ? old : undefined
+    const days = { ...previous?.days, [day]: (previous?.days[day] ?? 0) + 1 }
+    const cutoff = now - 90 * 86400000
+    for (const d of Object.keys(days)) {
+      if (dateTime(d) < cutoff)
+        delete days[d]
+    }
 
-  const grouped = computed(() => {
-    return (Object.keys(MISTAKE_MODULE_LABEL) as MistakeModule[])
+    parts.set(id, {
+      key: input.key,
+      title: input.title,
+      detail: input.detail || previous?.detail || '',
+      hint: input.hint || previous?.hint,
+      module,
+      count: (previous?.count ?? 0) + 1,
+      firstAt: previous?.firstAt ?? now,
+      lastAt: now,
+      epoch,
+      days,
+    })
+  }
+  function decrementMistake(key: string, date = studyDay()) {
+    const id = `${key}|${writerId()}`
+    const old = readRecords<MistakePart>('mistake_parts_v2', currentUser.value)[
+      id
+    ]
+    if (
+      !old
+      || old.epoch !== (resets.state.value[key]?.epoch ?? '')
+      || old.count <= 0
+    )
+      return
+    parts.set(id, {
+      ...old,
+      count: Math.max(0, old.count - 1),
+      days: { ...old.days, [date]: Math.max(0, (old.days[date] ?? 0) - 1) },
+    })
+  }
+  function removeMistake(key: string) {
+    resets.set(key, { epoch: crypto.randomUUID() })
+  }
+  function clearMistakes(module?: MistakeModule) {
+    batchStorage(() => {
+      for (const item of mistakes.value) {
+        if (!module || item.module === module)
+          removeMistake(item.key)
+      }
+    })
+  }
+  const totalCount = computed(() => mistakes.value.length)
+  const countByModule = computed(
+    () =>
+      Object.fromEntries(
+        Object.keys(MISTAKE_MODULE_LABEL).map(module => [
+          module,
+          mistakes.value.filter(x => x.module === module).length,
+        ]),
+      ) as Record<MistakeModule, number>,
+  )
+  const grouped = computed(() =>
+    (Object.keys(MISTAKE_MODULE_LABEL) as MistakeModule[])
       .map(module => ({
         module,
         label: MISTAKE_MODULE_LABEL[module],
         items: mistakes.value.filter(m => m.module === module),
       }))
-      .filter(g => g.items.length > 0)
-  })
-
-  return { mistakes, addMistake, removeMistake, decrementMistake, clearMistakes, totalCount, countByModule, grouped, reload: load }
+      .filter(g => g.items.length),
+  )
+  return {
+    mistakes,
+    addMistake,
+    decrementMistake,
+    removeMistake,
+    clearMistakes,
+    totalCount,
+    countByModule,
+    grouped,
+    reload: parts.reload,
+  }
 })
-
 export const useProgress = createGlobalState(() => {
-  const { currentUser } = useAuth()
-  const progress = ref<Record<string, ModuleProgress>>({})
-
-  function load() {
-    progress.value = readJson<Record<string, ModuleProgress>>(nsKey('progress_v1'), {})
-  }
-  load()
-
-  watch(currentUser, load)
-  // 拉取后 reload，见 useMistakes
-  onSyncApplied(load)
-  watch(progress, v => writeJson(nsKey('progress_v1'), v), { deep: true })
-
+  const store = useRecordMap<ModuleProgress>('progress_v1')
   function setProgress(module: ProgressModule, done: number, total: number) {
-    progress.value[module] = { done, total, updatedAt: Date.now() }
+    store.set(module, { done, total, updatedAt: Date.now() })
   }
-
-  function getProgress(module: ProgressModule): ModuleProgress {
-    return progress.value[module] || { done: 0, total: 0, updatedAt: 0 }
-  }
-
-  const modules = computed(() => {
-    return (Object.keys(PROGRESS_MODULE_LABEL) as ProgressModule[]).map(module => ({
+  const getProgress = (module: ProgressModule) =>
+    store.state.value[module] || { done: 0, total: 0, updatedAt: 0 }
+  const modules = computed(() =>
+    (Object.keys(PROGRESS_MODULE_LABEL) as ProgressModule[]).map(module => ({
       module,
       label: PROGRESS_MODULE_LABEL[module],
       ...getProgress(module),
-    }))
-  })
-
-  const hasAnyProgress = computed(() => Object.keys(progress.value).length > 0)
-
-  return { progress, setProgress, getProgress, modules, hasAnyProgress, reload: load }
+    })),
+  )
+  return {
+    progress: store.state,
+    setProgress,
+    getProgress,
+    modules,
+    hasAnyProgress: computed(() => Object.keys(store.state.value).length > 0),
+    reload: store.reload,
+  }
 })
-
-// 通用“已掌握”标记（如写作 100 句、阅读 538 词），按账号隔离
 export function useMastered(base: string) {
-  const { currentUser } = useAuth()
-  const mastered = ref<string[]>([])
-
-  function load() {
-    mastered.value = readJson<string[]>(nsKey(base), [])
+  const store = useRecordMap<boolean>(base)
+  const mastered = computed(() =>
+    Object.keys(store.state.value).filter(id => store.state.value[id]),
+  )
+  const isMastered = (id: string | number) =>
+    mastered.value.includes(String(id))
+  const toggleMastered = (id: string | number) =>
+    store.set(id, isMastered(id) ? undefined : true)
+  return {
+    mastered,
+    isMastered,
+    toggleMastered,
+    masteredCount: computed(() => mastered.value.length),
   }
-  load()
-
-  watch(currentUser, load)
-  watch(mastered, v => writeJson(nsKey(base), v))
-
-  function isMastered(id: string | number) {
-    return mastered.value.includes(String(id))
-  }
-
-  function toggleMastered(id: string | number) {
-    const key = String(id)
-    if (isMastered(key))
-      mastered.value = mastered.value.filter(v => v !== key)
-    else
-      mastered.value = [...mastered.value, key]
-  }
-
-  const masteredCount = computed(() => mastered.value.length)
-
-  return { mastered, isMastered, toggleMastered, masteredCount }
 }
-
 export function formatDate(ts: number) {
   const d = new Date(ts)
-  const m = `${d.getMonth() + 1}`.padStart(2, '0')
-  const day = `${d.getDate()}`.padStart(2, '0')
-  return `${d.getFullYear()}-${m}-${day}`
+  return `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, '0')}-${`${d.getDate()}`.padStart(2, '0')}`
 }

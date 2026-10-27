@@ -19,7 +19,9 @@ describe('parseExtra', () => {
   })
 
   it('。分隔多个并列条目', () => {
-    const r = parseExtra('horizontal adj. 水平的。broaden sb.\'s horizons 开阔眼界')
+    const r = parseExtra(
+      'horizontal adj. 水平的。broaden sb.\'s horizons 开阔眼界',
+    )
     expect(r).toEqual([
       { word: 'horizontal', pos: 'adj.', meaning: '水平的' },
       { word: 'broaden sb.\'s horizons', pos: '', meaning: '开阔眼界' },
@@ -42,9 +44,7 @@ describe('parseExtra', () => {
 
   it('中文开头的补充释义拼接到上一条', () => {
     const r = parseExtra('excel v. 擅长；突出')
-    expect(r).toEqual([
-      { word: 'excel', pos: 'v.', meaning: '擅长；突出' },
-    ])
+    expect(r).toEqual([{ word: 'excel', pos: 'v.', meaning: '擅长；突出' }])
   })
 
   it('备注与纯英文无释义被丢弃', () => {

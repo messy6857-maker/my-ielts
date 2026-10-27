@@ -18,8 +18,8 @@ const p1Filtered = computed(() => {
   const kw = p1Keyword.value.trim().toLowerCase()
   if (!kw)
     return PART1_TOPICS
-  return PART1_TOPICS.filter(t =>
-    t.topic.toLowerCase().includes(kw) || t.topicCn.includes(kw),
+  return PART1_TOPICS.filter(
+    t => t.topic.toLowerCase().includes(kw) || t.topicCn.includes(kw),
   )
 })
 function toggleP1(id: string) {
@@ -28,10 +28,14 @@ function toggleP1(id: string) {
 
 // Part 2
 const p2Category = ref('全部')
-const p2Categories = computed(() => ['全部', ...new Set(PART2_CARDS.map(c => c.category))])
-const p2Filtered = computed(() => p2Category.value === '全部'
-  ? PART2_CARDS
-  : PART2_CARDS.filter(c => c.category === p2Category.value),
+const p2Categories = computed(() => [
+  '全部',
+  ...new Set(PART2_CARDS.map(c => c.category)),
+])
+const p2Filtered = computed(() =>
+  p2Category.value === '全部'
+    ? PART2_CARDS
+    : PART2_CARDS.filter(c => c.category === p2Category.value),
 )
 const activeCard = ref<Part2Card | null>(null)
 
@@ -41,25 +45,35 @@ function toggleP3(id: string) {
   p3Expanded.value = p3Expanded.value === id ? null : id
 }
 
-const tabBtn = (t: Tab) =>
-  `rounded-lg px-4 py-2 text-sm font-bold transition ${
+function tabBtn(t: Tab) {
+  return `rounded-lg px-4 py-2 text-sm font-bold transition ${
     tab.value === t
       ? 'bg-blue-600 text-white'
       : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
   }`
+}
 </script>
 
 <template>
   <div class="mx-auto max-w-3xl px-4 pt-6 2xl:px-0">
-    <h2 class="mb-1 text-xl font-bold dark:text-white">🎙 口语</h2>
+    <h2 class="mb-1 text-xl font-bold dark:text-white">
+      🎙 口语
+    </h2>
     <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-      Part 1 日常问答 · Part 2 个人陈述（1 分钟准备 + 2 分钟陈述）· Part 3 深入讨论
+      Part 1 日常问答 · Part 2 个人陈述（1 分钟准备 + 2 分钟陈述）· Part 3
+      深入讨论
     </p>
 
     <div class="mb-5 flex gap-2">
-      <button :class="tabBtn('part1')" @click="tab = 'part1'">Part 1</button>
-      <button :class="tabBtn('part2')" @click="tab = 'part2'">Part 2</button>
-      <button :class="tabBtn('part3')" @click="tab = 'part3'">Part 3</button>
+      <button :class="tabBtn('part1')" @click="tab = 'part1'">
+        Part 1
+      </button>
+      <button :class="tabBtn('part2')" @click="tab = 'part2'">
+        Part 2
+      </button>
+      <button :class="tabBtn('part3')" @click="tab = 'part3'">
+        Part 3
+      </button>
     </div>
 
     <!-- Part 1 -->
@@ -67,22 +81,42 @@ const tabBtn = (t: Tab) =>
       <input
         v-model="p1Keyword"
         placeholder="搜索话题…（如 工作、家乡）"
-        class="mb-4 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-      />
-      <p class="mb-3 text-xs text-gray-400">{{ p1Filtered.length }} 个话题 · 每题回答 20–30 秒，点话题展开后可录音自测</p>
+        class="mb-4 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+      >
+      <p class="mb-3 text-xs text-gray-400">
+        {{ p1Filtered.length }} 个话题 · 每题回答 20–30
+        秒，点话题展开后可录音自测
+      </p>
       <div class="space-y-2">
         <div
           v-for="t in p1Filtered"
           :key="t.id"
-          class="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+          class="border border-gray-200 rounded-xl bg-white dark:border-gray-700 dark:bg-gray-800"
         >
-          <button class="flex w-full items-center justify-between px-4 py-3 text-left" @click="toggleP1(t.id)">
-            <span class="text-sm font-bold dark:text-white">{{ t.topic }} <span class="font-normal text-gray-400">{{ t.topicCn }}</span></span>
-            <span class="text-gray-400">{{ p1Expanded === t.id ? '▲' : '▼' }}</span>
+          <button
+            class="w-full flex items-center justify-between px-4 py-3 text-left"
+            @click="toggleP1(t.id)"
+          >
+            <span class="text-sm font-bold dark:text-white">{{ t.topic }}
+              <span class="font-normal text-gray-400">{{
+                t.topicCn
+              }}</span></span>
+            <span class="text-gray-400">{{
+              p1Expanded === t.id ? '▲' : '▼'
+            }}</span>
           </button>
-          <div v-if="p1Expanded === t.id" class="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
-            <div v-for="(q, i) in t.questions" :key="i" class="border-b border-gray-50 py-3 last:border-0 dark:border-gray-700/50">
-              <p class="text-sm leading-6 dark:text-gray-200">{{ q }}</p>
+          <div
+            v-if="p1Expanded === t.id"
+            class="border-t border-gray-100 px-4 py-3 dark:border-gray-700"
+          >
+            <div
+              v-for="(q, i) in t.questions"
+              :key="i"
+              class="border-b border-gray-50 py-3 last:border-0 dark:border-gray-700/50"
+            >
+              <p class="text-sm leading-6 dark:text-gray-200">
+                {{ q }}
+              </p>
               <QuestionRecorder :question="q" />
             </div>
           </div>
@@ -98,25 +132,35 @@ const tabBtn = (t: Tab) =>
             v-for="c in p2Categories"
             :key="c"
             class="rounded-full px-3 py-1 text-xs font-bold transition"
-            :class="p2Category === c
-              ? 'bg-amber-500 text-white'
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'"
+            :class="
+              p2Category === c
+                ? 'bg-amber-500 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
+            "
             @click="p2Category = c"
           >
             {{ c }}
           </button>
         </div>
-        <p class="mb-3 text-xs text-gray-400">{{ p2Filtered.length }} 张卡片 · 点一张开始计时练习</p>
+        <p class="mb-3 text-xs text-gray-400">
+          {{ p2Filtered.length }} 张卡片 · 点一张开始计时练习
+        </p>
         <div class="grid gap-2 sm:grid-cols-2">
           <button
             v-for="card in p2Filtered"
             :key="card.id"
-            class="rounded-xl border border-gray-200 bg-white p-4 text-left hover:border-amber-400 hover:shadow-sm dark:border-gray-700 dark:bg-gray-800"
+            class="border border-gray-200 rounded-xl bg-white p-4 text-left dark:border-gray-700 hover:border-amber-400 dark:bg-gray-800 hover:shadow-sm"
             @click="activeCard = card"
           >
-            <div class="mb-1 text-xs text-amber-600 dark:text-amber-400">{{ card.category }}</div>
-            <div class="text-sm font-bold leading-6 dark:text-white">{{ card.title }}</div>
-            <div class="mt-1 text-xs text-gray-400">{{ card.titleCn }}</div>
+            <div class="mb-1 text-xs text-amber-600 dark:text-amber-400">
+              {{ card.category }}
+            </div>
+            <div class="text-sm font-bold leading-6 dark:text-white">
+              {{ card.title }}
+            </div>
+            <div class="mt-1 text-xs text-gray-400">
+              {{ card.titleCn }}
+            </div>
           </button>
         </div>
       </div>
@@ -125,20 +169,40 @@ const tabBtn = (t: Tab) =>
 
     <!-- Part 3 -->
     <div v-if="tab === 'part3'">
-      <p class="mb-3 text-xs text-gray-400">{{ PART3_TOPICS.length }} 个讨论话题 · 回答要有观点 + 解释 + 例子，可录音自测</p>
+      <p class="mb-3 text-xs text-gray-400">
+        {{ PART3_TOPICS.length }} 个讨论话题 · 回答要有观点 + 解释 +
+        例子，可录音自测
+      </p>
       <div class="space-y-2">
         <div
           v-for="t in PART3_TOPICS"
           :key="t.id"
-          class="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+          class="border border-gray-200 rounded-xl bg-white dark:border-gray-700 dark:bg-gray-800"
         >
-          <button class="flex w-full items-center justify-between px-4 py-3 text-left" @click="toggleP3(t.id)">
-            <span class="text-sm font-bold dark:text-white">{{ t.topic }} <span class="font-normal text-gray-400">{{ t.topicCn }}</span></span>
-            <span class="text-gray-400">{{ p3Expanded === t.id ? '▲' : '▼' }}</span>
+          <button
+            class="w-full flex items-center justify-between px-4 py-3 text-left"
+            @click="toggleP3(t.id)"
+          >
+            <span class="text-sm font-bold dark:text-white">{{ t.topic }}
+              <span class="font-normal text-gray-400">{{
+                t.topicCn
+              }}</span></span>
+            <span class="text-gray-400">{{
+              p3Expanded === t.id ? '▲' : '▼'
+            }}</span>
           </button>
-          <div v-if="p3Expanded === t.id" class="border-t border-gray-100 px-4 py-3 dark:border-gray-700">
-            <div v-for="(q, i) in t.questions" :key="i" class="border-b border-gray-50 py-3 last:border-0 dark:border-gray-700/50">
-              <p class="text-sm leading-6 dark:text-gray-200">{{ q }}</p>
+          <div
+            v-if="p3Expanded === t.id"
+            class="border-t border-gray-100 px-4 py-3 dark:border-gray-700"
+          >
+            <div
+              v-for="(q, i) in t.questions"
+              :key="i"
+              class="border-b border-gray-50 py-3 last:border-0 dark:border-gray-700/50"
+            >
+              <p class="text-sm leading-6 dark:text-gray-200">
+                {{ q }}
+              </p>
               <QuestionRecorder :question="q" />
             </div>
           </div>

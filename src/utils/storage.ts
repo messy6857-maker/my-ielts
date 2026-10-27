@@ -1,0 +1,346 @@
+import { ref } from 'vue'
+import { mergeLegacy } from './legacyMerge'
+
+export interface Envelope<T = unknown> {
+  __ielts: 2
+  stamp: [number, string]
+  value?: T
+  deleted?: boolean
+}
+export const storageFailures = ref<string[]>([])
+export const storageRevision = ref(0)
+const listeners = new Set<(key: string, source: 'local' | 'remote') => void>()
+let batchDepth = 0
+let batchSource: 'local' | 'remote' | null = null
+let clock = 0
+let actor = ''
+export function writerId() {
+  actor ||= crypto.randomUUID()
+  return actor
+}
+export const mapBases = [
+  'progress_v1',
+  'sr_vocabulary_v1',
+  'listening179_sr_v1',
+  'reading538_sr_v1',
+  'corpus_sr_v1',
+  'mistake_parts_v2',
+  'mistake_resets_v2',
+  'daily_parts_v2',
+  'daily_resets_v2',
+  'stats_parts_v2',
+  'timer_sessions_v2',
+  'checkin_years_v2',
+]
+export const setBases = [
+  'reading_mastered_v1',
+  'writing_mastered_v1',
+  'flashcard_checkin_v1',
+]
+export const arrayBases = [
+  'mock_history_v1',
+  'task1_essays_v1',
+  'task2_essays_v1',
+]
+export const collectionBases = [...mapBases, ...setBases, ...arrayBases]
+const scalarBases = [
+  'flashcard_daily_goal_v1',
+  'listening179_daily_goal_v1',
+  'reading538_daily_goal_v1',
+  'corpus_daily_goal_v1',
+  'stats_archive_v2',
+  'checkin_archive_v2',
+  'archive_retention_v2',
+  'migration_version_v2',
+]
+const legacyBases = [
+  'mistakes_v1',
+  'flashcard_daily_new_v1',
+  'listening179_daily_new_v1',
+  'reading538_daily_new_v1',
+  'corpus_daily_new_v1',
+  'study_time_v1',
+  'stats_attempts_v1',
+  'tombstones_v1',
+]
+export function isStudyBase(base: string): boolean {
+  const [table, suffix, extra] = base.split('__entry_')
+  return (
+    extra === undefined
+    && ((suffix !== undefined
+      && collectionBases.includes(table)
+      && /^(?:[a-f\d]{4})+$/i.test(suffix))
+      || (suffix === undefined
+        && [...collectionBases, ...scalarBases, ...legacyBases].includes(base))
+      || /^study_time_v1_[a-z\d-]+$/i.test(base)
+      || /^aigrade_(?:speaking_)?v1_(?:[a-z\d]+_)?-?[a-z\d]+$/i.test(base))
+  )
+}
+export function accountPrefix(user: string | null) {
+  return user ? `myielts_u_${user}_` : 'myielts_'
+}
+export function accountKey(base: string, user: string | null) {
+  return accountPrefix(user) + base
+}
+export function studyBaseOf(key: string, user: string | null) {
+  const prefix = accountPrefix(user)
+  const base = key.startsWith(prefix) ? key.slice(prefix.length) : ''
+  return isStudyBase(base) ? base : null
+}
+export function isStudyKey(key: string) {
+  if (studyBaseOf(key, null))
+    return true
+  const match = key.match(/^myielts_u_(.+)_(.+)$/)
+  if (!match)
+    return false
+  // Match the complete known base. A username prefix never grants ownership.
+  return key
+    .slice('myielts_u_'.length)
+    .split('_')
+    .some((_, i, parts) => i > 0 && isStudyBase(parts.slice(i).join('_')))
+}
+export function encodeId(id: string) {
+  return id
+    .split('')
+    .map(c => c.charCodeAt(0).toString(16).padStart(4, '0'))
+    .join('')
+}
+export function decodeId(id: string) {
+  return /^(?:[a-f\d]{4})+$/i.test(id)
+    ? id
+      .match(/.{4}/g)!
+      .map(x => String.fromCharCode(Number.parseInt(x, 16)))
+      .join('')
+    : null
+}
+export function isEnvelope(value: unknown): value is Envelope {
+  const e = value as Envelope | null
+  return (
+    !!e
+    && e.__ielts === 2
+    && Array.isArray(e.stamp)
+    && Number.isSafeInteger(e.stamp[0])
+    && e.stamp[0] >= 0
+    && typeof e.stamp[1] === 'string'
+  )
+}
+export function compareStamp(a: Envelope, b: Envelope) {
+  return a.stamp[0] - b.stamp[0] || a.stamp[1].localeCompare(b.stamp[1])
+}
+export function envelope(raw: string): Envelope {
+  const value: unknown = JSON.parse(raw)
+  return isEnvelope(value) ? value : { __ielts: 2, stamp: [0, 'legacy'], value }
+}
+export function readValue<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    if (raw === null)
+      return fallback
+    const e = envelope(raw)
+    return e.deleted ? fallback : (e.value as T)
+  }
+  catch {
+    return fallback
+  }
+}
+export function subscribeStorage(
+  cb: (key: string, source: 'local' | 'remote') => void,
+) {
+  listeners.add(cb)
+  return () => listeners.delete(cb)
+}
+export function notifyStorage(key: string, source: 'local' | 'remote') {
+  if (batchDepth) {
+    if (batchSource !== 'local')
+      batchSource = source
+    return
+  }
+  storageRevision.value++
+  for (const cb of listeners) {
+    try {
+      cb(key, source)
+    }
+    catch (error) {
+      console.error('Storage subscriber failed', error)
+    }
+  }
+}
+export function batchStorage<T>(work: () => T): T {
+  batchDepth++
+  try {
+    return work()
+  }
+  finally {
+    if (--batchDepth === 0 && batchSource) {
+      const source = batchSource
+      batchSource = null
+      notifyStorage('', source)
+    }
+  }
+}
+export function saveEnvelope(
+  key: string,
+  e: Envelope,
+  source: 'local' | 'remote' = 'local',
+) {
+  try {
+    localStorage.setItem(key, JSON.stringify(e))
+    clock = Math.max(clock, e.stamp[0])
+    storageFailures.value = storageFailures.value.filter(k => k !== key)
+    notifyStorage(key, source)
+    return true
+  }
+  catch {
+    if (!storageFailures.value.includes(key))
+      storageFailures.value = [...storageFailures.value, key]
+    return false
+  }
+}
+export function saveValue(key: string, value: unknown, deleted = false) {
+  if (!isStudyKey(key)) {
+    try {
+      if (deleted)
+        localStorage.removeItem(key)
+      else localStorage.setItem(key, JSON.stringify(value))
+      notifyStorage(key, 'local')
+      return true
+    }
+    catch {
+      if (!storageFailures.value.includes(key))
+        storageFailures.value = [...storageFailures.value, key]
+      return false
+    }
+  }
+  const old = localStorage.getItem(key)
+  let previous: Envelope | undefined
+  try {
+    if (old)
+      previous = envelope(old)
+  }
+  catch {
+    /* Keep the unreadable original for export. */
+  }
+  if (
+    previous
+    && !!previous.deleted === deleted
+    && JSON.stringify(previous.value) === JSON.stringify(value)
+  )
+    return true
+  clock = Math.max(clock + 1, Date.now(), (previous?.stamp[0] ?? 0) + 1)
+  return saveEnvelope(key, {
+    __ielts: 2,
+    stamp: [clock, writerId()],
+    ...(deleted ? { deleted: true } : { value }),
+  })
+}
+export function entryKey(base: string, id: string, user: string | null) {
+  return `${accountKey(base, user)}__entry_${encodeId(id)}`
+}
+export function legacyEntries(
+  base: string,
+  value: unknown,
+): Record<string, unknown> {
+  if (setBases.includes(base)) {
+    return Array.isArray(value)
+      ? Object.fromEntries(
+        value.filter(x => typeof x === 'string').map(id => [id, true]),
+      )
+      : {}
+  }
+  if (arrayBases.includes(base)) {
+    return Array.isArray(value)
+      ? Object.fromEntries(
+        value
+          .filter(x => x && typeof x === 'object')
+          .map((x: any) => [
+            base === 'mock_history_v1'
+              ? `${x.kind}:${x.id}:${x.date}`
+              : String(x.id),
+            x,
+          ]),
+      )
+      : {}
+  }
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+export function importTable(base: string, value: unknown, user: string | null) {
+  for (const [id, item] of Object.entries(legacyEntries(base, value))) {
+    const key = entryKey(base, id, user)
+    const raw = localStorage.getItem(key)
+    let old: Envelope | null = null
+    try {
+      if (raw)
+        old = envelope(raw)
+    }
+    catch {
+      continue
+    }
+    if (old && (old.deleted || old.stamp[0] > 0))
+      continue
+    const merged = old ? mergeLegacy(base, old.value, item) : item
+    if (!old || JSON.stringify(old.value) !== JSON.stringify(merged)) {
+      saveEnvelope(
+        key,
+        { __ielts: 2, stamp: [0, 'legacy'], value: merged },
+        'remote',
+      )
+    }
+  }
+}
+export function readRecords<T>(
+  base: string,
+  user: string | null,
+): Record<string, T> {
+  const key = accountKey(base, user)
+  const marker = `myielts_local_migrated:${key}`
+  if (!localStorage.getItem(marker)) {
+    importTable(
+      base,
+      readValue(
+        key,
+        setBases.includes(base) || arrayBases.includes(base) ? [] : {},
+      ),
+      user,
+    )
+    try {
+      localStorage.setItem(marker, '1')
+    }
+    catch {
+      /* Repeating an idempotent import is safe. */
+    }
+  }
+  const prefix = `${key}__entry_`
+  const records: Record<string, T> = Object.create(null)
+  for (const storedKey of Object.keys(localStorage)) {
+    if (!storedKey.startsWith(prefix))
+      continue
+    const id = decodeId(storedKey.slice(prefix.length))
+    if (id === null)
+      continue
+    const value = readValue<T | undefined>(storedKey, undefined)
+    if (value !== undefined)
+      records[id] = value
+  }
+  return records
+}
+export function saveRecord(
+  base: string,
+  id: string,
+  value: unknown,
+  user: string | null,
+) {
+  return saveValue(entryKey(base, id, user), value, value === undefined)
+}
+export function clearRecords(base: string, user: string | null) {
+  for (const id of Object.keys(readRecords(base, user)))
+    saveRecord(base, id, undefined, user)
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.storageArea && event.storageArea !== localStorage)
+      return
+    notifyStorage(event.key ?? '', 'remote')
+  })
+}

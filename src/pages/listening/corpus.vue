@@ -1,7 +1,11 @@
 <script setup>
-import chapterData from './spelling_convention'
 import { RouterLink } from 'vue-router'
+import { speechLanguage, useAudioGroup } from '../../composables/useAudioGroup'
+
 import { resolveAudioUrl } from '../../composables/useAudio'
+import chapterData from './spelling_convention'
+
+const managedAudio = useAudioGroup()
 
 let audio = null
 function play(word) {
@@ -13,7 +17,7 @@ function play(word) {
     audio.pause()
     audio.currentTime = 0
   }
-  audio = document.createElement('audio')
+  audio = managedAudio.create()
   audio.src = resolveAudioUrl(`179_audios/${w}.mp3`)
   // MP3 不存在时用浏览器朗读兜底（onerror 与 play().catch 只触发一次）
   let fellBack = false
@@ -22,7 +26,7 @@ function play(word) {
       return
     fellBack = true
     const u = new SpeechSynthesisUtterance(w)
-    u.lang = 'en-US'
+    u.lang = speechLanguage()
     speechSynthesis.speak(u)
   }
   audio.onerror = fallback
@@ -58,7 +62,11 @@ const filteredRows = computed(() => {
   if (!kw)
     return rows
   return rows.filter(row =>
-    row.some(cell => String(Array.isArray(cell) ? cell.join(', ') : cell).toLowerCase().includes(kw)),
+    row.some(cell =>
+      String(Array.isArray(cell) ? cell.join(', ') : cell)
+        .toLowerCase()
+        .includes(kw),
+    ),
   )
 })
 </script>
@@ -89,24 +97,35 @@ const filteredRows = computed(() => {
           <!-- <option value="">
             全部章节
           </option> -->
-          <option
-            v-for="k in chapters"
-            :key="k"
-            :value="k"
-          >
+          <option v-for="k in chapters" :key="k" :value="k">
             {{ k }}
           </option>
         </select>
         <div class="relative ml-2 flex-1">
-          <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <svg class="h-4 w-4 text-gray-500 dark:text-gray-400" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-              <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
+          <div
+            class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3"
+          >
+            <svg
+              class="h-4 w-4 text-gray-500 dark:text-gray-400"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 20 20"
+            >
+              <path
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"
+              />
             </svg>
           </div>
           <input
             v-model="keyword"
             type="search"
-            class="block w-full border border-gray-300 rounded-lg bg-gray-50 p-2.5 pl-10 text-sm text-gray-900 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500 dark:placeholder-gray-400" placeholder="Search"
+            class="block w-full border border-gray-300 rounded-lg bg-gray-50 p-2.5 pl-10 text-sm text-gray-900 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500 dark:placeholder-gray-400"
+            placeholder="Search"
           >
         </div>
       </div>
@@ -119,57 +138,71 @@ const filteredRows = computed(() => {
           <h3 class="mb-2 font-bold text-gray-900 dark:text-white">
             {{ curChapter.title }}
           </h3>
-          <span class="text-base font-normal text-gray-500 dark:text-gray-400">{{ curChapter.desc }}</span>
+          <span
+            class="text-base font-normal text-gray-500 dark:text-gray-400"
+          >{{ curChapter.desc }}</span>
         </div>
       </div>
       <div class="overflow-x-auto rounded-lg">
-      <table class="w-full min-w-[640px] text-left text-sm text-gray-500 dark:text-gray-400">
-        <thead class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400">
-          <tr>
-            <th class="w-0 px-6 py-3">
-              #
-            </th>
-            <th class="w-0">
-              <!-- Pronunciation -->
-            </th>
-            <th
-              v-for="label in curChapter.columns"
-              :key="label"
-              class="w-0 px-6 py-3"
-            >
-              {{ label }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(row, index) in filteredRows"
-            :key="row[0]"
-            class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"
+        <table
+          class="min-w-[640px] w-full text-left text-sm text-gray-500 dark:text-gray-400"
+        >
+          <thead
+            class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"
           >
-            <td class="px-6 py-4">
-              {{ index }}
-            </td>
-            <td class="px-6 py-4">
-              <a href="javascript:;" class="i-carbon-volume-up-filled block" @click="play(row[0])" />
-            </td>
-            <th class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">
-              <a
-                class="hover:underline"
-                :title="`在剑桥词典中查询 ${row[0][0]}`"
-                :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${row[0][0]}`"
-                target="_blank"
-              >{{ row[0].join(', ') }}</a>
-            </th>
-            <td class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">
-              {{ row[1] }}
-            </td>
-            <td class="whitespace-nowrap px-6 py-4">
-              {{ row[2] }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            <tr>
+              <th class="w-0 px-6 py-3">
+                #
+              </th>
+              <th class="w-0">
+                <!-- Pronunciation -->
+              </th>
+              <th
+                v-for="label in curChapter.columns"
+                :key="label"
+                class="w-0 px-6 py-3"
+              >
+                {{ label }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="row in filteredRows"
+              :key="row[0]"
+              class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"
+            >
+              <td class="px-6 py-4">
+                {{ curChapter.rows.indexOf(row) + 1 }}
+              </td>
+              <td class="px-6 py-4">
+                <a
+                  href="javascript:;"
+                  class="i-carbon-volume-up-filled block"
+                  @click="play(row[0])"
+                />
+              </td>
+              <th
+                class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white"
+              >
+                <a
+                  class="hover:underline"
+                  :title="`在剑桥词典中查询 ${row[0][0]}`"
+                  :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${row[0][0]}`"
+                  target="_blank"
+                >{{ row[0].join(', ') }}</a>
+              </th>
+              <td
+                class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white"
+              >
+                {{ row[1] }}
+              </td>
+              <td class="whitespace-nowrap px-6 py-4">
+                {{ row[2] }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </template>
     <!-- <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">

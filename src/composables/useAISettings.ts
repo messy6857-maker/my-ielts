@@ -1,120 +1,140 @@
-import { ref} from 'vue'
+import { ref } from 'vue'
+import { extractJson } from '../utils/text'
 import { SYNC_API_BASE } from '../sync-config'
 import { getToken } from './syncClient'
+import { useAuth } from './useAuth'
 
 // AI 批改设置：存在浏览器 localStorage（全局，不按账号隔离），key 只留用户自己浏览器
 export interface AISettings {
-baseUrl: string // 如 https://api-cdn.thehive.ai/api/v3（不带 /chat/completions）
-apiKey: string
-model: string // 如 deepseek-ai/deepseek-v4.1-flash-1017
+  baseUrl: string // 如 https://api-cdn.thehive.ai/api/v3（不带 /chat/completions）
+  apiKey: string
+  model: string // 如 deepseek-ai/deepseek-v4.1-flash-1017
 }
-
 const KEY = 'myielts_ai_settings_v1'
-
 const DEFAULTS: AISettings = {
-baseUrl: 'https://api-cdn.thehive.ai/api/v3',
-apiKey: '',
-model: 'deepseek-ai/deepseek-v4.1-flash-1017',
+  baseUrl: 'https://api-cdn.thehive.ai/api/v3',
+  apiKey: '',
+  model: 'deepseek-ai/deepseek-v4.1-flash-1017',
 }
-
 export function getAISettings(): AISettings {
-try {
-const raw = localStorage.getItem(KEY)
-if (raw)
-return {...DEFAULTS,...JSON.parse(raw)}
+  try {
+    const raw = localStorage.getItem(KEY)
+    if (raw)
+      return { ...DEFAULTS, ...JSON.parse(raw) }
+  }
+  catch {
+    /* 忽略 */
+  }
+  return { ...DEFAULTS }
 }
-catch { /* 忽略 */}
-return {...DEFAULTS}
-}
-
 export function saveAISettings(s: AISettings) {
-localStorage.setItem(KEY, JSON.stringify(s))
+  localStorage.setItem(KEY, JSON.stringify(s))
 }
-
 export function hasAISettings(): boolean {
-const s = getAISettings()
-return!!(s.apiKey.trim() && s.baseUrl.trim() && s.model.trim())
+  const s = getAISettings()
+  return !!(s.apiKey.trim() && s.baseUrl.trim() && s.model.trim())
 }
-
 // ---------- AI 批改调用（OpenAI 兼容接口） ----------
-
 export interface AICorrection {
-original: string
-fixed: string
-reason: string
+  original: string
+  fixed: string
+  reason: string
 }
-
 export interface AIGradeResult {
-scores: { ta: number, cc: number, lr: number, gra: number, overall: number}
-comments: { ta: string, cc: string, lr: string, gra: string}
-corrections: AICorrection[]
-suggestion: string
-/** 四项标准各自的详细修改建议（新版才有，老存档可能缺失） */
-advice?: { ta: string, cc: string, lr: string, gra: string}
-/** 改写后的文章全文（新版才有） */
-rewritten?: string
+  scores: {
+    ta: number
+    cc: number
+    lr: number
+    gra: number
+    overall: number
+  }
+  comments: {
+    ta: string
+    cc: string
+    lr: string
+    gra: string
+  }
+  corrections: AICorrection[]
+  suggestion: string
+  /** 四项标准各自的详细修改建议（新版才有，老存档可能缺失） */
+  advice?: {
+    ta: string
+    cc: string
+    lr: string
+    gra: string
+  }
+  /** 改写后的文章全文（新版才有） */
+  rewritten?: string
 }
-
-function extractJson(text: string): string {
-// 去掉模型可能输出的特殊 token（如 <endoftext>）和 think 标签
-const clean = text.replace(/<\|?endoftext\|?>/gi, '').replace(/<\/?think>/gi, '').trim()
-// 兼容模型把 JSON 包在 markdown 代码块里的情况
-const m = clean.match(/```(?:json)?\s*([\s\S]*?)```/)
-const raw = (m? m[1]: clean).trim()
-const start = raw.indexOf('{')
-const end = raw.lastIndexOf('}')
-if (start >= 0 && end > start)
-return raw.slice(start, end + 1)
-return raw
+async function callChatApi(
+  settings: AISettings,
+  system: string,
+  user: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  // 走 VPS 中转：浏览器直连第三方 API 会被 CORS 拦截
+  const token = getToken(useAuth().currentUser.value)
+  if (!token)
+    throw new Error('请先登录（AI 中转需要登录态）')
+  const timeout = new AbortController()
+  const abort = () => timeout.abort()
+  signal?.addEventListener('abort', abort, { once: true })
+  if (signal?.aborted)
+    timeout.abort()
+  const timeoutId = setTimeout(abort, 120000)
+  let res: Response
+  let body: any
+  try {
+    res = await fetch(`${SYNC_API_BASE}/ai/chat`, {
+      method: 'POST',
+      signal: timeout.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        baseUrl: settings.baseUrl.trim(),
+        apiKey: settings.apiKey.trim(),
+        model: settings.model.trim(),
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: user },
+        ],
+        temperature: 0.3,
+      }),
+    })
+    body = await res.json().catch(() => null)
+  }
+  catch (e) {
+    throw new Error(
+      signal?.aborted
+        ? '已取消评分'
+        : timeout.signal.aborted
+          ? '评分请求超时，请重试'
+          : '中转请求失败，请检查网络连接',
+    )
+  }
+  finally {
+    clearTimeout(timeoutId)
+    signal?.removeEventListener('abort', abort)
+  }
+  // 401 可能是登录过期，也可能是用户的 API Key 无效（后端透传 Hive 的 401）
+  // 后端 auth 中间件返回的 message 是"登录已过期"，透传的是"AI 接口返回 401"
+  if (res.status === 401) {
+    const msg = body?.message || ''
+    if (msg.includes('AI 接口返回'))
+      throw new Error('API Key 无效或已过期，请去设置页检查 Key 是否正确')
+    throw new Error('登录已过期，请重新登录')
+  }
+  if (res.status === 403)
+    throw new Error(body?.message || '无权限使用 AI 功能')
+  if (!res.ok || !body?.ok)
+    throw new Error(body?.message || `请求失败（${res.status}）`)
+  const content = body.data?.choices?.[0]?.message?.content
+  if (!content)
+    throw new Error('AI 返回为空，请重试')
+  return content
 }
-
-async function callChatApi(settings: AISettings, system: string, user: string): Promise<string> {
-// 走 VPS 中转：浏览器直连第三方 API 会被 CORS 拦截
-const token = getToken()
-if (!token)
-throw new Error('请先登录（AI 中转需要登录态）')
-let res: Response
-try {
-res = await fetch(`${SYNC_API_BASE}/ai/chat`, {
-method: 'POST',
-headers: {
-'Content-Type': 'application/json',
-'Authorization': `Bearer ${token}`,
-},
-body: JSON.stringify({
-baseUrl: settings.baseUrl.trim(),
-apiKey: settings.apiKey.trim(),
-model: settings.model.trim(),
-messages: [
-{ role: 'system', content: system},
-{ role: 'user', content: user},
-],
-temperature: 0.3,
-}),
-})
-}
-catch (e) {
-throw new Error('中转请求失败，请检查网络连接')
-}
-const body = await res.json().catch(() => null)
-// 401 可能是登录过期，也可能是用户的 API Key 无效（后端透传 Hive 的 401）
-// 后端 auth 中间件返回的 message 是"登录已过期"，透传的是"AI 接口返回 401"
-if (res.status === 401) {
-  const msg = body?.message || ''
-  if (msg.includes('AI 接口返回'))
-    throw new Error('API Key 无效或已过期，请去设置页检查 Key 是否正确')
-  throw new Error('登录已过期，请重新登录')
-}
-if (res.status === 403)
-throw new Error(body?.message || '无权限使用 AI 功能')
-if (!res.ok || !body?.ok)
-throw new Error(body?.message || `请求失败（${res.status}）`)
-const content = body.data?.choices?.[0]?.message?.content
-if (!content)
-throw new Error('AI 返回为空，请重试')
-return content
-}
-
 // 官方评分标准（IELTS Writing Band Descriptors, May 2023 更新版）condensed
 const TASK1_DESCRIPTORS = `【Task Achievement】
 9分: 任务所有要求得到充分恰当的满足；关键特征选取巧妙，呈现清晰、突出并有例证；概述清晰。
@@ -140,7 +160,6 @@ const TASK1_DESCRIPTORS = `【Task Achievement】
 7分: 复杂句式多样，有一定灵活准确度；无错句常见；个别错误不影响理解。
 6分: 简单复杂句混用但灵活性有限；复杂句准确度不如简单句；有错但少影响理解。
 5分: 句式有限重复；复杂句多有错误；简单句最准；语法错误多。`
-
 const TASK2_DESCRIPTORS = `【Task Response】
 9分: 切题深入；立场清晰完整，直接回应问题；观点相关、充分展开、有力支撑。
 8分: 切题充分；立场清晰且展开好；观点相关、展开充分、有支撑；偶有遗漏。
@@ -165,11 +184,22 @@ const TASK2_DESCRIPTORS = `【Task Response】
 7分: 复杂句式多样，有一定灵活准确度；无错句常见；个别错误不影响理解。
 6分: 简单复杂句混用但灵活性有限；复杂句准确度不如简单句；有错但少影响理解。
 5分: 句式有限重复；复杂句多有错误；简单句最准；语法错误多。`
-
-function buildPrompt(taskLabel: string, criterion1: string, question: string, essay: string): { system: string, user: string} {
-const descriptors = taskLabel === 'Task 1' ? TASK1_DESCRIPTORS : TASK2_DESCRIPTORS
-const c1name = taskLabel === 'Task 1' ? '任务完成情况(Task Achievement)' : '任务回应(Task Response)'
-const system = `你是雅思写作${taskLabel}考官，必须严格依据以下官方评分标准（IELTS Writing Band Descriptors）打分：
+function buildPrompt(
+  taskLabel: string,
+  criterion1: string,
+  question: string,
+  essay: string,
+): {
+    system: string
+    user: string
+  } {
+  const descriptors
+    = taskLabel === 'Task 1' ? TASK1_DESCRIPTORS : TASK2_DESCRIPTORS
+  const c1name
+    = taskLabel === 'Task 1'
+      ? '任务完成情况(Task Achievement)'
+      : '任务回应(Task Response)'
+  const system = `你是雅思写作${taskLabel}考官，必须严格依据以下官方评分标准（IELTS Writing Band Descriptors）打分：
 
 ${descriptors}
 
@@ -190,42 +220,42 @@ ${descriptors}
 "rewritten": "把整篇文章按你的建议改写一遍（英文全文，保持原意和段落结构，应用所有改进；不要加中文）"
 }
 其中 ${criterion1} 对应${c1name}，cc=连贯与衔接，lr=词汇资源，gra=语法多样性与准确性。corrections 挑 3-6 个最值得改的句子。全部用中文（original/fixed/rewritten 保留英文原文）。`
-const user = `【题目】\n${question}\n\n【考生作文】\n${essay}`
-return { system, user}
+  const user = `【题目】\n${question}\n\n【考生作文】\n${essay}`
+  return { system, user }
 }
-
 export async function gradeEssayWithAI(
-task: 'task1' | 'task2',
-question: string,
-essay: string,
+  task: 'task1' | 'task2',
+  question: string,
+  essay: string,
+  signal?: AbortSignal,
 ): Promise<AIGradeResult> {
-const settings = getAISettings()
-if (!hasAISettings())
-throw new Error('请先在设置页填写 API 地址、Key 和模型')
-const words = essay.trim().split(/\s+/).filter(Boolean).length
-if (words < 20)
-throw new Error('作文太短，无法批改')
-const { system, user} = task === 'task1'
-? buildPrompt('Task 1', 'ta', question, essay)
-: buildPrompt('Task 2', 'tr', question, essay)
-const raw = await callChatApi(settings, system, user)
-let parsed: AIGradeResult
-try {
-parsed = JSON.parse(extractJson(raw))
+  const settings = getAISettings()
+  if (!hasAISettings())
+    throw new Error('请先在设置页填写 API 地址、Key 和模型')
+  const words = essay.trim().split(/\s+/).filter(Boolean).length
+  if (words < 20)
+    throw new Error('作文太短，无法批改')
+  const { system, user }
+    = task === 'task1'
+      ? buildPrompt('Task 1', 'ta', question, essay)
+      : buildPrompt('Task 2', 'tr', question, essay)
+  const raw = await callChatApi(settings, system, user, signal)
+  let parsed: AIGradeResult
+  try {
+    parsed = JSON.parse(extractJson(raw))
+  }
+  catch {
+    throw new Error('AI 返回格式异常，请重试')
+  }
+  // 入口校验：四项分数/四项点评/逐句修改/总建议齐全才放行（口语侧同款严格程度）；
+  // 只验 overall 会让缺字段结果入库，随后在恢复或渲染时崩溃
+  if (!isValidEssayGrade(parsed, task))
+    throw new Error('AI 返回格式异常，请重试')
+  // Task 2 第一项 key 为 tr，归一化为 ta，方便面板统一渲染
+  if (task === 'task2')
+    normalizeTask2Grade(parsed)
+  return parsed
 }
-catch {
-throw new Error('AI 返回格式异常，请重试')
-}
-// 入口校验：四项分数/四项点评/逐句修改/总建议齐全才放行（口语侧同款严格程度）；
-// 只验 overall 会让缺字段结果入库，随后在恢复或渲染时崩溃
-if (!isValidEssayGrade(parsed, task))
-throw new Error('AI 返回格式异常，请重试')
-// Task 2 第一项 key 为 tr，归一化为 ta，方便面板统一渲染
-if (task === 'task2')
-  normalizeTask2Grade(parsed)
-return parsed
-}
-
 /** Task 2 首项 key 归一化：模型按 prompt 用 tr，面板统一按 ta 取值。
  *  scores/comments/advice 三处都要归一化，否则建议区首项会空白；
  *  新批改与老存档恢复共用此函数。 */
@@ -248,15 +278,12 @@ export function normalizeTask2Grade(parsed: AIGradeResult): AIGradeResult {
   }
   return parsed
 }
-
 const ESSAY_CRITERIA = ['ta', 'cc', 'lr', 'gra'] as const
-
 /** 雅思 band 量表分数：有限数字且在 [0, 9] 内。prompt 写 4.0-9.0，但不收紧到 4-9，
  *  模型可能给 4 分以下；12、0 以下、负数、NaN 之类的一律不算合法分数。 */
 export function isBandScore(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 9
 }
-
 /** 逐句修改元素校验：非 null 对象，original/fixed 必须为字符串，
  *  reason 若存在必须为字符串（缺失允许，面板渲染为空）。 */
 function isValidCorrection(c: unknown): c is AICorrection {
@@ -269,65 +296,97 @@ function isValidCorrection(c: unknown): c is AICorrection {
     return false
   return true
 }
-
 /** 写作新批改入口校验：四项分数与 overall 须为 [0, 9] 内有限数字、四项点评须为字符串、
  *  corrections 须为数组且每个元素结构合法、suggestion 须为字符串、rewritten 若存在须为字符串；
  *  Task 2 首项接受 tr 或 ta。 */
-export function isValidEssayGrade(parsed: unknown, task: 'task1' | 'task2'): parsed is AIGradeResult {
+export function isValidEssayGrade(
+  parsed: unknown,
+  task: 'task1' | 'task2',
+): parsed is AIGradeResult {
   if (!parsed || typeof parsed !== 'object')
     return false
-  const p = parsed as Partial<AIGradeResult> & { scores?: Record<string, unknown>, comments?: Record<string, unknown> }
+  const p = parsed as Partial<AIGradeResult> & {
+    scores?: Record<string, unknown>
+    comments?: Record<string, unknown>
+  }
   const s = p.scores
   const c = p.comments
   if (!s || !c)
     return false
   const firstScore = task === 'task2' ? (s.ta ?? s.tr) : s.ta
   const firstComment = task === 'task2' ? (c.ta ?? c.tr) : c.ta
-  if (!isBandScore(firstScore) || !isBandScore(s.cc) || !isBandScore(s.lr)
-    || !isBandScore(s.gra) || !isBandScore(s.overall))
+  if (
+    !isBandScore(firstScore)
+    || !isBandScore(s.cc)
+    || !isBandScore(s.lr)
+    || !isBandScore(s.gra)
+    || !isBandScore(s.overall)
+  )
     return false
-  if (typeof firstComment !== 'string' || typeof c.cc !== 'string'
-    || typeof c.lr !== 'string' || typeof c.gra !== 'string')
+  if (
+    typeof firstComment !== 'string'
+    || typeof c.cc !== 'string'
+    || typeof c.lr !== 'string'
+    || typeof c.gra !== 'string'
+  )
     return false
-  if (!Array.isArray(p.corrections) || !p.corrections.every(isValidCorrection)
-    || typeof p.suggestion !== 'string')
+  if (
+    !Array.isArray(p.corrections)
+    || !p.corrections.every(isValidCorrection)
+    || typeof p.suggestion !== 'string'
+  )
     return false
   if (p.rewritten !== undefined && typeof p.rewritten !== 'string')
     return false
   return true
 }
-
 /** 老存档修复：分数本身无效（缺项/非数字/超 [0, 9] 范围）才丢弃；点评缺失的补空值、
  *  逐句修改过滤掉不合格元素、总建议缺失补空值后展示，不再像以前那样整条丢弃。
  *  rewritten 非字符串时置空（面板 v-if 为假即隐藏改写区）；advice/rewritten 本就是可选字段。 */
-export function repairSavedGrade(parsed: AIGradeResult, task: 'task1' | 'task2'): AIGradeResult | null {
+export function repairSavedGrade(
+  parsed: AIGradeResult,
+  task: 'task1' | 'task2',
+): AIGradeResult | null {
   const p = task === 'task2' ? normalizeTask2Grade(parsed) : parsed
   const s = p.scores as unknown as Record<string, unknown> | undefined
-  if (!s || !ESSAY_CRITERIA.every(k => isBandScore(s[k])) || !isBandScore(s.overall))
+  if (
+    !s
+    || !ESSAY_CRITERIA.every(k => isBandScore(s[k]))
+    || !isBandScore(s.overall)
+  )
     return null
-  const c = (p.comments && typeof p.comments === 'object' ? p.comments : {}) as Record<string, string>
+  const c = (
+    p.comments && typeof p.comments === 'object' ? p.comments : {}
+  ) as Record<string, string>
   for (const k of ESSAY_CRITERIA) {
     if (typeof c[k] !== 'string')
       c[k] = ''
   }
+
   p.comments = c as unknown as AIGradeResult['comments']
   if (!Array.isArray(p.corrections))
     p.corrections = []
-  else
-    p.corrections = p.corrections.filter(isValidCorrection)
+  else p.corrections = p.corrections.filter(isValidCorrection)
   if (typeof p.suggestion !== 'string')
     p.suggestion = ''
   if (p.rewritten !== undefined && typeof p.rewritten !== 'string')
     p.rewritten = ''
   return p
 }
-
 export interface AISpeakingResult {
-  scores: { fluency: number, lexical: number, grammar: number, overall: number }
-  comments: { fluency: string, lexical: string, grammar: string }
+  scores: {
+    fluency: number
+    lexical: number
+    grammar: number
+    overall: number
+  }
+  comments: {
+    fluency: string
+    lexical: string
+    grammar: string
+  }
   suggestion: string
 }
-
 // 口语评分标准 condensed（IELTS Speaking Band Descriptors）
 // 注意：发音(Pronunciation)无法从文字转写评估，不纳入 AI 打分
 const SPEAKING_DESCRIPTORS = `【Fluency and Coherence 流利度与连贯性】
@@ -348,7 +407,6 @@ const SPEAKING_DESCRIPTORS = `【Fluency and Coherence 流利度与连贯性】
 7分: 复杂句多样，有一定准确度；错误不影响理解。
 6分: 简单复杂句混用；复杂句错误多于简单句。
 5分: 句式有限重复；错误多但大意可懂。`
-
 const SPEAKING_SYSTEM_PROMPT = `你是雅思口语考官。考生用英语回答了口语题目，下面给你的是【语音转写的文字稿】（转写可能有小错，请宽容）。
 必须严格依据以下官方口语评分标准（IELTS Speaking Band Descriptors）打分：
 
@@ -366,10 +424,10 @@ ${SPEAKING_DESCRIPTORS}
 "suggestion": "整体提分建议（中文，2-3句，指出最该优先改的一项）"
 }
 其中 fluency=流利度与连贯性，lexical=词汇资源，grammar=语法多样性与准确性。全部用中文（引用考生原话时保留英文）。`
-
 export async function gradeSpeakingWithAI(
   question: string,
   transcript: string,
+  signal?: AbortSignal,
 ): Promise<AISpeakingResult> {
   const settings = getAISettings()
   if (!hasAISettings())
@@ -378,7 +436,7 @@ export async function gradeSpeakingWithAI(
   if (words < 10)
     throw new Error('转写文字太少，无法评分（请说几句完整的英语再试）')
   const user = `【题目】\n${question}\n\n【考生回答（语音转写）】\n${transcript}`
-  const raw = await callChatApi(settings, SPEAKING_SYSTEM_PROMPT, user)
+  const raw = await callChatApi(settings, SPEAKING_SYSTEM_PROMPT, user, signal)
   let parsed: AISpeakingResult
   try {
     parsed = JSON.parse(extractJson(raw))
@@ -387,32 +445,37 @@ export async function gradeSpeakingWithAI(
     throw new Error('AI 返回格式异常，请重试')
   }
   // 入口校验四项齐全：缺项时面板 toFixed 会崩溃，必须在这里拦住；分数复用写作侧 isBandScore 口径（[0, 9] 内有限数字）
-  if (!parsed?.scores || !isBandScore(parsed.scores.overall)
+  if (
+    !parsed?.scores
+    || !isBandScore(parsed.scores.overall)
     || !isBandScore(parsed.scores.fluency)
     || !isBandScore(parsed.scores.lexical)
     || !isBandScore(parsed.scores.grammar)
     || !parsed.comments
     || typeof parsed.comments.fluency !== 'string'
     || typeof parsed.comments.lexical !== 'string'
-    || typeof parsed.comments.grammar !== 'string')
+    || typeof parsed.comments.grammar !== 'string'
+  )
     throw new Error('AI 返回格式异常，请重试')
   return parsed
 }
-
 // 测试连接：发一个极短请求验证 Key/地址/模型可用
-export async function testAIConnection(): Promise<string> {const settings = getAISettings()
-if (!hasAISettings())
-throw new Error('请先填写 API 地址、Key 和模型')
-const content = await callChatApi(settings, '只回复 {"ok":true}', 'ping')
-// 能拿到模型回复即算连通，不强求标准 JSON
-try {
-const parsed = JSON.parse(extractJson(content))
-if (parsed?.ok)
-return '连接成功'
-} catch { /* 忽略解析失败 */ }
-if (content && content.trim().length > 0)
-return '连接成功（模型有响应）'
-throw new Error('API 返回为空，请重试')
+export async function testAIConnection(): Promise<string> {
+  const settings = getAISettings()
+  if (!hasAISettings())
+    throw new Error('请先填写 API 地址、Key 和模型')
+  const content = await callChatApi(settings, '只回复 {"ok":true}', 'ping')
+  // 能拿到模型回复即算连通，不强求标准 JSON
+  try {
+    const parsed = JSON.parse(extractJson(content))
+    if (parsed?.ok)
+      return '连接成功'
+  }
+  catch {
+    /* 忽略解析失败 */
+  }
+  if (content && content.trim().length > 0)
+    return '连接成功（模型有响应）'
+  throw new Error('API 返回为空，请重试')
 }
-
 export const aiSettingsState = ref<AISettings>(getAISettings())

@@ -1,18 +1,18 @@
 {
   "private": true,
-  "packageManager": "pnpm@8.6.0",
+  "packageManager": "pnpm@8.6.10",
   "scripts": {
     "build": "vite build",
     "dev": "vite --port 3333 --open",
-    "lint": "eslint .",
+    "lint": "eslint src test vite.config.ts uno.config.ts capacitor.config.ts",
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest",
-    "up": "taze major -I"
+    "up": "taze major -I",
+    "test:run": "vitest run --threads false"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",
-    "@capacitor/cli": "^8.5.3",
     "@capacitor/core": "^8.5.3",
     "@vueuse/core": "^10.1.2",
     "vue": "^3.3.4",
@@ -42,7 +42,8 @@
     "vite": "^4.3.9",
     "vite-plugin-pages": "^0.31.0",
     "vitest": "^0.31.4",
-    "vue-tsc": "^1.6.5"
+    "vue-tsc": "^1.6.5",
+    "@capacitor/cli": "^8.5.3"
   },
   "eslintConfig": {
     "extends": [

@@ -11,12 +11,9 @@ const scoreTable = [
   ['16-19', '5.0'],
   ['13-15', '4.5'],
   ['10-12', '4.0'],
-  ['6-9', '3.5'],
-  ['4-5', '3.0'],
-  ['3', '2.5'],
-  ['2', '2.0'],
-  ['1', '1.0'],
-  ['absent', '0.0'],
+  ['8-9', '3.5'],
+  ['6-7', '3.0'],
+  ['0-5', '2.5'],
 ]
 </script>
 
@@ -30,20 +27,22 @@ const scoreTable = [
       <br>
       <p>评分表</p>
       <div class="overflow-x-auto rounded-lg">
-      <table class="w-full min-w-[480px] text-center text-sm text-gray-500 dark:text-gray-400">
-        <tbody>
-          <tr class="border bg-white dark:border-gray-700 dark:bg-gray-800">
-            <td v-for="v in scoreTable" :key="v[0]" class="border px-6 py-4">
-              {{ v[0] }}
-            </td>
-          </tr>
-          <tr class="border bg-white dark:border-gray-700 dark:bg-gray-800">
-            <td v-for="v in scoreTable" :key="v[0]" class="border px-6 py-4">
-              {{ v[1] }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <table
+          class="min-w-[480px] w-full text-center text-sm text-gray-500 dark:text-gray-400"
+        >
+          <tbody>
+            <tr class="border bg-white dark:border-gray-700 dark:bg-gray-800">
+              <td v-for="v in scoreTable" :key="v[0]" class="border px-6 py-4">
+                {{ v[0] }}
+              </td>
+            </tr>
+            <tr class="border bg-white dark:border-gray-700 dark:bg-gray-800">
+              <td v-for="v in scoreTable" :key="v[0]" class="border px-6 py-4">
+                {{ v[1] }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
       <br>
       <ul class="ml-6 list-disc">
@@ -88,22 +87,34 @@ const scoreTable = [
           <li>numbers</li>
         </ul>
       </li>
-      <li>第一节很简单，必须拿高分 9-10 个正确，这样可以让你在后面难的部分有更多犯错空间</li>
+      <li>
+        第一节很简单，必须拿高分 9-10
+        个正确，这样可以让你在后面难的部分有更多犯错空间
+      </li>
     </ul>
     <p><strong>关键技巧：</strong></p>
     <ul class="ml-6 list-disc">
       <li>Use the breaks to read ahead 利用中间中断的时间提前读后面的题</li>
       <li>Before each section starts 每个小节开始前的停顿</li>
-      <li>In the middle of each section (Except in section 4) 每个小节中间的停顿，第四节中间没有停顿</li>
+      <li>
+        In the middle of each section (Except in section 4)
+        每个小节中间的停顿，第四节中间没有停顿
+      </li>
       <li>At the end of each section 每个小节结束的时候</li>
-      <li>Don't check back, read ahead 不要向后看！不要向后看！不要向后看！错过了就错过了</li>
+      <li>
+        Don't check back, read ahead
+        不要向后看！不要向后看！不要向后看！错过了就错过了
+      </li>
     </ul>
 
     <h3 class="my-4 text-xl font-semibold text-black dark:text-white">
       Section 2
     </h3>
     <ul class="ml-6 list-disc">
-      <li>Use all of the break time at the end of section 1 第一节结束后立马读第二节的题目</li>
+      <li>
+        Use all of the break time at the end of section 1
+        第一节结束后立马读第二节的题目
+      </li>
       <li>只有一个说话的</li>
       <li>
         一个简单的非学术类话题的陈述：
@@ -114,7 +125,9 @@ const scoreTable = [
         </ul>
       </li>
       <li>题型：填空、选择、匹配</li>
-      <li>中间会停顿（一般让你先看前 5 个问题，中间停顿让你再看后 5 个问题）</li>
+      <li>
+        中间会停顿（一般让你先看前 5 个问题，中间停顿让你再看后 5 个问题）
+      </li>
       <li>Still quite easy, aim for a high score 难度低，依然需要争取拿高分</li>
     </ul>
 
@@ -127,7 +140,9 @@ const scoreTable = [
       <li>2-3 个人的对话</li>
       <li>对话会和教育、培训有关，例如：老师和 2 个学生</li>
       <li>Gap-fill, multiple choice (difficult) 题型：填空、选择（难度高）</li>
-      <li>Underline keywords in questions and choices 在题目和选项中划关键词</li>
+      <li>
+        Underline keywords in questions and choices 在题目和选项中划关键词
+      </li>
       <li>Listen for keywords or synonyms 听关键词或者对应的同义词</li>
       <li>高难度小节，目标应该是 6-7 个答对</li>
     </ul>
@@ -143,7 +158,11 @@ const scoreTable = [
       <li>内容学术相关</li>
       <li>题型：填空、选择</li>
       <li>听关键词或者对应的同义词</li>
-      <li>Difficult: faster speech, more content, extra information 很难：说的很快、内容多、很多额外信息。比如：30s 的语音中可能没有给任何答案</li>
+      <li>
+        Difficult: faster speech, more content, extra information
+        很难：说的很快、内容多、很多额外信息。比如：30s
+        的语音中可能没有给任何答案
+      </li>
     </ul>
 
     <h3 class="my-4 text-xl font-semibold text-black dark:text-white">
@@ -151,19 +170,25 @@ const scoreTable = [
     </h3>
     <p>Do some real practice tests 模拟考试练习</p>
     <ol class="ml-6 list-decimal">
-      <li>Read ahead (only check back at the end) 向前读题，只在整个听力结束的时候才回头检查</li>
+      <li>
+        Read ahead (only check back at the end)
+        向前读题，只在整个听力结束的时候才回头检查
+      </li>
       <li>Underline keywords 划关键词，读题的时候要划关键词</li>
       <li>Listen for keywords or synonyms 注意听关键词或者其对应的同义词</li>
       <li>Be careful with spelling 注意拼写，听出来写不对也是没分的</li>
-      <li>Don’t get stuck on a difficult question - move forward 不要被难的题卡住，直接过</li>
+      <li>
+        Don’t get stuck on a difficult question - move forward
+        不要被难的题卡住，直接过
+      </li>
       <li>Concentrate! 集中注意力，整个 30 分钟要全神贯注</li>
     </ol>
   </div>
 </template>
 
 <style>
-  .dark svg text {
-    font-family: "comic sans ms", system-ui;
-    fill: #fff;
-  }
+.dark svg text {
+  font-family: 'comic sans ms', system-ui;
+  fill: #fff;
+}
 </style>

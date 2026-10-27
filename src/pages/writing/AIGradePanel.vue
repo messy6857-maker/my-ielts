@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
-import { gradeEssayWithAI, hasAISettings, repairSavedGrade } from '~/composables/useAISettings'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import {
+  gradeEssayWithAI,
+  hasAISettings,
+  repairSavedGrade,
+} from '~/composables/useAISettings'
 import type { AIGradeResult } from '~/composables/useAISettings'
-import { useAuth, writeJson } from '~/composables/useAuth'
+import { readJson, useAuth } from '~/composables/useAuth'
+import { saveAiArchive } from '~/utils/archives'
+import { onSyncApplied } from '~/composables/syncClient'
 import { diffWords } from '~/composables/useWordDiff'
 import type { DiffToken } from '~/composables/useWordDiff'
 
@@ -33,16 +39,15 @@ function storageKey(): string {
   const user = currentUser.value ? `u_${currentUser.value}` : 'guest'
   const s = `${props.task}|${props.question}|${props.essay}`
   let h = 0
-  for (let i = 0; i < s.length; i++)
-    h = ((h << 5) - h + s.charCodeAt(i)) | 0
+  for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
   return `myielts_${user}_aigrade_v1_${h.toString(36)}`
 }
 
 function loadSaved(): boolean {
   try {
-    const raw = localStorage.getItem(storageKey())
+    const raw = readJson<unknown>(storageKey(), null)
     if (raw) {
-      const parsed = JSON.parse(raw) as AIGradeResult
+      const parsed = raw as AIGradeResult
       // 残缺存档先补齐再展示：分数无效才丢弃，不再整条丢弃
       const repaired = repairSavedGrade(parsed, props.task)
       if (repaired) {
@@ -51,73 +56,111 @@ function loadSaved(): boolean {
       }
     }
   }
-  catch { /* ignore */ }
-  return false
-}
-
-function saveResult() {
-  try {
-    if (aiResult.value)
-      writeJson(storageKey(), aiResult.value)  // 经 writeJson 触发云同步
+  catch {
+    /* ignore */
   }
-  catch { /* ignore */ }
+  return false
 }
 
 onMounted(() => {
   loadSaved()
 })
 
-const criterionLabels: Record<'ta' | 'cc' | 'lr' | 'gra', string> = props.task === 'task1'
-  ? { ta: '任务完成', cc: '连贯衔接', lr: '词汇资源', gra: '语法' }
-  : { ta: '任务回应', cc: '连贯衔接', lr: '词汇资源', gra: '语法' }
+const criterionLabels: Record<'ta' | 'cc' | 'lr' | 'gra', string>
+  = props.task === 'task1'
+    ? { ta: '任务完成', cc: '连贯衔接', lr: '词汇资源', gra: '语法' }
+    : { ta: '任务回应', cc: '连贯衔接', lr: '词汇资源', gra: '语法' }
 
+let requestId = 0
+let controller: AbortController | null = null
+let stepTimer: ReturnType<typeof setInterval> | undefined
+function invalidate() {
+  requestId++
+  controller?.abort()
+  controller = null
+  clearInterval(stepTimer)
+  stepTimer = undefined
+  aiLoading.value = false
+  gradeStep.value = ''
+}
 async function runAIGrade() {
   if (!canUseAI.value) {
     aiError.value = '请先登录账号再使用 AI 批改'
     return
   }
+  invalidate()
+  const sequence = requestId
+  const owner = currentUser.value
+  const key = storageKey()
+  controller = new AbortController()
   aiLoading.value = true
   aiError.value = ''
   aiResult.value = null
-  // 批改过程分阶段提示
-  const steps = ['正在连接 AI…', '正在分析作文…', '正在按四项标准评分…', '正在生成修改建议…']
-  let stepIdx = 0
+  const steps = [
+    '正在连接 AI…',
+    '正在分析作文…',
+    '正在按四项标准评分…',
+    '正在生成修改建议…',
+  ]
+  let step = 0
   gradeStep.value = steps[0]
-  const stepTimer = setInterval(() => {
-    stepIdx = Math.min(stepIdx + 1, steps.length - 1)
-    gradeStep.value = steps[stepIdx]
+  stepTimer = setInterval(() => {
+    gradeStep.value = steps[Math.min(++step, steps.length - 1)]
   }, 4000)
   try {
-    aiResult.value = await gradeEssayWithAI(props.task, props.question, props.essay)
-    saveResult()
+    const value = await gradeEssayWithAI(
+      props.task,
+      props.question,
+      props.essay,
+      controller.signal,
+    )
+    if (
+      sequence !== requestId
+      || owner !== currentUser.value
+      || key !== storageKey()
+    )
+      return
+    aiResult.value = value
+    if (!saveAiArchive(key, value, owner))
+      aiError.value = '评分已显示，但存档未能保存，请导出备份并清理空间'
   }
   catch (e) {
-    aiError.value = e instanceof Error ? e.message : '批改失败，请重试'
+    if (sequence === requestId)
+      aiError.value = e instanceof Error ? e.message : '批改失败，请重试'
   }
   finally {
-    clearInterval(stepTimer)
-    gradeStep.value = ''
-    aiLoading.value = false
+    if (sequence === requestId) {
+      clearInterval(stepTimer)
+      gradeStep.value = ''
+      aiLoading.value = false
+    }
   }
 }
-
-// 换一篇作文时清空旧结果（能从本地恢复的则恢复）
-watch(() => props.essay, () => {
-  aiError.value = ''
-  if (!loadSaved())
+watch(
+  [currentUser, () => props.task, () => props.question, () => props.essay],
+  () => {
+    invalidate()
     aiResult.value = null
+    aiError.value = ''
+    loadSaved()
+  },
+)
+const offSync = onSyncApplied(() => {
+  if (!aiLoading.value)
+    loadSaved()
 })
-
-// 账号变化时清空上一账号的结果，不让游客/新账号看到旧结果
-watch(currentUser, () => {
-  aiResult.value = null
-  aiError.value = ''
+onUnmounted(() => {
+  invalidate()
+  offSync()
 })
 
 function scoreColor(s: number) {
-  if (s >= 7) return 'text-green-600 dark:text-green-400'
-  if (s >= 6) return 'text-blue-600 dark:text-blue-400'
-  if (s >= 5) return 'text-amber-600 dark:text-amber-400'
+  if (s >= 7)
+    return 'text-green-600 dark:text-green-400'
+  if (s >= 6)
+    return 'text-blue-600 dark:text-blue-400'
+  if (s >= 5)
+    return 'text-amber-600 dark:text-amber-400'
   return 'text-red-500'
 }
 
@@ -152,37 +195,49 @@ const rewrittenParagraphs = computed(() => {
 // 非对照模式下过滤掉被删的词（只看改写后）
 const visibleParagraphs = computed(() =>
   rewrittenParagraphs.value
-    .map(para => showDiff.value ? para : para.filter(t => t.type !== 'del'))
+    .map(para =>
+      showDiff.value ? para : para.filter(t => t.type !== 'del'),
+    )
     .filter(p => p.length > 0),
 )
 
 function tokenClass(t: DiffToken): string {
   if (t.type === 'del')
     return 'rounded bg-red-200 px-0.5 text-red-700 line-through dark:bg-red-900/50 dark:text-red-300'
-  if (t.type === 'ins')
+  if (t.type === 'ins') {
     return showDiff.value
       ? 'rounded bg-green-200 px-0.5 text-green-800 dark:bg-green-900/60 dark:text-green-200'
       : 'rounded bg-green-200 px-0.5 dark:bg-green-900/60 dark:text-green-200'
+  }
   return ''
 }
 </script>
 
 <template>
-  <div class="mb-6 rounded-xl border border-purple-200 bg-white p-5 dark:border-purple-900/50 dark:bg-gray-800">
+  <div
+    class="mb-6 border border-purple-200 rounded-xl bg-white p-5 dark:border-purple-900/50 dark:bg-gray-800"
+  >
     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-      <h4 class="font-bold text-sm dark:text-white">🤖 AI 批改 <span class="font-normal text-xs text-gray-400">（四项官方标准）</span></h4>
+      <h4 class="text-sm font-bold dark:text-white">
+        🤖 AI 批改
+        <span class="text-xs font-normal text-gray-400">（四项官方标准）</span>
+      </h4>
       <div class="flex items-center gap-3">
         <span v-if="!canUseAI" class="text-gray-400" title="locked">🔒</span>
         <template v-else>
-          <router-link v-if="!hasAISettings()" to="/settings" class="text-xs text-blue-600 hover:underline dark:text-blue-400">
+          <router-link
+            v-if="!hasAISettings()"
+            to="/settings"
+            class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+          >
             先去设置 API →
           </router-link>
           <button
-            class="rounded-lg bg-purple-700 px-4 py-2 text-sm font-bold text-white hover:bg-purple-800 disabled:opacity-50 dark:bg-purple-600"
+            class="rounded-lg bg-purple-700 px-4 py-2 text-sm font-bold text-white dark:bg-purple-600 hover:bg-purple-800 disabled:opacity-50"
             :disabled="aiLoading"
             @click="runAIGrade"
           >
-            {{ aiLoading ? '批改中…' : (aiResult ? '重新批改' : '开始 AI 批改') }}
+            {{ aiLoading ? '批改中…' : aiResult ? '重新批改' : '开始 AI 批改' }}
           </button>
         </template>
       </div>
@@ -206,61 +261,100 @@ function tokenClass(t: DiffToken): string {
       </button>
     </p>
 
-    <div v-if="aiLoading" class="flex items-center gap-3 rounded-lg bg-purple-50 p-4 dark:bg-purple-900/20">
-      <span class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-purple-300 border-t-purple-700" />
-      <span class="text-sm text-purple-700 dark:text-purple-300">{{ gradeStep || '正在批改…' }}</span>
+    <div
+      v-if="aiLoading"
+      class="flex items-center gap-3 rounded-lg bg-purple-50 p-4 dark:bg-purple-900/20"
+    >
+      <span
+        class="inline-block h-5 w-5 animate-spin border-2 border-purple-300 border-t-purple-700 rounded-full"
+      />
+      <span class="text-sm text-purple-700 dark:text-purple-300">{{
+        gradeStep || '正在批改…'
+      }}</span>
     </div>
 
     <div v-if="aiResult">
       <div class="mb-4 text-center">
-        <div class="text-5xl font-bold" :class="scoreColor(aiResult.scores.overall)">{{ fmtScore(aiResult.scores.overall) }}</div>
-        <div class="mt-1 text-xs text-gray-400">AI 预估总分</div>
+        <div
+          class="text-5xl font-bold"
+          :class="scoreColor(aiResult.scores.overall)"
+        >
+          {{ fmtScore(aiResult.scores.overall) }}
+        </div>
+        <div class="mt-1 text-xs text-gray-400">
+          AI 预估总分
+        </div>
       </div>
-      <div class="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div class="grid grid-cols-2 mb-5 gap-3 sm:grid-cols-4">
         <div
           v-for="(label, key) in criterionLabels"
           :key="key"
           class="rounded-lg bg-gray-50 p-3 text-center dark:bg-gray-700/50"
         >
-          <div class="text-2xl font-bold" :class="scoreColor(aiResult.scores[key])">
+          <div
+            class="text-2xl font-bold"
+            :class="scoreColor(aiResult.scores[key])"
+          >
             {{ fmtScore(aiResult.scores[key]) }}
           </div>
-          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">{{ label }}</div>
+          <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            {{ label }}
+          </div>
         </div>
       </div>
 
       <div class="mb-5 space-y-3">
         <div v-for="(label, key) in criterionLabels" :key="key">
-          <div class="mb-1 text-sm font-bold dark:text-white">{{ label }}</div>
-          <p class="text-sm leading-6 text-gray-600 dark:text-gray-300">{{ aiResult.comments?.[key] ?? '' }}</p>
+          <div class="mb-1 text-sm font-bold dark:text-white">
+            {{ label }}
+          </div>
+          <p class="text-sm leading-6 text-gray-600 dark:text-gray-300">
+            {{ aiResult.comments?.[key] ?? '' }}
+          </p>
         </div>
       </div>
 
       <div v-if="aiResult.advice" class="mb-5">
-        <div class="mb-2 text-sm font-bold dark:text-white">📋 四项标准详细修改建议</div>
+        <div class="mb-2 text-sm font-bold dark:text-white">
+          📋 四项标准详细修改建议
+        </div>
         <div class="space-y-2">
           <div
             v-for="(label, key) in criterionLabels"
             :key="key"
-            class="rounded-lg border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-900/10"
+            class="border border-blue-100 rounded-lg bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-900/10"
           >
-            <div class="mb-1 text-xs font-bold text-blue-700 dark:text-blue-300">{{ label }} · {{ fmtScore(aiResult.scores[key]) }}分</div>
-            <p class="text-sm leading-6 text-gray-700 dark:text-gray-200">{{ aiResult.advice?.[key] ?? '' }}</p>
+            <div
+              class="mb-1 text-xs font-bold text-blue-700 dark:text-blue-300"
+            >
+              {{ label }} · {{ fmtScore(aiResult.scores[key]) }}分
+            </div>
+            <p class="text-sm leading-6 text-gray-700 dark:text-gray-200">
+              {{ aiResult.advice?.[key] ?? '' }}
+            </p>
           </div>
         </div>
       </div>
 
       <div v-if="aiResult.corrections?.length" class="mb-5">
-        <div class="mb-2 text-sm font-bold dark:text-white">✏️ 逐句修改</div>
+        <div class="mb-2 text-sm font-bold dark:text-white">
+          ✏️ 逐句修改
+        </div>
         <div class="space-y-2">
           <div
             v-for="(c, i) in aiResult.corrections"
             :key="i"
             class="rounded-lg bg-gray-50 p-3 text-sm dark:bg-gray-700/50"
           >
-            <p class="text-gray-500 line-through dark:text-gray-400">{{ c.original }}</p>
-            <p class="mt-1 font-medium text-green-700 dark:text-green-400">{{ c.fixed }}</p>
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">💡 {{ c.reason }}</p>
+            <p class="text-gray-500 line-through dark:text-gray-400">
+              {{ c.original }}
+            </p>
+            <p class="mt-1 font-medium text-green-700 dark:text-green-400">
+              {{ c.fixed }}
+            </p>
+            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              💡 {{ c.reason }}
+            </p>
           </div>
         </div>
       </div>
@@ -269,39 +363,52 @@ function tokenClass(t: DiffToken): string {
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <span class="text-sm font-bold dark:text-white">📄 改写后全文</span>
           <button
-            class="text-xs text-blue-600 hover:underline dark:text-blue-400"
+            class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
             @click="showDiff = !showDiff"
           >
             {{ showDiff ? '只看改写后' : '对照查看改动' }}
           </button>
         </div>
-        <div class="rounded-lg bg-gray-50 p-4 text-sm leading-7 break-words dark:bg-gray-700/50 dark:text-gray-200">
+        <div
+          class="break-words rounded-lg bg-gray-50 p-4 text-sm leading-7 dark:bg-gray-700/50 dark:text-gray-200"
+        >
           <p
             v-for="(para, pi) in visibleParagraphs"
             :key="pi"
             class="mb-3 last:mb-0"
           >
-            <span
-              v-for="(t, i) in para"
-              :key="i"
-              :class="tokenClass(t)"
-            >{{ t.text }}</span>
+            <span v-for="(t, i) in para" :key="i" :class="tokenClass(t)">{{
+              t.text
+            }}</span>
           </p>
         </div>
         <p class="mt-1 text-xs text-gray-400">
-          <span class="rounded bg-green-200 px-1 dark:bg-green-900/60">绿色</span> 为改写新增/修改的词<span v-if="showDiff">，<span class="rounded bg-red-200 px-1 line-through dark:bg-red-900/50">红色删除线</span> 为原文删掉的词</span>
+          <span class="rounded bg-green-200 px-1 dark:bg-green-900/60">绿色</span>
+          为改写新增/修改的词<span v-if="showDiff">，<span
+            class="rounded bg-red-200 px-1 line-through dark:bg-red-900/50"
+          >红色删除线</span>
+            为原文删掉的词</span>
         </p>
       </div>
 
-      <div class="rounded-lg bg-purple-50 p-4 text-sm leading-6 dark:bg-purple-900/20 dark:text-gray-200">
+      <div
+        class="rounded-lg bg-purple-50 p-4 text-sm leading-6 dark:bg-purple-900/20 dark:text-gray-200"
+      >
         <span class="font-bold">📈 提分建议：</span>{{ aiResult.suggestion }}
       </div>
-      <p class="mt-3 text-xs text-gray-400">AI 批改仅供练习参考，不是官方评分</p>
+      <p class="mt-3 text-xs text-gray-400">
+        AI 批改仅供练习参考，不是官方评分
+      </p>
     </div>
 
-    <p v-else-if="!aiLoading && !aiError" class="text-xs leading-5 text-gray-400">
+    <p
+      v-else-if="!aiLoading && !aiError"
+      class="text-xs leading-5 text-gray-400"
+    >
       <template v-if="canUseAI">
-        AI 会按雅思四项官方标准打分，指出每项的问题，并逐句给出修改建议。需要先在右上角 ⚙️ 设置页填写 API 地址、Key 和模型。
+        AI
+        会按雅思四项官方标准打分，指出每项的问题，并逐句给出修改建议。需要先在右上角
+        ⚙️ 设置页填写 API 地址、Key 和模型。
       </template>
       <template v-else>
         AI 批改需要登录账号（每人填自己的 API Key），游客请先注册/登录。
