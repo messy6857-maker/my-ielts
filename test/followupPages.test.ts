@@ -356,3 +356,115 @@ it('speech scoring becomes enabled at exactly ten words', async () => {
   button = w.findAll('button').find(b => b.text().includes('评分'))!
   expect(button.attributes('disabled')).toBeUndefined()
 })
+it.each(['reading', 'listening'])(
+  '%s mock allows starting after logging in on the start screen',
+  async (kind) => {
+    const Page
+      = kind === 'reading'
+        ? (await import('../src/pages/mock/reading-test.vue')).default
+        : (await import('../src/pages/mock/listening-test.vue')).default
+    auth.currentUser.value = null
+    const session = await show(Page, `/mock/${kind}-test`)
+    auth.currentUser.value = 'alice'
+    await nextTick()
+    expect(session.state.recovery.blocked.value).toBe(false)
+    expect(session.state.recovery.error.value).toBe('')
+    session.state.startTest()
+    await nextTick()
+    expect(session.w.html()).not.toContain('▶ 开始测试')
+    expect(session.w.html()).not.toContain('继续上次作答')
+  },
+)
+it.each(['reading', 'listening'])(
+  '%s mock blocked test switch keeps content and URL on the running test',
+  async (kind) => {
+    const Page
+      = kind === 'reading'
+        ? (await import('../src/pages/mock/reading-test.vue')).default
+        : (await import('../src/pages/mock/listening-test.vue')).default
+    const session = await show(Page, `/mock/${kind}-test`)
+    session.state.startTest()
+    await nextTick()
+    const titleBefore = session.w.find('h2').text()
+    auth.currentUser.value = 'bob'
+    await nextTick()
+    expect(session.state.recovery.blocked.value).toBe(true)
+    await session.router.push(`/mock/${kind}-test?test=cam21-test2`)
+    for (let i = 0; i < 10; i++) {
+      await nextTick()
+      await flushPromises()
+      await new Promise(resolve => setTimeout(resolve, 5))
+    }
+    expect(session.router.currentRoute.value.query.test).toBe('cam21-test1')
+    expect(session.w.find('h2').text()).toBe(titleBefore)
+    expect(session.state.recovery.blocked.value).toBe(true)
+  },
+)
+it.each(['reading', 'listening'])(
+  '%s mock discard draft restarts fresh instead of resuming',
+  async (kind) => {
+    const Page
+      = kind === 'reading'
+        ? (await import('../src/pages/mock/reading-test.vue')).default
+        : (await import('../src/pages/mock/listening-test.vue')).default
+    const session = await show(Page, `/mock/${kind}-test`)
+    session.state.startTest()
+    session.state.answers.Q1 = 'valuable answer'
+    session.root.unmount()
+    wrappers.splice(wrappers.indexOf(session.root), 1)
+    const again = await show(Page, `/mock/${kind}-test`)
+    expect(again.state.recovery.draft.value).not.toBeNull()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    again.state.discardDraftAndStart()
+    await nextTick()
+    expect(again.state.recovery.draft.value.answers).toEqual({})
+    expect(again.w.html()).not.toContain('继续上次作答')
+  },
+)
+it.each(['reading', 'listening'])(
+  '%s mock submitted draft is not offered as resumable',
+  async (kind) => {
+    const Page
+      = kind === 'reading'
+        ? (await import('../src/pages/mock/reading-test.vue')).default
+        : (await import('../src/pages/mock/listening-test.vue')).default
+    localStorage.setItem(
+      `${accountKey(`mock_draft_v1_${kind}_cam21-test1`, 'alice')}__session_seed`,
+      JSON.stringify({
+        version: 1,
+        kind,
+        testId: 'cam21-test1',
+        answers: { Q1: 'submitted answer' },
+        timeLeft: 100,
+        submitted: true,
+        updatedAt: Date.now(),
+      }),
+    )
+    const session = await show(Page, `/mock/${kind}-test`)
+    expect(session.state.recovery.draft.value.submitted).toBe(true)
+    session.state.startTest()
+    await nextTick()
+    expect(session.state.recovery.draft.value.answers).toEqual({})
+    expect(session.state.recovery.draft.value.timeLeft).toBeGreaterThan(100)
+  },
+)
+it.each(['reading', 'listening'])(
+  '%s mock pause notice clears when returning to the original identity',
+  async (kind) => {
+    const Page
+      = kind === 'reading'
+        ? (await import('../src/pages/mock/reading-test.vue')).default
+        : (await import('../src/pages/mock/listening-test.vue')).default
+    const session = await show(Page, `/mock/${kind}-test`)
+    session.state.startTest()
+    auth.currentUser.value = 'bob'
+    await nextTick()
+    expect(session.state.recovery.blocked.value).toBe(true)
+    expect(session.state.recovery.error.value).toContain('已暂停')
+    auth.currentUser.value = 'alice'
+    await nextTick()
+    expect(session.state.recovery.blocked.value).toBe(false)
+    expect(session.state.recovery.error.value).toBe('')
+    expect(accountNotice.value).toBe('')
+  },
+)

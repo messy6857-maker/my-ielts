@@ -28,8 +28,6 @@ function handleBack() {
 function leaveForHistory() {
   router.push('/mock/history')
 }
-const testOwner = useAuth().currentUser.value
-
 const testId = computed(() => (route.query.test as string) || 'cam21-test1')
 const testPair = ref<MockTestPair | null>(null)
 const test = computed(() => testPair.value?.reading)
@@ -79,6 +77,14 @@ const recovery = useExamRecovery({
 // 异步加载选中的套题（按需加载）
 // loadSeq 防止快速切换时旧的加载覆盖新的；try/finally 保证 loading 一定复位
 async function loadTest() {
+  if (recovery.blocked.value) {
+    // 被阻断时不允许切题：把 URL 换回进行中的套题，保持内容与 URL 一致，
+    // 且不碰 started/答案（暂停中的考试保持原样）。
+    const active = recovery.activeTestId()
+    if (active && testId.value !== active)
+      router.replace({ query: { ...route.query, test: active } })
+    return
+  }
   recovery.save()
   pauseExam()
   started.value = false
@@ -95,8 +101,15 @@ async function loadTest() {
     clearInterval(timer)
   try {
     const pair = await loadMockTest(testId.value)
-    if (seq !== loadSeq || recovery.blocked.value)
+    if (seq !== loadSeq)
       return // 已被更新的加载取代
+    if (recovery.blocked.value) {
+      // 加载途中被阻断：不应用新套题，把 URL 换回进行中的套题
+      const active = recovery.activeTestId()
+      if (active && testId.value !== active)
+        router.replace({ query: { ...route.query, test: active } })
+      return
+    }
     testPair.value = pair
     answers.value = {}
     submitted.value = false
@@ -123,7 +136,10 @@ function startTest() {
     return
   if (!testPair.value || started.value)
     return
-  const saved = recovery.draft.value
+  // 已交卷的草稿不再续做：按全新测试开始
+  const saved = recovery.draft.value && !recovery.draft.value.submitted
+    ? recovery.draft.value
+    : null
   recovery.begin()
   timeLeft.value = saved
     ? Math.min(Math.max(0, saved.timeLeft), testPair.value.reading.timeLimit)
@@ -144,6 +160,15 @@ function startTest() {
     if (timeLeft.value <= 0)
       submit()
   }, 1000)
+}
+
+// 放弃当前草稿并重新开始：清掉本会话草稿后立刻全新开考，
+// 避免清完仍留在开始屏、下次刷新又被其他页签快照顶回来。
+function discardDraftAndStart() {
+  if (!window.confirm('放弃当前草稿并重新开始？草稿删除后无法恢复。'))
+    return
+  recovery.clear()
+  startTest()
 }
 
 onMounted(loadTest)
@@ -325,7 +350,7 @@ function handleMarkClick(e: MouseEvent, pi: number) {
 }
 onBeforeRouteLeave(
   () =>
-    useAuth().currentUser.value !== testOwner
+    useAuth().currentUser.value !== recovery.owner.value
     || !started.value
     || submitted.value
     || window.confirm('尚未交卷，离开将暂停计时并保留本机草稿，确定吗？'),
@@ -356,8 +381,11 @@ function submit() {
     total,
     band: band.value,
   })
+  recovery.markSubmitted()
   if (saved)
     recovery.clear()
+  else
+    recovery.error.value = '交卷记录保存失败，成绩已在当前页显示；本机草稿已标记为已交卷，不会再提示继续作答。'
 }
 
 function switchPassage(index: number) {
@@ -381,6 +409,9 @@ function switchPassage(index: number) {
       class="my-3 rounded-lg bg-amber-50 p-3 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
     >
       {{ recovery.error.value }}
+      <button type="button" class="ml-2 underline" @click="recovery.dismissNotice()">
+        知道了
+      </button>
     </p>
     <div v-if="loading" class="py-20 text-center text-gray-500">
       加载中…
@@ -445,11 +476,22 @@ function switchPassage(index: number) {
           @click="startTest"
         >
           {{
-            recovery.draft.value
+            recovery.draft.value && !recovery.draft.value.submitted
               ? '继续上次作答（从剩余时间计时）'
               : '▶ 开始测试'
           }}
         </button>
+        <button
+          v-if="recovery.draft.value && !recovery.draft.value.submitted"
+          type="button"
+          class="ml-3 border border-gray-300 rounded-xl px-6 py-3 text-lg text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+          @click="discardDraftAndStart"
+        >
+          放弃草稿，重新开始
+        </button>
+        <p v-if="recovery.draft.value?.submitted" class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+          该套题已交卷，重新开始将是一次新的测试
+        </p>
       </div>
       <div v-else :inert="recovery.blocked.value ? true : undefined">
         <!-- 顶栏：标题 + 计时器 -->
@@ -467,6 +509,7 @@ function switchPassage(index: number) {
             </h2>
             <select
               :value="testId"
+              :disabled="recovery.blocked.value"
               class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700"
               @change="onTestChange"
             >
