@@ -1,0 +1,307 @@
+{
+  "date": "2026-10-28",
+  "newsReadings": [
+    {
+      "title": "Another Year, Another Record: Greenhouse Gases Reach New Highs in 2025",
+      "source": "UN News, 'Record carbon dioxide levels will impact us for centuries, says UN weather agency,' 27 October 2026 (World Meteorological Organization Greenhouse Gas Bulletin)",
+      "passage": "Concentrations of carbon dioxide and other major greenhouse gases in the atmosphere reached record highs in 2025, committing the planet to further warming for decades and centuries to come, the World Meteorological Organization (WMO) warned on Tuesday. In its latest Greenhouse Gas Bulletin, the United Nations weather agency reported that the globally averaged concentration of carbon dioxide (CO2) reached 426.8 parts per million, equivalent to 153 per cent of the pre-industrial levels recorded in 1750, the baseline year against which modern change is measured.\n\n\"Another year, another new record. Greenhouse gases are trapping an unprecedented amount of heat in the atmosphere, providing energy for more extreme weather and associated risks to our economies and societies,\" said Ko Barrett, the WMO's deputy secretary-general. She warned that the past 11 years had been the warmest on record and that the warming trend is expected to continue. \"Every additional part per million matters because it traps additional heat. In effect, we are supercharging the ocean and the atmosphere. That means that heat waves, tropical cyclones, and rainstorms are intensifying faster than our historical baselines prepared us for,\" she told journalists in Geneva.\n\nThe bulletin also records alarming rises in the other long-lived gases produced by human activity. Methane concentrations reached 1,948 parts per billion, or 267 per cent of pre-industrial levels, while nitrous oxide climbed to 339.1 parts per billion, equivalent to 126 per cent of the 1750 baseline. The WMO further noted that sulphur hexafluoride, a gas widely used in electricity distribution, saw its largest annual increase in 2025 despite having a warming potential approximately 24,000 times greater than that of CO2. Although present in far smaller quantities, such gases illustrate how industrial choices far removed from everyday life can exert an outsized influence on the climate.\n\nBehind these figures stands a quiet global infrastructure that rarely makes headlines. The WMO's Global Atmosphere Watch programme draws on monitoring stations scattered from the Arctic to the Antarctic, where air samples are captured in flasks, analysed in laboratories and compared against common standards so that a measurement taken in Tasmania means exactly the same as one taken in Switzerland. Methane, meanwhile, presents a puzzle of its own: it escapes from agriculture, fossil fuel extraction and natural wetlands alike, and its relatively short atmospheric lifetime means that cutting it could slow warming faster than cuts to CO2 alone, provided that sources can be identified and controlled with sufficient precision.\n\nWhat makes the figures particularly sobering is the pace of change. When the Bulletin was first published in 2004, the annual average CO2 level measured by the WMO's Global Atmosphere Watch network of monitoring stations was 377.5 parts per million, compared with nearly 427 today. Annual CO2 growth rates have tripled since the 1960s, rising from 0.8 to 2.4 parts per million per year during 2011-2020, and between 2024 and 2025 concentrations rose by a further 2.8 parts per million, driven partly by continued fossil fuel combustion. Because CO2 has a very long lifetime in the atmosphere, the bulletin stresses, it will affect the global climate not just for years but for decades and even centuries, regardless of how quickly emissions are eventually reduced.\n\nScientists emphasise that the bulletin is not merely a catalogue of records but a warning about irreversibility. The heat already trapped by past emissions will continue to reshape weather patterns, sea levels and ecosystems long after the headlines fade. Yet the same monitoring network that documents the deterioration also provides the evidence base for action: by tracking exactly which gases are rising, and how fast, policymakers can judge whether pledges to cut emissions are translating into atmospheric reality. The question the 2025 figures pose is therefore not whether the planet is warming, but whether societies will respond at a speed commensurate with the scale of what the measurements now show.",
+      "notes": [
+        {
+          "word": "concentration",
+          "pos": "n.",
+          "meaning": "浓度；集中"
+        },
+        {
+          "word": "unprecedented",
+          "pos": "adj.",
+          "meaning": "前所未有的"
+        },
+        {
+          "word": "baseline",
+          "pos": "n.",
+          "meaning": "基线；基准"
+        },
+        {
+          "word": "methane",
+          "pos": "n.",
+          "meaning": "甲烷"
+        },
+        {
+          "word": "nitrous oxide",
+          "pos": "n.",
+          "meaning": "一氧化二氮"
+        },
+        {
+          "word": "sulphur hexafluoride",
+          "pos": "n.",
+          "meaning": "六氟化硫"
+        },
+        {
+          "word": "combustion",
+          "pos": "n.",
+          "meaning": "燃烧"
+        },
+        {
+          "word": "intensify",
+          "pos": "v.",
+          "meaning": "加剧；增强"
+        },
+        {
+          "word": "supercharge",
+          "pos": "v.",
+          "meaning": "使大大增强"
+        },
+        {
+          "word": "sobering",
+          "pos": "adj.",
+          "meaning": "令人清醒的；发人深省的"
+        },
+        {
+          "word": "irreversibility",
+          "pos": "n.",
+          "meaning": "不可逆性"
+        },
+        {
+          "word": "commensurate",
+          "pos": "adj.",
+          "meaning": "相称的；相当的"
+        },
+        {
+          "word": "pledge",
+          "pos": "n.",
+          "meaning": "承诺；保证"
+        },
+        {
+          "word": "deterioration",
+          "pos": "n.",
+          "meaning": "恶化"
+        },
+        {
+          "word": "catalogue",
+          "pos": "n.",
+          "meaning": "目录；一览表"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What was the globally averaged CO2 concentration in 2025, according to the WMO bulletin?",
+          "options": [
+            "377.5 parts per million",
+            "426.8 parts per million",
+            "339.1 parts per billion",
+            "1,948 parts per billion"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Methane concentrations in 2025 reached 1,948 parts per billion, which is what share of pre-industrial levels?",
+          "options": [
+            "126 per cent",
+            "153 per cent",
+            "267 per cent",
+            "24,000 per cent"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "The WMO said that the past 11 years had been the warmest on record.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "Why does CO2 matter for such a long time, according to the passage?",
+          "options": [
+            "Because it is the most abundant gas in the atmosphere",
+            "Because it has a very long lifetime and will affect the climate for decades or centuries",
+            "Because it can be removed quickly by planting trees",
+            "Because it is only produced by volcanoes"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Sulphur hexafluoride has a warming potential approximately 24,000 times greater than that of CO2.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "How did annual CO2 growth rates change between the 1960s and 2011-2020?",
+          "options": [
+            "They fell from 2.4 to 0.8 parts per million per year",
+            "They tripled, rising from 0.8 to 2.4 parts per million per year",
+            "They stayed constant at 2.8 parts per million per year",
+            "They doubled from 377.5 to 426.8 parts per million"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The bulletin states that global temperatures will fall within the next decade.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        }
+      ]
+    },
+    {
+      "title": "Beneath the Storm: Gliders Gather First-Ever Data Under a Super Typhoon",
+      "source": "NOAA IOOS, 'Underwater gliders achieve milestone in western Pacific observing,' October 2026 (US Navy / NOAA / IOOS partnership, data gathered near Guam during Typhoon Choi-Wan)",
+      "passage": "History was made in October 2026 when two United States Navy gliders travelled beneath super Typhoon Choi-Wan in the western Pacific, marking the first time that underwater ocean glider data was gathered for the National Oceanic and Atmospheric Administration (NOAA) directly beneath a major storm. The milestone, announced by the US Integrated Ocean Observing System (IOOS), was made possible through a partnership coordinated by IOOS that brings together the Navy, NOAA and regional association partners to deploy gliders and make their data available for forecasts.\n\nThe two gliders gathered underwater data near Guam before, during and after the passage of the typhoon. Unlike satellites, which observe the ocean surface, or aircraft, which fly above a storm, these autonomous vehicles dive deep and move slowly through the water, collecting real-time measurements of ocean temperature and salinity. Because tropical cyclones draw their power from warm waters, such underwater data is critical: it helps forecast models better predict storm intensity and potential rapid intensification, the sudden strengthening that poses the greatest danger to coastal communities.\n\nSince 2018, the Navy has been a key partner in the IOOS-led hurricane glider coordination effort, deploying gliders in US waters to gather the upper-ocean observations used in forecasting models. In 2026, the partnership expanded into Pacific waters, including the first gliders ever deployed in Guam waters, achieving this milestone in its very first year of operation there. Every piece of data, IOOS notes, works to improve forecast intensification and to give coastal and island communities more timely warnings and information before a storm makes landfall.\n\nThe significance of the achievement extends beyond a single storm. Tropical cyclones are among the most destructive natural phenomena on Earth, and their intensity has proved far harder to predict than their track. Surface measurements alone cannot reveal how much heat is stored below, yet it is precisely that hidden reservoir of warm water that determines whether a storm weakens or explodes in strength. By flying beneath the waves rather than above them, gliders fill a long-standing observational gap, sampling the very layer of the ocean that fuels the storm.\n\nThe vehicles themselves are marvels of endurance rather than speed. A glider has no propeller; instead it changes its buoyancy to sink and rise in a slow, sawtooth pattern, covering only a few dozen kilometres a day but remaining at sea for months at a time. Periodically it surfaces, raises an antenna and transmits its stored measurements by satellite before diving again, so forecasters receive fresh profiles of the upper ocean even while a storm rages overhead. This patience is precisely what makes the platform valuable: where a ship must flee an approaching typhoon and a plane can only sample it for hours, a glider can hold its station and watch the storm pass from below.\n\nOfficials hope the Choi-Wan success will pave the way for a denser observing network. Plans under discussion include deploying more gliders across the western Pacific before the next typhoon season, sharing data more rapidly among national forecast centres, and extending the approach to other basins where storm intensity forecasting remains weak. The cost of each vehicle is modest compared with a single research aircraft flight, and the data, once collected, is made freely available rather than hoarded. If that expansion proceeds, the western Pacific could become the best-observed stretch of storm ocean in the world, a proving ground for methods later adopted wherever tropical cyclones threaten.\n\nResearchers caution that no single technology will tame such storms. Gliders cannot alter a typhoon's course, and their data must be combined with satellite imagery, aircraft reconnaissance and computer modelling before it can guide an evacuation decision. Nevertheless, the Choi-Wan mission demonstrates that sustained, coordinated observation of the upper ocean is now feasible even in the most hostile conditions on the planet. For the island communities scattered across the western Pacific, that quiet progress beneath the waves may translate, in future storm seasons, into warnings issued hours earlier, and lives saved that would otherwise have been lost.",
+      "notes": [
+        {
+          "word": "autonomous",
+          "pos": "adj.",
+          "meaning": "自主的；自动的"
+        },
+        {
+          "word": "salinity",
+          "pos": "n.",
+          "meaning": "盐度；含盐量"
+        },
+        {
+          "word": "intensification",
+          "pos": "n.",
+          "meaning": "增强；加剧"
+        },
+        {
+          "word": "milestone",
+          "pos": "n.",
+          "meaning": "里程碑；重大进展"
+        },
+        {
+          "word": "deploy",
+          "pos": "v.",
+          "meaning": "部署；展开"
+        },
+        {
+          "word": "coordinate",
+          "pos": "v.",
+          "meaning": "协调；组织"
+        },
+        {
+          "word": "forecast",
+          "pos": "n./v.",
+          "meaning": "预测；预报"
+        },
+        {
+          "word": "timely",
+          "pos": "adj.",
+          "meaning": "及时的"
+        },
+        {
+          "word": "beneath",
+          "pos": "prep.",
+          "meaning": "在……之下"
+        },
+        {
+          "word": "reconnaissance",
+          "pos": "n.",
+          "meaning": "侦察；勘测"
+        },
+        {
+          "word": "reservoir",
+          "pos": "n.",
+          "meaning": "储量；蓄水池"
+        },
+        {
+          "word": "feasible",
+          "pos": "adj.",
+          "meaning": "可行的"
+        },
+        {
+          "word": "hostile",
+          "pos": "adj.",
+          "meaning": "恶劣的；敌对的"
+        },
+        {
+          "word": "evacuation",
+          "pos": "n.",
+          "meaning": "疏散；撤离"
+        },
+        {
+          "word": "scattered",
+          "pos": "adj.",
+          "meaning": "分散的；散布的"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What made the October 2026 glider mission historic?",
+          "options": [
+            "It was the first time gliders had ever been used in the ocean",
+            "It was the first time underwater glider data was gathered for NOAA directly beneath a major storm in the western Pacific",
+            "It was the first time a typhoon had formed near Guam",
+            "It was the first time satellites had observed a typhoon"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What do the gliders measure as they move through the water?",
+          "options": [
+            "Wind speed and air pressure",
+            "Ocean temperature and salinity",
+            "Rainfall and cloud height",
+            "Wave height and sea ice"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The gliders flew above Typhoon Choi-Wan to collect their data.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Why is upper-ocean data important for forecasting tropical cyclones?",
+          "options": [
+            "Because cyclones draw their power from warm waters, so the data helps predict intensity and rapid intensification",
+            "Because it allows forecasters to change a storm's direction",
+            "Because it replaces the need for satellites entirely",
+            "Because it measures the temperature of the air above the storm"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The Navy has been a partner in the IOOS-led hurricane glider coordination effort since 2018.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "Where did the two gliders gather data during Typhoon Choi-Wan?",
+          "options": [
+            "Near Hawaii",
+            "Near Guam",
+            "Near Taiwan",
+            "Near the Philippines"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The passage says that glider data alone can prevent typhoons from forming.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        }
+      ]
+    }
+  ]
+}
