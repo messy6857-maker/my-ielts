@@ -9,11 +9,13 @@ import {
   getQuarantinedKeys,
   getToken,
   handleRejectedKeys,
+  rejectedKeysOf,
   setAuthPendingPush,
   syncEnabled,
   unquarantineKeys,
 } from './syncClient'
 import {
+  accountNotice,
   finishGuestMigration,
   hasPendingGuestMigration,
   onLocalWrite,
@@ -31,6 +33,9 @@ export const useSync = createGlobalState(() => {
   const backendOutdated = ref(false)
   let timer: ReturnType<typeof setTimeout> | undefined
   let wired = false
+  // 上一次已用 accountNotice 横幅展示过的同步失败原因：同一原因重复失败时
+  // 不再刷屏；原因变化或成功同步后再次失败时才重新展示一次。
+  let lastNotifiedSyncError = ''
   let generation = 0
   let requestSequence = 0
   let inFlight: Promise<boolean> | null = null
@@ -52,7 +57,14 @@ export const useSync = createGlobalState(() => {
     authFailed.value = result.status === 401
     backendOutdated.value = result.status === 426
     status.value = 'error'
-    errorMsg.value = result.message || '同步失败，学习记录已保存在本机'
+    const msg = result.message || '同步失败，学习记录已保存在本机'
+    errorMsg.value = msg
+    // 同步失败原因只在顶栏按钮 title 里时触屏看不到：状态变化（新原因）
+    // 时用 accountNotice 横幅展示一次，可关闭；同一原因重复失败不刷屏。
+    if (msg !== lastNotifiedSyncError) {
+      lastNotifiedSyncError = msg
+      accountNotice.value = msg
+    }
   }
   async function pushNow(force = false): Promise<boolean> {
     const owner = currentUser.value
@@ -86,7 +98,7 @@ export const useSync = createGlobalState(() => {
       // longer poison (re-probe/legacy entries): drop them from quarantine.
       if (handleRejectedKeys(owner, result)) {
         rejectedNotice.value
-          = `${result.rejected!.length} 条学习记录因格式异常未同步，已隔离不再上传，详情见设置页`
+          = `${rejectedKeysOf(result.rejected).length} 条学习记录因格式异常未同步，已隔离不再上传，详情见设置页`
       }
       else if (!getQuarantinedKeys(owner).length) {
         // A clean push clears the notice only once nothing is quarantined
@@ -94,14 +106,17 @@ export const useSync = createGlobalState(() => {
         // user may not have seen yet.
         rejectedNotice.value = ''
       }
+      const rejectedKeys = new Set(rejectedKeysOf(result.rejected))
       unquarantineKeys(
         owner,
-        Object.keys(payload).filter(k => !result.rejected?.includes(k)),
+        Object.keys(payload).filter(k => !rejectedKeys.has(k)),
       )
       if (result.data)
         applySyncData(result.data, owner)
       if (atStart === generation)
         localStorage.removeItem(pendingKey(owner))
+      // 成功同步后清掉“已通知”标记，下一次失败（即使原因相同）是新一轮失败，应再提示一次。
+      lastNotifiedSyncError = ''
       lastSyncAt.value = Date.now()
       status.value = 'ok'
       clearAuthError()

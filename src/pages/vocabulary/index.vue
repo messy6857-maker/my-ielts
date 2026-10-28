@@ -35,6 +35,73 @@ const refVocabulary = reactive(structuredClone(vocabulary))
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
 
+// 逐词拼写答案按账号持久化（只存非空输入；进度总数仍走 setProgress 持久化，不改回会话内计算）。
+// 键：nsKey('vocabulary_spell_v1')（按账号隔离）；值：{ 章名: { 词 id: 输入 } }。
+const SPELL_KEY = 'vocabulary_spell_v1'
+function readSpellMap() {
+  try {
+    const raw = localStorage.getItem(nsKey(SPELL_KEY))
+    const parsed = raw ? JSON.parse(raw) : {}
+    return parsed && typeof parsed === 'object' ? parsed : {}
+  }
+  catch {
+    return {}
+  }
+}
+function saveSpellMap() {
+  const map = {}
+  for (const [chapter, cur] of Object.entries(refVocabulary)) {
+    if (!cur)
+      continue
+    for (const group of cur.words) {
+      for (const item of group) {
+        if (item.spellValue) {
+          if (!map[chapter])
+            map[chapter] = {}
+          map[chapter][item.id] = item.spellValue
+        }
+      }
+    }
+  }
+  try {
+    localStorage.setItem(nsKey(SPELL_KEY), JSON.stringify(map))
+  }
+  catch {
+    // 存储失败不阻塞拼写（进度仍由 setProgress 持久化）
+  }
+}
+function restoreSpellValues() {
+  const map = readSpellMap()
+  for (const [chapter, cur] of Object.entries(refVocabulary)) {
+    if (!cur)
+      continue
+    const saved = map[chapter] || {}
+    for (const group of cur.words) {
+      for (const item of group) {
+        const value = saved[item.id]
+        if (typeof value === 'string' && value.length > 0) {
+          item.spellValue = value
+          item.spellError = !item.word
+            .map(v => v.toLowerCase().trim())
+            .includes(value)
+        }
+        else {
+          item.spellValue = ''
+          item.spellError = false
+        }
+      }
+    }
+  }
+  trainingStats.value = calcStats()
+  syncProgress()
+}
+onMounted(restoreSpellValues)
+// 切账号时按新账号恢复（先清旧账号残留，再套用新账号的拼写记录）
+const { currentUser: spellUser } = useAuth()
+watch(spellUser, () => {
+  restoreSpellValues()
+})
+
 watch(category, (newVal) => {
   // console.log(newVal, oldVal)
   localStorage.setItem(CHAPTER_KEY, newVal)
@@ -179,6 +246,7 @@ function onInputFocusOut(e, item) {
   }
   trainingStats.value = calcStats()
   syncProgress()
+  saveSpellMap()
 }
 
 function syncProgress() {
@@ -470,6 +538,7 @@ function copyAllError() {
                           />
                           <input
                             :id="item.id"
+                            :value="item.spellValue"
                             autocomplete="off"
                             :class="getInputStyleClass(item)"
                             type="text"
@@ -501,7 +570,7 @@ function copyAllError() {
                             <a
                               class="hover:underline"
                               :title="`在剑桥词典中查询 ${w}`"
-                              target="_blank"
+                              target="_blank" rel="noopener noreferrer"
                               :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${w}`"
                             >{{ w }}</a>
                           </p>

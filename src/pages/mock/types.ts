@@ -122,6 +122,104 @@ export function multiSelectScore(q: MockQuestion, userAnswer: string): number {
   return score
 }
 
+/** 两页镜像的纯逻辑（M-Opt-#1）：只抽与模板/计时器/路由无关的部分，
+ *  行为与两页原内联实现逐行一致，改一处漏一处的风险不再靠复制粘贴兜底。 */
+
+/** 满分题数：多选题按答案个数计，其余每题 1 分 */
+export function totalScorePoints(questions: MockQuestion[]): number {
+  return questions.reduce(
+    (s, q) =>
+      s
+      + (q.type === 'multi-select' && Array.isArray(q.answer)
+        ? q.answer.length
+        : 1),
+    0,
+  )
+}
+
+/** 交卷前得分为 0；交卷后按判分规则计分（多选按对几个得几分） */
+export function countCorrect(
+  questions: MockQuestion[],
+  answers: Record<string, string>,
+  submitted: boolean,
+): number {
+  if (!submitted)
+    return 0
+  return questions.reduce((sum, q) => {
+    const ans = answers[q.id] ?? ''
+    return (
+      sum
+      + (q.type === 'multi-select'
+        ? multiSelectScore(q, ans)
+        : isCorrect(q, ans)
+          ? 1
+          : 0)
+    )
+  }, 0)
+}
+
+export function mockQuestionStatus(
+  q: MockQuestion,
+  userAns: string,
+  submitted: boolean,
+): 'correct' | 'wrong' | 'partial' | 'unanswered' {
+  if (!submitted)
+    return 'unanswered'
+  if (!userAns)
+    return 'unanswered'
+  if (q.type === 'multi-select') {
+    const score = multiSelectScore(q, userAns)
+    const max = Array.isArray(q.answer) ? q.answer.length : 1
+    if (score === max)
+      return 'correct'
+    return score > 0 ? 'partial' : 'wrong'
+  }
+  return isCorrect(q, userAns) ? 'correct' : 'wrong'
+}
+
+/** 多选切换：已选则取消；未选且未达上限则加入；已达上限拒绝加入 */
+export function toggleMultiSelectValue(
+  current: string,
+  idx: number,
+  max: number,
+): string {
+  const set = new Set(current.split(',').filter(Boolean))
+  const s = String(idx)
+  if (set.has(s)) {
+    set.delete(s)
+  }
+  else {
+    if (set.size >= max)
+      return current
+    set.add(s)
+  }
+  return [...set].join(',')
+}
+
+/** 草稿续做时限：钳制到 [0, timeLimit]，无草稿时用整卷时限 */
+export function restoreTimeLeft(
+  savedTimeLeft: number | null | undefined,
+  timeLimit: number,
+): number {
+  return savedTimeLeft == null
+    ? timeLimit
+    : Math.min(Math.max(0, savedTimeLeft), timeLimit)
+}
+
+/**
+ * map-label 占位文案（M-Opt3）：答案形态为小写罗马数字（i–viii，标题匹配题
+ * 的转录形态）时提示序号；其余（地图/配对题，答案为大写单字母，含大写 I）
+ * 保留“输入字母”。大小写是区分依据：小写 i 是序号，大写 I 是字母。
+ */
+export function mapLabelPlaceholder(q: MockQuestion): string {
+  if (q.type !== 'map-label')
+    return '输入答案'
+  const a = typeof q.answer === 'string' ? q.answer : ''
+  if (a && a === a.toLowerCase() && /^[iv]+$/.test(a))
+    return '输入序号，如 vii'
+  return '输入字母'
+}
+
 /** 秒 → mm:ss */
 export function formatCountdown(sec: number): string {
   const m = Math.floor(sec / 60)

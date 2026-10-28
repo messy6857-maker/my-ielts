@@ -22,6 +22,9 @@ const isFinished = ref(false)
 const wordHadError = ref(false)
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
+// 进词定时器：advancing 为真表示已完成待进词，窗口内输入不再处理
+let advanceTimer: ReturnType<typeof setTimeout> | null = null
+let advancing = false
 
 const words = computed(() => {
   const chapter = (vocabulary as any)[selectedChapter.value]
@@ -47,6 +50,11 @@ function reset() {
   accuracy.value = 100
   isFinished.value = false
   wordHadError.value = false
+  if (advanceTimer) {
+    clearTimeout(advanceTimer)
+    advanceTimer = null
+  }
+  advancing = false
   setProgress('typing', 0, words.value.length)
   playAudio()
 }
@@ -88,6 +96,15 @@ function handleInput(e: Event) {
 
   const rawInput = (e.target as HTMLInputElement).value
   const input = normalizeInput(rawInput)
+  // 已排进词定时器时（200ms 窗口内）忽略后续输入变化：多敲/删改都不再计错、
+  // 也不重排定时器，避免一次完成连跳两词或正确词被误记错词本
+  if (advancing)
+    return
+  // 输入变化先清掉待进词定时器（删改重输不再排两个定时器）
+  if (advanceTimer) {
+    clearTimeout(advanceTimer)
+    advanceTimer = null
+  }
   userInput.value = input
   // Sync normalized value back to DOM input
   if (rawInput !== input)
@@ -114,11 +131,19 @@ function handleInput(e: Event) {
     wpm.value = Math.round(input.length / 5 / timeElapsed)
 
   // Check if finished
-  if (input === currentWord.value)
-    setTimeout(nextWord, 200)
+  if (input === currentWord.value && !advancing) {
+    advancing = true
+    advanceTimer = setTimeout(nextWord, 200)
+  }
 }
 
 function nextWord() {
+  // 定时器已触发：清掉引用并解锁，下一词重新计时
+  if (advanceTimer) {
+    clearTimeout(advanceTimer)
+    advanceTimer = null
+  }
+  advancing = false
   // 当前词若输错过，记入错词本
   if (wordHadError.value && currentWordData.value) {
     addMistake('typing', {
@@ -144,6 +169,21 @@ function nextWord() {
 
 onMounted(() => {
   reset()
+})
+
+// 离页时停掉 TTS 与音频，避免后台继续出声（与 KeywordFlashcard 的 onUnmounted 对齐；
+// useAudioGroup 的 dispose 已有同类取消，此处显式兜底直接朗读的 TTS）
+onUnmounted(() => {
+  if (advanceTimer) {
+    clearTimeout(advanceTimer)
+    advanceTimer = null
+  }
+  advancing = false
+  speechSynthesis.cancel()
+  if (audio) {
+    audio.pause()
+    audio = null
+  }
 })
 </script>
 

@@ -102,9 +102,11 @@ async function onSubmit() {
         <form @submit.prevent="onSubmit">
           <div class="mb-4">
             <label
+              for="login-username"
               class="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
             >用户名</label>
             <input
+              id="login-username"
               v-model="username"
               type="text"
               autocomplete="username"
@@ -116,9 +118,11 @@ async function onSubmit() {
           </div>
           <div class="mb-4">
             <label
+              for="login-password"
               class="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
             >密码</label>
             <input
+              id="login-password"
               v-model="password"
               type="password"
               autocomplete="current-password"
@@ -129,9 +133,11 @@ async function onSubmit() {
           </div>
           <div v-if="mode === 'register'" class="mb-4">
             <label
+              for="login-confirm-password"
               class="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
             >确认密码</label>
             <input
+              id="login-confirm-password"
               v-model="confirmPassword"
               type="password"
               autocomplete="new-password"

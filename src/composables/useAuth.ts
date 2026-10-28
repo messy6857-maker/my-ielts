@@ -16,6 +16,7 @@ import {
   subscribeStorage,
 } from '../utils/storage'
 import {
+  SYNC_PENDING_KEY,
   apiLogin,
   apiPull,
   apiPush,
@@ -53,9 +54,7 @@ export function onLocalWrite(cb: (key: string) => void) {
       cb(key)
   })
 }
-export function onLocalRemove(cb: (key: string) => void) {
-  return onLocalWrite(cb)
-}
+
 export function readJson<T>(key: string, fallback: T): T {
   return readValue(key, fallback)
 }
@@ -74,7 +73,7 @@ export function migrateGuestData(username: string) {
   batchStorage(() => {
     for (const key of Object.keys(localStorage)) {
       const base = studyBaseOf(key, null)
-      if (!base || base === 'tombstones_v1')
+      if (!base)
         continue
       if (collectionBases.includes(base)) {
         const value = readValue<unknown>(key, undefined)
@@ -273,8 +272,16 @@ export const useAuth = createGlobalState(() => {
       // A successful login remains usable offline if the initial pull fails.
       if (pull.ok && pull.data)
         applySyncData(pull.data, username)
-      if (pull.ok)
+      if (pull.ok) {
         finishGuestMigration(username)
+      }
+      else {
+        // 离线登录也先做本机游客迁移（仅填空缺，不覆盖云端）：否则账号页
+        // 一片空白，用户会误以为游客数据丢了。pending 标记保留，联网后
+        // pullNow 成功时 finishGuestMigration 会再跑一次（幂等）。
+        migrateGuestData(username)
+        accountNotice.value = '游客数据已先合并到本机，联网后将与云端同步'
+      }
       // Merge independently versioned entries; never choose one whole table over another.
       const pushed = pull.ok
         ? await apiPush(collectSyncData(username), username)
@@ -401,8 +408,8 @@ export const useAuth = createGlobalState(() => {
         console.error('Save before logout failed', error)
       }
     })
-    // 退出前尽力把最新数据推到云端。推送失败时：返回值带给调用方（TheHeader 目前忽略
-    // 返回值），同时记补推标记，下次登录成功时由 useSync 补推一次。
+    // 退出前尽力把最新数据推到云端。推送失败时：返回值带给调用方（TheHeader 的
+    // onLogout 据此写 accountNotice 提示），同时记补推标记，下次登录成功时由 useSync 补推一次。
     let pushOk = true
     if (syncEnabled && currentUser.value && getToken(currentUser.value)) {
       try {
@@ -416,6 +423,13 @@ export const useAuth = createGlobalState(() => {
         }
         else if (handleRejectedKeys(currentUser.value, pr)) {
           setAuthPendingPush(true)
+        }
+        else {
+          // 退出推送全量成功且无 rejected：本机已无待传数据，清 pending，
+          // 下次登录不再多一次空推；有 rejected 时仍走补推标记路径。
+          localStorage.removeItem(
+            `${SYNC_PENDING_KEY}:${currentUser.value}`,
+          )
         }
       }
       catch {
@@ -448,8 +462,13 @@ export const useAuth = createGlobalState(() => {
         && event.key !== null
       )
         return
-      if (currentUser.value && getTokenOwner() !== currentUser.value)
+      if (currentUser.value && getTokenOwner() !== currentUser.value) {
+        // 先写横幅、再置空身份：置空会同步触发模考的 owner watcher，
+        // 进行中的模考会把横幅换成更具体的“已暂停”提示；无模考时
+        // 本条跨页签提示保留。本页随后被 App.vue 的 watch 踢回首页。
+        accountNotice.value = '另一页签切换了账号，本页已回到游客身份'
         currentUser.value = null
+      }
     })
   }
   return { currentUser, loggingOut, register, login, logout, syncEnabled }

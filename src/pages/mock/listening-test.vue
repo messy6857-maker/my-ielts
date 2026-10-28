@@ -2,13 +2,18 @@
 import { useRoute, useRouter } from 'vue-router'
 import { useExamRecovery } from '../../composables/useExamRecovery'
 
-import { loadMockTest, mockTestList } from './registry'
+import { loadMockTest, loadMockTranscript, mockTestList, withTranscripts } from './registry'
 import type { MockTestPair } from './registry'
 import {
   bandScore,
+  countCorrect,
   formatCountdown,
-  isCorrect,
+  mapLabelPlaceholder,
+  mockQuestionStatus,
   multiSelectScore,
+  restoreTimeLeft,
+  toggleMultiSelectValue,
+  totalScorePoints,
 } from './types'
 import type { MockQuestion } from './types'
 import { saveMockRecord } from '~/composables/useMockHistory'
@@ -16,7 +21,7 @@ import { resolveMediaUrl } from '~/composables/useAudio'
 import { useGoBack } from '~/composables/useGoBack'
 import ListeningTabs from '~/components/ListeningTabs.vue'
 
-const mediaError = ref('')
+const partImageFailed = ref<Record<number, boolean>>({})
 const mediaRoot = ref<HTMLElement | null>(null)
 
 const { goBack } = useGoBack('/listening')
@@ -34,6 +39,16 @@ const timeLeft = ref(0)
 const answers = ref<Record<string, string>>({})
 const submitted = ref(false)
 const activePart = ref(0)
+// M-P2-4：音频错误按 Part 记录，横幅只反映当前 Part；此前共用一个
+// mediaError，另一 Part 加载成功会把坏 Part 的横幅误清。
+const mediaErrors = ref<Record<number, string>>({})
+const mediaError = computed(() => mediaErrors.value[activePart.value] ?? '')
+function onAudioError(pi: number) {
+  mediaErrors.value[pi] = '音频加载失败，请检查网络后重试'
+}
+function onAudioLoaded(pi: number) {
+  delete mediaErrors.value[pi]
+}
 const audioEl = ref<HTMLAudioElement | null>(null)
 let timer: ReturnType<typeof setInterval> | null = null
 let loadSeq = 0
@@ -83,7 +98,7 @@ const recovery = useExamRecovery({
 function retryMedia() {
   if (recovery.blocked.value)
     return
-  mediaError.value = ''
+  delete mediaErrors.value[activePart.value]
   const els = audioEl.value as unknown as
     | HTMLAudioElement
     | HTMLAudioElement[]
@@ -165,13 +180,25 @@ function startTest() {
   if (!testPair.value || started.value)
     return
   // 已交卷的草稿不再续做：按全新测试开始
-  const saved = recovery.draft.value && !recovery.draft.value.submitted
+  let saved = recovery.draft.value && !recovery.draft.value.submitted
     ? recovery.draft.value
     : null
+  // M-Opt-#4：0 秒草稿不再 1 秒后自动交卷，给二选一：确定 = 直接交卷查看
+  // 成绩，取消 = 放弃草稿、全新开始。
+  if (saved && saved.timeLeft <= 0) {
+    recovery.begin()
+    if (window.confirm('该草稿剩余时间已到（0 秒）。点“确定”直接交卷查看成绩，点“取消”放弃草稿、全新开始。')) {
+      answers.value = saved.answers ?? {}
+      activePart.value = saved.extra?.active ?? 0
+      started.value = true
+      submitted.value = false
+      submit()
+      return
+    }
+    saved = null
+  }
   recovery.begin()
-  timeLeft.value = saved
-    ? Math.min(Math.max(0, saved.timeLeft), testPair.value.listening.timeLimit)
-    : testPair.value.listening.timeLimit
+  timeLeft.value = restoreTimeLeft(saved?.timeLeft, testPair.value.listening.timeLimit)
   answers.value = saved?.answers ?? {}
   submitted.value = false
   activePart.value = saved?.extra?.active ?? 0
@@ -300,32 +327,11 @@ const allQuestions = computed<MockQuestion[]>(
 )
 
 // 满分题数（多选题按答案个数计）
-const scoredTotal = computed(() =>
-  allQuestions.value.reduce(
-    (s, q) =>
-      s
-      + (q.type === 'multi-select' && Array.isArray(q.answer)
-        ? q.answer.length
-        : 1),
-    0,
-  ),
-)
+const scoredTotal = computed(() => totalScorePoints(allQuestions.value))
 
-const correctCount = computed(() => {
-  if (!submitted.value)
-    return 0
-  return allQuestions.value.reduce((sum, q) => {
-    const ans = answers.value[q.id] ?? ''
-    return (
-      sum
-      + (q.type === 'multi-select'
-        ? multiSelectScore(q, ans)
-        : isCorrect(q, ans)
-          ? 1
-          : 0)
-    )
-  }, 0)
-})
+const correctCount = computed(() =>
+  countCorrect(allQuestions.value, answers.value, submitted.value),
+)
 
 const band = computed(() => bandScore(correctCount.value, scoredTotal.value))
 
@@ -368,21 +374,11 @@ function toggleMultiSelect(qid: string, idx: number) {
     return
   if (submitted.value)
     return
-  const current = new Set((answers.value[qid] ?? '').split(',').filter(Boolean))
-  const s = String(idx)
-  if (current.has(s)) {
-    current.delete(s)
-  }
-  else {
-    // 多选题最多选该题答案个数（Choose TWO 即 2 个），多出的拒绝加入，防止全选刷分
-    const q = allQuestions.value.find(q => q.id === qid)
-    const max
-      = q && Array.isArray(q.answer) ? q.answer.length : Number.POSITIVE_INFINITY
-    if (current.size >= max)
-      return
-    current.add(s)
-  }
-  answers.value[qid] = [...current].join(',')
+  // 多选题最多选该题答案个数（Choose TWO 即 2 个），多出的拒绝加入，防止全选刷分
+  const q = allQuestions.value.find(q => q.id === qid)
+  const max
+    = q && Array.isArray(q.answer) ? q.answer.length : Number.POSITIVE_INFINITY
+  answers.value[qid] = toggleMultiSelectValue(answers.value[qid] ?? '', idx, max)
 }
 
 // 切换套题：已开始且未交卷且已有答案时先确认，避免误触丢进度；
@@ -403,19 +399,7 @@ function onTestChange(e: Event) {
 function questionStatus(
   q: MockQuestion,
 ): 'correct' | 'wrong' | 'partial' | 'unanswered' {
-  if (!submitted.value)
-    return 'unanswered'
-  const userAns = answers.value[q.id] ?? ''
-  if (!userAns)
-    return 'unanswered'
-  if (q.type === 'multi-select') {
-    const score = multiSelectScore(q, userAns)
-    const max = Array.isArray(q.answer) ? q.answer.length : 1
-    if (score === max)
-      return 'correct'
-    return score > 0 ? 'partial' : 'wrong'
-  }
-  return isCorrect(q, userAns) ? 'correct' : 'wrong'
+  return mockQuestionStatus(q, answers.value[q.id] ?? '', submitted.value)
 }
 onBeforeRouteLeave(
   () =>
@@ -424,7 +408,7 @@ onBeforeRouteLeave(
     || submitted.value
     || window.confirm('尚未交卷，离开将暂停计时并保留本机草稿，确定吗？'),
 )
-function submit() {
+async function submit() {
   if (recovery.mismatch())
     return
   if (submitted.value)
@@ -435,14 +419,7 @@ function submit() {
   pauseAllAudio()
   // 保存做题记录
   const qs = allQuestions.value
-  const total = qs.reduce(
-    (s, q) =>
-      s
-      + (q.type === 'multi-select' && Array.isArray(q.answer)
-        ? q.answer.length
-        : 1),
-    0,
-  )
+  const total = totalScorePoints(qs)
   const saved = saveMockRecord({
     id: testId.value,
     label: testPair.value?.label ?? testId.value,
@@ -456,6 +433,13 @@ function submit() {
     recovery.clear()
   else
     recovery.error.value = '交卷记录保存失败，成绩已在当前页显示；本机草稿已标记为已交卷，不会再提示继续作答。'
+  // M-Opt1：交卷后才按需加载录音脚本，选加载不再顺带下载整套脚本；
+  // 加载失败时脚本区保持隐藏（原有 v-if 分支），不阻塞交卷主流程。
+  // M-Opt2 的音频保留见模板：交卷后 audio 不再 v-if 销毁，仍可边听边对脚本。
+  const pairAtSubmit = testPair.value
+  const transcript = await loadMockTranscript(testId.value)
+  if (transcript && testPair.value && testPair.value === pairAtSubmit)
+    testPair.value = { ...testPair.value, listening: withTranscripts(testPair.value.listening, transcript) }
 }
 </script>
 
@@ -560,6 +544,9 @@ function submit() {
         <p v-if="recovery.draft.value?.submitted" class="mt-4 text-sm text-gray-500 dark:text-gray-400">
           该套题已交卷，重新开始将是一次新的测试
         </p>
+        <p v-if="recovery.draft.value && !recovery.draft.value.submitted" class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+          草稿最后保存：{{ new Date(recovery.draft.value.updatedAt).toLocaleString() }}
+        </p>
       </div>
       <div v-else :inert="recovery.blocked.value ? true : undefined">
         <div class="mb-6 flex items-center justify-between">
@@ -609,6 +596,13 @@ function submit() {
           <p class="text-gray-600 dark:text-gray-400">
             答对 {{ correctCount }} / {{ scoredTotal }} 分
           </p>
+          <button
+            type="button"
+            class="mt-4 border border-gray-300 rounded-lg px-6 py-2 text-sm text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+            @click="router.push('/listening/intensive')"
+          >
+            🎧 去精听对照原文（精听页需再选本套题）
+          </button>
         </div>
 
         <div v-if="!submitted" class="mb-6 flex gap-2">
@@ -639,14 +633,15 @@ function submit() {
             <h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
               {{ p.title }}
             </h3>
+            <!-- 交卷后音频不销毁：保留当前 Part 播放器，可边听边对脚本；
+                 交卷时 submit() 已 pauseAllAudio，位置保留、不会自动续播 -->
             <audio
-              v-if="!submitted"
               ref="audioEl"
               controls
               :src="resolveMediaUrl(p.audio)"
               class="w-full"
-              @error="mediaError = '音频加载失败，请检查网络后重试'"
-              @loadeddata="mediaError = ''"
+              @error="onAudioError(pi)"
+              @loadeddata="onAudioLoaded(pi)"
             />
             <p
               v-if="submitted && p.transcript"
@@ -670,12 +665,18 @@ function submit() {
                 class="border border-gray-200 rounded-xl bg-white p-2 shadow-sm dark:border-gray-700 dark:bg-gray-800"
               >
                 <img
+                  v-if="!partImageFailed[pi]"
                   :src="resolveMediaUrl(p.image)"
                   alt="题目示意图"
                   class="w-full cursor-zoom-in rounded-lg lg:max-h-[70vh] lg:object-contain"
                   @click="openZoom(resolveMediaUrl(p.image))"
+                  @error="partImageFailed[pi] = true"
                 >
+                <p v-else class="p-3 text-sm text-gray-500">
+                  示意图加载失败，请检查网络后刷新页面
+                </p>
                 <button
+                  v-if="!partImageFailed[pi]"
                   class="mt-2 w-full rounded-lg bg-gray-100 py-2 text-sm font-bold text-gray-700 dark:bg-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-600"
                   @click="openZoom(resolveMediaUrl(p.image))"
                 >
@@ -806,7 +807,7 @@ function submit() {
                     v-if="q.type === 'map-label'"
                     :disabled="submitted"
                     :value="answers[q.id] ?? ''"
-                    placeholder="输入字母"
+                    :placeholder="mapLabelPlaceholder(q)"
                     maxlength="1"
                     class="w-24 border border-gray-300 rounded-lg px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     @input="

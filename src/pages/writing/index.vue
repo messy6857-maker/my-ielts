@@ -220,9 +220,8 @@ function gradePractice(ok) {
     practiceStats.value.correct++
     if (!isMastered(item.no))
       toggleMastered(item.no)
-    // 错题重练时答对，从错词本移除
-    if (practiceScope.value === 'mistakes')
-      removeMistake(`writing:${item.no}`)
+    // 答对时统一从错词本移除（不限练习范围）
+    removeMistake(`writing:${item.no}`)
   }
   else {
     practiceStats.value.wrong++

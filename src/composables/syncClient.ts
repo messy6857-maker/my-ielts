@@ -9,7 +9,6 @@ import {
   compareStamp,
   envelope,
   importTable,
-  isEnvelope,
   notifyStorage,
   readRecords,
   readValue,
@@ -86,10 +85,48 @@ export interface ApiResult {
   token?: string
   username?: string
   data?: Record<string, string> | null
-  /** Keys the server skipped as malformed/foreign (sync PUT only). */
-  rejected?: string[]
+  /**
+   * Keys the server skipped as malformed/foreign (sync PUT only).
+   * 新服务端回 [{ key, reason }]，旧服务端回 string[]；两种形状都要兼容
+   * （部署窗口内前后端可能错位），见 rejectedKeysOf。
+   */
+  rejected?: RejectedEntry[]
   updatedAt?: number
   protocolVersion?: number
+}
+/** 服务端 rejected 原因三类：未知/跨账号 base、非字符串原始值、decode 失败。 */
+export type RejectedReason = 'unknown-base' | 'non-string' | 'decode-failed'
+export type RejectedEntry = string | { key: string; reason?: string }
+/** 归一化 rejected 为纯 key 列表（兼容 string[] 旧形状与对象新形状）。 */
+export function rejectedKeysOf(rejected?: RejectedEntry[]): string[] {
+  return (rejected ?? []).flatMap(e =>
+    typeof e === 'string'
+      ? [e]
+      : e && typeof e.key === 'string'
+        ? [e.key]
+        : [],
+  )
+}
+/** 从一次 rejected 响应中取出 key → 原因（无原因的条目不进表）。 */
+export function rejectedReasonsOf(
+  rejected?: RejectedEntry[],
+): Record<string, RejectedReason> {
+  const out: Record<string, RejectedReason> = {}
+  for (const e of rejected ?? []) {
+    if (
+      e
+      && typeof e !== 'string'
+      && typeof e.key === 'string'
+      && (e.reason === 'unknown-base' || e.reason === 'non-string' || e.reason === 'decode-failed')
+    )
+      out[e.key] = e.reason
+  }
+  return out
+}
+export const REJECTED_REASON_LABELS: Record<RejectedReason, string> = {
+  'unknown-base': '未知或跨账号条目',
+  'non-string': '原始值非字符串',
+  'decode-failed': '版本戳非法',
 }
 // Keys the server rejected: quarantined locally so they are never re-uploaded
 // (otherwise every push would carry the same poisoned entry again).
@@ -122,6 +159,16 @@ export function getQuarantineEntries(owner: string | null): QuarantineEntry[] {
           key: item.k,
           stamp: typeof item.s === 'string' ? item.s : null,
           at: typeof item.t === 'number' ? item.t : 0,
+        }]
+      }
+      // 写入侧存的是 { key, stamp, at }（见 quarantineKeys）：读取必须认
+      // 这种形状，否则隔离表经 localStorage 往返后全丢、隔离整体失效。
+      // 旧的 { k, s, t } 紧凑形状仍兼容（已存的老条目不丢）。
+      if (item && typeof item.key === 'string') {
+        return [{
+          key: item.key,
+          stamp: typeof item.stamp === 'string' ? item.stamp : null,
+          at: typeof item.at === 'number' ? item.at : 0,
         }]
       }
       return []
@@ -159,28 +206,94 @@ export function quarantineKeys(owner: string, keys: string[]) {
     byKey.set(key, { key, stamp: snapshotOf(key), at: Date.now() })
   writeQuarantineEntries(owner, [...byKey.values()])
 }
+const REJECTED_REASON_KEY = 'myielts_sync_rejected_reasons'
+function rejectedReasonKey(owner: string) {
+  return `${REJECTED_REASON_KEY}:${owner}`
+}
 export function unquarantineKeys(owner: string, keys: string[]) {
   if (!owner || !keys.length)
     return
   const drop = new Set(keys)
   const entries = getQuarantineEntries(owner)
-  if (!entries.some(e => drop.has(e.key)))
-    return
-  writeQuarantineEntries(owner, entries.filter(e => !drop.has(e.key)))
+  if (entries.some(e => drop.has(e.key)))
+    writeQuarantineEntries(owner, entries.filter(e => !drop.has(e.key)))
+  try {
+    const prev = JSON.parse(
+      localStorage.getItem(rejectedReasonKey(owner)) || '{}',
+    )
+    if (prev && typeof prev === 'object') {
+      for (const k of drop)
+        delete prev[k]
+      localStorage.setItem(rejectedReasonKey(owner), JSON.stringify(prev))
+    }
+  }
+  catch {
+    /* 原因表写失败不影响解除本身。 */
+  }
 }
 export function clearQuarantinedKeys(owner: string | null) {
-  if (owner)
+  if (owner) {
     localStorage.removeItem(quarantineKey(owner))
+    localStorage.removeItem(rejectedReasonKey(owner))
+  }
+}
+export function getRejectedReason(
+  owner: string | null,
+  key: string,
+): RejectedReason | null {
+  if (!owner)
+    return null
+  try {
+    const v = JSON.parse(localStorage.getItem(rejectedReasonKey(owner)) || '{}')
+    const r = v?.[key]
+    return r === 'unknown-base' || r === 'non-string' || r === 'decode-failed'
+      ? r
+      : null
+  }
+  catch {
+    return null
+  }
+}
+function storeRejectedReasons(
+  owner: string,
+  reasons: Record<string, RejectedReason>,
+) {
+  if (!Object.keys(reasons).length)
+    return
+  try {
+    const prev = JSON.parse(
+      localStorage.getItem(rejectedReasonKey(owner)) || '{}',
+    )
+    localStorage.setItem(
+      rejectedReasonKey(owner),
+      JSON.stringify({ ...(prev && typeof prev === 'object' ? prev : {}), ...reasons }),
+    )
+  }
+  catch {
+    /* 原因只是展示用，写失败不影响隔离本身。 */
+  }
 }
 /** Quarantine the keys a successful push reported as rejected, if any. */
 export function handleRejectedKeys(
   owner: string,
-  result: { ok: boolean; rejected?: string[] },
+  result: { ok: boolean; rejected?: RejectedEntry[] },
 ): boolean {
-  if (!result.ok || !result.rejected?.length)
+  const keys = rejectedKeysOf(result.rejected)
+  if (!result.ok || !keys.length)
     return false
-  quarantineKeys(owner, result.rejected)
+  quarantineKeys(owner, keys)
+  storeRejectedReasons(owner, rejectedReasonsOf(result.rejected))
   return true
+}
+/**
+ * 同步请求超时（毫秒）：基础 30 秒 + 每 MB 10 秒，上限 300 秒。
+ * 大账号在慢上行下不再每次都被固定 30 秒掐断；5MB 上限对应 80 秒。
+ */
+export function syncTimeoutMs(bodyBytes: number) {
+  return Math.min(
+    300000,
+    30000 + Math.ceil(Math.max(0, bodyBytes) / 1048576) * 10000,
+  )
 }
 const capabilities = new Map<string, number>()
 async function api(
@@ -193,7 +306,15 @@ async function api(
   if (username && !token)
     return { ok: false, status: 401, message: '账号会话已变化，请重新登录' }
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 30000)
+  const bodyText = body === undefined ? undefined : JSON.stringify(body)
+  const timeout = setTimeout(
+    () => controller.abort(),
+    syncTimeoutMs(
+      bodyText === undefined
+        ? 0
+        : new TextEncoder().encode(bodyText).length,
+    ),
+  )
   try {
     const response = await fetch(`${SYNC_API_BASE}${path}`, {
       method,
@@ -201,7 +322,7 @@ async function api(
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: bodyText,
       signal: controller.signal,
     })
     let json: any
@@ -300,6 +421,10 @@ export function apiPush(
           message: '同步服务需要更新后才能安全上传；学习记录已保存在本机',
         }
       }
+      // 探针拉取结果顺手应用：少一次往返的陈旧窗口。只在协议 2 确认后应用，
+      // 426 门禁语义不变（旧服务端的数据不应用）。
+      if (probe.data)
+        applySyncData(probe.data, username)
     }
     return api('/sync', 'PUT', { protocolVersion: 2, data }, username)
   })
@@ -349,7 +474,6 @@ export function collectSyncData(username: string): Record<string, string> {
         'mistakes_v1',
         'stats_attempts_v1',
         'study_time_v1',
-        'tombstones_v1',
       ].includes(base)
       || base.endsWith('_daily_new_v1')
       || base.startsWith('study_time_v1_')
@@ -453,7 +577,14 @@ export function applySyncData(data: Record<string, string>, username: string) {
             && !previous.deleted
             && !incoming.deleted
           ) {
-            const merged = mergeLegacy(base, previous.value, incoming.value)
+            // 戳 0 的 legacy 种子键走 union/max 语义（与服务端对齐），不是纯 LWW：
+            // 两设备各执一份 legacy 数据时，后来者不再因戳相等被丢弃。
+            // 注意传表名（去掉 __entry_ 后缀），否则 legacyMerge 的分支永不命中。
+            const merged = mergeLegacy(
+              base.split('__entry_')[0],
+              previous.value,
+              incoming.value,
+            )
             if (JSON.stringify(merged) !== JSON.stringify(previous.value)) {
               saveEnvelope(key, { ...incoming, value: merged }, 'remote')
               count++
@@ -471,35 +602,6 @@ export function applySyncData(data: Record<string, string>, username: string) {
       }
       catch {
         /* Ignore malformed remote entries without replacing local records. */
-      }
-    }
-    const tombs = readValue<
-      Array<{
-        k: string
-        h: string
-      }>
-    >(accountKey('tombstones_v1', username), [])
-    if (Array.isArray(tombs)) {
-      for (const tomb of tombs) {
-        if (!studyBaseOf(tomb.k, username))
-          continue
-        const raw = localStorage.getItem(tomb.k)
-        try {
-          if (
-            raw
-            && !isEnvelope(JSON.parse(raw))
-            && hashString(raw) === tomb.h
-          ) {
-            saveEnvelope(
-              tomb.k,
-              { __ielts: 2, stamp: [0, 'legacy-delete'], deleted: true },
-              'remote',
-            )
-          }
-        }
-        catch {
-          /* Preserve malformed originals. */
-        }
       }
     }
     migrateStudy(username)

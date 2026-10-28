@@ -22,6 +22,14 @@ describe('text parsing and presentation', () => {
     expect(
       splitSentences('First sentence. Second sentence? Last sentence!'),
     ).toHaveLength(3))
+  it('does not highlight English words inside other words, but keeps Chinese substring matching', () => {
+    const pieces = highlightPieces('The art in this part will fall, falling fast', ['art', 'fall'])
+    expect(pieces.filter(p => p.highlighted).map(p => p.text)).toEqual(['art', 'fall'])
+    const cn = highlightPieces('学习中文艺术', ['中文'])
+    expect(cn.filter(p => p.highlighted).map(p => p.text)).toEqual(['中文'])
+    const phrase = highlightPieces('hello world, say hello worldwide', ['hello world'])
+    expect(phrase.filter(p => p.highlighted).map(p => p.text)).toEqual(['hello world'])
+  })
   it('keeps original text through overlapping highlights', () => {
     const text = 'hello world mark <img src=x onerror=alert(1)>'
     expect(

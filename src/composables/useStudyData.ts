@@ -14,6 +14,7 @@ import { useRecordMap } from './useRecordData'
 
 export type MistakeModule =
   | 'vocabulary'
+  | 'flashcard'
   | 'typing'
   | 'listening'
   | 'reading'
@@ -46,6 +47,7 @@ export interface ModuleProgress {
 }
 export const MISTAKE_MODULE_LABEL: Record<MistakeModule, string> = {
   vocabulary: '词汇拼写',
+  flashcard: '单词自测',
   typing: '打字练习',
   listening: '听力 179',
   reading: '阅读 376',
@@ -194,21 +196,67 @@ export const useMistakes = createGlobalState(() => {
       days,
     })
   }
-  function decrementMistake(key: string, date = studyDay()) {
-    const id = `${key}|${writerId()}`
-    const old = readRecords<MistakePart>('mistake_parts_v2', currentUser.value)[
-      id
-    ]
-    if (
-      !old
-      || old.epoch !== (resets.state.value[key]?.epoch ?? '')
-      || old.count <= 0
+  // 跨设备 undo：按 key 查全设备 part（不再只取本设备 writer 分片）。
+  // 单源精确性不变：始终只扣一个 part、总数只减 1；指定了 date 时扣该日桶
+  // （与 goBackOne 传 entry.date、179practice 传 failureDate 的调用方一致）。
+  // 未指定 date 时扣最近失败日（与 mistakeOutstanding 的 failureDate 语义对齐），
+  // 不再默认扣当日空桶导致跨日纠正时 day 桶错配；多源时选最近失败日的 part。
+  function decrementMistake(key: string, date?: string) {
+    const epoch = resets.state.value[key]?.epoch ?? ''
+    const records = readRecords<MistakePart>(
+      'mistake_parts_v2',
+      currentUser.value,
     )
+    const candidates = Object.entries(records)
+      .filter(
+        ([, part]) =>
+          !!part
+          && part.key === key
+          && part.epoch === epoch
+          && part.count > 0,
+      )
+      .sort((a, b) => b[1].lastAt - a[1].lastAt)
+    if (candidates.length === 0)
       return
-    parts.set(id, {
+    let targetId: string
+    let targetDay: string | undefined
+    if (date !== undefined) {
+      const withDay = candidates.find(
+        ([, part]) => (part.days?.[date] ?? 0) > 0,
+      )
+      targetId = (withDay ?? candidates[0])[0]
+      targetDay = date
+    }
+    else {
+      let bestDay: string | null = null
+      let bestId = candidates[0][0]
+      for (const [id, part] of candidates) {
+        for (const [day, count] of Object.entries(part.days ?? {})) {
+          if (
+            count > 0
+            && (bestDay === null || dateTime(day) > dateTime(bestDay))
+          ) {
+            bestDay = day
+            bestId = id
+          }
+        }
+      }
+      targetId = bestId
+      targetDay = bestDay ?? undefined
+    }
+    const old = records[targetId]
+    if (!old)
+      return
+    parts.set(targetId, {
       ...old,
       count: Math.max(0, old.count - 1),
-      days: { ...old.days, [date]: Math.max(0, (old.days[date] ?? 0) - 1) },
+      days:
+        targetDay === undefined
+          ? old.days
+          : {
+              ...old.days,
+              [targetDay]: Math.max(0, (old.days[targetDay] ?? 0) - 1),
+            },
     })
   }
   // 179 练习的持久守卫：页面会话内的 checked 刷新即重建，改以错题本自身为准。

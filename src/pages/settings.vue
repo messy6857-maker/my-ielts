@@ -3,9 +3,13 @@ import { ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useSync } from '../composables/useSync'
 import {
+  REJECTED_REASON_LABELS,
   clearQuarantinedKeys,
   getQuarantinedKeys,
+  getRejectedReason,
+  unquarantineKeys,
 } from '../composables/syncClient'
+import { decodeId } from '../utils/storage'
 import { downloadStudyBackup } from '../utils/backup'
 import { pruneArchives } from '../utils/archives'
 import { useGoBack } from '../composables/useGoBack'
@@ -17,7 +21,7 @@ import {
 } from '../composables/useAISettings'
 
 const { currentUser } = useAuth()
-const { rejectedNotice, dismissRejectedNotice } = useSync()
+const { rejectedNotice, dismissRejectedNotice, pushNow } = useSync()
 const language = ref(
   localStorage.getItem('myielts_tts_language') === 'en-GB' ? 'en-GB' : 'en-US',
 )
@@ -30,9 +34,33 @@ function refreshQuarantined() {
   quarantined.value = getQuarantinedKeys(currentUser.value)
 }
 watch(currentUser, refreshQuarantined, { immediate: true })
-function clearQuarantine() {
+watch(rejectedNotice, refreshQuarantined)
+// entry 键形如 myielts_u_<用户>_<表>__entry_<hex>：用现有 decodeId 还原记录 ID，
+// 用户才能辨认被隔离的是哪条记录（用户名含下划线时不硬拆，只还原 ID 部分）。
+function describeQuarantinedKey(k: string) {
+  const idx = k.indexOf('__entry_')
+  if (idx === -1)
+    return k
+  const id = decodeId(k.slice(idx + 8))
+  return id === null ? k : `${k.slice(0, idx)} · ${id}`
+}
+function rejectedReasonLabel(k: string) {
+  const r = getRejectedReason(currentUser.value, k)
+  return r ? REJECTED_REASON_LABELS[r] : ''
+}
+async function unquarantineOne(k: string) {
+  if (!currentUser.value)
+    return
+  unquarantineKeys(currentUser.value, [k])
+  refreshQuarantined()
+  await pushNow(true)
+  refreshQuarantined()
+}
+async function clearQuarantine() {
   clearQuarantinedKeys(currentUser.value)
   dismissRejectedNotice()
+  refreshQuarantined()
+  await pushNow(true)
   refreshQuarantined()
 }
 const { goBack } = useGoBack('/')
@@ -116,8 +144,11 @@ async function onTest() {
           {{ rejectedNotice }}
         </p>
         <ul class="mt-2 max-h-32 overflow-auto break-all text-xs text-gray-500">
-          <li v-for="k in quarantined" :key="k">
-            {{ k }}
+          <li v-for="k in quarantined" :key="k" class="flex items-baseline justify-between gap-2">
+            <span>{{ describeQuarantinedKey(k) }}<span v-if="rejectedReasonLabel(k)">（{{ rejectedReasonLabel(k) }}）</span></span>
+            <button class="shrink-0 border rounded px-2 py-0.5 text-xs" @click="unquarantineOne(k)">
+              解除此条
+            </button>
           </li>
         </ul>
         <button class="mt-2 border rounded px-3 py-1.5 text-sm" @click="clearQuarantine">
@@ -153,6 +184,7 @@ async function onTest() {
         填写后可在大小作文批改页使用 AI 批改。Key
         只保存在你本机浏览器，请求经你的 VPS
         中转（浏览器直连会被第三方接口拦截）。
+        注意：Key 按浏览器全局共享、不按账号隔离，同一浏览器的各账号共用此 Key。
       </p>
 
       <label class="mb-4 block">

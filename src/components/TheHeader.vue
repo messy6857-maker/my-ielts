@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { accountNotice } from '../composables/useAuth'
+
 const menus = reactive([
   {
     label: '首页',
@@ -83,7 +85,9 @@ const syncDotClass = computed(() => {
 })
 
 async function onLogout() {
-  await logout()
+  const { pushOk } = await logout()
+  if (!pushOk)
+    accountNotice.value = '退出前有记录未能上传，下次登录将自动补推，请勿清理浏览器数据'
   clearAuthError()
   showMobileMenu.value = false
   // 退出回首页：页面卸载，旧账号的页内状态自然清掉，关闭退出不清屏家族。
@@ -215,7 +219,7 @@ async function onManualSync() {
           </router-link>
           <a
             href="https://github.com/messy6857-maker/my-ielts"
-            target="_blank"
+            target="_blank" rel="noopener noreferrer"
             class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 hover:text-gray-900 focus:ring-4 focus:ring-gray-300 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-600"
           >
             <div i-simple-icons-github />

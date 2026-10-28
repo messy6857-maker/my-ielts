@@ -29,7 +29,7 @@ const essay = computed(() => getModelEssay(props.promptId))
         v-if="essay.sourceUrl"
         :href="essay.sourceUrl"
         target="_blank"
-        rel="noopener"
+        rel="noopener noreferrer"
         class="text-blue-600 dark:text-blue-400 hover:underline"
       >{{ essay.sourceName || '原文链接' }}</a>
       <span v-else>{{ essay.sourceName }}</span>

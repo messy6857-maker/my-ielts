@@ -44,3 +44,29 @@ jobs:
         with:
           branch: gh-pages
           folder: dist
+      # 部署后冒烟：push 成功不等于线上可访问（曾遇 CDN 延迟）。curl 线上
+      # index.html 核对本次构建的 index chunk hash、并验关键 chunk 200。
+      # CDN 容忍重试；continue-on-error 只告警，不判部署失败。
+      - name: Smoke test deployed site
+        continue-on-error: true
+        run: |
+          set -u
+          SITE="https://messy6857-maker.github.io/my-ielts"
+          # 本次构建的 index chunk（dist 由 verify 产物下载而来，与部署物一致）
+          BUNDLE=$(grep -o 'assets/index-[^"]*\.js' dist/index.html | head -1)
+          echo "expecting bundle: $BUNDLE"
+          ok=""
+          for i in $(seq 1 10); do
+            if curl -fsSL "$SITE/" -o /tmp/smoke-index.html \
+              && grep -q "$BUNDLE" /tmp/smoke-index.html \
+              && curl -fsSL -o /dev/null "$SITE/$BUNDLE"; then
+              ok=1; break
+            fi
+            echo "smoke attempt $i: not live yet, retrying in 30s…"
+            sleep 30
+          done
+          if [ -z "$ok" ]; then
+            echo "::warning::smoke test did not see $BUNDLE live after retries (CDN delay possible); check $SITE manually"
+            exit 1
+          fi
+          echo "smoke test passed: $BUNDLE is live"

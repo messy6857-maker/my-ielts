@@ -63,6 +63,7 @@ const selectedPart = ref('part1')
 const transcript = ref('')
 const showTranscript = ref(false)
 const loading = ref(false)
+const loadError = ref(false)
 const speakingIndex = ref(-1)
 
 const sentenceEntries = computed(() =>
@@ -129,6 +130,7 @@ async function loadTranscript() {
   const test = selectedTest.value
   const part = selectedPart.value
   loading.value = true
+  loadError.value = false
   transcript.value = ''
   try {
     const mod = await transcriptModules[test]()
@@ -145,6 +147,8 @@ async function loadTranscript() {
   }
   catch (e) {
     console.error('加载原文失败', e)
+    if (sequence === transcriptSequence)
+      loadError.value = true
   }
   if (sequence === transcriptSequence)
     loading.value = false
@@ -304,6 +308,12 @@ function setRate(r: number) {
               {{ s }}
             </p>
           </div>
+        </div>
+        <div v-else-if="loadError" class="text-sm text-gray-500">
+          原文加载失败，点击重试
+          <button class="ml-2 underline" @click="loadTranscript()">
+            重试
+          </button>
         </div>
         <div v-else class="text-sm text-gray-500">
           暂无原文

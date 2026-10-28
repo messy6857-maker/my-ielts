@@ -79,7 +79,7 @@ onUnmounted(() => {
 
     <!-- 语音转写 -->
     <div
-      v-if="transcript || (audioUrl && !transcriptionSupported)"
+      v-if="transcript || (audioUrl && !isRecording && !processing)"
       class="mt-2 rounded-lg bg-gray-50 p-3 text-xs leading-5 dark:bg-gray-700/50"
     >
       <div class="mb-1 font-bold text-gray-500 dark:text-gray-400">
@@ -88,9 +88,12 @@ onUnmounted(() => {
       <p v-if="transcript" class="text-gray-700 dark:text-gray-200">
         {{ transcript }}
       </p>
-      <p v-else class="text-gray-400">
+      <p v-else-if="!transcriptionSupported" class="text-gray-400">
         当前浏览器不支持语音转写（请用 Chrome/Edge），AI
         评分不可用，但录音回放正常。
+      </p>
+      <p v-else class="text-gray-400">
+        未识别出语音内容
       </p>
     </div>
 

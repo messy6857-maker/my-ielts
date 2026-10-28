@@ -19,7 +19,8 @@ const p1Filtered = computed(() => {
   if (!kw)
     return PART1_TOPICS
   return PART1_TOPICS.filter(
-    t => t.topic.toLowerCase().includes(kw) || t.topicCn.includes(kw),
+    t => t.topic.toLowerCase().includes(kw) || t.topicCn.includes(kw)
+      || t.questions.some(q => q.toLowerCase().includes(kw)),
   )
 })
 function toggleP1(id: string) {

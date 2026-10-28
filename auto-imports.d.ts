@@ -13,6 +13,7 @@ declare global {
   const MEDIA_BASE: typeof import('./src/composables/useAudio')['MEDIA_BASE']
   const MISTAKE_MODULE_LABEL: typeof import('./src/composables/useStudyData')['MISTAKE_MODULE_LABEL']
   const PROGRESS_MODULE_LABEL: typeof import('./src/composables/useStudyData')['PROGRESS_MODULE_LABEL']
+  const REJECTED_REASON_LABELS: typeof import('./src/composables/syncClient')['REJECTED_REASON_LABELS']
   const SYNC_PENDING_KEY: typeof import('./src/composables/syncClient')['SYNC_PENDING_KEY']
   const accountNotice: typeof import('./src/composables/useAuth')['accountNotice']
   const aiSettingsState: typeof import('./src/composables/useAISettings')['aiSettingsState']
@@ -69,7 +70,9 @@ declare global {
   const getCurrentScope: typeof import('vue')['getCurrentScope']
   const getDeviceId: typeof import('./src/composables/useStudyTimer')['getDeviceId']
   const getMockHistory: typeof import('./src/composables/useMockHistory')['getMockHistory']
+  const getQuarantineEntries: typeof import('./src/composables/syncClient')['getQuarantineEntries']
   const getQuarantinedKeys: typeof import('./src/composables/syncClient')['getQuarantinedKeys']
+  const getRejectedReason: typeof import('./src/composables/syncClient')['getRejectedReason']
   const getToken: typeof import('./src/composables/syncClient')['getToken']
   const getTokenOwner: typeof import('./src/composables/syncClient')['getTokenOwner']
   const getWordInfo: typeof import('./src/composables/useWordInfo')['getWordInfo']
@@ -78,6 +81,7 @@ declare global {
   const gradeSchedule: typeof import('./src/composables/useSpacedRepetition')['gradeSchedule']
   const gradeSpeakingWithAI: typeof import('./src/composables/useAISettings')['gradeSpeakingWithAI']
   const h: typeof import('vue')['h']
+  const handleRejectedKeys: typeof import('./src/composables/syncClient')['handleRejectedKeys']
   const hasAISettings: typeof import('./src/composables/useAISettings')['hasAISettings']
   const hasPendingGuestMigration: typeof import('./src/composables/useAuth')['hasPendingGuestMigration']
   const hashString: typeof import('./src/composables/syncClient')['hashString']
@@ -146,6 +150,8 @@ declare global {
   const refThrottled: typeof import('@vueuse/core')['refThrottled']
   const refWithControl: typeof import('@vueuse/core')['refWithControl']
   const registerAudio: typeof import('./src/composables/useSingleAudio')['registerAudio']
+  const rejectedKeysOf: typeof import('./src/composables/syncClient')['rejectedKeysOf']
+  const rejectedReasonsOf: typeof import('./src/composables/syncClient')['rejectedReasonsOf']
   const removeJson: typeof import('./src/composables/useAuth')['removeJson']
   const repairSavedGrade: typeof import('./src/composables/useAISettings')['repairSavedGrade']
   const resolveAudioUrl: typeof import('./src/composables/useAudio')['resolveAudioUrl']
@@ -169,6 +175,7 @@ declare global {
   const syncEnabled: typeof import('./src/composables/syncClient')['syncEnabled']
   const syncRef: typeof import('@vueuse/core')['syncRef']
   const syncRefs: typeof import('@vueuse/core')['syncRefs']
+  const syncTimeoutMs: typeof import('./src/composables/syncClient')['syncTimeoutMs']
   const templateRef: typeof import('@vueuse/core')['templateRef']
   const testAIConnection: typeof import('./src/composables/useAISettings')['testAIConnection']
   const throttledRef: typeof import('@vueuse/core')['throttledRef']
@@ -186,6 +193,7 @@ declare global {
   const tryOnMounted: typeof import('@vueuse/core')['tryOnMounted']
   const tryOnScopeDispose: typeof import('@vueuse/core')['tryOnScopeDispose']
   const tryOnUnmounted: typeof import('@vueuse/core')['tryOnUnmounted']
+  const unquarantineKeys: typeof import('./src/composables/syncClient')['unquarantineKeys']
   const unref: typeof import('vue')['unref']
   const unrefElement: typeof import('@vueuse/core')['unrefElement']
   const until: typeof import('@vueuse/core')['until']
@@ -402,6 +410,7 @@ declare module 'vue' {
     readonly MEDIA_BASE: UnwrapRef<typeof import('./src/composables/useAudio')['MEDIA_BASE']>
     readonly MISTAKE_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['MISTAKE_MODULE_LABEL']>
     readonly PROGRESS_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['PROGRESS_MODULE_LABEL']>
+    readonly REJECTED_REASON_LABELS: UnwrapRef<typeof import('./src/composables/syncClient')['REJECTED_REASON_LABELS']>
     readonly SYNC_PENDING_KEY: UnwrapRef<typeof import('./src/composables/syncClient')['SYNC_PENDING_KEY']>
     readonly accountNotice: UnwrapRef<typeof import('./src/composables/useAuth')['accountNotice']>
     readonly aiSettingsState: UnwrapRef<typeof import('./src/composables/useAISettings')['aiSettingsState']>
@@ -456,7 +465,9 @@ declare module 'vue' {
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getDeviceId: UnwrapRef<typeof import('./src/composables/useStudyTimer')['getDeviceId']>
     readonly getMockHistory: UnwrapRef<typeof import('./src/composables/useMockHistory')['getMockHistory']>
+    readonly getQuarantineEntries: UnwrapRef<typeof import('./src/composables/syncClient')['getQuarantineEntries']>
     readonly getQuarantinedKeys: UnwrapRef<typeof import('./src/composables/syncClient')['getQuarantinedKeys']>
+    readonly getRejectedReason: UnwrapRef<typeof import('./src/composables/syncClient')['getRejectedReason']>
     readonly getToken: UnwrapRef<typeof import('./src/composables/syncClient')['getToken']>
     readonly getTokenOwner: UnwrapRef<typeof import('./src/composables/syncClient')['getTokenOwner']>
     readonly getWordInfo: UnwrapRef<typeof import('./src/composables/useWordInfo')['getWordInfo']>
@@ -465,6 +476,7 @@ declare module 'vue' {
     readonly gradeSchedule: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['gradeSchedule']>
     readonly gradeSpeakingWithAI: UnwrapRef<typeof import('./src/composables/useAISettings')['gradeSpeakingWithAI']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
+    readonly handleRejectedKeys: UnwrapRef<typeof import('./src/composables/syncClient')['handleRejectedKeys']>
     readonly hasAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['hasAISettings']>
     readonly hasPendingGuestMigration: UnwrapRef<typeof import('./src/composables/useAuth')['hasPendingGuestMigration']>
     readonly hashString: UnwrapRef<typeof import('./src/composables/syncClient')['hashString']>
@@ -500,7 +512,6 @@ declare module 'vue' {
     readonly onDeactivated: UnwrapRef<typeof import('vue')['onDeactivated']>
     readonly onErrorCaptured: UnwrapRef<typeof import('vue')['onErrorCaptured']>
     readonly onKeyStroke: UnwrapRef<typeof import('@vueuse/core')['onKeyStroke']>
-    readonly onLocalRemove: UnwrapRef<typeof import('./src/composables/useAuth')['onLocalRemove']>
     readonly onLocalWrite: UnwrapRef<typeof import('./src/composables/useAuth')['onLocalWrite']>
     readonly onLongPress: UnwrapRef<typeof import('@vueuse/core')['onLongPress']>
     readonly onMounted: UnwrapRef<typeof import('vue')['onMounted']>
@@ -532,6 +543,8 @@ declare module 'vue' {
     readonly refThrottled: UnwrapRef<typeof import('@vueuse/core')['refThrottled']>
     readonly refWithControl: UnwrapRef<typeof import('@vueuse/core')['refWithControl']>
     readonly registerAudio: UnwrapRef<typeof import('./src/composables/useSingleAudio')['registerAudio']>
+    readonly rejectedKeysOf: UnwrapRef<typeof import('./src/composables/syncClient')['rejectedKeysOf']>
+    readonly rejectedReasonsOf: UnwrapRef<typeof import('./src/composables/syncClient')['rejectedReasonsOf']>
     readonly removeJson: UnwrapRef<typeof import('./src/composables/useAuth')['removeJson']>
     readonly repairSavedGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['repairSavedGrade']>
     readonly resolveAudioUrl: UnwrapRef<typeof import('./src/composables/useAudio')['resolveAudioUrl']>
@@ -555,6 +568,7 @@ declare module 'vue' {
     readonly syncEnabled: UnwrapRef<typeof import('./src/composables/syncClient')['syncEnabled']>
     readonly syncRef: UnwrapRef<typeof import('@vueuse/core')['syncRef']>
     readonly syncRefs: UnwrapRef<typeof import('@vueuse/core')['syncRefs']>
+    readonly syncTimeoutMs: UnwrapRef<typeof import('./src/composables/syncClient')['syncTimeoutMs']>
     readonly templateRef: UnwrapRef<typeof import('@vueuse/core')['templateRef']>
     readonly testAIConnection: UnwrapRef<typeof import('./src/composables/useAISettings')['testAIConnection']>
     readonly throttledRef: UnwrapRef<typeof import('@vueuse/core')['throttledRef']>
@@ -572,6 +586,7 @@ declare module 'vue' {
     readonly tryOnMounted: UnwrapRef<typeof import('@vueuse/core')['tryOnMounted']>
     readonly tryOnScopeDispose: UnwrapRef<typeof import('@vueuse/core')['tryOnScopeDispose']>
     readonly tryOnUnmounted: UnwrapRef<typeof import('@vueuse/core')['tryOnUnmounted']>
+    readonly unquarantineKeys: UnwrapRef<typeof import('./src/composables/syncClient')['unquarantineKeys']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly unrefElement: UnwrapRef<typeof import('@vueuse/core')['unrefElement']>
     readonly until: UnwrapRef<typeof import('@vueuse/core')['until']>
@@ -781,6 +796,7 @@ declare module '@vue/runtime-core' {
     readonly MEDIA_BASE: UnwrapRef<typeof import('./src/composables/useAudio')['MEDIA_BASE']>
     readonly MISTAKE_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['MISTAKE_MODULE_LABEL']>
     readonly PROGRESS_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['PROGRESS_MODULE_LABEL']>
+    readonly REJECTED_REASON_LABELS: UnwrapRef<typeof import('./src/composables/syncClient')['REJECTED_REASON_LABELS']>
     readonly SYNC_PENDING_KEY: UnwrapRef<typeof import('./src/composables/syncClient')['SYNC_PENDING_KEY']>
     readonly accountNotice: UnwrapRef<typeof import('./src/composables/useAuth')['accountNotice']>
     readonly aiSettingsState: UnwrapRef<typeof import('./src/composables/useAISettings')['aiSettingsState']>
@@ -835,7 +851,9 @@ declare module '@vue/runtime-core' {
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getDeviceId: UnwrapRef<typeof import('./src/composables/useStudyTimer')['getDeviceId']>
     readonly getMockHistory: UnwrapRef<typeof import('./src/composables/useMockHistory')['getMockHistory']>
+    readonly getQuarantineEntries: UnwrapRef<typeof import('./src/composables/syncClient')['getQuarantineEntries']>
     readonly getQuarantinedKeys: UnwrapRef<typeof import('./src/composables/syncClient')['getQuarantinedKeys']>
+    readonly getRejectedReason: UnwrapRef<typeof import('./src/composables/syncClient')['getRejectedReason']>
     readonly getToken: UnwrapRef<typeof import('./src/composables/syncClient')['getToken']>
     readonly getTokenOwner: UnwrapRef<typeof import('./src/composables/syncClient')['getTokenOwner']>
     readonly getWordInfo: UnwrapRef<typeof import('./src/composables/useWordInfo')['getWordInfo']>
@@ -844,6 +862,7 @@ declare module '@vue/runtime-core' {
     readonly gradeSchedule: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['gradeSchedule']>
     readonly gradeSpeakingWithAI: UnwrapRef<typeof import('./src/composables/useAISettings')['gradeSpeakingWithAI']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
+    readonly handleRejectedKeys: UnwrapRef<typeof import('./src/composables/syncClient')['handleRejectedKeys']>
     readonly hasAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['hasAISettings']>
     readonly hasPendingGuestMigration: UnwrapRef<typeof import('./src/composables/useAuth')['hasPendingGuestMigration']>
     readonly hashString: UnwrapRef<typeof import('./src/composables/syncClient')['hashString']>
@@ -879,7 +898,6 @@ declare module '@vue/runtime-core' {
     readonly onDeactivated: UnwrapRef<typeof import('vue')['onDeactivated']>
     readonly onErrorCaptured: UnwrapRef<typeof import('vue')['onErrorCaptured']>
     readonly onKeyStroke: UnwrapRef<typeof import('@vueuse/core')['onKeyStroke']>
-    readonly onLocalRemove: UnwrapRef<typeof import('./src/composables/useAuth')['onLocalRemove']>
     readonly onLocalWrite: UnwrapRef<typeof import('./src/composables/useAuth')['onLocalWrite']>
     readonly onLongPress: UnwrapRef<typeof import('@vueuse/core')['onLongPress']>
     readonly onMounted: UnwrapRef<typeof import('vue')['onMounted']>
@@ -911,6 +929,8 @@ declare module '@vue/runtime-core' {
     readonly refThrottled: UnwrapRef<typeof import('@vueuse/core')['refThrottled']>
     readonly refWithControl: UnwrapRef<typeof import('@vueuse/core')['refWithControl']>
     readonly registerAudio: UnwrapRef<typeof import('./src/composables/useSingleAudio')['registerAudio']>
+    readonly rejectedKeysOf: UnwrapRef<typeof import('./src/composables/syncClient')['rejectedKeysOf']>
+    readonly rejectedReasonsOf: UnwrapRef<typeof import('./src/composables/syncClient')['rejectedReasonsOf']>
     readonly removeJson: UnwrapRef<typeof import('./src/composables/useAuth')['removeJson']>
     readonly repairSavedGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['repairSavedGrade']>
     readonly resolveAudioUrl: UnwrapRef<typeof import('./src/composables/useAudio')['resolveAudioUrl']>
@@ -934,6 +954,7 @@ declare module '@vue/runtime-core' {
     readonly syncEnabled: UnwrapRef<typeof import('./src/composables/syncClient')['syncEnabled']>
     readonly syncRef: UnwrapRef<typeof import('@vueuse/core')['syncRef']>
     readonly syncRefs: UnwrapRef<typeof import('@vueuse/core')['syncRefs']>
+    readonly syncTimeoutMs: UnwrapRef<typeof import('./src/composables/syncClient')['syncTimeoutMs']>
     readonly templateRef: UnwrapRef<typeof import('@vueuse/core')['templateRef']>
     readonly testAIConnection: UnwrapRef<typeof import('./src/composables/useAISettings')['testAIConnection']>
     readonly throttledRef: UnwrapRef<typeof import('@vueuse/core')['throttledRef']>
@@ -951,6 +972,7 @@ declare module '@vue/runtime-core' {
     readonly tryOnMounted: UnwrapRef<typeof import('@vueuse/core')['tryOnMounted']>
     readonly tryOnScopeDispose: UnwrapRef<typeof import('@vueuse/core')['tryOnScopeDispose']>
     readonly tryOnUnmounted: UnwrapRef<typeof import('@vueuse/core')['tryOnUnmounted']>
+    readonly unquarantineKeys: UnwrapRef<typeof import('./src/composables/syncClient')['unquarantineKeys']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly unrefElement: UnwrapRef<typeof import('@vueuse/core')['unrefElement']>
     readonly until: UnwrapRef<typeof import('@vueuse/core')['until']>

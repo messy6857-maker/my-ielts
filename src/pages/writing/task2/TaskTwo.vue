@@ -70,6 +70,7 @@ interface SavedTask2 {
   text: string
   wordCount: number
   secondsUsed: number
+  timed?: boolean
   overtime?: boolean
   createdAt: number
 }
@@ -107,6 +108,7 @@ const prompt = ref<CambridgeWritingTask | null>(null)
 const essayText = ref('')
 const secondsLeft = ref(TIME_LIMIT)
 const timerOn = ref(false)
+const timerStarted = ref(false)
 const timeUp = ref(false)
 const overtime = ref(false)
 let timerId: ReturnType<typeof setInterval> | null = null
@@ -208,6 +210,7 @@ function restoreDraft() {
         secondsLeft.value = Math.min(Math.max(0, savedSeconds), TIME_LIMIT)
         timeUp.value = secondsLeft.value <= 0
         overtime.value = !!d.overtime
+        timerStarted.value = secondsLeft.value < TIME_LIMIT || !!d.overtime
         view.value = 'write'
         return
       }
@@ -238,6 +241,7 @@ function startWrite(p: CambridgeWritingTask) {
   secondsLeft.value = saved?.secondsLeft ?? TIME_LIMIT
   timeUp.value = secondsLeft.value <= 0
   overtime.value = !!saved?.overtime
+  timerStarted.value = secondsLeft.value < TIME_LIMIT || !!saved?.overtime
   timerOn.value = false
   if (timerId)
     clearInterval(timerId)
@@ -269,6 +273,7 @@ function toggleTimer() {
   }
   else {
     timerOn.value = true
+    timerStarted.value = true
     timerEndAt = Date.now() + secondsLeft.value * 1000
     timerId = setInterval(() => {
       secondsLeft.value = Math.max(
@@ -291,6 +296,7 @@ function resetTimer() {
   if (timerId)
     clearInterval(timerId)
   timerOn.value = false
+  timerStarted.value = false
   overtime.value = false
   timeUp.value = false
   secondsLeft.value = TIME_LIMIT
@@ -310,6 +316,7 @@ const stats = ref<EssayStats | null>(null)
 const resultPrompt = ref<CambridgeWritingTask | null>(null)
 const resultQuestion = ref('')
 const secondsUsed = ref(0)
+const secondsTimed = ref(true)
 
 function checklist(s: EssayStats): { ok: boolean; text: string }[] {
   return [
@@ -356,6 +363,7 @@ function submitEssay() {
     clearInterval(timerId)
   timerOn.value = false
   secondsUsed.value = TIME_LIMIT - secondsLeft.value
+  secondsTimed.value = timerStarted.value
   stats.value = analyzeEssay(essayText.value)
   resultPrompt.value = prompt.value
   resultQuestion.value = prompt.value ? prompt.value.promptEn : ''
@@ -368,6 +376,7 @@ function submitEssay() {
       text: essayText.value,
       wordCount: stats.value.words,
       secondsUsed: secondsUsed.value,
+      timed: timerStarted.value,
       overtime: overtime.value,
       createdAt: Date.now(),
     })
@@ -385,6 +394,7 @@ function reviewEssay(e: SavedTask2) {
   essayText.value = e.text
   stats.value = analyzeEssay(e.text)
   secondsUsed.value = e.secondsUsed
+  secondsTimed.value = e.timed !== false
   overtime.value = !!e.overtime
   view.value = 'result'
 }
@@ -530,7 +540,7 @@ function resumeDraft(promptId: string) {
               {{ e.promptTitleCn }}
             </div>
             <div class="text-xs text-gray-400">
-              {{ e.wordCount }} 词 · 用时 {{ formatDuration(e.secondsUsed)
+              {{ e.wordCount }} 词 · 用时 {{ e.timed === false ? '未计时' : formatDuration(e.secondsUsed)
               }}{{ e.overtime ? '（含不限时续写）' : '' }} ·
               {{ formatDate(e.createdAt) }}
             </div>
@@ -676,7 +686,7 @@ function resumeDraft(promptId: string) {
       >
         <div class="mb-4 text-sm text-gray-400">
           {{ resultPrompt ? promptTitleCn(resultPrompt) : '' }} ·
-          {{ stats.words }} 词 · 用时 {{ formatDuration(secondsUsed)
+          {{ stats.words }} 词 · 用时 {{ secondsTimed ? formatDuration(secondsUsed) : '未计时'
           }}{{ overtime ? '（另含不限时续写）' : '' }}
         </div>
         <h4 class="mb-3 font-bold dark:text-white">

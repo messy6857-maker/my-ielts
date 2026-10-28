@@ -4,7 +4,7 @@ export function mergeLegacy(base: string, a: any, b: any): any {
     return b
   if (b === undefined || b === null)
     return a
-  if (base === 'migration-mistake') {
+  if (base === 'migration-mistake' || base === 'mistake_parts_v2') {
     return {
       ...a,
       ...b,
@@ -12,6 +12,32 @@ export function mergeLegacy(base: string, a: any, b: any): any {
       firstAt: Math.min(a.firstAt ?? Number.POSITIVE_INFINITY, b.firstAt ?? Number.POSITIVE_INFINITY),
       lastAt: Math.max(a.lastAt || 0, b.lastAt || 0),
     }
+  }
+  // stats_parts_v2 的 legacy 种子（id 'legacy'）与 stats_attempts_v1 同构：
+  // totals 与 days 均按“每项取大”合并，任一设备都不丢历史计数。
+  if (base === 'stats_parts_v2') {
+    const result = structuredClone(a)
+    result.totals ??= {}
+    for (const [ns, count] of Object.entries(b?.totals ?? {}) as Array<
+      [string, any]
+    >) {
+      const old = (result.totals[ns] ??= {})
+      for (const field of ['known', 'vague', 'unknown'])
+        old[field] = Math.max(Number(old[field]) || 0, Number(count?.[field]) || 0)
+    }
+    result.days ??= {}
+    for (const [date, modules] of Object.entries(b?.days ?? {}) as Array<
+      [string, any]
+    >) {
+      for (const [ns, count] of Object.entries(modules ?? {}) as Array<
+        [string, any]
+      >) {
+        const old = ((result.days[date] ??= {})[ns] ??= {})
+        for (const field of ['known', 'vague', 'unknown'])
+          old[field] = Math.max(Number(old[field]) || 0, Number(count?.[field]) || 0)
+      }
+    }
+    return result
   }
   if (base === 'daily_parts_v2') {
     return dateTime(a.date) > dateTime(b.date)

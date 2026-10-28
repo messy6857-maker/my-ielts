@@ -43,7 +43,7 @@ export function useExamRecovery(options: {
   // 墓碑键与草稿键前缀不同（mock_tombstone_v1_，不是 mock_draft_v1_），
   // 因此不会被草稿扫描、备份扫描误当成草稿。
   // 取舍（a 与 b 同一机制的两面，只能二选一地折中，无法仅凭时间戳区分意图）：
-  // - 过期快照（updatedAt < clearedAt）在加载时忽略并删除，弃稿后不再
+  // - 过期快照（updatedAt <= clearedAt）在加载时忽略并删除，弃稿后不再
   //   offer“继续”，交卷后不再产生第二条历史记录；
   // - 活页签下一次主动保存（答题 watcher）的时间戳 > clearedAt，草稿不受影响；
   // - 但墓碑无法区分“弃稿后又在旧页签里新作答”和“活页签继续作答”：旧页签
@@ -55,9 +55,11 @@ export function useExamRecovery(options: {
   //   删除本会话快照，因此“只是关掉另一页签”不会把草稿写回来。毫秒比较
   //   在同毫秒内分不出先后（begin/保存/弃稿可发生在同一毫秒），只用它会
   //   让弃稿后立刻关页签的旧快照漏网，所以被动保存不用它。
-  // - 加载时过期判断仍用严格 <：与墓碑同一毫秒的快照按未过期处理，避免
-  //   弃稿后立刻重开的新草稿（同毫秒写入）被误删；代价是恰好同一毫秒写入
-  //   的旧快照可能多活一次加载，下一轮墓碑/主动保存会覆盖它。
+  // - 加载时过期判断用 <=（收尾批改动）：与墓碑同一毫秒的快照也按过期
+  //   处理，不再多活一次加载。弃稿后立刻重开的新草稿若恰好与墓碑同毫秒
+  //   写入，首轮 refresh 可能误删它；但活页签下次主动保存（答题 watcher）
+  //   的时间戳必晚于墓碑，即自愈——残留窗口仅为“同毫秒重开且重开后、
+  //   下次保存前发生刷新/重载”这一种，属 clear-win 取舍。
   interface ExamTombstone {
     account: string | null
     paper: string
@@ -100,7 +102,7 @@ export function useExamRecovery(options: {
   function isExpired(d: ExamDraft, tombstone: ExamTombstone | null) {
     return !!tombstone
       && Number.isFinite(d.updatedAt)
-      && d.updatedAt < tombstone.clearedAt
+      && d.updatedAt <= tombstone.clearedAt
   }
   // 每张纸（paper）每个墓碑时间戳最多全量清扫一次，避免答题 watcher
   // 每次按键都扫描全部 localStorage 键；refresh 本身仍逐项过滤过期快照。
@@ -266,7 +268,7 @@ export function useExamRecovery(options: {
     // 弃稿只写墓碑 + 删本会话键与无会话后缀的历史键，不删其他会话文件：
     // 另一页签进行中的草稿文件得以保留，其下次主动保存时间戳 > clearedAt
     // 即恢复为有效草稿，不再有“弃稿后、活页签下次保存前崩溃即丢快照”的窗口；
-    // 而弃稿前未再保存的旧快照 updatedAt < clearedAt，refresh() 会忽略并删除，
+    // 而弃稿前未再保存的旧快照 updatedAt <= clearedAt，refresh() 会忽略并删除，
     // 不再 offer“继续”。清当前展示套题：弃稿发生在开始屏，此时 activeTestId
     // 还是上次开考的套题，用它会清错键；交卷时两者一致，不受影响。
     writeTombstone(options.testId.value)
@@ -290,8 +292,9 @@ export function useExamRecovery(options: {
   // 开始屏不再 offer“继续”，避免对已交卷内容重复续做；记录保存失败时
   // 草稿仍保留答案。同账号同套题的其他会话草稿一并标记，否则记录保存
   // 失败（不清键）时别页签的未交卷旧快照仍会在该页签 offer“继续”。
-  // 标记时把 updatedAt 抬到不低于 clearedAt：已交卷快照不是过期快照，
-  // 墓碑不应把它清掉；它因 submitted=true 本身就不再被 offer 续做。
+  // 标记时把 updatedAt 抬到不低于 clearedAt；与墓碑同毫秒的已交卷快照
+  // 按 <= 也算过期、refresh 时可删，但它因 submitted=true 本身就不再被
+  // offer 续做，删了无影响。
   // 交卷成功后调用方随后调 clear() 写新墓碑并删本会话键，其他会话的
   // 已交卷快照若时间戳 < 新墓碑，会在之后 refresh 时被当作过期删除——
   // 已交卷快照被删无影响，它本来就不再续做。
@@ -361,9 +364,19 @@ export function useExamRecovery(options: {
     },
     { flush: 'sync' },
   )
-  const stopAnswers = watch(options.answers, save, {
+  // M-Opt-#3：答案写入 300ms 防抖——填空连续输入不再每次按键全量序列化
+  // 写 localStorage。显式保存（startTest 的 save()）仍立即写；unmount /
+  // pagehide / visibilitychange 走 saveFlush() 立即写，不受防抖影响。
+  let answersTimer: ReturnType<typeof setTimeout> | null = null
+  const stopAnswers = watch(options.answers, () => {
+    if (answersTimer)
+      clearTimeout(answersTimer)
+    answersTimer = setTimeout(() => {
+      answersTimer = null
+      save()
+    }, 300)
+  }, {
     deep: true,
-    flush: 'sync',
   })
   const stopTest = watch(options.testId, refresh)
   const offLogout = onBeforeLogout(() => {
@@ -378,6 +391,12 @@ export function useExamRecovery(options: {
   document.addEventListener('visibilitychange', visibility)
   onUnmounted(() => {
     saveFlush()
+    // saveFlush 已立即写了最新答案，挂起的防抖定时器不再需要：清掉它，
+    // 避免卸载后多余的一次重复写入。
+    if (answersTimer) {
+      clearTimeout(answersTimer)
+      answersTimer = null
+    }
     options.pause()
     stopOwner()
     stopAnswers()

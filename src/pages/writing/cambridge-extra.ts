@@ -1,4 +1,4 @@
-// 大作文模拟题：剑14/15/17 Task 2 真题（剑18–21 已在 cambridge.ts，另行展示）
+// 大作文补充真题：剑14/15/17 Task 2 真题（剑18–21 已在 cambridge.ts，另行展示）
 import type { CambridgeWritingTask } from './cambridge'
 
 export const EXTRA_TASK2: CambridgeWritingTask[] = [

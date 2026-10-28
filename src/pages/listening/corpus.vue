@@ -189,7 +189,7 @@ const filteredRows = computed(() => {
                   class="hover:underline"
                   :title="`在剑桥词典中查询 ${row[0][0]}`"
                   :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${row[0][0]}`"
-                  target="_blank"
+                  target="_blank" rel="noopener noreferrer"
                 >{{ row[0].join(', ') }}</a>
               </th>
               <td
@@ -237,7 +237,7 @@ const filteredRows = computed(() => {
           <th scope="row" class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white">
             <a
               :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${w.word}`"
-              target="_blank"
+              target="_blank" rel="noopener noreferrer"
             >{{ w.word }}</a>
           </th>
           <td class="px-6 py-4 italic">

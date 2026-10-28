@@ -13,13 +13,12 @@ const errorImage = `${import.meta.env.BASE_URL}404.svg`
       <h1
         class="mb-3 text-2xl font-bold leading-tight text-gray-900 lg:text-5xl sm:text-4xl dark:text-white"
       >
-        Page not found
+        页面不存在
       </h1>
       <p
         class="mb-5 text-base font-normal text-gray-500 md:text-lg dark:text-gray-400"
       >
-        Oops! Looks like you followed a bad link. If you think this is a problem
-        with us, please tell us.
+        哎呀，这个链接好像走错了路，页面找不到了。
       </p>
       <router-link
         to="/"
@@ -37,7 +36,7 @@ const errorImage = `${import.meta.env.BASE_URL}404.svg`
             clip-rule="evenodd"
           />
         </svg>
-        Go back home
+        回首页
       </router-link>
     </div>
   </div>

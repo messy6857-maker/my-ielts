@@ -4,6 +4,18 @@ import type { ListeningMockTest } from './types'
  * 剑桥雅思 20 Test 2 听力（40 题）
  * 转录自 Cambridge IELTS 20 PDF (Test 2, pp.39-45)，答案来自书后 answer key (p.46)
  */
+/** Part 2 Q11-16 选项框（书上原文，剑20 p.40）：志愿者在各活动中的角色，选 A-I */
+const VOLUNTEER_ROLE_OPTIONS = [
+  'providing entertainment',
+  'providing publicity about a council service',
+  'contacting local businesses',
+  'giving advice to visitors',
+  'collecting feedback on events',
+  'selling tickets',
+  'introducing guest speakers at an event',
+  'encouraging cooperation between local organisations',
+  'helping people find their seats',
+]
 /** Part 3 Q21-25 选项框（书上原文）：对人文地理各方面的看法，选 A-G */
 const HUMAN_GEO_OPTIONS = [
   'The information given about this was too vague.',
@@ -39,12 +51,12 @@ export const cam20Test2Listening: ListeningMockTest = {
       title: 'Part 2：志愿者活动',
       audio: 'mock/cam20-test2-listening-part2.mp3',
       questions: [
-        { id: 'Q11', type: 'map-label', question: 'walking around the town centre', answer: 'D' },
-        { id: 'Q12', type: 'map-label', question: 'helping at concerts', answer: 'I' },
-        { id: 'Q13', type: 'map-label', question: 'getting involved with community groups', answer: 'H' },
-        { id: 'Q14', type: 'map-label', question: 'helping with a magazine', answer: 'E' },
-        { id: 'Q15', type: 'map-label', question: 'participating at lunches for retired people', answer: 'A' },
-        { id: 'Q16', type: 'map-label', question: 'helping with the website', answer: 'B' },
+        { id: 'Q11', type: 'map-label', question: 'walking around the town centre', answer: 'D', options: VOLUNTEER_ROLE_OPTIONS },
+        { id: 'Q12', type: 'map-label', question: 'helping at concerts', answer: 'I', options: VOLUNTEER_ROLE_OPTIONS },
+        { id: 'Q13', type: 'map-label', question: 'getting involved with community groups', answer: 'H', options: VOLUNTEER_ROLE_OPTIONS },
+        { id: 'Q14', type: 'map-label', question: 'helping with a magazine', answer: 'E', options: VOLUNTEER_ROLE_OPTIONS },
+        { id: 'Q15', type: 'map-label', question: 'participating at lunches for retired people', answer: 'A', options: VOLUNTEER_ROLE_OPTIONS },
+        { id: 'Q16', type: 'map-label', question: 'helping with the website', answer: 'B', options: VOLUNTEER_ROLE_OPTIONS },
         { id: 'Q17', type: 'multiple-choice', question: 'Which event requires the largest number of volunteers?', options: ['A the music festival', 'B the science festival', 'C the book festival'], answer: 1 },
         { id: 'Q18', type: 'multiple-choice', question: 'What is the most important requirement for volunteers at the festivals?', options: ['A interpersonal skills', 'B personal interest in the event', 'C flexibility'], answer: 0 },
         { id: 'Q19', type: 'multiple-choice', question: 'New volunteers will start working in the week beginning', options: ['A 2 September.', 'B 9 September.', 'C 23 September.'], answer: 1 },

@@ -64,6 +64,30 @@ function confirmClearModule(module: string, label: string) {
   if (window.confirm(`确定要清空「${label}」的错词吗？`))
     clearMistakes(module as any)
 }
+
+// 旧键清理（确认式，不静默删用户数据）：只删 key 为 listening: 开头、且非
+// listening179: 的旧键条目（B2 键统一之前由 179 练习页产生）；新键与其它分组不动。
+// removeMistake 按 key 写重置纪元，同一 key 的全设备分片一并失效。
+const legacyListeningKeys = computed(() =>
+  allMistakes()
+    .filter(
+      m =>
+        m.key.startsWith('listening:')
+        && !m.key.startsWith('listening179:'),
+    )
+    .map(m => m.key),
+)
+function confirmClearLegacyListening() {
+  const count = legacyListeningKeys.value.length
+  if (count === 0)
+    return
+  if (
+    window.confirm(
+      `确定要清理 ${count} 条旧听力错题吗？仅删除 listening: 开头、且非 listening179: 的旧键条目（键统一之前产生），新键 listening179: 与其他分组不受影响。此操作不可撤销。`,
+    )
+  )
+    legacyListeningKeys.value.forEach(key => removeMistake(key))
+}
 </script>
 
 <template>
@@ -89,6 +113,14 @@ function confirmClearModule(module: string, label: string) {
             @click="startReview"
           >
             开始复习
+          </button>
+          <button
+            v-if="legacyListeningKeys.length > 0"
+            type="button"
+            class="rounded-lg bg-amber-100 px-5 py-2.5 text-sm font-medium text-amber-800 dark:bg-amber-900/30 hover:bg-amber-200 dark:text-amber-200 dark:hover:bg-amber-900/50"
+            @click="confirmClearLegacyListening"
+          >
+            清理旧听力键（{{ legacyListeningKeys.length }} 条）
           </button>
           <button
             v-if="totalCount > 0"

@@ -15,7 +15,7 @@ export const synonymMeanings: Record<string, string> = {
   "abnormal": "不正常的；反常的；变态的",
   "aboard": "在（船、飞机等）上",
   "abolish": "废除，消除 v. 废除，取消",
-  "aboriginal": "Aboriginal 澳大利亚土人/本土原有的；土著的",
+  "aboriginal": "Aboriginal 澳大利亚土著居民/本土原有的；土著的",
   "abortion": "人工流产；中途失败",
   "abound": "大量存在；(~in,~with)充满,富于",
   "about": "关于；在…周围",

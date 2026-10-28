@@ -68,7 +68,10 @@ export function highlightPieces(text: string, words: string[]): TextPiece[] {
     if (!word.trim())
       return
     const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const pattern = new RegExp(escaped, 'gi')
+    // 纯英文单词/词组才包词边界，避免 art 误中 part/start；中文不走此分支
+    const pattern = /^[A-Za-z]+(?: [A-Za-z]+)*$/.test(word)
+      ? new RegExp(`\\b${escaped}\\b`, 'gi')
+      : new RegExp(escaped, 'gi')
     for (const match of text.matchAll(pattern)) {
       matches.push({
         start: match.index!,

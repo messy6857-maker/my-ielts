@@ -184,11 +184,23 @@ function play(word) {
                       class="hover:underline"
                       :title="`在剑桥词典中查询 ${w[1]}`"
                       :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${w[1]}`"
-                      target="_blank"
+                      target="_blank" rel="noopener noreferrer"
                     >{{ w[1] }}</a>
                   </th>
-                  <td class="px-6 py-4 italic" v-html="w[2].join('<br>')" />
-                  <td class="px-6 py-4" v-html="w[3].join('<br>')" />
+                  <!-- 数据源 reading538words.js 为纯文本、无 <b> 等有意标记，
+                       故直接用转义插值 + <br> 渲染，显示与原 v-html 拼接一致 -->
+                  <td class="px-6 py-4 italic">
+                    <template v-for="(pos, i) in w[2]" :key="i">
+                      <br v-if="i">
+                      {{ pos }}
+                    </template>
+                  </td>
+                  <td class="px-6 py-4">
+                    <template v-for="(meaning, i) in w[3]" :key="i">
+                      <br v-if="i">
+                      {{ meaning }}
+                    </template>
+                  </td>
                   <td class="px-6 py-4">
                     {{ w[4].join(', ') }}
                     <br>

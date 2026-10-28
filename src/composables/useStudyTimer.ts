@@ -1,11 +1,13 @@
 import { getCurrentInstance, onUnmounted, ref, watch } from 'vue'
 import {
+  accountKey,
   entryKey,
   readRecords,
   readValue,
   saveEnvelope,
   saveRecord,
   studyBaseOf,
+  subscribeStorage,
 } from '../utils/storage'
 import { onBeforeLogout, useAuth } from './useAuth'
 import { nsKey, studyDay } from './useStudyData'
@@ -236,9 +238,22 @@ export function useStudyTimer() {
     },
     { flush: 'sync' },
   )
+  // 跨页签实时性（纯显示）：另一页签结算/持久化计时段后，本页签的今日累计
+  // 通过 storage 事件刷新；只响应 remote（跨页签）事件与本账号计时记录键，
+  // 本页签自己的 persist 不触发重算（load 本身是幂等的重算，无写操作）。
+  const offStorage = subscribeStorage((key, source) => {
+    if (source !== 'remote')
+      return
+    if (
+      !key
+      || key.startsWith(`${accountKey('timer_sessions_v2', currentUser.value)}__entry_`)
+    )
+      load()
+  })
   function dispose() {
     pause()
     offLogout()
+    offStorage()
     document.removeEventListener('visibilitychange', visibility)
     window.removeEventListener('pagehide', pause)
   }

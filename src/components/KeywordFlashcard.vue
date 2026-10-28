@@ -49,10 +49,12 @@ const deck = useDeckStore(props.ns)
 const { goBack } = useGoBack(props.backTo)
 const timer = useStudyTimer()
 const showExitModal = ref(false)
-const lastSessionSec = ref(0)
+// 页面级累计：每次退出弹窗的 pause() 段秒数累加，弹窗显示进页总时长
+// （timer.pause() 只返回当前段，取消退出再退会只显示最后一段）
+const sessionTotal = ref(0)
 
 function handleBack() {
-  lastSessionSec.value = timer.pause()
+  sessionTotal.value += timer.pause()
   showExitModal.value = true
 }
 function cancelExit() {
@@ -319,6 +321,14 @@ watch(
     gradeHistory.value = []
     studying.value = null
     finished.value = true
+    // 与 buildQueue 的重置项对齐：切账号后完成屏不再用旧账号残留渲染
+    bestGrade.value = {}
+    stats.value = { known: 0, vague: 0, unknown: 0 }
+    initialTotal.value = 0
+    reviewCount.value = 0
+    dueCount.value = 0
+    newCount.value = 0
+    sessionTotal.value = 0
     timer.pause()
   },
   { flush: 'sync' },
@@ -447,7 +457,7 @@ onUnmounted(() => {
           class="border border-gray-200 rounded-xl bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
         >
           <div class="mb-1 text-xs text-gray-500">
-            认识
+            认识（自评次数）
           </div>
           <div class="text-lg font-bold text-green-600">
             {{ stats.known }}
@@ -457,7 +467,7 @@ onUnmounted(() => {
           class="border border-gray-200 rounded-xl bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
         >
           <div class="mb-1 text-xs text-gray-500">
-            不认识
+            不认识（自评次数）
           </div>
           <div class="text-lg font-bold text-red-600">
             {{ stats.unknown }}
@@ -467,7 +477,7 @@ onUnmounted(() => {
           class="border border-gray-200 rounded-xl bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
         >
           <div class="mb-1 text-xs text-gray-500">
-            模糊
+            模糊（自评次数）
           </div>
           <div class="text-lg font-bold text-yellow-600">
             {{ stats.vague }}
@@ -666,7 +676,7 @@ onUnmounted(() => {
             本次学习结束
           </h3>
           <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">
-            {{ formatDuration(lastSessionSec) }}
+            {{ formatDuration(sessionTotal) }}
           </p>
           <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">
             今日累计 {{ formatDuration(timer.dailySeconds.value) }}

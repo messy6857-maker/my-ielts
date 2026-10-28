@@ -18,8 +18,10 @@ import { wordPhonetics } from './wordPhonetics'
 import { parseExtra } from './extraParser'
 import { getMnemonic } from './mnemonics'
 import { synonymMeanings } from './synonymMeanings'
-import { synonymPosData } from './synonymPos'
 import vocabulary from './vocabulary'
+
+// 注：synonymPosData 不再静态 import（7781 条）：首次需要展示同义词词性时才由
+// ensureSynonymPos() 动态 import()，未加载完成前词性区为空（v-if 守卫），加载后响应式刷新。
 
 const managedAudio = useAudioGroup()
 
@@ -50,10 +52,12 @@ const daily = useDailyGoal()
 const router = useRouter()
 const timer = useStudyTimer()
 const showExitModal = ref(false)
-const lastSessionSec = ref(0)
+// 页面级累计：每次退出弹窗的 pause() 段秒数累加，弹窗显示进页总时长
+// （timer.pause() 只返回当前段，取消退出再退会只显示最后一段）
+const sessionTotal = ref(0)
 
 function handleBack() {
-  lastSessionSec.value = timer.pause()
+  sessionTotal.value += timer.pause()
   showExitModal.value = true
 }
 function cancelExit() {
@@ -149,10 +153,32 @@ const wordPosMap = computed(() => {
   }
   return map
 })
+// 抓取表懒加载缓存：只 import 一次，失败则保持空态（不显示词性，不重试刷屏）
+const synonymPosLazy = ref<Record<string, string> | null>(null)
+let synonymPosPromise: Promise<Record<string, string> | null> | null = null
+function ensureSynonymPos() {
+  if (!synonymPosPromise) {
+    synonymPosPromise = import('./synonymPos')
+      .then((m) => {
+        synonymPosLazy.value = m.synonymPosData
+        return m.synonymPosData
+      })
+      .catch(() => null)
+  }
+  return synonymPosPromise
+}
 function synonymPos(syn: string): string {
-  // 先查本站词库，再查联网抓取的词性数据；都查不到就不显示（如实标注）
+  // 先查本站词库（权威词性，原样显示），再查联网抓取的词性数据；都查不到就不显示（如实标注）
   const key = syn.trim().toLowerCase()
-  return wordPosMap.value.get(key) || synonymPosData[key] || ''
+  const local = wordPosMap.value.get(key)
+  if (local)
+    return local
+  const fallback = synonymPosLazy.value?.[key]
+  if (!fallback)
+    return ''
+  // 抓取缓存只存了 Datamuse 首个标记（见 ~/workspace/shot/synonymPos-cache.jsonl，
+  // 7795 行均为单值、无完整多标签），多义词只显示其一，故标注“首选”避免误以为只有这一种词性
+  return `${fallback}（首选）`
 }
 function synonymMeaning(syn: string): string {
   return synonymMeanings[syn.trim().toLowerCase()] || ''
@@ -260,7 +286,7 @@ const gradeHistory = ref<GradeHistoryEntry[]>([])
 
 function buildQueue() {
   const chapter = (vocabulary as any)[category.value]
-  const all = crossChapter.value
+  let all = crossChapter.value
     ? Object.values(vocabulary)
       .flatMap((c: any) => c.words.flat())
       .filter(
@@ -271,6 +297,23 @@ function buildQueue() {
     : chapter
       ? chapter.words.flat()
       : []
+  if (crossChapter.value) {
+    // 跨章同词串只留一张卡：保留到期更早的副本（各章 id 独立、调度互不相通，
+    // 同词两副本同时到期会在同一轮重复出现）。Map.set 保留首次出现位置。
+    const byWord = new Map<string, any>()
+    for (const w of all) {
+      // 无词串的条目无法按词去重，用 id 占位键原样保留
+      const key = w.word?.[0] ?? `__id:${w.id}`
+      const prev = byWord.get(key)
+      if (
+        !prev
+        || (scheduleStore.get(w.id)?.dueAt ?? Number.POSITIVE_INFINITY)
+          < (scheduleStore.get(prev.id)?.dueAt ?? Number.POSITIVE_INFINITY)
+      )
+        byWord.set(key, w)
+    }
+    all = [...byWord.values()]
+  }
   // 复习配额 = 3 × 每日新词目标（1:3）：到期优先，不足时从已学词里补；新词按今日剩余名额取
   const plan = planQueue(
     all,
@@ -346,8 +389,9 @@ function grade(g: 0 | 3 | 5) {
   queue.value.shift()
 
   if (g !== 5) {
-    // 模糊 / 不认识：记入错词本
-    addMistake('vocabulary', {
+    // 模糊 / 不认识：记入错词本。单词自测用独立模块 flashcard，与词表拼写
+    // （vocabulary）分开，错词本不再把“没认出”和“没拼对”混在“词汇拼写”组里
+    addMistake('flashcard', {
       key: `vocabulary:${card.id}`,
       title: card.word,
       detail: `${card.pos} ${card.meaning}`,
@@ -444,6 +488,8 @@ function next() {
 /** 自评前加载例句/同义词：查内置预抓取数据（本词 → 派生词），同步返回 */
 function loadWordInfo(card: Card) {
   wordInfo.value = getWordInfoWithFallback([card.word, ...card.hintWords])
+  // 同义词词性首次需要时才加载抓取表（懒加载，带缓存与未加载空态）
+  ensureSynonymPos()
 }
 
 function finishSession() {
@@ -500,6 +546,14 @@ watch(
     gradeHistory.value = []
     studying.value = null
     finished.value = true
+    // 与 buildQueue 的重置项对齐：切账号后完成屏不再用旧账号残留渲染
+    bestGrade.value = {}
+    stats.value = { known: 0, vague: 0, unknown: 0 }
+    initialTotal.value = 0
+    reviewCount.value = 0
+    dueCount.value = 0
+    newCount.value = 0
+    sessionTotal.value = 0
     timer.pause()
   },
   { flush: 'sync' },
@@ -507,6 +561,19 @@ watch(
 onMounted(() => {
   buildQueue()
   timer.start()
+})
+
+// 离页时停掉 TTS 与音频，避免后台继续出声（useAudioGroup 的 dispose 已有同类取消，此处显式兜底，与 KeywordFlashcard 对齐）
+onUnmounted(() => {
+  speechSynthesis.cancel()
+  if (audio) {
+    audio.pause()
+    audio = null
+  }
+  if (preloadAudioEl) {
+    preloadAudioEl.pause()
+    preloadAudioEl = null
+  }
 })
 </script>
 
@@ -629,7 +696,7 @@ onMounted(() => {
           class="border border-gray-200 rounded-xl bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
         >
           <div class="mb-1 text-xs text-gray-500">
-            认识
+            认识（自评次数）
           </div>
           <div class="text-lg font-bold text-green-600">
             {{ stats.known }}
@@ -639,7 +706,7 @@ onMounted(() => {
           class="border border-gray-200 rounded-xl bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
         >
           <div class="mb-1 text-xs text-gray-500">
-            不认识
+            不认识（自评次数）
           </div>
           <div class="text-lg font-bold text-red-600">
             {{ stats.unknown }}
@@ -649,7 +716,7 @@ onMounted(() => {
           class="border border-gray-200 rounded-xl bg-white p-3 dark:border-gray-700 dark:bg-gray-800"
         >
           <div class="mb-1 text-xs text-gray-500">
-            模糊
+            模糊（自评次数）
           </div>
           <div class="text-lg font-bold text-yellow-600">
             {{ stats.vague }}
@@ -1113,7 +1180,7 @@ onMounted(() => {
             本次学习结束
           </h3>
           <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">
-            {{ formatDuration(lastSessionSec) }}
+            {{ formatDuration(sessionTotal) }}
           </p>
           <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">
             今日累计 {{ formatDuration(timer.dailySeconds.value) }}

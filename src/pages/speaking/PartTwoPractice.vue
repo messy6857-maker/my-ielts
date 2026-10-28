@@ -196,6 +196,9 @@ onUnmounted(() => {
         <p class="text-sm text-gray-500 dark:text-gray-400">
           回放你的陈述，检查：有没有说满时间？四个要点都覆盖了吗？有没有长时间卡壳？
         </p>
+        <p v-if="recorder.processing.value" class="text-sm text-gray-500">
+          正在保存录音…
+        </p>
         <audio
           v-if="recorder.audioUrl.value"
           :src="recorder.audioUrl.value"

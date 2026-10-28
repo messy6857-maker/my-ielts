@@ -8,9 +8,14 @@ import { loadMockTest, mockTestList } from './registry'
 import type { MockTestPair } from './registry'
 import {
   bandScore,
+  countCorrect,
   formatCountdown,
-  isCorrect,
+  mapLabelPlaceholder,
+  mockQuestionStatus,
   multiSelectScore,
+  restoreTimeLeft,
+  toggleMultiSelectValue,
+  totalScorePoints,
 } from './types'
 import type { MockQuestion } from './types'
 import { saveMockRecord } from '~/composables/useMockHistory'
@@ -150,13 +155,27 @@ function startTest() {
   if (!testPair.value || started.value)
     return
   // 已交卷的草稿不再续做：按全新测试开始
-  const saved = recovery.draft.value && !recovery.draft.value.submitted
+  let saved = recovery.draft.value && !recovery.draft.value.submitted
     ? recovery.draft.value
     : null
+  // M-Opt-#4：0 秒草稿不再 1 秒后自动交卷，给二选一：确定 = 直接交卷查看
+  // 成绩，取消 = 放弃草稿、全新开始。
+  if (saved && saved.timeLeft <= 0) {
+    recovery.begin()
+    if (window.confirm('该草稿剩余时间已到（0 秒）。点“确定”直接交卷查看成绩，点“取消”放弃草稿、全新开始。')) {
+      answers.value = saved.answers ?? {}
+      activePassage.value = saved.extra?.active ?? 0
+      highlights.value = new Map(saved.extra?.highlights ?? [])
+      selPopup.value = null
+      started.value = true
+      submitted.value = false
+      submit()
+      return
+    }
+    saved = null
+  }
   recovery.begin()
-  timeLeft.value = saved
-    ? Math.min(Math.max(0, saved.timeLeft), testPair.value.reading.timeLimit)
-    : testPair.value.reading.timeLimit
+  timeLeft.value = restoreTimeLeft(saved?.timeLeft, testPair.value.reading.timeLimit)
   answers.value = saved?.answers ?? {}
   submitted.value = false
   activePassage.value = saved?.extra?.active ?? 0
@@ -189,32 +208,11 @@ const allQuestions = computed<MockQuestion[]>(
 )
 
 // 满分题数（多选题按答案个数计）
-const scoredTotal = computed(() =>
-  allQuestions.value.reduce(
-    (s, q) =>
-      s
-      + (q.type === 'multi-select' && Array.isArray(q.answer)
-        ? q.answer.length
-        : 1),
-    0,
-  ),
-)
+const scoredTotal = computed(() => totalScorePoints(allQuestions.value))
 
-const correctCount = computed(() => {
-  if (!submitted.value)
-    return 0
-  return allQuestions.value.reduce((sum, q) => {
-    const ans = answers.value[q.id] ?? ''
-    return (
-      sum
-      + (q.type === 'multi-select'
-        ? multiSelectScore(q, ans)
-        : isCorrect(q, ans)
-          ? 1
-          : 0)
-    )
-  }, 0)
-})
+const correctCount = computed(() =>
+  countCorrect(allQuestions.value, answers.value, submitted.value),
+)
 
 const band = computed(() => bandScore(correctCount.value, scoredTotal.value))
 
@@ -230,21 +228,11 @@ function toggleMultiSelect(qid: string, idx: number) {
     return
   if (submitted.value)
     return
-  const current = new Set((answers.value[qid] ?? '').split(',').filter(Boolean))
-  const s = String(idx)
-  if (current.has(s)) {
-    current.delete(s)
-  }
-  else {
-    // 多选题最多选该题答案个数（Choose TWO 即 2 个），多出的拒绝加入，防止全选刷分
-    const q = allQuestions.value.find(q => q.id === qid)
-    const max
-      = q && Array.isArray(q.answer) ? q.answer.length : Number.POSITIVE_INFINITY
-    if (current.size >= max)
-      return
-    current.add(s)
-  }
-  answers.value[qid] = [...current].join(',')
+  // 多选题最多选该题答案个数（Choose TWO 即 2 个），多出的拒绝加入，防止全选刷分
+  const q = allQuestions.value.find(q => q.id === qid)
+  const max
+    = q && Array.isArray(q.answer) ? q.answer.length : Number.POSITIVE_INFINITY
+  answers.value[qid] = toggleMultiSelectValue(answers.value[qid] ?? '', idx, max)
 }
 
 // 切换套题：已开始且未交卷且已有答案时先确认，避免误触丢进度；
@@ -265,19 +253,7 @@ function onTestChange(e: Event) {
 function questionStatus(
   q: MockQuestion,
 ): 'correct' | 'wrong' | 'partial' | 'unanswered' {
-  if (!submitted.value)
-    return 'unanswered'
-  const userAns = answers.value[q.id] ?? ''
-  if (!userAns)
-    return 'unanswered'
-  if (q.type === 'multi-select') {
-    const score = multiSelectScore(q, userAns)
-    const max = Array.isArray(q.answer) ? q.answer.length : 1
-    if (score === max)
-      return 'correct'
-    return score > 0 ? 'partial' : 'wrong'
-  }
-  return isCorrect(q, userAns) ? 'correct' : 'wrong'
+  return mockQuestionStatus(q, answers.value[q.id] ?? '', submitted.value)
 }
 
 // 划词高亮
@@ -370,14 +346,7 @@ function submit() {
   if (timer)
     clearInterval(timer)
   // 保存做题记录
-  const total = allQuestions.value.reduce(
-    (s, q) =>
-      s
-      + (q.type === 'multi-select' && Array.isArray(q.answer)
-        ? q.answer.length
-        : 1),
-    0,
-  )
+  const total = totalScorePoints(allQuestions.value)
   const saved = saveMockRecord({
     id: testId.value,
     label: testPair.value?.label ?? testId.value,
@@ -497,6 +466,9 @@ function switchPassage(index: number) {
         <p v-if="recovery.draft.value?.submitted" class="mt-4 text-sm text-gray-500 dark:text-gray-400">
           该套题已交卷，重新开始将是一次新的测试
         </p>
+        <p v-if="recovery.draft.value && !recovery.draft.value.submitted" class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+          草稿最后保存：{{ new Date(recovery.draft.value.updatedAt).toLocaleString() }}
+        </p>
       </div>
       <div v-else :inert="recovery.blocked.value ? true : undefined">
         <!-- 顶栏：标题 + 计时器 -->
@@ -583,9 +555,12 @@ function switchPassage(index: number) {
         >
           <div class="grid gap-6 lg:grid-cols-2 lg:h-[calc(100vh-12rem)]">
             <!-- 左：文章（独立滚动，支持划词高亮） -->
+            <!-- M-Opt5：桌面端标题列表置顶对照。article 在 lg 下改为 flex 列，
+                 headings 块仅在 lg 下 order-first + 吸顶；移动端 DOM 顺序与
+                 手机原文弹窗均不动。 -->
             <article
               data-passage
-              class="select-text border border-gray-200 rounded-2xl bg-white p-6 shadow-sm lg:min-h-0 lg:overflow-y-auto dark:border-gray-700 dark:bg-gray-800"
+              class="select-text border border-gray-200 rounded-2xl bg-white p-6 shadow-sm lg:min-h-0 lg:flex lg:flex-col lg:overflow-y-auto dark:border-gray-700 dark:bg-gray-800"
               @mouseup="handleSelect(pi)"
               @touchend="handleSelect(pi)"
             >
@@ -627,7 +602,7 @@ function switchPassage(index: number) {
               >
               <div
                 v-if="p.headings?.length"
-                class="mt-4 border border-gray-200 rounded-lg p-4 dark:border-gray-700"
+                class="mt-4 border border-gray-200 rounded-lg bg-white p-4 lg:sticky lg:top-0 lg:z-10 lg:order-first lg:mt-0 dark:border-gray-700 dark:bg-gray-800"
               >
                 <p class="mb-2 text-sm font-bold text-gray-900 dark:text-white">
                   标题列表
@@ -744,12 +719,29 @@ function switchPassage(index: number) {
                   "
                 >
 
+                <!-- 配对/标注题的选项框：镜像听力页写法（M-Opt4）。当前阅读数据
+                     尚无 options 字段，只补渲染分支不改数据；“按题组只渲染一次”
+                     需改 v-for 分组结构，非零风险，本次不动。 -->
+                <div
+                  v-if="q.type === 'map-label' && q.options?.length"
+                  class="mb-2 border border-gray-200 rounded-lg bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-800"
+                >
+                  <p class="mb-1 font-bold">
+                    选项
+                  </p>
+                  <ul class="space-y-0.5">
+                    <li v-for="(opt, oi) in q.options" :key="oi">
+                      {{ String.fromCharCode(65 + oi) }}. {{ opt }}
+                    </li>
+                  </ul>
+                </div>
+
                 <!-- 地图标注题 -->
                 <input
                   v-if="q.type === 'map-label'"
                   :disabled="submitted"
                   :value="answers[q.id] ?? ''"
-                  placeholder="输入字母"
+                  :placeholder="mapLabelPlaceholder(q)"
                   maxlength="4"
                   class="w-24 border border-gray-300 rounded-lg px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   @input="

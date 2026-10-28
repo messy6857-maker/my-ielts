@@ -239,7 +239,7 @@ function pieSlices(data: { label: string; value: number }[]) {
             <span
               class="inline-block h-2.5 w-2.5 rounded-sm"
               :style="{ background: s.color }"
-            />{{ s.label }} {{ s.value }}%
+            />{{ s.label }} {{ s.value }}{{ prompt.unit }}
           </span>
         </div>
       </div>
@@ -293,11 +293,13 @@ function pieSlices(data: { label: string; value: number }[]) {
     </ol>
 
     <!-- map -->
-    <p
-      v-else-if="prompt.type === 'map'"
-      class="text-sm leading-7 text-gray-700"
-    >
-      {{ prompt.description }}
-    </p>
+    <div v-else-if="prompt.type === 'map'">
+      <p class="mb-1 text-xs text-gray-400">
+        本题为文字版地图题
+      </p>
+      <p class="text-sm leading-7 text-gray-700">
+        {{ prompt.description }}
+      </p>
+    </div>
   </div>
 </template>

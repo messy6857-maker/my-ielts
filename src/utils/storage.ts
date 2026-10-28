@@ -12,7 +12,37 @@ export const storageRevision = ref(0)
 const listeners = new Set<(key: string, source: 'local' | 'remote') => void>()
 let batchDepth = 0
 let batchSource: 'local' | 'remote' | null = null
-let clock = 0
+// “见过的最大戳”下限：会话内棘轮只能防同会话的快钟回放，重载即归零。
+// 持久化到 localStorage 后，拉取过快钟设备数据的设备在重载后本地写仍能赢
+// （新戳 = max(墙钟, 下限 + 1)，见 saveValue）。只存单调递增的数值，不含账号信息。
+// 懒加载：首次写时才读存储，而不是模块导入时读——导入时读会把测试环境里
+// 跨文件残留的旧下限带进 fake 时间的用例；生产中首写前存储未被清过，语义相同。
+const CLOCK_FLOOR_KEY = 'myielts_clock_floor_v1'
+let clock: number | null = null
+function currentClockFloor(): number {
+  if (clock === null) {
+    clock = 0
+    try {
+      const stored = typeof localStorage !== 'undefined'
+        ? Number(localStorage.getItem(CLOCK_FLOOR_KEY))
+        : Number.NaN
+      if (Number.isFinite(stored) && stored > 0)
+        clock = stored
+    }
+    catch {
+      /* 无存储环境（如 SSR）下退化为会话内棘轮。 */
+    }
+  }
+  return clock
+}
+function persistClock(value: number) {
+  try {
+    localStorage.setItem(CLOCK_FLOOR_KEY, String(value))
+  }
+  catch {
+    /* 存储失败不阻塞写本身；下限仍保留在内存棘轮里。 */
+  }
+}
 let actor = ''
 export function writerId() {
   if (!actor) {
@@ -77,7 +107,6 @@ const legacyBases = [
   'corpus_daily_new_v1',
   'study_time_v1',
   'stats_attempts_v1',
-  'tombstones_v1',
 ]
 export function isStudyBase(base: string): boolean {
   const [table, suffix, extra] = base.split('__entry_')
@@ -201,7 +230,8 @@ export function saveEnvelope(
 ) {
   try {
     localStorage.setItem(key, JSON.stringify(e))
-    clock = Math.max(clock, e.stamp[0])
+    clock = Math.max(currentClockFloor(), e.stamp[0])
+    persistClock(clock)
     storageFailures.value = storageFailures.value.filter(k => k !== key)
     notifyStorage(key, source)
     return true
@@ -242,7 +272,7 @@ export function saveValue(key: string, value: unknown, deleted = false) {
     && JSON.stringify(previous.value) === JSON.stringify(value)
   )
     return true
-  clock = Math.max(clock + 1, Date.now(), (previous?.stamp[0] ?? 0) + 1)
+  clock = Math.max(currentClockFloor() + 1, Date.now(), (previous?.stamp[0] ?? 0) + 1)
   return saveEnvelope(key, {
     __ielts: 2,
     stamp: [clock, writerId()],

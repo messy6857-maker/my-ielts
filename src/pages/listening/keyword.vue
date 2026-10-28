@@ -152,7 +152,7 @@ const filteredWs = computed(() => {
                 class="hover:underline"
                 :title="`在剑桥词典中查询 ${w.word}`"
                 :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${w.word}`"
-                target="_blank"
+                target="_blank" rel="noopener noreferrer"
               >{{ w.word }}</a>
             </th>
             <td class="px-6 py-4 italic">

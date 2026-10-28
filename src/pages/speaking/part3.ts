@@ -1,4 +1,4 @@
-// 雅思口语 Part 3 题库（2025-2026 真题，30 话题 / 163 题）
+// 雅思口语 Part 3 题库（2025-2026 真题，30 话题 / 161 题）
 export interface Part3Topic { id: string; topic: string; topicCn: string; questions: string[] }
 
 export const PART3_TOPICS: Part3Topic[] = [
@@ -354,8 +354,6 @@ export const PART3_TOPICS: Part3Topic[] = [
     "questions": [
       "How important is it for governments to fund the arts?",
       "Do you think traditional arts and crafts are at risk of disappearing?",
-      "How has streaming changed the way people consume music and film?",
-      "Should the media be more strictly regulated?",
       "Is it important for young people to learn about their cultural heritage?",
       "Do you think celebrity culture has a positive or negative influence on society?"
     ],

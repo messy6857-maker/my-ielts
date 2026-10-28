@@ -14,6 +14,11 @@ watch(currentUser, (user, previous) => {
   if (previous && user !== previous)
     router.replace('/')
 })
+// 存储失败横幅：会话内可关闭；失败列表变化（新 key 失败或旧失败清除后重现）时自动重现。
+const storageBannerClosed = ref(false)
+watch(storageFailures, () => {
+  storageBannerClosed.value = false
+})
 </script>
 
 <template>
@@ -29,7 +34,7 @@ watch(currentUser, (user, previous) => {
     </button>
   </div>
   <div
-    v-if="storageFailures.length"
+    v-if="storageFailures.length && !storageBannerClosed"
     role="alert"
     class="fixed left-0 right-0 top-16 z-50 border border-red-300 bg-red-50 p-3 text-sm text-red-800"
   >
@@ -37,6 +42,9 @@ watch(currentUser, (user, previous) => {
     <RouterLink to="/settings" class="underline">
       导出备份并清理空间
     </RouterLink>，不要关闭页面。
+    <button class="ml-2 underline" @click="storageBannerClosed = true">
+      知道了
+    </button>
   </div>
   <div
     v-if="loggingOut"
