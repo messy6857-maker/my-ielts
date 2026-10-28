@@ -81,7 +81,7 @@ function play(word) {
         <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
           阅读考点词
         </h3>
-        <span class="text-base font-normal text-gray-500 dark:text-gray-400">538 考点词同义替换</span>
+        <span class="text-base font-normal text-gray-500 dark:text-gray-400">376 考点词同义替换</span>
         <span
           class="ml-4 text-sm font-medium text-green-600 dark:text-green-400"
         >已掌握 {{ masteredCount }} / {{ totalWords }}</span>

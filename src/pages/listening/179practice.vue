@@ -23,7 +23,7 @@ const ws = reactive(
   }),
 )
 
-const { addMistake } = useMistakes()
+const { addMistake, decrementMistake } = useMistakes()
 const { setProgress } = useProgress()
 
 function onKeydown(e, word) {
@@ -69,6 +69,8 @@ function next(index) {
     .map(v => v.trim().toLowerCase().replace(/\s+/g, ' '))
   // window.console.log(practiceReplace, practiceWord)
 
+  // 重复检查守卫：同一行已记过错时不再重复记错；改对后递减一次（与自测卡片 goBackOne 语义对齐）
+  const hadErrors = cw.result.checked && cw.result.errorWords.length > 0
   const errorWords = []
   if (practiceWord !== cw.word.trim().toLowerCase())
     errorWords.push(cw.word)
@@ -84,12 +86,18 @@ function next(index) {
   cw.result.errorWords = errorWords
 
   if (errorWords.length > 0) {
-    // 有错词：记入错词本
-    addMistake('listening', {
-      key: `listening:${cw.word}`,
-      title: cw.word,
-      detail: `${cw.type} ${cw.meaning}；同义替换：${cw.replace.join(' / ')}`,
-    })
+    // 有错词：首次记错才记入错词本（仍错的重复检查不重复记）
+    if (!hadErrors) {
+      addMistake('listening', {
+        key: `listening179:${cw.index}`,
+        title: cw.word,
+        detail: `${cw.type} ${cw.meaning}；同义替换：${cw.replace.join(' / ')}`,
+      })
+    }
+  }
+  else if (hadErrors) {
+    // 上次记错、本次改对：错题计数减一
+    decrementMistake(`listening179:${cw.index}`)
   }
   setProgress('listening', index + 1, words.length)
 

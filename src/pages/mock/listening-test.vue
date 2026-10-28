@@ -520,7 +520,7 @@ function submit() {
           该套题已交卷，重新开始将是一次新的测试
         </p>
       </div>
-      <div v-else>
+      <div v-else :inert="recovery.blocked.value ? true : undefined">
         <div class="mb-6 flex items-center justify-between">
           <div class="flex items-center gap-3">
             <h2 class="text-2xl font-bold text-gray-900 dark:text-white">

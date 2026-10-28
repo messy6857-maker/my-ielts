@@ -25,6 +25,27 @@ describe('analyzeEssay', () => {
     expect(analyzeEssay(POOR_ESSAY).hasOverview).toBe(false)
   })
 
+  it('overview 只认段首：细节段中段出现 overall 不算', () => {
+    const midParagraph = `The bar chart shows internet access in five countries in 2020.
+
+In 2020, Country A reached 95%, which was the highest figure. Overall, sales rose steadily in most countries, but Country E lagged behind at 45%. The gap between the highest and lowest figures remained large.`
+    expect(analyzeEssay(midParagraph).hasOverview).toBe(false)
+  })
+
+  it('复合句：只有 that 的句子不再算复合句', () => {
+    expect(analyzeEssay('The chart shows that sales rose in 2020.').complexRatio).toBe(0)
+  })
+
+  it('复合句：逗号分隔的短语不算，逗号两侧完整分句才算', () => {
+    expect(analyzeEssay('In 2020, sales rose sharply, reaching a peak, before falling back.').complexRatio).toBe(0)
+    expect(analyzeEssay('Sales rose in 2020, and they fell in 2021.').complexRatio).toBe(1)
+  })
+
+  it('复合句：真正的从句标记仍算（while / which）', () => {
+    expect(analyzeEssay('Sales rose while costs fell.').complexRatio).toBe(1)
+    expect(analyzeEssay('Country A reached 95%, which was the highest figure.').complexRatio).toBe(1)
+  })
+
   it('统计衔接词和趋势词汇', () => {
     const s = analyzeEssay(GOOD_ESSAY)
     expect(s.linkingUnique).toBeGreaterThanOrEqual(4)

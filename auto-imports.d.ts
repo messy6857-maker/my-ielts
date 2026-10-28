@@ -25,6 +25,7 @@ declare global {
   const attemptModuleLabel: typeof import('./src/composables/useStats')['attemptModuleLabel']
   const autoResetRef: typeof import('@vueuse/core')['autoResetRef']
   const clearMockHistory: typeof import('./src/composables/useMockHistory')['clearMockHistory']
+  const clearQuarantinedKeys: typeof import('./src/composables/syncClient')['clearQuarantinedKeys']
   const collectBackupData: (typeof import('./src/composables/useBackup'))['collectBackupData']
   const collectSyncData: typeof import('./src/composables/syncClient')['collectSyncData']
   const computed: typeof import('vue')['computed']
@@ -68,6 +69,7 @@ declare global {
   const getCurrentScope: typeof import('vue')['getCurrentScope']
   const getDeviceId: typeof import('./src/composables/useStudyTimer')['getDeviceId']
   const getMockHistory: typeof import('./src/composables/useMockHistory')['getMockHistory']
+  const getQuarantinedKeys: typeof import('./src/composables/syncClient')['getQuarantinedKeys']
   const getToken: typeof import('./src/composables/syncClient')['getToken']
   const getTokenOwner: typeof import('./src/composables/syncClient')['getTokenOwner']
   const getWordInfo: typeof import('./src/composables/useWordInfo')['getWordInfo']
@@ -127,6 +129,7 @@ declare global {
   const pausableWatch: typeof import('@vueuse/core')['pausableWatch']
   const planQueue: typeof import('./src/composables/useDeckStore')['planQueue']
   const provide: typeof import('vue')['provide']
+  const quarantineKeys: typeof import('./src/composables/syncClient')['quarantineKeys']
   const reactify: typeof import('@vueuse/core')['reactify']
   const reactifyObject: typeof import('@vueuse/core')['reactifyObject']
   const reactive: typeof import('vue')['reactive']
@@ -411,6 +414,7 @@ declare module 'vue' {
     readonly attemptModuleLabel: UnwrapRef<typeof import('./src/composables/useStats')['attemptModuleLabel']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly clearMockHistory: UnwrapRef<typeof import('./src/composables/useMockHistory')['clearMockHistory']>
+    readonly clearQuarantinedKeys: UnwrapRef<typeof import('./src/composables/syncClient')['clearQuarantinedKeys']>
     readonly collectSyncData: UnwrapRef<typeof import('./src/composables/syncClient')['collectSyncData']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
@@ -452,6 +456,7 @@ declare module 'vue' {
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getDeviceId: UnwrapRef<typeof import('./src/composables/useStudyTimer')['getDeviceId']>
     readonly getMockHistory: UnwrapRef<typeof import('./src/composables/useMockHistory')['getMockHistory']>
+    readonly getQuarantinedKeys: UnwrapRef<typeof import('./src/composables/syncClient')['getQuarantinedKeys']>
     readonly getToken: UnwrapRef<typeof import('./src/composables/syncClient')['getToken']>
     readonly getTokenOwner: UnwrapRef<typeof import('./src/composables/syncClient')['getTokenOwner']>
     readonly getWordInfo: UnwrapRef<typeof import('./src/composables/useWordInfo')['getWordInfo']>
@@ -510,6 +515,7 @@ declare module 'vue' {
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
     readonly planQueue: UnwrapRef<typeof import('./src/composables/useDeckStore')['planQueue']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
+    readonly quarantineKeys: UnwrapRef<typeof import('./src/composables/syncClient')['quarantineKeys']>
     readonly reactify: UnwrapRef<typeof import('@vueuse/core')['reactify']>
     readonly reactifyObject: UnwrapRef<typeof import('@vueuse/core')['reactifyObject']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>
@@ -787,6 +793,7 @@ declare module '@vue/runtime-core' {
     readonly attemptModuleLabel: UnwrapRef<typeof import('./src/composables/useStats')['attemptModuleLabel']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
     readonly clearMockHistory: UnwrapRef<typeof import('./src/composables/useMockHistory')['clearMockHistory']>
+    readonly clearQuarantinedKeys: UnwrapRef<typeof import('./src/composables/syncClient')['clearQuarantinedKeys']>
     readonly collectSyncData: UnwrapRef<typeof import('./src/composables/syncClient')['collectSyncData']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
@@ -828,6 +835,7 @@ declare module '@vue/runtime-core' {
     readonly getCurrentScope: UnwrapRef<typeof import('vue')['getCurrentScope']>
     readonly getDeviceId: UnwrapRef<typeof import('./src/composables/useStudyTimer')['getDeviceId']>
     readonly getMockHistory: UnwrapRef<typeof import('./src/composables/useMockHistory')['getMockHistory']>
+    readonly getQuarantinedKeys: UnwrapRef<typeof import('./src/composables/syncClient')['getQuarantinedKeys']>
     readonly getToken: UnwrapRef<typeof import('./src/composables/syncClient')['getToken']>
     readonly getTokenOwner: UnwrapRef<typeof import('./src/composables/syncClient')['getTokenOwner']>
     readonly getWordInfo: UnwrapRef<typeof import('./src/composables/useWordInfo')['getWordInfo']>
@@ -886,6 +894,7 @@ declare module '@vue/runtime-core' {
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
     readonly planQueue: UnwrapRef<typeof import('./src/composables/useDeckStore')['planQueue']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
+    readonly quarantineKeys: UnwrapRef<typeof import('./src/composables/syncClient')['quarantineKeys']>
     readonly reactify: UnwrapRef<typeof import('@vueuse/core')['reactify']>
     readonly reactifyObject: UnwrapRef<typeof import('@vueuse/core')['reactifyObject']>
     readonly reactive: UnwrapRef<typeof import('vue')['reactive']>

@@ -140,8 +140,8 @@ function buildQueue() {
     deck.remaining.value,
   )
   queue.value = [
-    ...plan.newWords.map(c => toCard(c, true)),
     ...plan.reviews.map(c => toCard(c, false)),
+    ...plan.newWords.map(c => toCard(c, true)),
   ]
   initialTotal.value = queue.value.length
   reviewCount.value = plan.reviews.length

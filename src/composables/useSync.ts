@@ -7,6 +7,7 @@ import {
   collectSyncData,
   getAuthPendingPush,
   getToken,
+  quarantineKeys,
   setAuthPendingPush,
   syncEnabled,
 } from './syncClient'
@@ -23,6 +24,7 @@ export const useSync = createGlobalState(() => {
   const status = ref<SyncStatus>('idle')
   const lastSyncAt = ref(0)
   const errorMsg = ref('')
+  const rejectedNotice = ref('')
   const authFailed = ref(false)
   const backendOutdated = ref(false)
   let timer: ReturnType<typeof setTimeout> | undefined
@@ -71,6 +73,16 @@ export const useSync = createGlobalState(() => {
         localStorage.setItem(pendingKey(owner), '1')
         failure(result)
         return false
+      }
+      // Server-skipped entries are quarantined locally (never re-uploaded)
+      // and surfaced in Settings; the rest of the payload already synced.
+      if (result.rejected?.length) {
+        quarantineKeys(owner, result.rejected)
+        rejectedNotice.value
+          = `${result.rejected.length} 条学习记录因格式异常未同步，已隔离不再上传，详情见设置页`
+      }
+      else {
+        rejectedNotice.value = ''
       }
       if (result.data)
         applySyncData(result.data, owner)
@@ -203,6 +215,7 @@ export const useSync = createGlobalState(() => {
     status,
     statusText,
     errorMsg,
+    rejectedNotice,
     lastSyncAt,
     needsRelogin,
     pushNow,

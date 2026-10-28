@@ -32,7 +32,7 @@ function audioFor(word: string) {
   </div>
   <KeywordFlashcard
     ns="reading538"
-    title="阅读 538 自测"
+    title="阅读 376 自测"
     subtitle="看到单词先凭感觉自评，重点记同义替换"
     back-to="/reading"
     back-label="返回考点词"

@@ -95,7 +95,7 @@ TODO
 
 ### 阅读
 
-- 538 考点词同义替换
+- 376 考点词同义替换
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="public/screenshot/screenshot-reading-dark.png">

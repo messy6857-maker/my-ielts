@@ -86,8 +86,35 @@ export interface ApiResult {
   token?: string
   username?: string
   data?: Record<string, string> | null
+  /** Keys the server skipped as malformed/foreign (sync PUT only). */
+  rejected?: string[]
   updatedAt?: number
   protocolVersion?: number
+}
+// Keys the server rejected: quarantined locally so they are never re-uploaded
+// (otherwise every push would carry the same poisoned entry again).
+const QUARANTINE_KEY = 'myielts_sync_quarantined'
+const quarantineKey = (owner: string) => `${QUARANTINE_KEY}:${owner}`
+export function getQuarantinedKeys(owner: string | null): string[] {
+  if (!owner)
+    return []
+  try {
+    const v = JSON.parse(localStorage.getItem(quarantineKey(owner)) || '[]')
+    return Array.isArray(v) ? v.filter(k => typeof k === 'string') : []
+  }
+  catch {
+    return []
+  }
+}
+export function quarantineKeys(owner: string, keys: string[]) {
+  if (!owner || !keys.length)
+    return
+  const merged = [...new Set([...getQuarantinedKeys(owner), ...keys])]
+  localStorage.setItem(quarantineKey(owner), JSON.stringify(merged))
+}
+export function clearQuarantinedKeys(owner: string | null) {
+  if (owner)
+    localStorage.removeItem(quarantineKey(owner))
 }
 const capabilities = new Map<string, number>()
 async function api(
@@ -225,10 +252,12 @@ export function collectSyncData(username: string): Record<string, string> {
   if (!storageFailures.value.some(key => studyBaseOf(key, username)))
     saveValue(accountKey('migration_version_v2', username), 2)
   const result: Record<string, string> = Object.create(null)
+  const quarantined = new Set(getQuarantinedKeys(username))
   for (const key of Object.keys(localStorage)) {
     const base = studyBaseOf(key, username)
     if (
       !base
+      || quarantined.has(key)
       || collectionBases.includes(base)
       || [
         'mistakes_v1',

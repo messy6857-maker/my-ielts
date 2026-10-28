@@ -279,8 +279,8 @@ function buildQueue() {
     daily.remaining.value,
   )
   queue.value = [
-    ...plan.newWords.map(w => toCard(w, true)),
     ...plan.reviews.map(w => toCard(w, false)),
+    ...plan.newWords.map(w => toCard(w, true)),
   ]
   initialTotal.value = queue.value.length
   reviewCount.value = plan.reviews.length

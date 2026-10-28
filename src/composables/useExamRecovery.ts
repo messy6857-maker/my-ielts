@@ -95,27 +95,44 @@ export function useExamRecovery(options: {
       return false
     }
   }
+  // 同账号同套题同科目的全部草稿键（含无会话后缀的历史键）：
+  // 草稿键按页签会话区分，弃稿/交卷只清本会话键时，别页签的旧快照
+  // 会被 refresh() 重新 offer“继续”，让已弃/已交卷的草稿复活。
+  function sessionKeys() {
+    const prefix = baseKey()
+    return Object.keys(localStorage)
+      .filter(k => k === prefix || k.startsWith(`${prefix}__session_`))
+  }
   function clear() {
     // 清当前展示套题的本会话草稿：弃稿发生在开始屏，此时 activeTestId
     // 还是上次开考的套题，用它会清错键；交卷时两者一致，不受影响。
-    localStorage.removeItem(key())
+    // 同时清掉同账号同套题的其他会话草稿，避免别页签旧快照复活。
+    // 注意：这也会清掉另一页签正在进行的同套题草稿，弃稿确认即视为
+    // 该账号该套题的草稿全部作废；正常单页签流程不受影响。
+    for (const storedKey of sessionKeys())
+      localStorage.removeItem(storedKey)
     draft.value = null
   }
   // 交卷时把草稿标记为已交卷（无论记录保存是否成功）：开始屏不再 offer
   // “继续”，避免对已交卷内容重复续做；记录保存失败时草稿仍保留答案。
+  // 同账号同套题的其他会话草稿一并标记，否则记录保存失败（不清键）
+  // 时别页签的未交卷旧快照仍会在该页签 offer“继续”。
   function markSubmitted() {
     const storedKey = key()
-    try {
-      const raw = localStorage.getItem(storedKey)
-      const d = raw ? (JSON.parse(raw) as ExamDraft | null) : null
-      if (d && d.version === 1) {
-        const value = { ...d, submitted: true, updatedAt: Date.now() }
-        localStorage.setItem(storedKey, JSON.stringify(value))
-        draft.value = value
+    for (const k of sessionKeys()) {
+      try {
+        const raw = localStorage.getItem(k)
+        const d = raw ? (JSON.parse(raw) as ExamDraft | null) : null
+        if (d && d.version === 1) {
+          const value = { ...d, submitted: true, updatedAt: Date.now() }
+          localStorage.setItem(k, JSON.stringify(value))
+          if (k === storedKey)
+            draft.value = value
+        }
       }
-    }
-    catch {
-      // 标记失败不阻塞交卷流程
+      catch {
+        // 单个标记失败不阻塞交卷流程
+      }
     }
   }
   function dismissNotice() {

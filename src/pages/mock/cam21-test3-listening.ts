@@ -8,6 +8,17 @@ import type { ListeningMockTest } from './types'
  * answer 存为下标数组，前端多选计分。
  * Q17–20、Q25–30 为配对题，保持原生"写字母"格式（map-label）。
  */
+/** Part 3 Q25-30 选项框（书上原文，p.58）：对各半合成面料的评价，选 A-H */
+const FABRIC_COMMENTS_OPTIONS = [
+  'The production process is fuel efficient.',
+  'It is the least sustainable of alternative fabrics.',
+  'Production costs are high.',
+  'It provides additional health benefits.',
+  'It is not durable in the long-term.',
+  'It needs to be produced in a certain way to be sustainable.',
+  'Chemicals required for production can be reused.',
+  'This is from a wholly sustainable source.',
+]
 export const cam21Test3Listening: ListeningMockTest = {
   id: 'cam21-test3-listening',
   title: '剑21 Test 3 听力',
@@ -49,12 +60,12 @@ export const cam21Test3Listening: ListeningMockTest = {
       questions: [
         { id: 'Q21-22', type: 'multi-select', question: 'Which TWO points do the speakers make about the terms \'ethical\' and \'sustainable\' fashion? (Choose TWO letters, A–E)', options: ['A Their definitions keep changing.', 'B People think they mean the same thing.', 'C The term \'eco-friendly\' is preferable.', 'D They are often used imprecisely.', 'E Companies should avoid using them on clothing labels.'], answer: [1, 3] },
         { id: 'Q23-24', type: 'multi-select', question: 'Which TWO claims about wool production do the speakers disagree with? (Choose TWO letters, A–E)', options: ['A Sheep are generally well-treated.', 'B Wool is easy to recycle.', 'C Wool is a long-lasting fabric.', 'D Wool production involves few chemicals.', 'E Sheep do less environmental damage than other livestock.'], answer: [3, 4] },
-        { id: 'Q25', type: 'map-label', question: 'Lyocell', answer: 'G' },
-        { id: 'Q26', type: 'map-label', question: 'Cupro', answer: 'B' },
-        { id: 'Q27', type: 'map-label', question: 'Bamboo', answer: 'F' },
-        { id: 'Q28', type: 'map-label', question: 'EcoVero', answer: 'A' },
-        { id: 'Q29', type: 'map-label', question: 'Cork', answer: 'H' },
-        { id: 'Q30', type: 'map-label', question: 'Hemp', answer: 'D' },
+        { id: 'Q25', type: 'map-label', question: 'Lyocell', answer: 'G', options: FABRIC_COMMENTS_OPTIONS },
+        { id: 'Q26', type: 'map-label', question: 'Cupro', answer: 'B', options: FABRIC_COMMENTS_OPTIONS },
+        { id: 'Q27', type: 'map-label', question: 'Bamboo', answer: 'F', options: FABRIC_COMMENTS_OPTIONS },
+        { id: 'Q28', type: 'map-label', question: 'EcoVero', answer: 'A', options: FABRIC_COMMENTS_OPTIONS },
+        { id: 'Q29', type: 'map-label', question: 'Cork', answer: 'H', options: FABRIC_COMMENTS_OPTIONS },
+        { id: 'Q30', type: 'map-label', question: 'Hemp', answer: 'D', options: FABRIC_COMMENTS_OPTIONS },
       ],
     },
     {

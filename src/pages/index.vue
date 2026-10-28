@@ -42,7 +42,7 @@ const menus = reactive([
     label: '阅读',
     icon: 'i-carbon-white-paper',
     link: '/reading',
-    desc: '538 考点词同义替换',
+    desc: '376 考点词同义替换',
   },
   {
     label: '写作',

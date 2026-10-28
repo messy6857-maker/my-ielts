@@ -48,7 +48,7 @@ export const MISTAKE_MODULE_LABEL: Record<MistakeModule, string> = {
   vocabulary: '词汇拼写',
   typing: '打字练习',
   listening: '听力 179',
-  reading: '阅读 538',
+  reading: '阅读 376',
   corpus: '听力语料库',
 }
 export const PROGRESS_MODULE_LABEL: Record<ProgressModule, string> = {

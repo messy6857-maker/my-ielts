@@ -118,11 +118,14 @@ const TREND_VOCAB = [
   'proportion', 'percentage', 'overtake', 'overtook', 'surpass',
 ]
 
+// 从句专属标记：只保留不能单独作介词的从属连词、关系代词与固定搭配。
+// 已剔除 that / as / when / where / after / before / once / since / until：
+// 它们常作介词或引导非从句成分，数据描述句几乎句句含有，子串命中会把简单句
+// 系统性误算为复合句（原规则下复合句占比几乎恒 >= 0.4，GRA 常驻 +0.5）。
 const COMPLEX_MARKERS = [
-  'although', 'though', 'while', 'whereas', 'because', 'since', 'as',
-  'which', 'who', 'whom', 'whose', 'when', 'where', 'that',
+  'although', 'though', 'while', 'whereas', 'because',
+  'which', 'who', 'whom', 'whose',
   'if', 'unless', 'despite', 'in spite of', 'in order to', 'so that',
-  'after', 'before', 'until', 'once',
 ]
 
 const COMPARISON_MARKERS = [
@@ -130,6 +133,52 @@ const COMPARISON_MARKERS = [
   'compared to', 'compared with', 'in comparison', 'in contrast',
   'while', 'whereas', 'by contrast', 'similarly', 'twice as',
 ]
+
+// 段首判定：标记后须跟非字母（空格/标点/结尾），避免 overallocation 之类误触
+function startsWithMarker(text: string, marker: string): boolean {
+  if (!text.startsWith(marker))
+    return false
+  const next = text[marker.length]
+  return next === undefined || !/[a-z]/.test(next)
+}
+
+// 概述段只认段首：某段以 overview 标记开头才算，不再全文子串匹配
+// （细节段里顺带写一句 Overall, ... 不代表写了独立概述段）
+function hasOverviewParagraph(paragraphs: string[]): boolean {
+  return paragraphs.some((p) => {
+    const pl = p.toLowerCase().trim()
+    return OVERVIEW_MARKERS.some(m => startsWithMarker(pl, m))
+  })
+}
+
+// 近似判断一段文字是否含谓语动词：助动词/情态动词、-ed 形式或常见不规则过去式
+const FINITE_VERB_RE = /\b(am|is|are|was|were|be|been|being|has|have|had|will|would|can|could|may|might|must|shall|should|do|does|did)\b/
+const IRREGULAR_PAST = [
+  'rose', 'fell', 'grew', 'went', 'came', 'saw', 'took', 'gave', 'became',
+  'stood', 'reached', 'remained', 'accounted', 'showed', 'recorded',
+]
+function hasFiniteVerb(fragment: string): boolean {
+  const f = ` ${fragment.toLowerCase()} `
+  if (FINITE_VERB_RE.test(f))
+    return true
+  if (/\b\w+ed\b/.test(f))
+    return true
+  return IRREGULAR_PAST.some(v => f.includes(` ${v} `))
+}
+
+// 逗号规则：须存在一个逗号，其两侧（累计左侧与右侧）均为完整分句
+// （各 >= 3 词且含谓语），逗号分隔的短语/插入语（如 In 2020, ... / ..., reaching a peak）不再算数
+function hasCommaClause(sentence: string): boolean {
+  const parts = sentence.split(',')
+  for (let i = 0; i < parts.length - 1; i++) {
+    const left = parts.slice(0, i + 1).join(',')
+    const right = parts.slice(i + 1).join(',')
+    if (left.trim().split(/\s+/).length >= 3 && right.trim().split(/\s+/).length >= 3
+      && hasFiniteVerb(left) && hasFiniteVerb(right))
+      return true
+  }
+  return false
+}
 
 function roundHalf(n: number): number {
   return Math.round(n * 2) / 2
@@ -154,7 +203,7 @@ export function analyzeEssay(text: string): EssayStats {
 
   const linkingFound = uniqueMatches(text, LINKING_DEVICES)
   const trendFound = uniqueMatches(text, TREND_VOCAB)
-  const overviewFound = OVERVIEW_MARKERS.some(m => lower.includes(m))
+  const overviewFound = hasOverviewParagraph(paragraphs)
 
   // 数据引用：数字（带 % / million / thousand 等）出现次数
   const dataRefs = (text.match(/\d[\d,.]*\s*(%|percent|million|billion|thousand)/gi) || []).length
@@ -163,14 +212,14 @@ export function analyzeEssay(text: string): EssayStats {
   // 对比手法：比较级 / compared to / while / whereas 等
   const comparisons = uniqueMatches(text, COMPARISON_MARKERS).length
 
-  // 复合句比例：含从属连词或被动语态的句子占比
+  // 复合句比例：含从句专属标记、被动语态，或逗号两侧均为完整分句的句子占比
   let complexCount = 0
   for (const s of sentences) {
     const sl = ` ${s.toLowerCase()} `
     const hasSub = COMPLEX_MARKERS.some(m => sl.includes(` ${m} `))
     const hasPassive = /\b(is|are|was|were|be|been|being)\s+\w+ed\b/.test(sl)
-    const hasCommaClause = (s.match(/,/g) || []).length >= 1 && s.split(/\s+/).length > 14
-    if (hasSub || hasPassive || hasCommaClause)
+    const commaClause = hasCommaClause(s)
+    if (hasSub || hasPassive || commaClause)
       complexCount++
   }
 
@@ -352,7 +401,7 @@ function gradeGRA(stats: EssayStats): CriterionScore {
   }
   else if (stats.complexRatio < 0.2) {
     score -= 0.75
-    improvements.push('几乎全是简单句：多用定语从句（which/that）、状语从句（while/although/because）和被动语态')
+    improvements.push('几乎全是简单句：多用定语从句（which/who）、状语从句（while/although/because）和被动语态')
   }
 
   if (stats.avgSentenceLen >= 12 && stats.avgSentenceLen <= 24) {

@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
+import {
+  clearQuarantinedKeys,
+  getQuarantinedKeys,
+} from '../composables/syncClient'
 import { downloadStudyBackup } from '../utils/backup'
 import { pruneArchives } from '../utils/archives'
 import { useGoBack } from '../composables/useGoBack'
@@ -18,6 +22,16 @@ const language = ref(
 watch(language, value => localStorage.setItem('myielts_tts_language', value))
 const backup = () => downloadStudyBackup(currentUser.value)
 const cleanupArchives = () => pruneArchives(currentUser.value)
+// 服务端拒绝的同步条目（格式异常）：已隔离不再上传，本机记录仍在，导出备份可取回
+const quarantined = ref<string[]>([])
+function refreshQuarantined() {
+  quarantined.value = getQuarantinedKeys(currentUser.value)
+}
+watch(currentUser, refreshQuarantined, { immediate: true })
+function clearQuarantine() {
+  clearQuarantinedKeys(currentUser.value)
+  refreshQuarantined()
+}
 const { goBack } = useGoBack('/')
 
 const form = ref({ ...getAISettings() })
@@ -85,6 +99,22 @@ async function onTest() {
       <button class="border rounded px-3 py-2 text-sm" @click="cleanupArchives">
         整理旧评分存档
       </button>
+      <div
+        v-if="quarantined.length"
+        class="mt-4 border border-amber-300 rounded-lg bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-900/20"
+      >
+        <p class="text-sm font-medium text-amber-800 dark:text-amber-200">
+          ⚠️ 有 {{ quarantined.length }} 条学习记录因格式异常被服务端拒绝，已隔离不再随包上传（本机记录仍在，可先导出备份）。
+        </p>
+        <ul class="mt-2 max-h-32 overflow-auto break-all text-xs text-gray-500">
+          <li v-for="k in quarantined" :key="k">
+            {{ k }}
+          </li>
+        </ul>
+        <button class="mt-2 border rounded px-3 py-1.5 text-sm" @click="clearQuarantine">
+          解除隔离（下次同步会再次尝试上传）
+        </button>
+      </div>
       <label class="mt-4 block text-sm">朗读偏好
         <select
           v-model="language"
