@@ -24,6 +24,7 @@ import {
   collectSyncData,
   getToken,
   getTokenOwner,
+  handleRejectedKeys,
   setAuthPendingPush,
   setToken,
   syncEnabled,
@@ -219,7 +220,9 @@ export const useAuth = createGlobalState(() => {
     // 推送失败不阻塞注册：记补推标记，useSync 在 ensureWired/登录成功时补推一次
     try {
       const pr = await apiPush(collectSyncData(username), username)
-      if (!pr.ok)
+      // 成功也可能带 rejected：立即隔离并记补推，让 useSync 的下次推送
+      // 走统一的隔离路径（否则要等用户下次本地写才落地）。
+      if (!pr.ok || handleRejectedKeys(username, pr))
         setAuthPendingPush(true)
     }
     catch {
@@ -278,7 +281,7 @@ export const useAuth = createGlobalState(() => {
         : { ok: false, data: null }
       if (pushed.ok && pushed.data)
         applySyncData(pushed.data, username)
-      if (!pushed.ok)
+      if (!pushed.ok || handleRejectedKeys(username, pushed))
         setAuthPendingPush(true)
     }
     catch {
@@ -409,6 +412,9 @@ export const useAuth = createGlobalState(() => {
         )
         if (!pr.ok) {
           pushOk = false
+          setAuthPendingPush(true)
+        }
+        else if (handleRejectedKeys(currentUser.value, pr)) {
           setAuthPendingPush(true)
         }
       }

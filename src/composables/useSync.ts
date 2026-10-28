@@ -6,10 +6,12 @@ import {
   applySyncData,
   collectSyncData,
   getAuthPendingPush,
+  getQuarantinedKeys,
   getToken,
-  quarantineKeys,
+  handleRejectedKeys,
   setAuthPendingPush,
   syncEnabled,
+  unquarantineKeys,
 } from './syncClient'
 import {
   finishGuestMigration,
@@ -43,6 +45,9 @@ export const useSync = createGlobalState(() => {
     authFailed.value = false
     backendOutdated.value = false
   }
+  function dismissRejectedNotice() {
+    rejectedNotice.value = ''
+  }
   function failure(result: { status: number; message?: string }) {
     authFailed.value = result.status === 401
     backendOutdated.value = result.status === 426
@@ -66,7 +71,8 @@ export const useSync = createGlobalState(() => {
     status.value = 'syncing'
     errorMsg.value = ''
     const job = (async () => {
-      const result = await apiPush(collectSyncData(owner), owner)
+      const payload = collectSyncData(owner)
+      const result = await apiPush(payload, owner)
       if (currentUser.value !== owner || getToken(owner) !== token)
         return false
       if (!result.ok) {
@@ -74,16 +80,24 @@ export const useSync = createGlobalState(() => {
         failure(result)
         return false
       }
-      // Server-skipped entries are quarantined locally (never re-uploaded)
-      // and surfaced in Settings; the rest of the payload already synced.
-      if (result.rejected?.length) {
-        quarantineKeys(owner, result.rejected)
+      // Server-skipped entries are quarantined locally (never re-uploaded
+      // while unchanged) and surfaced in Settings; the rest of the payload
+      // already synced. Keys sent in this push and not rejected are no
+      // longer poison (re-probe/legacy entries): drop them from quarantine.
+      if (handleRejectedKeys(owner, result)) {
         rejectedNotice.value
-          = `${result.rejected.length} 条学习记录因格式异常未同步，已隔离不再上传，详情见设置页`
+          = `${result.rejected!.length} 条学习记录因格式异常未同步，已隔离不再上传，详情见设置页`
       }
-      else {
+      else if (!getQuarantinedKeys(owner).length) {
+        // A clean push clears the notice only once nothing is quarantined
+        // anymore; otherwise the next auto-push would erase a prompt the
+        // user may not have seen yet.
         rejectedNotice.value = ''
       }
+      unquarantineKeys(
+        owner,
+        Object.keys(payload).filter(k => !result.rejected?.includes(k)),
+      )
       if (result.data)
         applySyncData(result.data, owner)
       if (atStart === generation)
@@ -216,6 +230,7 @@ export const useSync = createGlobalState(() => {
     statusText,
     errorMsg,
     rejectedNotice,
+    dismissRejectedNotice,
     lastSyncAt,
     needsRelogin,
     pushNow,

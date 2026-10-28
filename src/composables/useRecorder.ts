@@ -170,7 +170,22 @@ export function useRecorder() {
                 recognizer.start()
               }
               catch {
-                error.value = '语音转写已停止，录音仍在继续'
+                // restart 抛错（如识别器尚未完全结束）不能成为终态：healthy
+                // 仍为真却再无 onend 可触发，转写会静默永久停摆。先延迟重试
+                // 一次；重试仍抛错则明确降级为不可恢复：healthy 置 false，
+                // 并给出“停止后可重录”的明确提示，不再假装健康。
+                error.value = '语音转写重启失败，正在重试；录音仍在继续'
+                setTimeout(() => {
+                  if (recognition !== recognizer || !isRecording.value || !healthy)
+                    return
+                  try {
+                    recognizer.start()
+                  }
+                  catch {
+                    healthy = false
+                    error.value = '语音转写已停止（无法自动恢复），录音仍在继续；停止录音后可重录'
+                  }
+                }, 300)
               }
             }
           }

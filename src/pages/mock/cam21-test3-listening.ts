@@ -8,6 +8,15 @@ import type { ListeningMockTest } from './types'
  * answer 存为下标数组，前端多选计分。
  * Q17–20、Q25–30 为配对题，保持原生"写字母"格式（map-label）。
  */
+/** Part 2 Q17-20 选项框（书上原文，p.56）：各街头食品摊遇到的问题，选 A-F；不带字母前缀，渲染侧自动补 A-F */
+const STREET_FOOD_PROBLEMS_OPTIONS = [
+  'Some ingredients were too expensive.',
+  'The meals took a long time to prepare.',
+  'They had no money for marketing.',
+  'It was difficult to get a permit to sell food.',
+  'A competitor was selling similar food in their area.',
+  'They worked very long hours.',
+]
 /** Part 3 Q25-30 选项框（书上原文，p.58）：对各半合成面料的评价，选 A-H */
 const FABRIC_COMMENTS_OPTIONS = [
   'The production process is fuel efficient.',
@@ -48,10 +57,10 @@ export const cam21Test3Listening: ListeningMockTest = {
         { id: 'Q13-14', type: 'multi-select', question: 'Which TWO places are recommended for new street food businesses? (Choose TWO letters, A–E)', options: ['A music festivals', 'B food markets', 'C weddings', 'D parties', 'E parks'], answer: [1, 4] },
         { id: 'Q15', type: 'multiple-choice', question: 'What does the speaker say about getting equipment for a street food business?', options: ['A High quality equipment is a good investment.', 'B It\'s best to buy second-hand equipment.', 'C Renting equipment can be cheap.'], answer: 1 },
         { id: 'Q16', type: 'multiple-choice', question: 'What advice is given about creating a product for a street food business?', options: ['A Provide information about the ingredients.', 'B It is important to have an original product.', 'C The presentation is an important factor.'], answer: 2 },
-        { id: 'Q17', type: 'map-label', question: 'Thai Basil', answer: 'F' },
-        { id: 'Q18', type: 'map-label', question: 'Basque', answer: 'A' },
-        { id: 'Q19', type: 'map-label', question: 'Lou\'s kitchen', answer: 'B' },
-        { id: 'Q20', type: 'map-label', question: 'Chip Chop', answer: 'D' },
+        { id: 'Q17', type: 'map-label', question: 'Thai Basil', answer: 'F', options: STREET_FOOD_PROBLEMS_OPTIONS },
+        { id: 'Q18', type: 'map-label', question: 'Basque', answer: 'A', options: STREET_FOOD_PROBLEMS_OPTIONS },
+        { id: 'Q19', type: 'map-label', question: 'Lou\'s kitchen', answer: 'B', options: STREET_FOOD_PROBLEMS_OPTIONS },
+        { id: 'Q20', type: 'map-label', question: 'Chip Chop', answer: 'D', options: STREET_FOOD_PROBLEMS_OPTIONS },
       ],
     },
     {

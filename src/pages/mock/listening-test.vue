@@ -18,10 +18,6 @@ import ListeningTabs from '~/components/ListeningTabs.vue'
 
 const mediaError = ref('')
 const mediaRoot = ref<HTMLElement | null>(null)
-function retryMedia() {
-  mediaError.value = ''
-  mediaRoot.value?.querySelectorAll('audio').forEach(audio => audio.load())
-}
 
 const { goBack } = useGoBack('/listening')
 
@@ -80,6 +76,22 @@ const recovery = useExamRecovery({
   onUnblocked: startTimer,
 })
 
+// 只重置当前 Part 的音频：4 个 Part 的 audio 都在 DOM 内（v-show 隐藏），
+// 全量 load() 会把其他 Part 的播放进度一并清零。audioEl 在 v-for 里收成
+// 数组，下标与 test.parts 顺序一致，即 activePart。阻断时横幅本身已 inert，
+// 这里再守一道：阻断期间不重置任何音频。
+function retryMedia() {
+  if (recovery.blocked.value)
+    return
+  mediaError.value = ''
+  const els = audioEl.value as unknown as
+    | HTMLAudioElement
+    | HTMLAudioElement[]
+    | null
+  const el = Array.isArray(els) ? els[activePart.value] : els
+  el?.load()
+}
+
 // audio 的 ref 写在 v-for 里，Vue 会收成数组；逐个暂停
 function pauseAllAudio() {
   const els = audioEl.value as unknown as
@@ -102,7 +114,7 @@ async function loadTest() {
       router.replace({ query: { ...route.query, test: active } })
     return
   }
-  recovery.save()
+  recovery.saveFlush()
   pauseExam()
   started.value = false
   // 非法 test id（如手写 URL / 过期书签）不再静默 fallback：把 URL 参数规范化为默认套题，
@@ -324,6 +336,33 @@ function setAnswer(qid: string, val: string) {
     answers.value[qid] = val
 }
 
+// 听力 map-label 答案均为单个字母：maxlength=1 挡住多字符输入，
+// 并把非字母/多余字符过滤掉且给出提示，避免“AB”之类误输入交卷后静默判错。
+// 阅读侧不走这里（阅读标题题最长 viii 需保留 maxlength=4，见 reading-test.vue）。
+const mapLabelHints = ref<Record<string, string>>({})
+function setMapLabelAnswer(qid: string, raw: string) {
+  if (recovery.mismatch())
+    return
+  if (submitted.value)
+    return
+  const letters = raw.toUpperCase().replace(/[^A-Z]/g, '')
+  if (!raw) {
+    mapLabelHints.value[qid] = ''
+    answers.value[qid] = ''
+    return
+  }
+  if (!letters) {
+    mapLabelHints.value[qid] = '只填一个字母（A–Z），请重新输入'
+    answers.value[qid] = ''
+    return
+  }
+  if (raw.trim().length > 1 || letters.length > 1)
+    mapLabelHints.value[qid] = '只填一个字母，已取首个字母'
+  else
+    mapLabelHints.value[qid] = ''
+  answers.value[qid] = letters[0]
+}
+
 function toggleMultiSelect(qid: string, idx: number) {
   if (recovery.mismatch())
     return
@@ -424,6 +463,7 @@ function submit() {
   <div ref="mediaRoot" class="mx-auto max-w-5xl px-4 pt-6 2xl:px-0">
     <p
       v-if="recovery.error.value"
+      :inert="recovery.blocked.value ? true : undefined"
       role="alert"
       class="my-3 rounded-lg bg-amber-50 p-3 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
     >
@@ -434,6 +474,7 @@ function submit() {
     </p>
     <p
       v-if="mediaError"
+      :inert="recovery.blocked.value ? true : undefined"
       role="alert"
       class="my-3 border border-amber-300 rounded p-3 text-sm text-amber-800 dark:text-amber-300"
     >
@@ -766,12 +807,18 @@ function submit() {
                     :disabled="submitted"
                     :value="answers[q.id] ?? ''"
                     placeholder="输入字母"
-                    maxlength="4"
+                    maxlength="1"
                     class="w-24 border border-gray-300 rounded-lg px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     @input="
-                      setAnswer(q.id, ($event.target as HTMLInputElement).value)
+                      setMapLabelAnswer(q.id, ($event.target as HTMLInputElement).value)
                     "
                   >
+                  <p
+                    v-if="mapLabelHints[q.id]"
+                    class="mt-1 text-xs text-amber-600 dark:text-amber-400"
+                  >
+                    {{ mapLabelHints[q.id] }}
+                  </p>
 
                   <p
                     v-if="submitted && questionStatus(q) !== 'correct'"
@@ -825,7 +872,9 @@ function submit() {
   </div>
 
   <!-- 图片全屏查看器：双指缩放 / 单指拖动 / 双击切换 / 滚轮缩放 -->
-  <div v-if="zoomImage" class="fixed inset-0 z-50 flex flex-col bg-black/95">
+  <!-- 查看器在考试区 inert 子树之外：阻断时同样 inert，否则阻断前已打开的
+       查看器在阻断期间仍可缩放/关闭。 -->
+  <div v-if="zoomImage" :inert="recovery.blocked.value ? true : undefined" class="fixed inset-0 z-50 flex flex-col bg-black/95">
     <div class="flex items-center justify-between gap-2 p-3">
       <div class="flex items-center gap-2">
         <button

@@ -23,7 +23,7 @@ const ws = reactive(
   }),
 )
 
-const { addMistake, decrementMistake } = useMistakes()
+const { addMistake, decrementMistake, mistakeOutstanding } = useMistakes()
 const { setProgress } = useProgress()
 
 function onKeydown(e, word) {
@@ -69,8 +69,14 @@ function next(index) {
     .map(v => v.trim().toLowerCase().replace(/\s+/g, ' '))
   // window.console.log(practiceReplace, practiceWord)
 
-  // 重复检查守卫：同一行已记过错时不再重复记错；改对后递减一次（与自测卡片 goBackOne 语义对齐）
-  const hadErrors = cw.result.checked && cw.result.errorWords.length > 0
+  // 重复检查守卫：同一行已记过错时不再重复记错；改对后递减一次（与自测卡片 goBackOne 语义对齐）。
+  // 会话内 checked 刷新即重建，故再以错题本为准补一道持久守卫：该键仍有未消除记错
+  // 时即视为已记过，刷新、隔日重进后也不再重复记错；纠正时递减传原失败日期。
+  const mistakeKey = `listening179:${cw.index}`
+  const outstanding = mistakeOutstanding(mistakeKey)
+  const hadErrors
+    = (cw.result.checked && cw.result.errorWords.length > 0)
+      || outstanding.outstanding
   const errorWords = []
   if (practiceWord !== cw.word.trim().toLowerCase())
     errorWords.push(cw.word)
@@ -89,15 +95,15 @@ function next(index) {
     // 有错词：首次记错才记入错词本（仍错的重复检查不重复记）
     if (!hadErrors) {
       addMistake('listening', {
-        key: `listening179:${cw.index}`,
+        key: mistakeKey,
         title: cw.word,
         detail: `${cw.type} ${cw.meaning}；同义替换：${cw.replace.join(' / ')}`,
       })
     }
   }
   else if (hadErrors) {
-    // 上次记错、本次改对：错题计数减一
-    decrementMistake(`listening179:${cw.index}`)
+    // 上次记错、本次改对：错题计数减一，扣回原失败日的桶（无原失败日时沿用当日默认）
+    decrementMistake(mistakeKey, outstanding.failureDate ?? undefined)
   }
   setProgress('listening', index + 1, words.length)
 

@@ -211,6 +211,34 @@ export const useMistakes = createGlobalState(() => {
       days: { ...old.days, [date]: Math.max(0, (old.days[date] ?? 0) - 1) },
     })
   }
+  // 179 练习的持久守卫：页面会话内的 checked 刷新即重建，改以错题本自身为准。
+  // 只看当前作者分片（与 decrementMistake 的扣减口径一致），且 epoch 须与当前
+  // 重置纪元一致，否则该条目已被清空，不应再视为未消除的记错。failureDate 取
+  // 仍有计数的最近一日，供纠正时扣回原失败日桶，避免扣到当日的空桶。
+  function mistakeOutstanding(key: string): {
+    outstanding: boolean
+    failureDate: string | null
+  } {
+    const id = `${key}|${writerId()}`
+    const part = readRecords<MistakePart>('mistake_parts_v2', currentUser.value)[
+      id
+    ]
+    if (
+      !part
+      || part.epoch !== (resets.state.value[key]?.epoch ?? '')
+      || part.count <= 0
+    )
+      return { outstanding: false, failureDate: null }
+    let failureDate: string | null = null
+    for (const [day, count] of Object.entries(part.days ?? {})) {
+      if (
+        count > 0
+        && (failureDate === null || dateTime(day) > dateTime(failureDate))
+      )
+        failureDate = day
+    }
+    return { outstanding: true, failureDate }
+  }
   function removeMistake(key: string) {
     resets.set(key, { epoch: crypto.randomUUID() })
   }
@@ -245,6 +273,7 @@ export const useMistakes = createGlobalState(() => {
     mistakes,
     addMistake,
     decrementMistake,
+    mistakeOutstanding,
     removeMistake,
     clearMistakes,
     totalCount,

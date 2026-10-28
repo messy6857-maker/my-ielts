@@ -93,28 +93,94 @@ export interface ApiResult {
 }
 // Keys the server rejected: quarantined locally so they are never re-uploaded
 // (otherwise every push would carry the same poisoned entry again).
+// An entry also snapshots the local value's stamp and the quarantine time:
+// a locally rewritten value is released automatically, and an unchanged entry
+// is re-probed after QUARANTINE_REPROBE_MS (e.g. the server may have been
+// upgraded to accept it since) instead of being skipped forever.
 const QUARANTINE_KEY = 'myielts_sync_quarantined'
+const QUARANTINE_REPROBE_MS = 7 * 24 * 60 * 60 * 1000
 const quarantineKey = (owner: string) => `${QUARANTINE_KEY}:${owner}`
-export function getQuarantinedKeys(owner: string | null): string[] {
+interface QuarantineEntry {
+  key: string
+  /** JSON stamp of the local value when quarantined; null for legacy entries. */
+  stamp: string | null
+  /** Epoch ms when quarantined; 0 for legacy entries (re-probe at once). */
+  at: number
+}
+export function getQuarantineEntries(owner: string | null): QuarantineEntry[] {
   if (!owner)
     return []
   try {
     const v = JSON.parse(localStorage.getItem(quarantineKey(owner)) || '[]')
-    return Array.isArray(v) ? v.filter(k => typeof k === 'string') : []
+    if (!Array.isArray(v))
+      return []
+    return v.flatMap((item): QuarantineEntry[] => {
+      if (typeof item === 'string')
+        return [{ key: item, stamp: null, at: 0 }]
+      if (item && typeof item.k === 'string') {
+        return [{
+          key: item.k,
+          stamp: typeof item.s === 'string' ? item.s : null,
+          at: typeof item.t === 'number' ? item.t : 0,
+        }]
+      }
+      return []
+    })
   }
   catch {
     return []
   }
 }
+function writeQuarantineEntries(owner: string, entries: QuarantineEntry[]) {
+  localStorage.setItem(quarantineKey(owner), JSON.stringify(entries))
+}
+export function getQuarantinedKeys(owner: string | null): string[] {
+  return getQuarantineEntries(owner).map(e => e.key)
+}
+/** Stamp snapshot of the current local value (null when the key is gone). */
+function snapshotOf(key: string): string | null {
+  const raw = localStorage.getItem(key)
+  if (raw === null)
+    return null
+  try {
+    return JSON.stringify(envelope(raw).stamp)
+  }
+  catch {
+    return `raw:${hashString(raw)}`
+  }
+}
 export function quarantineKeys(owner: string, keys: string[]) {
   if (!owner || !keys.length)
     return
-  const merged = [...new Set([...getQuarantinedKeys(owner), ...keys])]
-  localStorage.setItem(quarantineKey(owner), JSON.stringify(merged))
+  const byKey = new Map(
+    getQuarantineEntries(owner).map(e => [e.key, e] as const),
+  )
+  for (const key of keys)
+    byKey.set(key, { key, stamp: snapshotOf(key), at: Date.now() })
+  writeQuarantineEntries(owner, [...byKey.values()])
+}
+export function unquarantineKeys(owner: string, keys: string[]) {
+  if (!owner || !keys.length)
+    return
+  const drop = new Set(keys)
+  const entries = getQuarantineEntries(owner)
+  if (!entries.some(e => drop.has(e.key)))
+    return
+  writeQuarantineEntries(owner, entries.filter(e => !drop.has(e.key)))
 }
 export function clearQuarantinedKeys(owner: string | null) {
   if (owner)
     localStorage.removeItem(quarantineKey(owner))
+}
+/** Quarantine the keys a successful push reported as rejected, if any. */
+export function handleRejectedKeys(
+  owner: string,
+  result: { ok: boolean; rejected?: string[] },
+): boolean {
+  if (!result.ok || !result.rejected?.length)
+    return false
+  quarantineKeys(owner, result.rejected)
+  return true
 }
 const capabilities = new Map<string, number>()
 async function api(
@@ -252,7 +318,27 @@ export function collectSyncData(username: string): Record<string, string> {
   if (!storageFailures.value.some(key => studyBaseOf(key, username)))
     saveValue(accountKey('migration_version_v2', username), 2)
   const result: Record<string, string> = Object.create(null)
-  const quarantined = new Set(getQuarantinedKeys(username))
+  // Quarantined keys are skipped only while the local value is unchanged
+  // and the re-probe window has not elapsed. A rewritten value is released
+  // at once; an expired or legacy (snapshot-less) entry is included in this
+  // push so the server gets another chance — pushNow removes it if the
+  // server accepts it, or re-quarantines it with a fresh stamp/time if not.
+  const quarantined = new Set<string>()
+  const released: string[] = []
+  const now = Date.now()
+  for (const entry of getQuarantineEntries(username)) {
+    if (entry.stamp === null)
+      continue
+    const current = snapshotOf(entry.key)
+    if (current === null || current !== entry.stamp) {
+      released.push(entry.key)
+      continue
+    }
+    if (now - entry.at < QUARANTINE_REPROBE_MS)
+      quarantined.add(entry.key)
+  }
+  if (released.length)
+    unquarantineKeys(username, released)
   for (const key of Object.keys(localStorage)) {
     const base = studyBaseOf(key, username)
     if (

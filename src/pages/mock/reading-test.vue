@@ -98,7 +98,7 @@ async function loadTest() {
       router.replace({ query: { ...route.query, test: active } })
     return
   }
-  recovery.save()
+  recovery.saveFlush()
   pauseExam()
   started.value = false
   // 非法 test id（如手写 URL / 过期书签）不再静默 fallback：把 URL 参数规范化为默认套题，

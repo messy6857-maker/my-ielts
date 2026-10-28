@@ -46,6 +46,23 @@ In 2020, Country A reached 95%, which was the highest figure. Overall, sales ros
     expect(analyzeEssay('Country A reached 95%, which was the highest figure.').complexRatio).toBe(1)
   })
 
+  it('复合句：that / when / where / as 引导的真从句补回识别', () => {
+    expect(analyzeEssay('The country that recorded the highest figure was China.').complexRatio).toBe(1)
+    expect(analyzeEssay('The city where most tourists stayed was Paris.').complexRatio).toBe(1)
+    expect(analyzeEssay('Sales rose as incomes grew.').complexRatio).toBe(1)
+    expect(analyzeEssay('Sales rose in the year when incomes grew sharply.').complexRatio).toBe(1)
+  })
+
+  it('复合句：现在时逗号并列句不再漏判', () => {
+    expect(analyzeEssay('Sales rise in summer, and costs fall in winter.').complexRatio).toBe(1)
+  })
+
+  it('复合句：despite 介词短语与 in order to 不定式不再算复合句', () => {
+    expect(analyzeEssay('Despite the sharp rise, sales remained below the 2010 level.').complexRatio).toBe(0)
+    expect(analyzeEssay('He went to London in order to study English.').complexRatio).toBe(0)
+    expect(analyzeEssay('In spite of the sharp rise, sales remained below the 2010 level.').complexRatio).toBe(0)
+  })
+
   it('统计衔接词和趋势词汇', () => {
     const s = analyzeEssay(GOOD_ESSAY)
     expect(s.linkingUnique).toBeGreaterThanOrEqual(4)

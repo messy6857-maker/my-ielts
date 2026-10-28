@@ -124,3 +124,39 @@ it('surfaces transcription errors while retaining the recording', async () => {
   expect(r.error.value).toContain('network')
   expect(r.isRecording.value).toBe(true)
 })
+it('onend restart 抛错后不进入“健康却永久停摆”：延迟重试仍失败则明确降级', async () => {
+  let recognizer: any
+  // 具名函数声明（不用 class：start() 内引用闭包实例，不把 this 赋值给外部变量；声明式函数作参数不触发 prefer-arrow-callback）。
+  function FakeRecognition() {
+    const inst: any = {
+      startCount: 0,
+      onend: null,
+      start() {
+        inst.startCount++
+        if (inst.startCount > 1)
+          throw new Error('recognition not ended')
+      },
+      stop() {},
+    }
+    recognizer = inst
+    return inst
+  }
+  vi.stubGlobal('SpeechRecognition', FakeRecognition)
+  vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue({
+    getTracks: () => [{ stop: vi.fn() }],
+  } as any)
+  const r = make()
+  await r.start()
+  expect(recognizer.startCount).toBe(1)
+  recognizer.onend()
+  expect(r.error.value).toContain('正在重试')
+  expect(r.isRecording.value).toBe(true)
+  await vi.advanceTimersByTimeAsync(300)
+  // 初次 1 + onend 重启 2 + 延迟重试 3；重试仍抛错后 healthy 置 false
+  expect(recognizer.startCount).toBe(3)
+  expect(r.error.value).toContain('无法自动恢复')
+  expect(r.error.value).toContain('停止录音后可重录')
+  // 降级后 onend 不再尝试重启：不再假装健康，也不再无声重试
+  recognizer.onend()
+  expect(recognizer.startCount).toBe(3)
+})

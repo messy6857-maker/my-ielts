@@ -93,6 +93,8 @@ async function onLogout() {
 }
 
 async function onManualSync() {
+  // 移动端菜单内点同步后先收起菜单，避免重登跳转后菜单仍展开
+  showMobileMenu.value = false
   // 老本地会话或 token 过期：先退出再重登，才能拿到云同步 token
   if (needsRelogin.value) {
     await logout()
@@ -165,6 +167,26 @@ async function onManualSync() {
                 "
               />
               {{ needsRelogin ? '请重新登录' : statusText }}
+            </button>
+            <!-- 小屏紧凑版：只显示状态圆点，不占文字宽度；过期时为橙色闪烁圆点，点按走同一重登分支 -->
+            <button
+              v-if="syncEnabled"
+              class="mr-1 inline-flex items-center rounded-full bg-gray-100 p-2 text-gray-600 sm:hidden dark:bg-gray-700 hover:bg-gray-200 dark:text-gray-300 dark:hover:bg-gray-600"
+              :title="
+                needsRelogin
+                  ? '点我退出并重新登录，以启用云同步'
+                  : errorMsg || '点击立即同步'
+              "
+              :aria-label="needsRelogin ? '请重新登录' : statusText"
+              @click="onManualSync"
+            >
+              <span
+                class="inline-block h-2 w-2 rounded-full"
+                :class="
+                  needsRelogin ? 'bg-orange-500 animate-pulse' : syncDotClass
+                "
+              />
+              <span class="sr-only">{{ needsRelogin ? '请重新登录' : statusText }}</span>
             </button>
             <span
               class="mr-1 hidden text-sm text-gray-700 sm:inline dark:text-gray-300"
@@ -250,6 +272,27 @@ async function onManualSync() {
               class="ml-1 rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white"
             >{{ mistakeCount }}</span>
           </router-link>
+        </li>
+        <!-- 小屏同步状态行：复用桌面端同一 statusText/needsRelogin，过期时显示“请重新登录”，点按走同一 onManualSync 重登分支 -->
+        <li v-if="currentUser && syncEnabled" class="block border-b dark:border-gray-700">
+          <button
+            type="button"
+            class="block px-4 py-3 text-gray-900 lg:px-0 lg:py-0 dark:text-white lg:hover:underline"
+            :title="
+              needsRelogin
+                ? '点我退出并重新登录，以启用云同步'
+                : errorMsg || '点击立即同步'
+            "
+            @click="onManualSync"
+          >
+            <span
+              class="mr-1 inline-block h-2 w-2 rounded-full"
+              :class="
+                needsRelogin ? 'bg-orange-500 animate-pulse' : syncDotClass
+              "
+            />
+            {{ needsRelogin ? '请重新登录' : statusText }}
+          </button>
         </li>
         <li v-if="!currentUser" class="block border-b dark:border-gray-700">
           <router-link

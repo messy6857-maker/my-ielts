@@ -493,7 +493,7 @@ it.each(['reading', 'listening'])(
   },
 )
 
-it('listening map-label set shows its options box and allows multi-char input', async () => {
+it('listening map-label set shows its options box and limits input to a single letter', async () => {
   const Page = (await import('../src/pages/mock/listening-test.vue')).default
   const session = await show(Page, '/mock/listening-test')
   await session.router.push({ query: { test: 'cam20-test2' } })
@@ -511,7 +511,8 @@ it('listening map-label set shows its options box and allows multi-char input', 
   expect(session.w.html()).toContain('The information given about this was too vague.')
   const inputs = session.w.findAll('input[placeholder="输入字母"]')
   expect(inputs.length).toBeGreaterThan(0)
-  inputs.forEach((input: any) => expect(input.attributes('maxlength')).toBe('4'))
+  // 听力 map-label 答案均为单个字母，maxlength=1（阅读侧标题题最长 viii 仍保留 4，不在此页断言）
+  inputs.forEach((input: any) => expect(input.attributes('maxlength')).toBe('1'))
 })
 
 it('cam20-test3 reading shows its heading list', async () => {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
+import { useSync } from '../composables/useSync'
 import {
   clearQuarantinedKeys,
   getQuarantinedKeys,
@@ -16,6 +17,7 @@ import {
 } from '../composables/useAISettings'
 
 const { currentUser } = useAuth()
+const { rejectedNotice, dismissRejectedNotice } = useSync()
 const language = ref(
   localStorage.getItem('myielts_tts_language') === 'en-GB' ? 'en-GB' : 'en-US',
 )
@@ -30,6 +32,7 @@ function refreshQuarantined() {
 watch(currentUser, refreshQuarantined, { immediate: true })
 function clearQuarantine() {
   clearQuarantinedKeys(currentUser.value)
+  dismissRejectedNotice()
   refreshQuarantined()
 }
 const { goBack } = useGoBack('/')
@@ -106,6 +109,12 @@ async function onTest() {
         <p class="text-sm font-medium text-amber-800 dark:text-amber-200">
           ⚠️ 有 {{ quarantined.length }} 条学习记录因格式异常被服务端拒绝，已隔离不再随包上传（本机记录仍在，可先导出备份）。
         </p>
+        <p
+          v-if="rejectedNotice"
+          class="mt-1 text-sm text-amber-800 dark:text-amber-200"
+        >
+          {{ rejectedNotice }}
+        </p>
         <ul class="mt-2 max-h-32 overflow-auto break-all text-xs text-gray-500">
           <li v-for="k in quarantined" :key="k">
             {{ k }}
@@ -113,6 +122,13 @@ async function onTest() {
         </ul>
         <button class="mt-2 border rounded px-3 py-1.5 text-sm" @click="clearQuarantine">
           解除隔离（下次同步会再次尝试上传）
+        </button>
+        <button
+          v-if="rejectedNotice"
+          class="ml-2 mt-2 border rounded px-3 py-1.5 text-sm"
+          @click="dismissRejectedNotice"
+        >
+          我知道了
         </button>
       </div>
       <label class="mt-4 block text-sm">朗读偏好

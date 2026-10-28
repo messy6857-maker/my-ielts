@@ -118,14 +118,17 @@ const TREND_VOCAB = [
   'proportion', 'percentage', 'overtake', 'overtook', 'surpass',
 ]
 
-// 从句专属标记：只保留不能单独作介词的从属连词、关系代词与固定搭配。
+// 从句专属标记：只保留从属连词、关系代词与固定搭配。
 // 已剔除 that / as / when / where / after / before / once / since / until：
-// 它们常作介词或引导非从句成分，数据描述句几乎句句含有，子串命中会把简单句
-// 系统性误算为复合句（原规则下复合句占比几乎恒 >= 0.4，GRA 常驻 +0.5）。
+// 它们常作介词或引导非从句成分，子串命中会把简单句系统性误算为复合句
+// （原规则下复合句占比几乎恒 >= 0.4，GRA 常驻 +0.5）；这四个词的真从句
+// 由 hasTrueSubordinateClause 按“标记 + 主谓结构”单独识别，不走子串。
+// 已剔除 despite / in spite of / in order to：前两者只接名词/动名词短语，
+// 后者只接不定式，都不是从句，子串命中同样是误判。
 const COMPLEX_MARKERS = [
   'although', 'though', 'while', 'whereas', 'because',
   'which', 'who', 'whom', 'whose',
-  'if', 'unless', 'despite', 'in spite of', 'in order to', 'so that',
+  'if', 'unless', 'so that',
 ]
 
 const COMPARISON_MARKERS = [
@@ -157,13 +160,108 @@ const IRREGULAR_PAST = [
   'rose', 'fell', 'grew', 'went', 'came', 'saw', 'took', 'gave', 'became',
   'stood', 'reached', 'remained', 'accounted', 'showed', 'recorded',
 ]
+// 常见现在时实义动词。注意 rise / fall / increase 等兼作名词：
+// 只有当前置词不是冠词、形容词、介词时才算谓语（排除 the sharp rise、
+// a fall in sales 这类名词短语），否则逗号短语会被误判为完整分句。
+// 另排除 peak / costs：peak 在 reaching a peak 里是宾语，costs 常作主语名词。
+const PRESENT_VERBS = [
+  'rise', 'rises', 'fall', 'falls', 'show', 'shows', 'increase', 'increases',
+  'decrease', 'decreases', 'grow', 'grows', 'change', 'changes', 'vary', 'varies',
+  'remain', 'remains', 'stay', 'stays', 'stand', 'stands', 'drop', 'drops',
+  'climb', 'climbs', 'decline', 'declines', 'fluctuate', 'fluctuates',
+  'reach', 'reaches', 'exceed', 'exceeds', 'surpass', 'surpasses',
+  'dominate', 'dominates', 'lead', 'leads', 'follow', 'follows',
+  'continue', 'continues', 'begin', 'begins', 'start', 'starts', 'end', 'ends',
+]
+const NON_VERB_PRECEDING = new Set([
+  'a', 'an', 'the', 'in', 'on', 'at', 'to', 'of', 'for', 'from', 'with', 'by',
+  'despite', 'after', 'before', 'during', 'over', 'under',
+  'sharp', 'sharply', 'dramatic', 'dramatically', 'slight', 'slightly',
+  'gradual', 'gradually', 'significant', 'significantly', 'steep', 'steeply',
+  'considerable', 'considerably', 'marginal', 'marginally', 'rapid', 'rapidly',
+  'substantial', 'modest', 'marked', 'noticeable', 'strong', 'weak', 'large', 'small',
+])
+function wordTokens(text: string): string[] {
+  return text.toLowerCase().match(/[a-z]+(?:'[a-z]+)?/g) || []
+}
+function isFiniteVerbToken(token: string): boolean {
+  if (FINITE_VERB_RE.test(` ${token} `))
+    return true
+  if (/\w+ed$/.test(token))
+    return true
+  if (IRREGULAR_PAST.includes(token))
+    return true
+  return PRESENT_VERBS.includes(token)
+}
 function hasFiniteVerb(fragment: string): boolean {
   const f = ` ${fragment.toLowerCase()} `
   if (FINITE_VERB_RE.test(f))
     return true
   if (/\b\w+ed\b/.test(f))
     return true
-  return IRREGULAR_PAST.some(v => f.includes(` ${v} `))
+  if (IRREGULAR_PAST.some(v => f.includes(` ${v} `)))
+    return true
+  // 现在时实义动词须带主语位置：前一词不是冠词/形容词/介词，且不是句首孤词
+  const tokens = wordTokens(fragment)
+  return tokens.some((t, i) => i > 0 && PRESENT_VERBS.includes(t) && !NON_VERB_PRECEDING.has(tokens[i - 1]))
+}
+
+// that / when / where / as 引导的真从句：标记后须有主谓结构才算。
+// 反例（不算）：shows that sales rose（that 前是动词，属宾语从句，上一批
+// 已定为不算）、as a result（as 后是名词短语）、when in 2020（when 后是介词短语）。
+// 正例（算）：that recorded（that 作主语紧跟谓语）、where most tourists
+// stayed、as incomes grew（标记 + 主语 + 谓语）。
+function hasTrueSubordinateClause(sentence: string): boolean {
+  const tokens = wordTokens(sentence)
+  const PREPOSITIONS = new Set(['in', 'on', 'at', 'to', 'of', 'for', 'from', 'with', 'by', 'a', 'an', 'the'])
+  // 在标记后 offset 1..3 处找谓语，且谓语前的词不含介词/冠词
+  const clauseAfter = (idx: number, allowSubjectRelative: boolean): boolean => {
+    if (allowSubjectRelative && idx + 1 < tokens.length && isFiniteVerbToken(tokens[idx + 1]))
+      return true
+    for (let off = 1; off <= 3; off++) {
+      const vi = idx + off
+      if (vi >= tokens.length)
+        return false
+      if (!isFiniteVerbToken(tokens[vi]))
+        continue
+      const between = tokens.slice(idx + 1, vi)
+      if (between.some(t => PREPOSITIONS.has(t)))
+        continue
+      // 现在时动词作谓语时，主语须在它前面（between 非空即已满足）；
+      // 若谓语是现在时且紧贴标记（如 that rise），那是无主语结构，不算
+      if (PRESENT_VERBS.includes(tokens[vi]) && between.length === 0)
+        continue
+      return true
+    }
+    return false
+  }
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]
+    if (t === 'that') {
+      // 主语型关系从句：that 紧跟谓语；宾语型关系从句：that 前须为名词
+      // （而非 shows/says 等动词，否则是宾语从句，沿用上一批“不算”的口径）
+      if (clauseAfter(i, true)) {
+        const verbAtNext = i + 1 < tokens.length && isFiniteVerbToken(tokens[i + 1])
+        if (verbAtNext)
+          return true
+        if (i > 0 && !isFiniteVerbToken(tokens[i - 1]) && !FINITE_VERB_RE.test(` ${tokens[i - 1]} `))
+          return true
+      }
+    }
+    else if (t === 'when' || t === 'where') {
+      if (i + 1 < tokens.length && PREPOSITIONS.has(tokens[i + 1]))
+        continue
+      if (clauseAfter(i, false))
+        return true
+    }
+    else if (t === 'as') {
+      if (i + 1 < tokens.length && PREPOSITIONS.has(tokens[i + 1]))
+        continue
+      if (clauseAfter(i, false))
+        return true
+    }
+  }
+  return false
 }
 
 // 逗号规则：须存在一个逗号，其两侧（累计左侧与右侧）均为完整分句
@@ -212,14 +310,16 @@ export function analyzeEssay(text: string): EssayStats {
   // 对比手法：比较级 / compared to / while / whereas 等
   const comparisons = uniqueMatches(text, COMPARISON_MARKERS).length
 
-  // 复合句比例：含从句专属标记、被动语态，或逗号两侧均为完整分句的句子占比
+  // 复合句比例：含从句专属标记、真从句（that/when/where/as + 主谓结构）、
+  // 被动语态，或逗号两侧均为完整分句的句子占比
   let complexCount = 0
   for (const s of sentences) {
     const sl = ` ${s.toLowerCase()} `
     const hasSub = COMPLEX_MARKERS.some(m => sl.includes(` ${m} `))
+    const hasTrueClause = hasTrueSubordinateClause(s)
     const hasPassive = /\b(is|are|was|were|be|been|being)\s+\w+ed\b/.test(sl)
     const commaClause = hasCommaClause(s)
-    if (hasSub || hasPassive || commaClause)
+    if (hasSub || hasTrueClause || hasPassive || commaClause)
       complexCount++
   }
 
