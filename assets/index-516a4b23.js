@@ -1,0 +1,1 @@
+import{p as o,G as t,I as n,B as r,J as s,o as a,A as c}from"./index-424e0114.js";const d=o({__name:"index",setup(i){return t().replace("/listening/keyword"),(u,_)=>{const e=n("RouterLink");return a(),r(e,{to:"/listening/keyword"},{default:s(()=>[c(" 打开听力179练习 ")]),_:1})}}});export{d as default};
