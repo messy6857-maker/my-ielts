@@ -361,7 +361,8 @@ export const useProgress = createGlobalState(() => {
   const modules = computed(() => [
     ...(Object.keys(PROGRESS_MODULE_LABEL) as ProgressModule[])
       .filter(
-        module => module !== 'flashcard' || chapterModules.value.length === 0,
+        module => (module !== 'flashcard' || !chapterModules.value.some(row => row.module.startsWith('flashcard:')))
+          && (module !== 'vocabulary' || !chapterModules.value.some(row => row.module.startsWith('spelling:'))),
       )
       .map(module => ({
         module,

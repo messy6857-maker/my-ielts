@@ -1,4 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest'
+import { useProgress } from '../src/composables/useStudyData'
+import { useAuth } from '../src/composables/useAuth'
 import { pruneCollectionData } from '../src/utils/retention'
 import {
   apiPull,
@@ -236,4 +238,17 @@ it.each([
 ])('quarantine restores supported legacy and current shapes: %j', (shape) => {
   localStorage.setItem('myielts_sync_quarantined:alice', JSON.stringify([shape]))
   expect(getQuarantineEntries('alice')[0]?.key).toBe('old-key')
+})
+
+it('chapter progress hides only its own legacy aggregate fallback', () => {
+  useAuth().currentUser.value = 'progress-fixture'
+  const progress = useProgress()
+  progress.setProgress('flashcard', 2, 10)
+  progress.setProgress('vocabulary', 3, 10)
+  progress.setProgress('spelling:chapter-one', 4, 10)
+  expect(progress.modules.value.some(row => row.module === 'flashcard')).toBe(true)
+  expect(progress.modules.value.some(row => row.module === 'vocabulary')).toBe(false)
+  expect(progress.modules.value.some(row => row.module === 'spelling:chapter-one')).toBe(true)
+  progress.setProgress('flashcard:chapter-one', 5, 10)
+  expect(progress.modules.value.some(row => row.module === 'flashcard')).toBe(false)
 })
