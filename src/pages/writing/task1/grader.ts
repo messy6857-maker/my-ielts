@@ -445,6 +445,47 @@ function hasFiniteVerb(fragment: string): boolean {
 
 // that / when / where / as 引导的从句：须有主谓结构；宾语从句与关系从句均计入。
 // shows that sales rose / as incomes grew 算；as a result / when in 2020 不算。
+const MEASURE_WORDS = new Set([
+  'percentage',
+  'percentages',
+  'share',
+  'shares',
+  'proportion',
+  'proportions',
+  'rate',
+  'rates',
+  'ratio',
+  'ratios',
+  'fraction',
+  'fractions',
+  'whole',
+  'level',
+  'levels',
+  'amount',
+  'amounts',
+  'number',
+  'numbers',
+  'total',
+  'totals',
+  'figure',
+  'figures',
+])
+const COORDINATOR_DETERMINERS = new Set([
+  'a',
+  'an',
+  'the',
+  'this',
+  'that',
+  'these',
+  'those',
+  'its',
+  'their',
+  'our',
+  'your',
+  'his',
+  'her',
+  'my',
+])
 function hasTrueSubordinateClause(sentence: string): boolean {
   const tokens
     = sentence.toLowerCase().match(/[a-z]+(?:'[a-z]+)?|[,;:]/g) || []
@@ -476,9 +517,45 @@ function hasTrueSubordinateClause(sentence: string): boolean {
       if (
         vi >= tokens.length
         || [',', ';', ':'].includes(tokens[vi])
-        || (stopAtCoordinator && ['and', 'but', 'or'].includes(tokens[vi]))
       )
         return false
+      if (stopAtCoordinator && ['and', 'but', 'or'].includes(tokens[vi])) {
+        // 度量分支见 and/but/or 即停会误杀并列主语（如 as the percentage and
+        // the share increased）。先看 and 后：限定词 + 名词 … 谓语是并列主语，
+        // 继续扫描；否则看 and 前的名词头并剥掉尾部 of 补语：度量名词短语已
+        // 完整，and 后是新分句，停；非度量名词头视为并列主语，继续扫描。
+        let j = vi + 1
+        let sawDet = false
+        let sawVerb = false
+        while (
+          j < tokens.length
+          && j <= vi + 6
+          && ![',', ';', ':'].includes(tokens[j])
+        ) {
+          if (COORDINATOR_DETERMINERS.has(tokens[j])) {
+            sawDet = true
+          }
+          else if (sawDet && isFiniteVerbToken(tokens[j])) {
+            sawVerb = true
+            break
+          }
+          j++
+        }
+        if (sawDet && sawVerb)
+          continue
+        let h = vi - 1
+        if (h >= 2 && tokens[h - 1] === 'of')
+          h -= 2
+        else if (
+          h >= 3
+          && COORDINATOR_DETERMINERS.has(tokens[h - 1])
+          && tokens[h - 2] === 'of'
+        )
+          h -= 3
+        if (MEASURE_WORDS.has(tokens[h]))
+          return false
+        continue
+      }
       if (!isFiniteVerbToken(tokens[vi]))
         continue
       const between = tokens.slice(idx + 1, vi)
@@ -515,21 +592,7 @@ function hasTrueSubordinateClause(sentence: string): boolean {
         continue
       const head
         = tokens[i + 1 + (['a', 'an', 'the'].includes(tokens[i + 1]) ? 1 : 0)]
-      const measure = [
-        'percentage',
-        'percentages',
-        'share',
-        'shares',
-        'proportion',
-        'proportions',
-        'rate',
-        'rates',
-        'ratio',
-        'ratios',
-        'fraction',
-        'fractions',
-        'whole',
-      ].includes(head)
+      const measure = MEASURE_WORDS.has(head)
       if (clauseAfter(i, false, measure))
         return true
     }

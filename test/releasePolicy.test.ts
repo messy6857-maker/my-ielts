@@ -24,4 +24,28 @@ it('deployment verification retries ten times, sleeps only between tries and fai
   expect(result.stdout.match(/NODE_CALL/g)).toHaveLength(10)
   expect(result.stdout.match(/SLEEP_CALL/g)).toHaveLength(9)
   expect(result.stdout).toContain('源码推送已完成')
+  expect(result.stdout).toContain('::error::')
+  expect(result.stdout).toContain('冒烟失败不代表源码推送失败')
+})
+
+it('deployment verification succeeds on the first try without sleeping', () => {
+  const workflow = readFileSync('.github/workflows/deploy.yml', 'utf8')
+  const step = workflow.slice(workflow.indexOf('- name: Verify deployed site'))
+  const body = step
+    .slice(step.indexOf('for attempt'))
+    .split('\n')
+    .map(line => line.trimStart())
+    .join('\n')
+  const result = spawnSync(
+    'bash',
+    [
+      '-c',
+      `node(){ echo NODE_CALL; return 0; }; sleep(){ echo SLEEP_CALL; }; ${
+        body}`,
+    ],
+    { encoding: 'utf8' },
+  )
+  expect(result.status).toBe(0)
+  expect(result.stdout.match(/NODE_CALL/g)).toHaveLength(1)
+  expect(result.stdout.match(/SLEEP_CALL/g) ?? []).toHaveLength(0)
 })

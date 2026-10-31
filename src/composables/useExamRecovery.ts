@@ -98,6 +98,11 @@ export function useExamRecovery(options: {
   const error = ref('')
   const draft = ref<ExamDraft | null>(null)
   const availableDrafts = ref<ExamDraft[]>([])
+  // 退役横幅与通用 error 分离：退役文案只读 retiredMessage，“知道了”清 error
+  // 时不再抹空横幅；离开后的保留确认走 retainedNotice，在开始屏单独展示。
+  const retiredMessage = ref('')
+  const retainedNotice = ref('')
+  const submittedDrafts = ref<ExamDraft[]>([])
   let selectedVersion: string | null = null
   // Session snapshots belong to independent attempts. Clearing/submitting this tab
   // must never retire another tab's answers, even for the same paper.
@@ -108,7 +113,7 @@ export function useExamRecovery(options: {
         .filter(Boolean),
     )
     const prefix = baseKey()
-    const candidates = Object.keys(localStorage)
+    const parsed = Object.keys(localStorage)
       .filter(k => k === prefix || k.startsWith(`${prefix}__session_`))
       .flatMap((storedKey) => {
         try {
@@ -155,6 +160,11 @@ export function useExamRecovery(options: {
           return []
         }
       })
+    // 已交卷快照不进入可选列表，但开始屏仍须可见提示（死代码清理）。
+    submittedDrafts.value = parsed
+      .filter(c => c.value.submitted)
+      .map(c => c.value)
+    const candidates = parsed
       .filter(
         c =>
           !c.value.submitted
@@ -221,7 +231,7 @@ export function useExamRecovery(options: {
         recoverySaved = true
         retired.value = true
         options.pause()
-        error.value
+        retiredMessage.value
           = '本次作答已在另一页签提交或放弃，计时已暂停。当前答案已另存为恢复副本；请选择继续为独立作答或保留副本后离开。'
         return false
       }
@@ -236,6 +246,10 @@ export function useExamRecovery(options: {
     catch {
       error.value
         = '作答草稿保存失败，请先复制答案或导出可用备份，不要关闭页面。'
+      if (isRetired) {
+        retiredMessage.value
+          = '本次作答已在另一页签提交或放弃，计时已暂停；恢复副本保存失败，请先复制答案，不要关闭页面。'
+      }
       if (!storageFailures.value.includes(key(activeTestId)))
         storageFailures.value = [...storageFailures.value, key(activeTestId)]
       return false
@@ -247,7 +261,8 @@ export function useExamRecovery(options: {
       return
     options.started.value = false
     retired.value = false
-    error.value = '恢复副本已保留，可从草稿列表选择恢复，也可安全离开。'
+    retiredMessage.value = ''
+    retainedNotice.value = '恢复副本已保留，可从草稿列表选择恢复。'
     selectedVersion = null
     owner.value = useAuth().currentUser.value
     wasBlocked = false
@@ -274,6 +289,7 @@ export function useExamRecovery(options: {
       }
       recoveryId = ''
       retired.value = false
+      retiredMessage.value = ''
       error.value = ''
       options.onUnblocked?.()
     }
@@ -368,11 +384,18 @@ export function useExamRecovery(options: {
     error.value = ''
     dismissAccountNotice(pauseNoticeId)
   }
+  function dismissRetainedNotice() {
+    retainedNotice.value = ''
+  }
   function mismatch() {
     if (!blocked.value)
       return false
     const saved = saveFlush()
-    const message = `账号已变化，本次模考已暂停。${saved ? `答案已保存在原身份的本机草稿中；${owner.value ? '重新登录原账号' : '退出账号后以游客身份'}回到此套题，可从剩余时间继续作答。` : '作答草稿保存失败，请先复制答案，不要关闭页面。'}`
+    // 退役路径返回 false 恰恰发生在恢复副本已成功落盘时，绝不能写成“保存失败”。
+    const retiredSaved = retired.value && recoverySaved
+    const message = retiredSaved
+      ? `账号已变化，本次模考已暂停。当前答案已另存为恢复副本；${owner.value ? '重新登录原账号' : '退出账号后以游客身份'}回到此套题，可从草稿列表选择恢复。`
+      : `账号已变化，本次模考已暂停。${saved ? `答案已保存在原身份的本机草稿中；${owner.value ? '重新登录原账号' : '退出账号后以游客身份'}回到此套题，可从剩余时间继续作答。` : '作答草稿保存失败，请先复制答案，不要关闭页面。'}`
     pauseMessage = message
     error.value = message
     pushAccountNotice(message, pauseNoticeId, 2)
@@ -504,6 +527,8 @@ export function useExamRecovery(options: {
       attemptId = saved?.attemptId || crypto.randomUUID()
       previousSnapshot = saved || null
       retired.value = false
+      retiredMessage.value = ''
+      retainedNotice.value = ''
       recoveryId = ''
       sourceKey = saved?.versionId
       sourceRaw = sourceKey ? localStorage.getItem(sourceKey) : null
@@ -516,6 +541,10 @@ export function useExamRecovery(options: {
     },
     owner,
     retired,
+    retiredMessage,
+    retainedNotice,
+    submittedDrafts,
+    dismissRetainedNotice,
     leaveRetired,
     continueRecovered,
     availableDrafts,

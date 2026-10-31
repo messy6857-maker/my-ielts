@@ -54,5 +54,5 @@ jobs:
             node scripts/smoke-site.mjs https://messy6857-maker.github.io/my-ielts && exit 0
             if [ "$attempt" -lt 10 ]; then sleep 30; fi
           done
-          echo "::error::部署验证未通过，源码推送已完成；请检查 Pages 更新状态。"
+          echo "::error::部署验证未通过，源码推送已完成；冒烟失败不代表源码推送失败，请检查 Pages 更新状态。"
           exit 1

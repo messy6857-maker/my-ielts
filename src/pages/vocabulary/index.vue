@@ -123,18 +123,36 @@ function restoreSpellValues() {
     for (const group of cur.words) {
       for (const item of group) {
         const stored = saved[item.id]
-        const value
-          = typeof stored === 'string'
-            ? stored
-            : stored?.requiresSelection
-              ? ''
-              : stored?.text
-        item.spellAlternatives
+        const alternatives
           = typeof stored === 'object'
             ? (stored?.alternatives || []).filter(
                 value => typeof value === 'string' && value.trim(),
               )
             : []
+        // 7d711167 时代已存的无标记分歧对象：无 requiresSelection 但 alternatives > 1，
+        // 与新合并对象同款处理（显示置空、强制选择），并一次性把标记写回存储，
+        // 使进度派生等其他消费者同步识别；已标记对象不再重复写。
+        const needsSelection
+          = !!stored?.requiresSelection || alternatives.length > 1
+        if (
+          typeof stored === 'object'
+          && alternatives.length > 1
+          && !stored.requiresSelection
+        ) {
+          saveRecord(
+            SPELL_KEY,
+            `${chapter}|${item.id}`,
+            { ...stored, alternatives, requiresSelection: true },
+            useAuth().currentUser.value,
+          )
+        }
+        const value
+          = typeof stored === 'string'
+            ? stored
+            : needsSelection
+              ? ''
+              : stored?.text
+        item.spellAlternatives = alternatives
         if (typeof value === 'string' && value.length > 0) {
           item.spellValue = value
           item.spellError = !item.word
@@ -642,6 +660,12 @@ function copyAllError() {
                             </button>
                           </div>
                         </template>
+                        <div
+                          v-if="!isTrainingModel && item.spellAlternatives?.length > 1"
+                          class="text-xs text-amber-700"
+                        >
+                          该词有两个旧答案未选，请到拼写练习选择保留哪一个。
+                        </div>
                       </td>
                       <td class="group relative whitespace-nowrap p-4">
                         <div

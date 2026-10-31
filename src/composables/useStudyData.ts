@@ -44,6 +44,7 @@ export interface MistakeItem {
   firstAt: number
   lastAt: number
   legacySource?: boolean
+  legacyActivity?: 'vocabulary' | 'flashcard'
   failureDays?: number
 }
 export interface ModuleProgress {
@@ -53,7 +54,7 @@ export interface ModuleProgress {
 }
 export const MISTAKE_MODULE_LABEL: Record<MistakeModule, string> = {
   vocabulary: '词汇拼写',
-  legacy_vocabulary: '旧版词汇（待确认活动）',
+  legacy_vocabulary: '旧版词汇（待确认来源）',
   flashcard: '单词自测',
   typing: '打字练习',
   listening: '听力 179',
@@ -187,6 +188,7 @@ export const useMistakes = createGlobalState(() => {
         ...part,
         count: (previous?.count ?? 0) + part.count,
         legacySource: !!previous?.legacySource || !!part.legacySource,
+        legacyActivity: previous?.legacyActivity || part.legacyActivity,
         firstAt: Math.min(previous?.firstAt ?? part.firstAt, part.firstAt),
         lastAt: Math.max(previous?.lastAt ?? 0, part.lastAt),
         dates,
@@ -197,7 +199,9 @@ export const useMistakes = createGlobalState(() => {
         ...item,
         detail:
           item.legacySource && !item.detail.includes('旧版')
-            ? `${item.detail}（含旧版词汇记录，原活动未区分）`
+            ? item.legacyActivity
+              ? `${item.detail}（归属已确认）`
+              : `${item.detail}（含旧版词汇记录，原活动未区分）`
             : item.detail,
         failureDays: dates.size,
       }))

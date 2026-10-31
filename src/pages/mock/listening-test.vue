@@ -499,7 +499,7 @@ async function submit() {
     role="alert"
     class="mx-auto max-w-4xl rounded bg-amber-50 p-3 text-amber-900"
   >
-    {{ recovery.error.value }}
+    {{ recovery.retiredMessage.value }}
     <button class="ml-2 underline" @click="recovery.continueRecovered">
       保留答案，继续为独立作答
     </button>
@@ -617,7 +617,9 @@ async function submit() {
           {{
             recovery.draft.value && !recovery.draft.value.submitted
               ? "继续所选作答（从剩余时间计时）"
-              : "▶ 开始测试"
+              : recovery.availableDrafts.value.length && !recovery.draft.value
+                ? "▶ 全新开始（已有草稿未选）"
+                : "▶ 开始测试"
           }}
         </button>
         <button
@@ -629,10 +631,24 @@ async function submit() {
           放弃草稿，重新开始
         </button>
         <p
-          v-if="recovery.draft.value?.submitted"
+          v-if="recovery.retainedNotice.value"
+          role="status"
+          class="mt-4 text-sm text-amber-700 dark:text-amber-300"
+        >
+          {{ recovery.retainedNotice.value }}
+          <button
+            type="button"
+            class="ml-2 underline"
+            @click="recovery.dismissRetainedNotice()"
+          >
+            知道了
+          </button>
+        </p>
+        <p
+          v-if="recovery.submittedDrafts.value.length"
           class="mt-4 text-sm text-gray-500 dark:text-gray-400"
         >
-          该套题已交卷，重新开始将是一次新的测试
+          该套题已有交卷记录，重新开始将是一次新的测试
         </p>
         <div
           v-if="
