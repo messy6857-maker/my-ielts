@@ -1,8 +1,8 @@
+import { mergeEntry } from './entryMerge'
 import {
   accountKey,
   batchStorage,
   collectionBases,
-  compareStamp,
   envelope,
   importTable,
   saveEnvelope,
@@ -133,16 +133,19 @@ export function restoreStudyBackup(
       try {
         const incoming = envelope(raw)
         if (collectionBases.includes(base) && !incoming.deleted) {
-          importTable(base, incoming.value, target)
-          imported++
+          const result = importTable(base, incoming.value, target, 'local')
+          imported += result.imported
+          keptNewer += result.keptNewer
+          failed += result.failed
           continue
         }
         const previous = localStorage.getItem(key)
-        if (previous && compareStamp(envelope(previous), incoming) >= 0) {
+        const merged = mergeEntry(base, previous ? envelope(previous) : undefined, incoming)
+        if (previous && JSON.stringify(envelope(previous)) === JSON.stringify(merged)) {
           keptNewer++
           continue
         }
-        if (saveEnvelope(key, incoming))
+        if (saveEnvelope(key, merged))
           imported++
         else failed++
       }

@@ -1,5 +1,6 @@
+import { compactStatsData } from '../utils/statsArchive'
+import { mergeEntry } from '../utils/entryMerge'
 import { pruneCollectionData } from '../utils/retention'
-import { mergeLegacy } from '../utils/legacyMerge'
 import { migrateStudy } from '../utils/migrateStudy'
 import { pruneArchives } from '../utils/archives'
 import { SYNC_API_BASE } from '../sync-config'
@@ -7,12 +8,10 @@ import {
   accountKey,
   batchStorage,
   collectionBases,
-  compareStamp,
   envelope,
   importTable,
   notifyStorage,
   readRecords,
-  readValue,
   removeStoredValue,
   saveEnvelope,
   saveValue,
@@ -95,10 +94,16 @@ export interface ApiResult {
   rejected?: RejectedEntry[]
   sentData?: Record<string, string>
   updatedAt?: number
+  nextCursor?: string | null
+  compactStats?: boolean
   protocolVersion?: number
 }
 /** 服务端 rejected 原因三类：未知/跨账号 base、非字符串原始值、decode 失败。 */
-export type RejectedReason = 'unknown-base' | 'non-string' | 'decode-failed' | 'entry-too-large'
+export type RejectedReason =
+  | 'unknown-base'
+  | 'non-string'
+  | 'decode-failed'
+  | 'entry-too-large'
 export type RejectedEntry = string | { key: string; reason?: string }
 /** 归一化 rejected 为纯 key 列表（兼容 string[] 旧形状与对象新形状）。 */
 export function rejectedKeysOf(rejected?: RejectedEntry[]): string[] {
@@ -118,7 +123,8 @@ export function rejectedReasonsOf(
       && typeof e.key === 'string'
       && (e.reason === 'unknown-base'
         || e.reason === 'non-string'
-        || e.reason === 'decode-failed' || e.reason === 'entry-too-large')
+        || e.reason === 'decode-failed'
+        || e.reason === 'entry-too-large')
     )
       out[e.key] = e.reason
   }
@@ -257,7 +263,10 @@ export function getRejectedReason(
       localStorage.getItem(rejectedReasonKey(owner)) || '{}',
     )
     const r = v?.[key]
-    return r === 'unknown-base' || r === 'non-string' || r === 'decode-failed' || r === 'entry-too-large'
+    return r === 'unknown-base'
+      || r === 'non-string'
+      || r === 'decode-failed'
+      || r === 'entry-too-large'
       ? r
       : null
   }
@@ -290,7 +299,11 @@ function storeRejectedReasons(
 /** Quarantine the keys a successful push reported as rejected, if any. */
 export function handleRejectedKeys(
   owner: string,
-  result: { ok: boolean; rejected?: RejectedEntry[]; sentData?: Record<string, string> },
+  result: {
+    ok: boolean
+    rejected?: RejectedEntry[]
+    sentData?: Record<string, string>
+  },
   sent?: Record<string, string>,
 ): boolean {
   sent ??= result.sentData
@@ -324,6 +337,7 @@ export function syncTimeoutMs(bodyBytes: number) {
   )
 }
 const capabilities = new Map<string, number>()
+const compactServers = new Set<string>()
 async function api(
   path: string,
   method: string,
@@ -346,6 +360,7 @@ async function api(
       method,
       headers: {
         'Content-Type': 'application/json',
+        ...(path.split('?')[0] === '/sync' ? { 'X-IELTS-Compact': '1' } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: bodyText,
@@ -379,7 +394,7 @@ async function api(
       }
     }
     if (
-      path === '/sync'
+      path.split('?')[0] === '/sync'
       && method === 'GET'
       && !(
         json.data === null
@@ -417,10 +432,58 @@ export function apiLogin(username: string, password: string) {
   return api('/login', 'POST', { username, password })
 }
 export async function apiPull(username = getTokenOwner() ?? '') {
-  const result = await api('/sync', 'GET', undefined, username)
-  if (result.ok)
-    capabilities.set(username, result.protocolVersion ?? 1)
-  return result
+  const token = getToken(username)
+  for (let attempt = 0; attempt < 3; attempt++) {
+    let result = await api('/sync', 'GET', undefined, username)
+    const all: Record<string, string> = { ...(result.data || {}) }
+    const cursors = new Set<string>()
+    let restart = false
+    while (result.ok && result.nextCursor) {
+      if (getToken(username) !== token) {
+        return {
+          ok: false,
+          status: 401,
+          message: '账号会话已变化，未应用旧账号数据',
+        }
+      }
+      if (cursors.has(result.nextCursor))
+        return { ok: false, status: 502, message: '同步分页异常，请重试' }
+      cursors.add(result.nextCursor)
+      result = await api(
+        `/sync?cursor=${encodeURIComponent(result.nextCursor)}`,
+        'GET',
+        undefined,
+        username,
+      )
+      if (result.status === 409) {
+        restart = true
+        break
+      }
+      Object.assign(all, result.data || {})
+    }
+    if (restart)
+      continue
+    if (getToken(username) !== token) {
+      return {
+        ok: false,
+        status: 401,
+        message: '账号会话已变化，未应用旧账号数据',
+      }
+    }
+    if (result.ok) {
+      capabilities.set(username, result.protocolVersion ?? 1)
+      if (result.compactStats)
+        compactServers.add(username)
+      else compactServers.delete(username)
+    }
+    return result.ok
+      ? {
+          ...result,
+          data: result.data === null && !Object.keys(all).length ? null : all,
+        }
+      : result
+  }
+  return { ok: false, status: 409, message: '云端正在更新，请稍后重试拉取' }
 }
 let pushQueue = Promise.resolve()
 export function apiPush(
@@ -452,7 +515,23 @@ export function apiPush(
       if (probe.data)
         applySyncData(probe.data, username)
     }
-    const result: ApiResult = { ok: true, status: 200, data: {}, rejected: [], sentData: data }
+    if (
+      Object.keys(data).some(k => k.includes('_stats_archive_v3__entry_'))
+      && !compactServers.has(username)
+    ) {
+      return {
+        ok: false,
+        status: 426,
+        message: '同步服务需要支持统计压缩后才能上传，原记录保留在本机。',
+      }
+    }
+    const result: ApiResult = {
+      ok: true,
+      status: 200,
+      data: {},
+      rejected: [],
+      sentData: data,
+    }
     const encoder = new TextEncoder()
     const send = async (
       entries: Array<[string, string]>,
@@ -568,7 +647,11 @@ export function collectSyncData(username: string): Record<string, string> {
       /* Invalid originals remain available in the local backup export. */
     }
   }
-  const pruned = pruneCollectionData(result, username)
+  const pruned = compactStatsData(
+    pruneCollectionData(result, username),
+    username,
+    compactServers.has(username),
+  )
   for (const key of Object.keys(result)) {
     if (!(key in pruned))
       removeStoredValue(key)
@@ -602,110 +685,12 @@ export function applySyncData(data: Record<string, string>, username: string) {
             importTable(base, incoming.value, username)
           continue
         }
-        if (
-          base.startsWith('checkin_years_v2__entry_')
-          && !incoming.deleted
-          && Array.isArray(incoming.value)
-        ) {
-          const old = readValue<number[]>(key, [])
-          const merged = [...new Set([...old, ...incoming.value])].sort(
-            (a, b) => Number(a) - Number(b),
-          )
-          const previous = localStorage.getItem(key)
-          const latest
-            = previous && compareStamp(envelope(previous), incoming) > 0
-              ? envelope(previous)
-              : incoming
-          if (JSON.stringify(old) !== JSON.stringify(merged)) {
-            saveEnvelope(key, { ...latest, value: merged }, 'remote')
-            count++
-          }
-          continue
-        }
         const previousRaw = localStorage.getItem(key)
-        if (base === 'collection_retention_v3') {
-          const previous = previousRaw ? envelope(previousRaw) : undefined
-          const cuts: Record<string, string> = { ...(previous?.value as any) }
-          for (const [table, cut] of Object.entries(
-            (incoming.value as Record<string, string>) ?? {},
-          )) {
-            if (typeof cut === 'string' && cut > (cuts[table] ?? ''))
-              cuts[table] = cut
-          }
-
-          const latest
-            = previous && compareStamp(previous, incoming) > 0
-              ? previous
-              : incoming
-          saveEnvelope(key, { ...latest, value: cuts }, 'remote')
+        const previous = previousRaw ? envelope(previousRaw) : undefined
+        const merged = mergeEntry(base, previous, incoming)
+        if (JSON.stringify(merged) === JSON.stringify(previous))
           continue
-        }
-        if (base === 'archive_retention_v2') {
-          const previous = previousRaw ? envelope(previousRaw) : undefined
-          const cuts = [
-            (previous?.value as any)?.cutoff,
-            (incoming.value as any)?.cutoff,
-          ].filter(
-            c =>
-              Array.isArray(c)
-              && c.length === 3
-              && Number.isFinite(c[0])
-              && typeof c[1] === 'string'
-              && typeof c[2] === 'string',
-          ) as Array<[number, string, string]>
-          cuts.sort(
-            (a, b) =>
-              a[0] - b[0]
-              || a[1].localeCompare(b[1])
-              || a[2].localeCompare(b[2]),
-          )
-          const cutoff = cuts.at(-1)
-          if (cutoff) {
-            const latest
-              = previous && compareStamp(previous, incoming) > 0
-                ? previous
-                : incoming
-            const merged = {
-              __ielts: 2 as const,
-              stamp: latest.stamp,
-              value: { cutoff },
-            }
-            if (
-              JSON.stringify(previous) !== JSON.stringify(merged)
-              && saveEnvelope(key, merged, 'remote')
-            )
-              count++
-            continue
-          }
-        }
-        if (previousRaw && incoming.stamp[0] === 0) {
-          const previous = envelope(previousRaw)
-          if (
-            previous.stamp[0] === 0
-            && !previous.deleted
-            && !incoming.deleted
-          ) {
-            // 戳 0 的 legacy 种子键走 union/max 语义（与服务端对齐），不是纯 LWW：
-            // 两设备各执一份 legacy 数据时，后来者不再因戳相等被丢弃。
-            // 注意传表名（去掉 __entry_ 后缀），否则 legacyMerge 的分支永不命中。
-            const merged = mergeLegacy(
-              base.split('__entry_')[0],
-              previous.value,
-              incoming.value,
-            )
-            if (JSON.stringify(merged) !== JSON.stringify(previous.value)) {
-              saveEnvelope(key, { ...incoming, value: merged }, 'remote')
-              count++
-            }
-            continue
-          }
-        }
-        if (
-          previousRaw !== null
-          && compareStamp(incoming, envelope(previousRaw)) <= 0
-        )
-          continue
-        if (saveEnvelope(key, incoming, 'remote'))
+        if (saveEnvelope(key, merged, 'remote'))
           count++
       }
       catch {

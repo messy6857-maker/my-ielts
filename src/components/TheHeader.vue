@@ -85,7 +85,9 @@ const syncDotClass = computed(() => {
 })
 
 async function onLogout() {
-  const { pushOk } = await logout()
+  const { pushOk, cancelled } = await logout()
+  if (cancelled)
+    return
   if (!pushOk)
     accountNotice.value = '退出前有记录未能上传，下次登录将自动补推，请勿清理浏览器数据'
   clearAuthError()
@@ -101,7 +103,9 @@ async function onManualSync() {
   showMobileMenu.value = false
   // 老本地会话或 token 过期：先退出再重登，才能拿到云同步 token
   if (needsRelogin.value) {
-    await logout()
+    const result = await logout()
+    if (result.cancelled)
+      return
     clearAuthError()
     router.push('/login')
     return

@@ -23,7 +23,9 @@ const router = useRouter()
 
 // 登录过期时：先退出再去登录页（登录页已登录会直接跳首页）
 async function goRelogin() {
-  await logout()
+  const result = await logout()
+  if (result.cancelled)
+    return
   router.push('/login')
 }
 // AI 批改：所有登录账号可用，每人填自己的 API Key

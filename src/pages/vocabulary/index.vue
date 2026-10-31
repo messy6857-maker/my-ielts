@@ -106,7 +106,10 @@ function saveSpellMap(item) {
 }
 function onSpellInput(event, item) {
   item.spellValue = event.target.value
+  item.spellError = !!item.spellValue.trim() && !item.word.map(v => v.toLowerCase().trim()).includes(item.spellValue.toLowerCase().trim())
   saveSpellMap(item)
+  trainingStats.value = calcStats()
+  syncProgress()
 }
 function restoreSpellValues() {
   const map = readSpellMap()
@@ -121,7 +124,7 @@ function restoreSpellValues() {
           item.spellValue = value
           item.spellError = !item.word
             .map(v => v.toLowerCase().trim())
-            .includes(value)
+            .includes(value.toLowerCase().trim())
         }
         else {
           item.spellValue = ''

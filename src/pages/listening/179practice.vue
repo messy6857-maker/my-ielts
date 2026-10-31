@@ -103,7 +103,7 @@ function next(index) {
   }
   else if (hadErrors) {
     // 上次记错、本次改对：错题计数减一，扣回原失败日的桶（无原失败日时沿用当日默认）
-    decrementMistake(mistakeKey, outstanding.failureDate ?? undefined)
+    decrementMistake(mistakeKey, outstanding.failureDate ?? undefined, 'all')
   }
   setProgress('listening', index + 1, words.length)
 

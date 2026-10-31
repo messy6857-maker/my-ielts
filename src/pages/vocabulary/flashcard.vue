@@ -483,10 +483,12 @@ function next() {
 /** 自评前加载例句/同义词：查内置预抓取数据（本词 → 派生词），同步返回 */
 async function loadWordInfo(card: Card) {
   const sequence = ++wordLoadSequence
+  const owner = useAuth().currentUser.value
+  const isActive = () => sequence === wordLoadSequence && owner === useAuth().currentUser.value && (current.value || studying.value) === card
   wordInfo.value = null
   try {
     const details = await loadVocabularyDetails(card.chapter)
-    if (sequence !== wordLoadSequence)
+    if (!isActive())
       return
     const detail = details[String(card.id)]
     if (detail) {
@@ -497,7 +499,7 @@ async function loadWordInfo(card: Card) {
         .slice(0, 3)
     }
     const info = await loadWordInfoWithFallback([card.word, ...card.hintWords])
-    if (sequence !== wordLoadSequence)
+    if (!isActive())
       return
     wordInfo.value = info
   }
@@ -550,7 +552,7 @@ watch([category, crossChapter], () => {
 })
 
 // 卡片切换时预加载联网例句/同义词
-watch(current, (c) => {
+watch(() => current.value || studying.value, (c) => {
   wordLoadSequence++
   if (c)
     loadWordInfo(c)

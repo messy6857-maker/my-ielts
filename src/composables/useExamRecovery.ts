@@ -3,9 +3,11 @@ import type { Ref } from 'vue'
 import { accountKey, storageFailures, writerId } from '../utils/storage'
 import type { MockRecord } from './useMockHistory'
 import { saveMockRecord } from './useMockHistory'
-import { accountNotice, onBeforeLogout, useAuth } from './useAuth'
+import { dismissAccountNotice, onBeforeLogout, pushAccountNotice, useAuth } from './useAuth'
 
 export interface ExamDraft {
+  attemptId?: string
+  versionId?: string
   version: 1
   kind: 'reading' | 'listening'
   testId: string
@@ -33,6 +35,10 @@ export function useExamRecovery(options: {
   const owner = ref(useAuth().currentUser.value)
   let activeTestId = options.testId.value
   let pauseMessage = ''
+  const pauseNoticeId = `exam-pause:${crypto.randomUUID()}`
+  let attemptId = ''
+  let sourceKey: string | undefined
+  let sourceRaw: string | null = null
   let wasBlocked = false
   const writer = writerId()
   const baseKey = (id = options.testId.value) =>
@@ -73,6 +79,8 @@ export function useExamRecovery(options: {
                   storedKey,
                   value: {
                     ...d,
+                    versionId: storedKey,
+                    attemptId: d.attemptId || `legacy:${storedKey}:${d.updatedAt}`,
                     updatedAt:
                       Number.isFinite(d.updatedAt)
                       && d.updatedAt > 0
@@ -88,13 +96,17 @@ export function useExamRecovery(options: {
           return []
         }
       })
+      .filter(c => !localStorage.getItem(`${prefix}__completed_${encodeURIComponent(c.value.attemptId)}`))
       .sort((a, b) => b.value.updatedAt - a.value.updatedAt)
     draft.value
       = (candidates.find(c => c.storedKey === key()) ?? candidates[0])?.value
       ?? null
   }
   function writeDraft() {
+    if (attemptId && localStorage.getItem(`${baseKey(activeTestId)}__completed_${encodeURIComponent(attemptId)}`))
+      return true
     const value: ExamDraft = {
+      attemptId,
       version: 1,
       kind: options.kind,
       testId: activeTestId,
@@ -130,8 +142,14 @@ export function useExamRecovery(options: {
     return save()
   }
   function clear() {
+    if (!options.started.value && draft.value?.versionId) {
+      sourceKey = draft.value.versionId
+      sourceRaw = localStorage.getItem(sourceKey)
+    }
     try {
       localStorage.removeItem(key())
+      if (sourceKey && localStorage.getItem(sourceKey) === sourceRaw)
+        localStorage.removeItem(sourceKey)
     }
     catch {
       return false
@@ -144,6 +162,7 @@ export function useExamRecovery(options: {
     const current = draft.value
     if (current) {
       try {
+        localStorage.setItem(`${baseKey()}__completed_${encodeURIComponent(attemptId)}`, JSON.stringify({ completedAt: Date.now() }))
         localStorage.setItem(
           key(),
           JSON.stringify({ ...current, submitted: true }),
@@ -178,8 +197,7 @@ export function useExamRecovery(options: {
   }
   function dismissNotice() {
     error.value = ''
-    if (accountNotice.value === pauseMessage)
-      accountNotice.value = ''
+    dismissAccountNotice(pauseNoticeId)
   }
   function mismatch() {
     if (!blocked.value)
@@ -188,7 +206,7 @@ export function useExamRecovery(options: {
     const message = `账号已变化，本次模考已暂停。${saved ? `答案已保存在原身份的本机草稿中；${owner.value ? '重新登录原账号' : '退出账号后以游客身份'}回到此套题，可从剩余时间继续作答。` : '作答草稿保存失败，请先复制答案，不要关闭页面。'}`
     pauseMessage = message
     error.value = message
-    accountNotice.value = message
+    pushAccountNotice(message, pauseNoticeId, 2)
     options.pause()
     wasBlocked = true
     return true
@@ -214,8 +232,7 @@ export function useExamRecovery(options: {
       // 回到原身份、阻断解除：清掉暂停提示（保存失败的提示不是暂停消息，保留）。
       if (error.value === pauseMessage)
         error.value = ''
-      if (accountNotice.value === pauseMessage)
-        accountNotice.value = ''
+      dismissAccountNotice(pauseNoticeId)
     },
     { flush: 'sync' },
   )
@@ -239,8 +256,10 @@ export function useExamRecovery(options: {
   )
   const stopTest = watch(options.testId, refresh)
   const offLogout = onBeforeLogout(() => {
-    saveFlush()
-    options.pause()
+    const saved = saveFlush()
+    if (saved)
+      options.pause()
+    return saved
   })
   window.addEventListener('pagehide', saveFlush)
   const visibility = () => {
@@ -266,13 +285,15 @@ export function useExamRecovery(options: {
   })
   refresh()
   return {
-    begin() {
+    begin(saved?: ExamDraft | null) {
+      attemptId = saved?.attemptId || crypto.randomUUID()
+      sourceKey = saved?.versionId
+      sourceRaw = sourceKey ? localStorage.getItem(sourceKey) : null
       owner.value = useAuth().currentUser.value
       activeTestId = options.testId.value
       wasBlocked = false
       error.value = ''
-      if (accountNotice.value === pauseMessage)
-        accountNotice.value = ''
+      dismissAccountNotice(pauseNoticeId)
     },
     owner,
     activeTestId: () => activeTestId,

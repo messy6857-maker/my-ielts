@@ -79,8 +79,8 @@ const USERS_KEY = 'myielts_users_v1'
 const SESSION_KEY = 'myielts_session_v1'
 // 服务器托管账号在本地用户表中的标记（仅用于会话恢复，不做本地密码校验）
 const SERVER_MARKER_HASH = 'server-managed'
-const beforeLogout = new Set<() => void>()
-export function onBeforeLogout(cb: () => void) {
+const beforeLogout = new Set<() => unknown | Promise<unknown>>()
+export function onBeforeLogout(cb: () => unknown | Promise<unknown>) {
   beforeLogout.add(cb)
   return () => beforeLogout.delete(cb)
 }
@@ -419,8 +419,8 @@ export const useAuth = createGlobalState(() => {
       return serverLogin(username, password, remember)
     return localLogin(username, password, remember)
   }
-  let logoutJob: Promise<{ pushOk: boolean }> | null = null
-  function logout(): Promise<{ pushOk: boolean }> {
+  let logoutJob: Promise<{ pushOk: boolean; cancelled?: boolean }> | null = null
+  function logout(): Promise<{ pushOk: boolean; cancelled?: boolean }> {
     if (logoutJob)
       return logoutJob
     const job = performLogout()
@@ -433,18 +433,29 @@ export const useAuth = createGlobalState(() => {
       .catch(() => {})
     return job
   }
-  async function performLogout(): Promise<{ pushOk: boolean }> {
+  async function performLogout(): Promise<{ pushOk: boolean; cancelled?: boolean }> {
     const owner = currentUser.value
     const tokenAtStart = owner ? getToken(owner) : null
     loggingOut.value = true
-    beforeLogout.forEach((cb) => {
+    for (const cb of beforeLogout) {
       try {
-        cb()
+        if (await cb() === false) {
+          pushAccountNotice('草稿保存失败，已取消退出。请复制原文或释放本机空间后重试。', 'logout-save-failed', 3)
+          loggingOut.value = false
+          return { pushOk: false, cancelled: true }
+        }
       }
-      catch (error) {
-        console.error('Save before logout failed', error)
+      catch {
+        pushAccountNotice('离开前保存失败，已取消退出，请保留当前页面并重试。', 'logout-save-failed', 3)
+        loggingOut.value = false
+        return { pushOk: false, cancelled: true }
       }
-    })
+    }
+    if (currentUser.value !== owner || (owner && getToken(owner) !== tokenAtStart)) {
+      loggingOut.value = false
+      return { pushOk: false, cancelled: true }
+    }
+    dismissAccountNotice('logout-save-failed')
     // 退出前尽力把最新数据推到云端。推送失败时：返回值带给调用方（TheHeader 的
     // onLogout 据此写 accountNotice 提示），同时记补推标记，下次登录成功时由 useSync 补推一次。
     let pushOk = true
@@ -479,6 +490,10 @@ export const useAuth = createGlobalState(() => {
         pushOk = false
         setAuthPendingPush(true)
       }
+    }
+    if (currentUser.value !== owner || (owner && getToken(owner) !== tokenAtStart)) {
+      loggingOut.value = false
+      return { pushOk: false, cancelled: true }
     }
     if (owner && getToken(owner) === tokenAtStart)
       setToken(null)

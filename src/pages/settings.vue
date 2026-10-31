@@ -61,7 +61,8 @@ function restoreBackup() {
     return
   const result = restoreStudyBackup(importPreview.value, currentUser.value)
   importMessage.value = `已合并 ${result.imported} 条；保留本机较新版本 ${result.keptNewer} 条；失败 ${result.failed} 条。`
-  importText.value = ''
+  if (!result.failed)
+    importText.value = ''
 }
 const backup = () => downloadStudyBackup(currentUser.value)
 const cleanupArchives = () => pruneArchives(currentUser.value)

@@ -97,8 +97,6 @@ export function useStudyTimer() {
   let autoPaused = false
   let interval: ReturnType<typeof setInterval> | undefined
   let ticks = 0
-  let persistedAt = 0
-  const liveTail = ref(0)
   function migrate(user: string | null) {
     const base = nsKey('study_time_v1', user)
     for (const oldKey of Object.keys(localStorage).filter((k) => {
@@ -143,6 +141,11 @@ export function useStudyTimer() {
     const parts = Object.values(
       readRecords<TimerSegment>('timer_sessions_v2', user),
     )
+    if (running.value && user === owner) {
+      const midnight = new Date()
+      midnight.setHours(0, 0, 0, 0)
+      parts.push({ date, device, start: Math.max(startAt, midnight.getTime()), end: Date.now() })
+    }
     let total = legacyTimerSeconds(parts, nsKey('study_time_v1', user), date)
     for (const part of parts) {
       if (part.date !== date)
@@ -183,8 +186,6 @@ export function useStudyTimer() {
       )
       cursor = segmentEnd
     }
-    persistedAt = end
-    liveTail.value = 0
     load(owner)
   }
   function start() {
@@ -198,16 +199,11 @@ export function useStudyTimer() {
     }
     session = crypto.randomUUID()
     startAt = Date.now()
-    persistedAt = startAt
-    liveTail.value = 0
     elapsed.value = 0
     running.value = true
     ticks = 0
     interval = setInterval(() => {
-      liveTail.value = Math.max(
-        0,
-        Math.floor((Date.now() - persistedAt) / 1000),
-      )
+      load(owner)
       elapsed.value = Math.floor((Date.now() - startAt) / 1000)
       if (++ticks % 10 === 0)
         persist()
@@ -272,7 +268,7 @@ export function useStudyTimer() {
   if (getCurrentInstance())
     onUnmounted(dispose)
   return {
-    dailySeconds: computed(() => dailySeconds.value + liveTail.value),
+    dailySeconds: computed(() => dailySeconds.value),
     elapsed,
     running,
     dailyGoal: DAILY_STUDY_GOAL,

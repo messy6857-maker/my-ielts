@@ -1,9 +1,13 @@
+import { mergeWriters } from './statsArchive'
+
 /** Merge only unversioned migration snapshots. Versioned deletions always win. */
 export function mergeLegacy(base: string, a: any, b: any): any {
   if (a === undefined || a === null)
     return b
   if (b === undefined || b === null)
     return a
+  if (base === 'stats_archive_v3')
+    return { writers: mergeWriters(a.writers, b.writers) }
   if (base === 'migration-mistake' || base === 'mistake_parts_v2') {
     return {
       ...a,

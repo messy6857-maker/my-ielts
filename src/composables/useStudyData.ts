@@ -205,12 +205,9 @@ export const useMistakes = createGlobalState(() => {
       days,
     })
   }
-  // 跨设备 undo：按 key 查全设备 part（不再只取本设备 writer 分片）。
-  // 单源精确性不变：始终只扣一个 part、总数只减 1；指定了 date 时扣该日桶
-  // （与 goBackOne 传 entry.date、179practice 传 failureDate 的调用方一致）。
-  // 未指定 date 时扣最近失败日（与 mistakeOutstanding 的 failureDate 语义对齐），
-  // 不再默认扣当日空桶导致跨日纠正时 day 桶错配；多源时选最近失败日的 part。
-  function decrementMistake(key: string, date?: string) {
+  // 撤销本机评分只扣当前作者；179 纠错显式使用 all，消除跨设备的未解决失败。
+  // 指定日期时优先扣原失败日，不触碰其他作者的本机撤销记录。
+  function decrementMistake(key: string, date?: string, scope: 'own' | 'all' = 'own') {
     const epoch = resets.state.value[key]?.epoch ?? ''
     const records = readRecords<MistakePart>(
       'mistake_parts_v2',
@@ -218,8 +215,9 @@ export const useMistakes = createGlobalState(() => {
     )
     const candidates = Object.entries(records)
       .filter(
-        ([, part]) =>
-          !!part && part.key === key && part.epoch === epoch && part.count > 0,
+        ([id, part]) =>
+          !!part && part.key === key && part.epoch === epoch && part.count > 0
+          && (scope === 'all' || id === `${key}|${writerId()}`),
       )
       .sort((a, b) => b[1].lastAt - a[1].lastAt)
     if (candidates.length === 0)
@@ -266,8 +264,7 @@ export const useMistakes = createGlobalState(() => {
     })
   }
   // 179 练习的持久守卫：页面会话内的 checked 刷新即重建，改以错题本自身为准。
-  // 只看当前作者分片（与 decrementMistake 的扣减口径一致），且 epoch 须与当前
-  // 重置纪元一致，否则该条目已被清空，不应再视为未消除的记错。failureDate 取
+  // 扫描全设备分片，并匹配当前重置纪元；已清空的记录不算未解决失败。failureDate 取
   // 仍有计数的最近一日，供纠正时扣回原失败日桶，避免扣到当日的空桶。
   function mistakeOutstanding(key: string): {
     outstanding: boolean

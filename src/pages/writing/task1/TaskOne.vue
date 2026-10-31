@@ -1,4 +1,13 @@
 <script setup lang="ts">
+import {
+  deleteDraft,
+  emergencyWritingDrafts,
+  listDrafts,
+  readDraft,
+  readOwnDraft,
+  saveDraft,
+} from '../../../utils/drafts'
+import type { WritingDraft } from '../../../utils/drafts'
 import { usePersistentBool } from '../../../composables/usePersistentBool'
 import { CAMBRIDGE_WRITING } from '../cambridge'
 import type { CambridgeWritingTask } from '../cambridge'
@@ -7,12 +16,6 @@ import ModelEssayView from '../ModelEssayView.vue'
 import { resolveMediaUrl } from '../../../composables/useAudio'
 import { onBeforeLogout, useAuth } from '../../../composables/useAuth'
 
-import {
-  deleteDraft,
-  listDrafts,
-  readDraft,
-  saveDraft,
-} from '../../../utils/drafts'
 import { readRecords, saveRecord } from '../../../utils/storage'
 import { onSyncApplied } from '../../../composables/syncClient'
 import TaskChart from './TaskChart.vue'
@@ -120,6 +123,11 @@ const timeText = computed(() => {
 // 游客沿用原全局 key）；draftOwner 在挂载恢复与切换账号时确定，save/clear/flush 一律用它，
 // 不再按调用时刻的 currentUser 现算——否则退出后卸载 flush 会把旧账号的全文写进游客全局 key。
 // 仍走普通 localStorage（刻意不用 writeJson，草稿不同步）；旧全局草稿不迁移给登录账号
+const emergencyDrafts = {
+  get: (owner: string | null) => emergencyWritingDrafts.get(JSON.stringify(['task1', owner])),
+  set: (owner: string | null, value: WritingDraft) => emergencyWritingDrafts.set(JSON.stringify(['task1', owner]), value),
+  delete: (owner: string | null) => emergencyWritingDrafts.delete(JSON.stringify(['task1', owner])),
+}
 let draftOwner: string | null = currentUser.value
 let draftTimer: ReturnType<typeof setTimeout> | null = null
 const drafts = ref(listDrafts('task1', draftOwner))
@@ -134,13 +142,10 @@ function saveDraftNow(): boolean {
       overtime: overtime.value,
     })
     : (deleteDraft('task1', draftOwner, prompt.value.id), true)
+  if (ok)
+    emergencyDrafts.delete(draftOwner)
   drafts.value = listDrafts('task1', draftOwner)
   return ok
-}
-function clearDraft() {
-  if (prompt.value)
-    deleteDraft('task1', draftOwner, prompt.value.id)
-  drafts.value = listDrafts('task1', draftOwner)
 }
 const offLogout = onBeforeLogout(saveDraftNow)
 const offSync = onSyncApplied(loadHistory)
@@ -167,12 +172,14 @@ onUnmounted(() => {
     clearInterval(timerId)
   if (draftTimer)
     clearTimeout(draftTimer)
-  saveDraftNow()
+  if (!saveDraftNow() && prompt.value)
+    emergencyDrafts.set(draftOwner, { promptId: prompt.value.id, text: essayText.value, secondsLeft: secondsLeft.value, overtime: overtime.value })
 })
 // 恢复草稿：挂载时调用一次；切换账号时也调用，先取消 pending 防抖、再按新身份重载。
 // 新身份有合法草稿则恢复；无草稿则回到选题页（清屏，不再留旧身份的全文）
 function restoreDraft() {
-  saveDraftNow()
+  if (!saveDraftNow() && prompt.value)
+    emergencyDrafts.set(draftOwner, { promptId: prompt.value.id, text: essayText.value, secondsLeft: secondsLeft.value, overtime: overtime.value })
   if (draftTimer)
     clearTimeout(draftTimer)
   draftTimer = null
@@ -183,7 +190,7 @@ function restoreDraft() {
   draftOwner = currentUser.value
   try {
     drafts.value = listDrafts('task1', draftOwner)
-    const d = readDraft('task1', draftOwner)
+    const d = emergencyDrafts.get(draftOwner) ?? readDraft('task1', draftOwner)
     if (d) {
       const p = findPrompt(d.promptId)
       if (d.text && p) {
@@ -303,13 +310,15 @@ const secondsUsed = ref(0)
 const secondsTimed = ref(true)
 
 const archiveError = ref('')
-let pendingEssay: { owner: string | null; record: SavedEssay } | null = null
+let pendingEssay: { owner: string | null; record: SavedEssay; draft: WritingDraft | null } | null = null
 function persistEssay(record: SavedEssay) {
-  pendingEssay = { owner: currentUser.value, record }
+  pendingEssay ??= { owner: draftOwner, record, draft: readOwnDraft('task1', draftOwner, record.promptId) }
   if (saveEssay(record)) {
+    if (pendingEssay.draft)
+      deleteDraft('task1', pendingEssay.owner, record.promptId, pendingEssay.draft)
     pendingEssay = null
     archiveError.value = ''
-    clearDraft()
+    drafts.value = listDrafts('task1', draftOwner)
   }
   else {
     archiveError.value
@@ -343,6 +352,7 @@ function submitEssay() {
   view.value = 'result'
   // 自动存档
   if (prompt.value && result.value) {
+    pendingEssay = null
     persistEssay({
       id: `${Date.now()}-${crypto.randomUUID()}`,
       promptId: prompt.value.id,

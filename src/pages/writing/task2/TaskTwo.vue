@@ -1,4 +1,13 @@
 <script setup lang="ts">
+import {
+  deleteDraft,
+  emergencyWritingDrafts,
+  listDrafts,
+  readDraft,
+  readOwnDraft,
+  saveDraft,
+} from '../../../utils/drafts'
+import type { WritingDraft } from '../../../utils/drafts'
 import { usePersistentBool } from '../../../composables/usePersistentBool'
 import { analyzeEssay } from '../task1/grader'
 import type { EssayStats } from '../task1/grader'
@@ -9,12 +18,6 @@ import { onBeforeLogout, useAuth } from '../../../composables/useAuth'
 import AIGradePanel from '../AIGradePanel.vue'
 import ModelEssayView from '../ModelEssayView.vue'
 
-import {
-  deleteDraft,
-  listDrafts,
-  readDraft,
-  saveDraft,
-} from '../../../utils/drafts'
 import { readRecords, saveRecord } from '../../../utils/storage'
 import { onSyncApplied } from '../../../composables/syncClient'
 
@@ -132,6 +135,11 @@ const timeText = computed(() => {
 // 游客沿用原全局 key）；draftOwner 在挂载恢复与切换账号时确定，save/clear/flush 一律用它，
 // 不再按调用时刻的 currentUser 现算——否则退出后卸载 flush 会把旧账号的全文写进游客全局 key。
 // 仍走普通 localStorage（刻意不用 writeJson，草稿不同步）；旧全局草稿不迁移给登录账号
+const emergencyDrafts = {
+  get: (owner: string | null) => emergencyWritingDrafts.get(JSON.stringify(['task2', owner])),
+  set: (owner: string | null, value: WritingDraft) => emergencyWritingDrafts.set(JSON.stringify(['task2', owner]), value),
+  delete: (owner: string | null) => emergencyWritingDrafts.delete(JSON.stringify(['task2', owner])),
+}
 let draftOwner: string | null = currentUser.value
 let draftTimer: ReturnType<typeof setTimeout> | null = null
 const drafts = ref(listDrafts('task2', draftOwner))
@@ -146,13 +154,10 @@ function saveDraftNow(): boolean {
       overtime: overtime.value,
     })
     : (deleteDraft('task2', draftOwner, prompt.value.id), true)
+  if (ok)
+    emergencyDrafts.delete(draftOwner)
   drafts.value = listDrafts('task2', draftOwner)
   return ok
-}
-function clearDraft() {
-  if (prompt.value)
-    deleteDraft('task2', draftOwner, prompt.value.id)
-  drafts.value = listDrafts('task2', draftOwner)
 }
 const offLogout = onBeforeLogout(saveDraftNow)
 const offSync = onSyncApplied(loadHistory)
@@ -179,12 +184,14 @@ onUnmounted(() => {
     clearInterval(timerId)
   if (draftTimer)
     clearTimeout(draftTimer)
-  saveDraftNow()
+  if (!saveDraftNow() && prompt.value)
+    emergencyDrafts.set(draftOwner, { promptId: prompt.value.id, text: essayText.value, secondsLeft: secondsLeft.value, overtime: overtime.value })
 })
 // 恢复草稿：挂载时调用一次；切换账号时也调用，先取消 pending 防抖、再按新身份重载。
 // 新身份有合法草稿则恢复；无草稿则回到选题页（清屏，不再留旧身份的全文）
 function restoreDraft() {
-  saveDraftNow()
+  if (!saveDraftNow() && prompt.value)
+    emergencyDrafts.set(draftOwner, { promptId: prompt.value.id, text: essayText.value, secondsLeft: secondsLeft.value, overtime: overtime.value })
   if (draftTimer)
     clearTimeout(draftTimer)
   draftTimer = null
@@ -195,7 +202,7 @@ function restoreDraft() {
   draftOwner = currentUser.value
   try {
     drafts.value = listDrafts('task2', draftOwner)
-    const d = readDraft('task2', draftOwner)
+    const d = emergencyDrafts.get(draftOwner) ?? readDraft('task2', draftOwner)
     if (d) {
       const p
         = TASK2_QUESTIONS.find(x => x.id === d.promptId)
@@ -352,13 +359,15 @@ function checklist(s: EssayStats): { ok: boolean; text: string }[] {
 }
 
 const archiveError = ref('')
-let pendingEssay: { owner: string | null; record: SavedTask2 } | null = null
+let pendingEssay: { owner: string | null; record: SavedTask2; draft: WritingDraft | null } | null = null
 function persistEssay(record: SavedTask2) {
-  pendingEssay = { owner: currentUser.value, record }
+  pendingEssay ??= { owner: draftOwner, record, draft: readOwnDraft('task2', draftOwner, record.promptId) }
   if (saveEssay(record)) {
+    if (pendingEssay.draft)
+      deleteDraft('task2', pendingEssay.owner, record.promptId, pendingEssay.draft)
     pendingEssay = null
     archiveError.value = ''
-    clearDraft()
+    drafts.value = listDrafts('task2', draftOwner)
   }
   else {
     archiveError.value
@@ -391,6 +400,7 @@ function submitEssay() {
     return
   view.value = 'result'
   if (prompt.value && stats.value) {
+    pendingEssay = null
     persistEssay({
       id: `${Date.now()}-${crypto.randomUUID()}`,
       promptId: prompt.value.id,

@@ -25,7 +25,9 @@ const { currentUser, logout } = useAuth()
 const router = useRouter()
 
 async function goRelogin() {
-  await logout()
+  const result = await logout()
+  if (result.cancelled)
+    return
   router.push('/login')
 }
 // 与写作 AI 批改一致：所有登录账号可用

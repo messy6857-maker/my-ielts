@@ -53,9 +53,15 @@ function pruneCollectionData(input, user, now = Date.now()) {
       }))
       .filter(x => x.id && x.e)
       .sort((a, b) => b.id.localeCompare(a.id))
-    if (entries.length > limit * 2)
-      cuts[base] = [cuts[base] || '', entries[limit * 2].id].sort().at(-1)
 
+    // Tombstone GC may only retire an identity range containing no protected live record.
+    if (entries.length > limit * 2) {
+      const candidate = entries[limit * 2].id
+      const oldestLive = entries.filter(x => !x.e.deleted && (!cuts[base] || x.id > cuts[base])).at(-1)?.id
+      const safe = !oldestLive || candidate < oldestLive ? candidate : entries.find(x => x.id < oldestLive)?.id
+      if (safe)
+        cuts[base] = [cuts[base] || '', safe].sort().at(-1)
+    }
     const live = entries.filter(
       x => !x.e.deleted && (!cuts[base] || x.id > cuts[base]),
     )

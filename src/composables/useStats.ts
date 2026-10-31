@@ -1,11 +1,15 @@
+import { dateTime, mergeLegacy } from '../utils/legacyMerge'
+import { bucketOf, partOf } from '../utils/statsArchive'
 import { compactStatsParts } from '../utils/migrateStudy'
-import { dateTime } from '../utils/legacyMerge'
 
 // 学习数据统计：自测卡片每次自评按日累计，供统计仪表盘使用
 // 注意：此前没有按日记录自评历史，本功能上线后才开始累计；
 // 上线前的自测正确率无法还原，只能从 SM-2 现状（已学词、到期词、累计记错）看当前状态。
 import {
+  accountKey,
+  compareStamp,
   entryKey,
+  envelope,
   readRecord,
   readRecords,
   saveEnvelope,
@@ -49,14 +53,19 @@ interface StatsPart {
   totals: Record<string, AttemptCount>
   days: AttemptRecord
 }
+function archivedPart(id: string, user: string | null) {
+  const bucket = readRecord<any>('stats_archive_v3', bucketOf(id), user)
+  const tuple = bucket?.writers?.[id]
+  return tuple ? partOf(tuple, id) : null
+}
 function loadPart(): StatsPart {
   const user = useAuth().currentUser.value
-  return (
-    readRecord<StatsPart>('stats_parts_v2', writerId(), user) ?? {
-      totals: {},
-      days: {},
-    }
-  )
+  readRecord<StatsPart>('stats_parts_v2', writerId(), user) // Import any legacy table before reading its version.
+  const archived = archivedPart(writerId(), user) as any
+  const raw = localStorage.getItem(entryKey('stats_parts_v2', writerId(), user))
+  const active = raw ? envelope(raw) : undefined
+  const latest = active && (!archived || compareStamp(active, archived) >= 0) ? active : archived
+  return latest && !latest.deleted ? latest.value as StatsPart : { totals: {}, days: {} }
 }
 function prune(part: StatsPart) {
   const cutoff = new Date()
@@ -97,7 +106,7 @@ export function decrementAttempt(
 export function getAttempts(): AttemptRecord {
   const user = useAuth().currentUser.value
   const key = entryKey('stats_parts_v2', 'legacy', user)
-  if (localStorage.getItem(key) === null) {
+  if (localStorage.getItem(key) === null && !archivedPart('legacy', user)) {
     const legacy = readJson<AttemptRecord>(nsKey('stats_attempts_v1'), {})
     const part: StatsPart = { totals: {}, days: legacy }
     for (const day of Object.values(legacy)) {
@@ -121,9 +130,32 @@ export function getAttempts(): AttemptRecord {
   const result: AttemptRecord = {}
   const totals: Record<string, AttemptCount> = {}
   const recent: Record<string, AttemptCount> = {}
-  for (const part of Object.values(
-    readRecords<StatsPart>('stats_parts_v2', user),
-  )) {
+  const writers = new Map<string, any>()
+  for (const bucket of Object.values(readRecords<any>('stats_archive_v3', user)))
+    for (const [id, tuple] of Object.entries(bucket.writers || {})) writers.set(id, partOf(tuple, id))
+
+  // Compare envelopes so a newer active revision (including an undo) replaces its archive baseline.
+  readRecords<StatsPart>('stats_parts_v2', user)
+  const prefix = `${accountKey('stats_parts_v2', user)}__entry_`
+  for (const key of Object.keys(localStorage).filter(k => k.startsWith(prefix))) {
+    if (!/^(?:[a-f\d]{4})+$/i.test(key.slice(prefix.length)))
+      continue
+    const id = key.slice(prefix.length).match(/.{4}/g)!.map(x => String.fromCharCode(Number.parseInt(x, 16))).join('')
+    const raw = localStorage.getItem(key)
+    if (!raw)
+      continue
+    const candidate = envelope(raw)
+    const archived = writers.get(id)
+    if (archived && archived.stamp[0] === 0 && candidate.stamp[0] === 0 && !archived.deleted && !candidate.deleted)
+      candidate.value = mergeLegacy('stats_parts_v2', archived.value, candidate.value)
+
+    if (!writers.has(id) || compareStamp(candidate, writers.get(id)) >= 0)
+      writers.set(id, candidate)
+  }
+  for (const record of writers.values()) {
+    if (record.deleted)
+      continue
+    const part = record.value as StatsPart
     prune(part)
     for (const [module, count] of Object.entries(part.totals))
       totals[module] = mergeCounts([totals[module] ?? emptyCount(), count])

@@ -154,7 +154,7 @@ function startTest() {
   // M-Opt-#4：0 秒草稿不再 1 秒后自动交卷，给二选一：确定 = 直接交卷查看
   // 成绩，取消 = 放弃草稿、全新开始。
   if (saved && saved.timeLeft <= 0) {
-    recovery.begin()
+    recovery.begin(saved)
     if (
       window.confirm(
         '该草稿剩余时间已到（0 秒）。点“确定”直接交卷查看成绩，点“取消”放弃草稿、全新开始。',
@@ -169,9 +169,11 @@ function startTest() {
       submit()
       return
     }
+    if (!recovery.clear())
+      return
     saved = null
   }
-  recovery.begin()
+  recovery.begin(saved)
   timeLeft.value = restoreTimeLeft(
     saved?.timeLeft,
     testPair.value.reading.timeLimit,
@@ -191,8 +193,8 @@ function startTest() {
 function discardDraftAndStart() {
   if (!window.confirm('放弃当前草稿并重新开始？草稿删除后无法恢复。'))
     return
-  recovery.clear()
-  startTest()
+  if (recovery.clear())
+    startTest()
 }
 
 onMounted(loadTest)
@@ -342,13 +344,14 @@ onBeforeRouteLeave(
 )
 function submit() {
   const total = totalScorePoints(allQuestions.value)
+  const score = countCorrect(allQuestions.value, answers.value, true)
   const result = recovery.submitResult({
     id: testId.value,
     label: testPair.value?.label ?? testId.value,
     kind: 'reading',
-    score: correctCount.value,
+    score,
     total,
-    band: band.value,
+    band: bandScore(score, total),
   })
   if (!result)
     return

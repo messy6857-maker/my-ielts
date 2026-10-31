@@ -76,6 +76,7 @@ export const mapBases = [
   'daily_parts_v2',
   'daily_resets_v2',
   'stats_parts_v2',
+  'stats_archive_v3',
   'timer_sessions_v2',
   'checkin_years_v2',
 ]
@@ -320,7 +321,8 @@ export function legacyEntries(
     ? (value as Record<string, unknown>)
     : {}
 }
-export function importTable(base: string, value: unknown, user: string | null) {
+export function importTable(base: string, value: unknown, user: string | null, source: 'local' | 'remote' = 'remote') {
+  const result = { imported: 0, keptNewer: 0, failed: 0 }
   for (const [id, item] of Object.entries(legacyEntries(base, value))) {
     const key = entryKey(base, id, user)
     const raw = localStorage.getItem(key)
@@ -330,19 +332,26 @@ export function importTable(base: string, value: unknown, user: string | null) {
         old = envelope(raw)
     }
     catch {
+      result.failed++
       continue
     }
-    if (old && (old.deleted || old.stamp[0] > 0))
+    if (old && (old.deleted || old.stamp[0] > 0)) {
+      result.keptNewer++
       continue
+    }
     const merged = old ? mergeLegacy(base, old.value, item) : item
     if (!old || JSON.stringify(old.value) !== JSON.stringify(merged)) {
-      saveEnvelope(
+      if (saveEnvelope(
         key,
         { __ielts: 2, stamp: [0, 'legacy'], value: merged },
-        'remote',
-      )
+        source,
+      ))
+        result.imported++
+      else result.failed++
     }
+    else { result.keptNewer++ }
   }
+  return result
 }
 export function readRecords<T>(
   base: string,
@@ -351,7 +360,7 @@ export function readRecords<T>(
   const key = accountKey(base, user)
   const marker = `myielts_local_migrated:${key}`
   if (!localStorage.getItem(marker)) {
-    importTable(
+    const imported = importTable(
       base,
       readValue(
         key,
@@ -360,7 +369,8 @@ export function readRecords<T>(
       user,
     )
     try {
-      localStorage.setItem(marker, '1')
+      if (!imported.failed)
+        localStorage.setItem(marker, '1')
     }
     catch {
       /* Repeating an idempotent import is safe. */
