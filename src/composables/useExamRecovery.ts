@@ -326,8 +326,19 @@ export function useExamRecovery(options: {
           JSON.stringify({ completedAt: Date.now() }),
         )
       }
-      if (options.started.value || sourceKey === key())
-        localStorage.removeItem(key())
+      if (options.started.value || sourceKey === key()) {
+        // 已交卷快照必须保留：开始屏靠它显示“已有交卷记录”。
+        // submitResult 先由 markSubmitted 写 submitted 快照、随后调 clear()，
+        // 若这里无条件删 key()，快照会被立即删掉，开始屏永远看不到。
+        let keepSubmitted = false
+        try {
+          keepSubmitted
+            = JSON.parse(localStorage.getItem(key()) ?? 'null')?.submitted === true
+        }
+        catch {}
+        if (!keepSubmitted)
+          localStorage.removeItem(key())
+      }
       if (sourceKey && localStorage.getItem(sourceKey) === sourceRaw)
         localStorage.removeItem(sourceKey)
     }
