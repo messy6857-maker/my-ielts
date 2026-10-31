@@ -1,16 +1,27 @@
-import type { ReadingMockTest } from './types'
+import type { ReadingMockTest } from "./types";
+
+/** Cambridge IELTS 20 p.100; endings paraphrased, original letter order retained */
+const ROBOT_ENDINGS = [
+  "sending robots into space",
+  "progress achieved in artificial intelligence to date",
+  "altering other worlds to suit human needs",
+  "damage that AI has already caused",
+];
+
+/** Cambridge IELTS 20 p.100 */
+const ROBOT_EXPERTS = ["Martin Rees", "Daniel Wolpert", "Kathleen Richardson"];
 
 /**
  * 剑桥雅思 20 Test 3 阅读（40 题）
  * 转录自 Cambridge IELTS 20 PDF，答案来自书后 answer key (PDF p.102)
  */
 export const cam20Test3Reading: ReadingMockTest = {
-  id: 'cam20-test3-reading',
-  title: '剑20 Test 3 阅读',
+  id: "cam20-test3-reading",
+  title: "剑20 Test 3 阅读",
   timeLimit: 3600,
   passages: [
     {
-      title: 'Passage 1：Frozen Food',
+      title: "Passage 1：Frozen Food",
       passage: `A US perspective on the development of the frozen food industry
 
 At some point in history, humans discovered that ice preserved food. There is evidence that winter ice was stored to preserve food in the summer as far back as 10,000 years ago. Two thousand years ago, the inhabitants of South America's Andean mountains had a unique means of conserving potatoes for later consumption. They froze them overnight, then trampled them to squeeze out the moisture, then dried them in the sun. This preserved their nutritional value - if not their aesthetic appeal.
@@ -35,31 +46,114 @@ Sales increased in the early 1940s, when World War II gave a boost to the frozen
 
 Today, the US frozen food industry has a turnover of over $67 billion annually, with $26.6 billion of that sold to consumers for home consumption. The remaining $40 billion in frozen food sales come through restaurants, cafeterias, hospitals and schools, and that represents a third of the total food service sales.`,
       questions: [
-        { id: 'Q1', type: 'fill-blank', question: '2,000 years ago, South America: People conserved the nutritional value of ____, using a method of freezing then drying', answer: 'potatoes' },
-        { id: 'Q2', type: 'fill-blank', question: '1851, USA: ____ was kept cool by ice during transportation in specially adapted trains', answer: 'butter' },
-        { id: 'Q3', type: 'fill-blank', question: '1880, Australia: Two kinds of ____ were the first frozen food shipped to England', answer: 'meat' },
-        { id: 'Q4', type: 'fill-blank', question: '1917 onwards, USA: Clarence Birdseye introduced quick-freezing methods, so that ____ did not spoil the food', answer: 'crystals' },
-        { id: 'Q5', type: 'fill-blank', question: '1917 onwards, USA: Clarence Birdseye introduced packaging products with ____, so the product was visible', answer: 'cellophane' },
-        { id: 'Q6', type: 'fill-blank', question: 'Early 1940s, USA: Frozen food became popular because of a shortage of ____', answer: 'tin' },
-        { id: 'Q7', type: 'fill-blank', question: '1950s, USA: A large number of homes now had a ____', answer: 'refrigerator' },
-        { id: 'Q8', type: 'tfng', question: 'The ice transportation business made some Boston ship owners very wealthy in the early 1800s.', options: ['TRUE', 'FALSE', 'NOT GIVEN'], answer: 2 },
-        { id: 'Q9', type: 'tfng', question: 'A disadvantage of the freezing process invented in Australia was that it affected the taste of food.', options: ['TRUE', 'FALSE', 'NOT GIVEN'], answer: 0 },
-        { id: 'Q10', type: 'tfng', question: 'Clarence Birdseye travelled to Labrador in order to learn how the Inuit people froze fish.', options: ['TRUE', 'FALSE', 'NOT GIVEN'], answer: 1 },
-        { id: 'Q11', type: 'tfng', question: 'Swanson Foods invested a great deal of money in the promotion of the TV Dinner.', options: ['TRUE', 'FALSE', 'NOT GIVEN'], answer: 0 },
-        { id: 'Q12', type: 'tfng', question: 'Swanson Foods developed a new style of container for the launch of the TV Dinner.', options: ['TRUE', 'FALSE', 'NOT GIVEN'], answer: 1 },
-        { id: 'Q13', type: 'tfng', question: 'The US frozen food industry is currently the largest in the world.', options: ['TRUE', 'FALSE', 'NOT GIVEN'], answer: 2 },
+        {
+          id: "Q1",
+          type: "fill-blank",
+          question:
+            "2,000 years ago, South America: People conserved the nutritional value of ____, using a method of freezing then drying",
+          answer: "potatoes",
+        },
+        {
+          id: "Q2",
+          type: "fill-blank",
+          question:
+            "1851, USA: ____ was kept cool by ice during transportation in specially adapted trains",
+          answer: "butter",
+        },
+        {
+          id: "Q3",
+          type: "fill-blank",
+          question:
+            "1880, Australia: Two kinds of ____ were the first frozen food shipped to England",
+          answer: "meat",
+        },
+        {
+          id: "Q4",
+          type: "fill-blank",
+          question:
+            "1917 onwards, USA: Clarence Birdseye introduced quick-freezing methods, so that ____ did not spoil the food",
+          answer: "crystals",
+        },
+        {
+          id: "Q5",
+          type: "fill-blank",
+          question:
+            "1917 onwards, USA: Clarence Birdseye introduced packaging products with ____, so the product was visible",
+          answer: "cellophane",
+        },
+        {
+          id: "Q6",
+          type: "fill-blank",
+          question:
+            "Early 1940s, USA: Frozen food became popular because of a shortage of ____",
+          answer: "tin",
+        },
+        {
+          id: "Q7",
+          type: "fill-blank",
+          question: "1950s, USA: A large number of homes now had a ____",
+          answer: "refrigerator",
+        },
+        {
+          id: "Q8",
+          type: "tfng",
+          question:
+            "The ice transportation business made some Boston ship owners very wealthy in the early 1800s.",
+          options: ["TRUE", "FALSE", "NOT GIVEN"],
+          answer: 2,
+        },
+        {
+          id: "Q9",
+          type: "tfng",
+          question:
+            "A disadvantage of the freezing process invented in Australia was that it affected the taste of food.",
+          options: ["TRUE", "FALSE", "NOT GIVEN"],
+          answer: 0,
+        },
+        {
+          id: "Q10",
+          type: "tfng",
+          question:
+            "Clarence Birdseye travelled to Labrador in order to learn how the Inuit people froze fish.",
+          options: ["TRUE", "FALSE", "NOT GIVEN"],
+          answer: 1,
+        },
+        {
+          id: "Q11",
+          type: "tfng",
+          question:
+            "Swanson Foods invested a great deal of money in the promotion of the TV Dinner.",
+          options: ["TRUE", "FALSE", "NOT GIVEN"],
+          answer: 0,
+        },
+        {
+          id: "Q12",
+          type: "tfng",
+          question:
+            "Swanson Foods developed a new style of container for the launch of the TV Dinner.",
+          options: ["TRUE", "FALSE", "NOT GIVEN"],
+          answer: 1,
+        },
+        {
+          id: "Q13",
+          type: "tfng",
+          question:
+            "The US frozen food industry is currently the largest in the world.",
+          options: ["TRUE", "FALSE", "NOT GIVEN"],
+          answer: 2,
+        },
       ],
     },
     {
       title: "Passage 2：Can the planet's coral reefs be saved?",
       headings: [
-        'i. Tried and tested solutions',
-        'ii. Cooperation beneath the waves',
-        'iii. Working to lessen the problems',
-        'iv. Disagreement about the accuracy of a certain phrase',
-        'v. Two clear educational goals',
-        'vi. Promoting hope',
-        'vii. A warning of further trouble ahead',
+        "i. Tried and tested solutions",
+        "ii. Cooperation beneath the waves",
+        "iii. Working to lessen the problems",
+        "iv. Disagreement about the accuracy of a certain phrase",
+        "v. Two clear educational goals",
+        "vi. Promoting hope",
+        "vii. A warning of further trouble ahead",
       ],
       passage: `A
 Conservationists have put the final touches to a giant artificial reef they have been assembling at the world-renowned Zoological Society of London (London Zoo). Samples of the planet's most spectacular corals - vivid green branching coral, yellow scroll, blue ridge and many more species - have been added to the giant tank along with fish that thrive in their presence: blue tang, clownfish and many others. The reef is in the zoo's new gallery, Tiny Giants, which is dedicated to the minuscule invertebrate creatures that sustain life across the planet. The coral reef tank and its seven-metre-wide window form the core of the exhibition.
@@ -81,21 +175,64 @@ However, scientists are trying to pinpoint hardy types of coral that could survi
 F
 Research in these fields is being conducted in laboratories around the world, with the London Zoo centre linked to this global network. Studies carried out in one centre can then be tested in others. The resulting young coral can then be displayed in the tank in Tiny Giants. 'The crucial point is that the progress we make in making coral better able to survive in a warming world can be shown to the public and encourage them to believe that we can do something to save the planet's reefs,' said Pearce-Kelly. 'Saving our coral reefs is now a critically important ecological goal.'`,
       questions: [
-        { id: 'Q14', type: 'map-label', question: 'Section A', answer: 'v' },
-        { id: 'Q15', type: 'map-label', question: 'Section B', answer: 'ii' },
-        { id: 'Q16', type: 'map-label', question: 'Section C', answer: 'iv' },
-        { id: 'Q17', type: 'map-label', question: 'Section D', answer: 'vii' },
-        { id: 'Q18', type: 'map-label', question: 'Section E', answer: 'iii' },
-        { id: 'Q19', type: 'map-label', question: 'Section F', answer: 'vi' },
-        { id: 'Q20-21', type: 'multi-select', question: 'Which TWO of these causes of damage to coral reefs are mentioned by the writer of the text? (Choose TWO letters, A–E)', options: ['A a rising number of extreme storms', 'B the removal of too many fish from the sea', 'C the contamination of the sea from waste', 'D increased disease among marine species', 'E alterations in the usual flow of water in the seas'], answer: [2, 4] },
-        { id: 'Q22-23', type: 'multi-select', question: 'Which TWO of the following statements are true of the researchers at London Zoo? (Choose TWO letters, A–F)', options: ['A They are hoping to expand the numbers of different corals being bred in laboratories.', 'B They want to identify corals that can cope well with the changed sea conditions.', 'C They are looking at ways of creating artificial reefs that corals could grow on.', 'D They are trying out methods that would speed up reproduction in some corals.', 'E They are investigating materials that might protect reefs from higher temperatures.'], answer: [1, 3] },
-        { id: 'Q24', type: 'fill-blank', question: 'Corals have a number of ____ which they use to collect their food', answer: 'tentacles' },
-        { id: 'Q25', type: 'fill-blank', question: 'Algae gain ____ from being inside the coral', answer: 'protection' },
-        { id: 'Q26', type: 'fill-blank', question: 'Increases in the warmth of the sea water can remove the ____ from coral', answer: 'colour' },
+        { id: "Q14", type: "map-label", question: "Section A", answer: "v" },
+        { id: "Q15", type: "map-label", question: "Section B", answer: "ii" },
+        { id: "Q16", type: "map-label", question: "Section C", answer: "iv" },
+        { id: "Q17", type: "map-label", question: "Section D", answer: "vii" },
+        { id: "Q18", type: "map-label", question: "Section E", answer: "iii" },
+        { id: "Q19", type: "map-label", question: "Section F", answer: "vi" },
+        {
+          id: "Q20-21",
+          type: "multi-select",
+          question:
+            "Which TWO of these causes of damage to coral reefs are mentioned by the writer of the text? (Choose TWO letters, A–E)",
+          options: [
+            "A a rising number of extreme storms",
+            "B the removal of too many fish from the sea",
+            "C the contamination of the sea from waste",
+            "D increased disease among marine species",
+            "E alterations in the usual flow of water in the seas",
+          ],
+          answer: [2, 4],
+        },
+        {
+          id: "Q22-23",
+          type: "multi-select",
+          question:
+            "Which TWO of the following statements are true of the researchers at London Zoo? (Choose TWO letters, A–F)",
+          options: [
+            "A They are hoping to expand the numbers of different corals being bred in laboratories.",
+            "B They want to identify corals that can cope well with the changed sea conditions.",
+            "C They are looking at ways of creating artificial reefs that corals could grow on.",
+            "D They are trying out methods that would speed up reproduction in some corals.",
+            "E They are investigating materials that might protect reefs from higher temperatures.",
+          ],
+          answer: [1, 3],
+        },
+        {
+          id: "Q24",
+          type: "fill-blank",
+          question:
+            "Corals have a number of ____ which they use to collect their food",
+          answer: "tentacles",
+        },
+        {
+          id: "Q25",
+          type: "fill-blank",
+          question: "Algae gain ____ from being inside the coral",
+          answer: "protection",
+        },
+        {
+          id: "Q26",
+          type: "fill-blank",
+          question:
+            "Increases in the warmth of the sea water can remove the ____ from coral",
+          answer: "colour",
+        },
       ],
     },
     {
-      title: 'Passage 3：Robots and us',
+      title: "Passage 3：Robots and us",
       passage: `Three leaders in their fields answer questions about our relationships with robots.
 
 When asked 'Should robots be used to colonise other planets?', cosmology and astrophysics Professor Martin Rees said he believed the solar system would be mapped by robotic craft by the end of the century. 'The next step would be mining of asteroids, enabling fabrication of large structures in space without having to bring all the raw materials from Earth. ... I think this is more realistic and benign than the ... "terraforming"* of planets.' He maintains that colonised planets 'should be preserved with a status that is analogous to Antarctica here on Earth.'
@@ -125,21 +262,137 @@ Finally, on the question of science fiction, Richardson pointed out that in mode
 * terraforming: modifying a planet's atmosphere to suit human needs
 ** singularity: the point when robots will be able to start creating ever more sophisticated versions of themselves`,
       questions: [
-        { id: 'Q27', type: 'map-label', question: 'For our own safety, humans will need to restrict the abilities of robots.', answer: 'A' },
-        { id: 'Q28', type: 'map-label', question: 'The risk of robots harming us is less serious than humans believe it to be.', answer: 'C' },
-        { id: 'Q29', type: 'map-label', question: 'It will take many decades for robot intelligence to be as imaginative as human intelligence.', answer: 'B' },
-        { id: 'Q30', type: 'map-label', question: 'We may have to start considering whether we are treating robots fairly.', answer: 'A' },
-        { id: 'Q31', type: 'map-label', question: 'Robots are probably of more help to us on Earth than in space.', answer: 'B' },
-        { id: 'Q32', type: 'map-label', question: 'The ideas in high-quality science fiction may prove to be just as accurate as those found in the work of mediocre scientists.', answer: 'A' },
-        { id: 'Q33', type: 'map-label', question: 'There are those who look forward to robots developing greater intelligence.', answer: 'C' },
-        { id: 'Q34', type: 'map-label', question: 'Richardson and Rees express similar views regarding the ethical aspect of ____', answer: 'C' },
-        { id: 'Q35', type: 'map-label', question: 'Rees and Wolpert share an opinion about the extent of ____', answer: 'B' },
-        { id: 'Q36', type: 'map-label', question: 'Wolpert disagrees with Richardson on the question of ____', answer: 'D' },
-        { id: 'Q37', type: 'multiple-choice', question: 'What point does Richardson make about fear of machines?', options: ['A It has grown alongside the development of ever more advanced robots.', 'B It is the result of our inclination to attribute human characteristics to non-human entities.', 'C It has its origins in basic misunderstandings about how inanimate objects function.', 'D It demonstrates a key difference between human intelligence and machine intelligence.'], answer: 1 },
-        { id: 'Q38', type: 'multiple-choice', question: 'What potential advance does Rees see as a cause for concern?', options: ['A robots outnumbering people', 'B robots having abilities which humans do not', 'C artificial intelligence developing independent thought', 'D artificial intelligence taking over every aspect of our lives'], answer: 2 },
-        { id: 'Q39', type: 'multiple-choice', question: 'What does Wolpert emphasise in his response to the question about science fiction?', options: ['A how science fiction influences our attitudes to robots', 'B how fundamental robots are to the science fiction genre', 'C how the image of robots in science fiction has changed over time', 'D how reactions to similar portrayals of robots in science fiction may vary'], answer: 1 },
-        { id: 'Q40', type: 'multiple-choice', question: 'What is Richardson doing in her comment about reality and fantasy?', options: ['A warning people not to confuse one with the other', 'B outlining ways in which one has impacted on the other', 'C recommending a change of approach in how people view them', 'D explaining why scientists have a different perspective on them from other people'], answer: 2 },
+        {
+          id: "Q27",
+          type: "map-label",
+          question:
+            "For our own safety, humans will need to restrict the abilities of robots.",
+          answer: "A",
+          options: ROBOT_EXPERTS,
+        },
+        {
+          id: "Q28",
+          type: "map-label",
+          question:
+            "The risk of robots harming us is less serious than humans believe it to be.",
+          answer: "C",
+          options: ROBOT_EXPERTS,
+        },
+        {
+          id: "Q29",
+          type: "map-label",
+          question:
+            "It will take many decades for robot intelligence to be as imaginative as human intelligence.",
+          answer: "B",
+          options: ROBOT_EXPERTS,
+        },
+        {
+          id: "Q30",
+          type: "map-label",
+          question:
+            "We may have to start considering whether we are treating robots fairly.",
+          answer: "A",
+          options: ROBOT_EXPERTS,
+        },
+        {
+          id: "Q31",
+          type: "map-label",
+          question:
+            "Robots are probably of more help to us on Earth than in space.",
+          answer: "B",
+          options: ROBOT_EXPERTS,
+        },
+        {
+          id: "Q32",
+          type: "map-label",
+          question:
+            "The ideas in high-quality science fiction may prove to be just as accurate as those found in the work of mediocre scientists.",
+          answer: "A",
+          options: ROBOT_EXPERTS,
+        },
+        {
+          id: "Q33",
+          type: "map-label",
+          question:
+            "There are those who look forward to robots developing greater intelligence.",
+          answer: "C",
+          options: ROBOT_EXPERTS,
+        },
+        {
+          id: "Q34",
+          type: "map-label",
+          question:
+            "Richardson and Rees express similar views regarding the ethical aspect of ____",
+          answer: "C",
+          options: ROBOT_ENDINGS,
+        },
+        {
+          id: "Q35",
+          type: "map-label",
+          question:
+            "Rees and Wolpert share an opinion about the extent of ____",
+          answer: "B",
+          options: ROBOT_ENDINGS,
+        },
+        {
+          id: "Q36",
+          type: "map-label",
+          question: "Wolpert disagrees with Richardson on the question of ____",
+          answer: "D",
+          options: ROBOT_ENDINGS,
+        },
+        {
+          id: "Q37",
+          type: "multiple-choice",
+          question: "What point does Richardson make about fear of machines?",
+          options: [
+            "A It has grown alongside the development of ever more advanced robots.",
+            "B It is the result of our inclination to attribute human characteristics to non-human entities.",
+            "C It has its origins in basic misunderstandings about how inanimate objects function.",
+            "D It demonstrates a key difference between human intelligence and machine intelligence.",
+          ],
+          answer: 1,
+        },
+        {
+          id: "Q38",
+          type: "multiple-choice",
+          question:
+            "What potential advance does Rees see as a cause for concern?",
+          options: [
+            "A robots outnumbering people",
+            "B robots having abilities which humans do not",
+            "C artificial intelligence developing independent thought",
+            "D artificial intelligence taking over every aspect of our lives",
+          ],
+          answer: 2,
+        },
+        {
+          id: "Q39",
+          type: "multiple-choice",
+          question:
+            "What does Wolpert emphasise in his response to the question about science fiction?",
+          options: [
+            "A how science fiction influences our attitudes to robots",
+            "B how fundamental robots are to the science fiction genre",
+            "C how the image of robots in science fiction has changed over time",
+            "D how reactions to similar portrayals of robots in science fiction may vary",
+          ],
+          answer: 1,
+        },
+        {
+          id: "Q40",
+          type: "multiple-choice",
+          question:
+            "What is Richardson doing in her comment about reality and fantasy?",
+          options: [
+            "A warning people not to confuse one with the other",
+            "B outlining ways in which one has impacted on the other",
+            "C recommending a change of approach in how people view them",
+            "D explaining why scientists have a different perspective on them from other people",
+          ],
+          answer: 2,
+        },
       ],
     },
   ],
-}
+};

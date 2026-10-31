@@ -6,6 +6,7 @@ import { dateTime } from '../utils/legacyMerge'
 // 上线前的自测正确率无法还原，只能从 SM-2 现状（已学词、到期词、累计记错）看当前状态。
 import {
   entryKey,
+  readRecord,
   readRecords,
   saveEnvelope,
   saveRecord,
@@ -50,8 +51,12 @@ interface StatsPart {
 }
 function loadPart(): StatsPart {
   const user = useAuth().currentUser.value
-  const all = readRecords<StatsPart>('stats_parts_v2', user)
-  return all[writerId()] ?? { totals: {}, days: {} }
+  return (
+    readRecord<StatsPart>('stats_parts_v2', writerId(), user) ?? {
+      totals: {},
+      days: {},
+    }
+  )
 }
 function prune(part: StatsPart) {
   const cutoff = new Date()
@@ -124,7 +129,7 @@ export function getAttempts(): AttemptRecord {
       totals[module] = mergeCounts([totals[module] ?? emptyCount(), count])
     for (const [date, records] of Object.entries(part.days)) {
       for (const [module, count] of Object.entries(records)) {
-        ;(result[date] ??= {})[module] = mergeCounts([
+        (result[date] ??= {})[module] = mergeCounts([
           result[date]?.[module] ?? emptyCount(),
           count,
         ])

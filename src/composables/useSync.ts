@@ -16,6 +16,7 @@ import {
 } from './syncClient'
 import {
   accountNotice,
+  dismissAccountNotice,
   finishGuestMigration,
   hasPendingGuestMigration,
   onLocalWrite,
@@ -96,9 +97,8 @@ export const useSync = createGlobalState(() => {
       // while unchanged) and surfaced in Settings; the rest of the payload
       // already synced. Keys sent in this push and not rejected are no
       // longer poison (re-probe/legacy entries): drop them from quarantine.
-      if (handleRejectedKeys(owner, result)) {
-        rejectedNotice.value
-          = `${rejectedKeysOf(result.rejected).length} 条学习记录因格式异常未同步，已隔离不再上传，详情见设置页`
+      if (handleRejectedKeys(owner, result, payload)) {
+        rejectedNotice.value = `${rejectedKeysOf(result.rejected).length} 条学习记录因格式异常未同步，已隔离不再上传，详情见设置页`
       }
       else if (!getQuarantinedKeys(owner).length) {
         // A clean push clears the notice only once nothing is quarantined
@@ -116,6 +116,7 @@ export const useSync = createGlobalState(() => {
       if (atStart === generation)
         localStorage.removeItem(pendingKey(owner))
       // 成功同步后清掉“已通知”标记，下一次失败（即使原因相同）是新一轮失败，应再提示一次。
+      dismissAccountNotice(lastNotifiedSyncError)
       lastNotifiedSyncError = ''
       lastSyncAt.value = Date.now()
       status.value = 'ok'
@@ -125,6 +126,17 @@ export const useSync = createGlobalState(() => {
     inFlight = job
     try {
       return await job
+    }
+    catch (error) {
+      localStorage.setItem(pendingKey(owner), '1')
+      failure({
+        status: 0,
+        message:
+          error instanceof Error
+            ? error.message
+            : '本机同步准备失败，请导出备份后重试',
+      })
+      return false
     }
     finally {
       if (inFlight === job)
@@ -160,6 +172,12 @@ export const useSync = createGlobalState(() => {
     if (result.data)
       applySyncData(result.data, owner)
     finishGuestMigration(owner)
+    clearAuthError()
+    dismissAccountNotice(lastNotifiedSyncError)
+    lastNotifiedSyncError = ''
+    errorMsg.value = ''
+    lastSyncAt.value = Date.now()
+    status.value = pending(owner) ? 'idle' : 'ok'
     return true
   }
   function schedulePush(key?: string) {

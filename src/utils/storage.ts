@@ -20,24 +20,24 @@ let batchSource: 'local' | 'remote' | null = null
 const CLOCK_FLOOR_KEY = 'myielts_clock_floor_v1'
 let clock: number | null = null
 function currentClockFloor(): number {
-  if (clock === null) {
-    clock = 0
-    try {
-      const stored = typeof localStorage !== 'undefined'
-        ? Number(localStorage.getItem(CLOCK_FLOOR_KEY))
-        : Number.NaN
-      if (Number.isFinite(stored) && stored > 0)
-        clock = stored
-    }
-    catch {
-      /* 无存储环境（如 SSR）下退化为会话内棘轮。 */
-    }
+  clock ??= 0
+  try {
+    const stored = Number(localStorage.getItem(CLOCK_FLOOR_KEY))
+    if (Number.isSafeInteger(stored) && stored > clock)
+      clock = stored
+  }
+  catch {
+    /* Keep the in-memory floor when storage is unavailable. */
   }
   return clock
 }
+
 function persistClock(value: number) {
   try {
-    localStorage.setItem(CLOCK_FLOOR_KEY, String(value))
+    localStorage.setItem(
+      CLOCK_FLOOR_KEY,
+      String(Math.max(value, currentClockFloor())),
+    )
   }
   catch {
     /* 存储失败不阻塞写本身；下限仍保留在内存棘轮里。 */
@@ -66,6 +66,7 @@ export function writerId() {
 }
 export const mapBases = [
   'progress_v1',
+  'vocabulary_spell_v2',
   'sr_vocabulary_v1',
   'listening179_sr_v1',
   'reading538_sr_v1',
@@ -97,9 +98,11 @@ const scalarBases = [
   'stats_archive_v2',
   'checkin_archive_v2',
   'archive_retention_v2',
+  'collection_retention_v3',
   'migration_version_v2',
 ]
 const legacyBases = [
+  'vocabulary_spell_v1',
   'mistakes_v1',
   'flashcard_daily_new_v1',
   'listening179_daily_new_v1',
@@ -174,7 +177,9 @@ export function compareStamp(a: Envelope, b: Envelope) {
 }
 export function envelope(raw: string): Envelope {
   const value: unknown = JSON.parse(raw)
-  return isEnvelope(value) ? value : { __ielts: 2, stamp: [0, 'legacy'], value }
+  return isEnvelope(value)
+    ? value
+    : { __ielts: 2, stamp: [0, 'legacy'], value }
 }
 export function readValue<T>(key: string, fallback: T): T {
   try {
@@ -272,7 +277,11 @@ export function saveValue(key: string, value: unknown, deleted = false) {
     && JSON.stringify(previous.value) === JSON.stringify(value)
   )
     return true
-  clock = Math.max(currentClockFloor() + 1, Date.now(), (previous?.stamp[0] ?? 0) + 1)
+  clock = Math.max(
+    currentClockFloor() + 1,
+    Date.now(),
+    (previous?.stamp[0] ?? 0) + 1,
+  )
   return saveEnvelope(key, {
     __ielts: 2,
     stamp: [clock, writerId()],
@@ -371,6 +380,27 @@ export function readRecords<T>(
   }
   return records
 }
+/** Read a single entry without enumerating a migrated collection. */
+export function readRecord<T>(
+  base: string,
+  id: string | number,
+  user: string | null,
+): T | undefined {
+  const marker = `myielts_local_migrated:${accountKey(base, user)}`
+  if (!localStorage.getItem(marker))
+    readRecords(base, user)
+  return readValue<T | undefined>(entryKey(base, String(id), user), undefined)
+}
+export function removeStoredValue(key: string) {
+  try {
+    localStorage.removeItem(key)
+    notifyStorage(key, 'remote')
+    return true
+  }
+  catch {
+    return false
+  }
+}
 export function saveRecord(
   base: string,
   id: string,
@@ -389,6 +419,8 @@ if (typeof window !== 'undefined') {
   window.addEventListener('storage', (event) => {
     if (event.storageArea && event.storageArea !== localStorage)
       return
+    if (event.key === CLOCK_FLOOR_KEY)
+      currentClockFloor()
     notifyStorage(event.key ?? '', 'remote')
   })
 }

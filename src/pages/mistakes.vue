@@ -1,6 +1,18 @@
 <script setup lang="ts">
 import type { MistakeItem } from '../composables/useStudyData'
 
+const { currentUser } = useAuth()
+let reviewTimer: ReturnType<typeof setTimeout> | undefined
+watch(
+  currentUser,
+  () => {
+    clearTimeout(reviewTimer)
+    stopReview()
+  },
+  { flush: 'sync' },
+)
+onUnmounted(() => clearTimeout(reviewTimer))
+
 const { grouped, totalCount, removeMistake, clearMistakes } = useMistakes()
 
 const isReviewing = ref(false)
@@ -40,14 +52,19 @@ function submitAnswer() {
   if (!reviewItem.value || reviewState.value !== 'answering')
     return
   const answer = reviewInput.value.trim().toLowerCase()
-  const expected = reviewItem.value.title.trim().toLowerCase()
-  if (answer && answer === expected) {
+  const expected = reviewItem.value.title
+    .toLowerCase()
+    .split(/\s+\/\s+|\s*;\s*/)
+    .map(s => s.trim())
+  if (answer && expected.includes(answer)) {
     // 答对：从错词本移除
     reviewState.value = 'correct'
     const key = reviewItem.value.key
-    setTimeout(() => {
-      removeMistake(key)
-      nextCard()
+    removeMistake(key)
+    const owner = currentUser.value
+    reviewTimer = setTimeout(() => {
+      if (currentUser.value === owner)
+        nextCard()
     }, 800)
   }
   else {
@@ -72,8 +89,7 @@ const legacyListeningKeys = computed(() =>
   allMistakes()
     .filter(
       m =>
-        m.key.startsWith('listening:')
-        && !m.key.startsWith('listening179:'),
+        m.key.startsWith('listening:') && !m.key.startsWith('listening179:'),
     )
     .map(m => m.key),
 )

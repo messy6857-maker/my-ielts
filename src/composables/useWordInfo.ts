@@ -2,8 +2,9 @@
  * 单词例句 + 同义词：查内置预抓取数据（构建时由 scripts/fetch-examples.mjs 生成），
  * 运行时零联网、零等待。查不到时返回 null，调用方用本地例句降级。
  */
-import { wordSentences } from '../pages/vocabulary/wordSentences'
 import type { WordSentence } from '../pages/vocabulary/wordSentences'
+
+const wordSentences: Record<string, WordSentence> = {}
 
 export interface WordInfo {
   /** 例句实际所属的单词（可能是派生词） */
@@ -50,4 +51,40 @@ export function getWordInfoWithFallback(
       fallback = info
   }
   return fallback
+}
+
+const wordModules = import.meta.glob(
+  '../pages/vocabulary/word-info/*.json',
+) as Record<string, () => Promise<{ default: Record<string, WordSentence> }>>
+const wordLoads = new Map<string, Promise<void>>()
+export async function loadWordInfoWithFallback(words: string[]) {
+  const letters = [
+    ...new Set(
+      words.map(w =>
+        /^[a-z]/i.test(w.trim()) ? w.trim()[0].toLowerCase() : 'other',
+      ),
+    ),
+  ]
+  await Promise.all(
+    letters.map((letter) => {
+      if (!wordLoads.has(letter)) {
+        wordLoads.set(
+          letter,
+          (async () => {
+            const data
+              = await wordModules[
+                `../pages/vocabulary/word-info/${letter}.json`
+              ]?.()
+            if (data)
+              Object.assign(wordSentences, data.default)
+          })().catch((error) => {
+            wordLoads.delete(letter)
+            throw error
+          }),
+        )
+      }
+      return wordLoads.get(letter)
+    }),
+  )
+  return getWordInfoWithFallback(words)
 }

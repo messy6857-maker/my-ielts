@@ -53,6 +53,16 @@ function seed(base: string, id: string, value: unknown, owner: string | null) {
 }
 export function migrateStudy(owner: string | null) {
   batchStorage(() => {
+    const spelling = readValue<Record<string, Record<string, string>>>(
+      accountKey('vocabulary_spell_v1', owner),
+      {},
+    )
+    for (const [chapter, words] of Object.entries(spelling || {})) {
+      for (const [id, value] of Object.entries(words || {})) {
+        if (typeof value === 'string')
+          seed('vocabulary_spell_v2', `${chapter}|${id}`, value, owner)
+      }
+    }
     const mistakes = readValue<any[]>(accountKey('mistakes_v1', owner), [])
     if (Array.isArray(mistakes)) {
       for (const item of mistakes) {

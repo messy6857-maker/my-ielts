@@ -26,6 +26,8 @@ export function saveMockRecord(r: Omit<MockRecord, 'date'>) {
     record,
     owner(),
   )
+  if (!saved)
+    return false
   for (const old of Object.entries(
     readRecords<MockRecord>('mock_history_v1', owner()),
   )

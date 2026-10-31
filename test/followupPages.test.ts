@@ -79,7 +79,17 @@ it.each(['reading', 'listening'])(
     session.state.answers.Q1 = 'valuable answer'
     session.state.timeLeft = 321
     const otherKey = `${accountKey(`mock_draft_v1_${kind}_cam21-test1`, 'alice')}__session_other`
-    localStorage.setItem(otherKey, JSON.stringify({ version: 1, kind, testId: 'cam21-test1', answers: { Q1: 'other tab answer' }, timeLeft: 100, updatedAt: Date.now() + 10000 }))
+    localStorage.setItem(
+      otherKey,
+      JSON.stringify({
+        version: 1,
+        kind,
+        testId: 'cam21-test1',
+        answers: { Q1: 'other tab answer' },
+        timeLeft: 100,
+        updatedAt: Date.now() + 10000,
+      }),
+    )
     // Simulate another tab replacing the token; the authentication storage listener invalidates this account.
     setToken('bob-token', 'bob')
     window.dispatchEvent(
@@ -104,15 +114,21 @@ it.each(['reading', 'listening'])(
     expect(session.w.text()).toContain('继续上次作答')
     session.state.startTest()
     expect(session.state.answers.Q1).toBe('valuable answer')
-    expect(JSON.parse(localStorage.getItem(otherKey)!).answers.Q1).toBe('other tab answer')
+    expect(JSON.parse(localStorage.getItem(otherKey)!).answers.Q1).toBe(
+      'other tab answer',
+    )
     expect(session.state.timeLeft).toBeGreaterThan(0)
   },
 )
 it.each(['task1', 'task2'])(
   '%s timed-out drafts can continue without resetting the original clock',
   async (task) => {
-    const { TASK1_PROMPTS } = await import('../src/pages/writing/task1/prompts')
-    const { CAMBRIDGE_WRITING } = await import('../src/pages/writing/cambridge')
+    const { TASK1_PROMPTS } = await import(
+      '../src/pages/writing/task1/prompts'
+    )
+    const { CAMBRIDGE_WRITING } = await import(
+      '../src/pages/writing/cambridge'
+    )
     const prompt
       = task === 'task1'
         ? TASK1_PROMPTS[0]
@@ -478,18 +494,20 @@ it.each(['reading', 'listening'])(
         ? (await import('../src/pages/mock/reading-test.vue')).default
         : (await import('../src/pages/mock/listening-test.vue')).default
     const session = await show(Page, `/mock/${kind}-test`)
+    vi.useFakeTimers()
     session.state.startTest()
     auth.currentUser.value = 'bob'
     await nextTick()
     expect(session.state.recovery.blocked.value).toBe(true)
     const frozen = session.state.timeLeft
-    await new Promise(resolve => setTimeout(resolve, 1100))
+    await vi.advanceTimersByTimeAsync(2000)
     expect(session.state.timeLeft).toBe(frozen)
     auth.currentUser.value = 'alice'
     await nextTick()
     expect(session.state.recovery.blocked.value).toBe(false)
-    await new Promise(resolve => setTimeout(resolve, 1100))
+    await vi.advanceTimersByTimeAsync(2000)
     expect(session.state.timeLeft).toBeLessThan(frozen)
+    vi.useRealTimers()
   },
 )
 
@@ -499,7 +517,11 @@ it('listening map-label set shows its options box and limits input to a single l
   await session.router.push({ query: { test: 'cam20-test2' } })
   // 等切题真正完成：只看 loading 会漏掉 watcher 尚未触发的窗口，
   // 以 testPair.id 为准轮询。
-  for (let i = 0; i < 200 && session.state.testPair?.id !== 'cam20-test2'; i++) {
+  for (
+    let i = 0;
+    i < 200 && session.state.testPair?.id !== 'cam20-test2';
+    i++
+  ) {
     await nextTick()
     await flushPromises()
     await new Promise(resolve => setTimeout(resolve, 5))
@@ -508,11 +530,15 @@ it('listening map-label set shows its options box and limits input to a single l
   session.state.startTest()
   session.state.activePart = 2
   await nextTick()
-  expect(session.w.html()).toContain('The information given about this was too vague.')
+  expect(session.w.html()).toContain(
+    'The information given about this was too vague.',
+  )
   const inputs = session.w.findAll('input[placeholder="输入字母"]')
   expect(inputs.length).toBeGreaterThan(0)
   // 听力 map-label 答案均为单个字母，maxlength=1（阅读侧标题题最长 viii 仍保留 4，不在此页断言）
-  inputs.forEach((input: any) => expect(input.attributes('maxlength')).toBe('1'))
+  inputs.forEach((input: any) =>
+    expect(input.attributes('maxlength')).toBe('1'),
+  )
 })
 
 it('cam20-test3 reading shows its heading list', async () => {
@@ -521,7 +547,11 @@ it('cam20-test3 reading shows its heading list', async () => {
   await session.router.push({ query: { test: 'cam20-test3' } })
   // 等切题真正完成：只看 loading 会漏掉 watcher 尚未触发的窗口，
   // 以 testPair.id 为准轮询。
-  for (let i = 0; i < 200 && session.state.testPair?.id !== 'cam20-test3'; i++) {
+  for (
+    let i = 0;
+    i < 200 && session.state.testPair?.id !== 'cam20-test3';
+    i++
+  ) {
     await nextTick()
     await flushPromises()
     await new Promise(resolve => setTimeout(resolve, 5))

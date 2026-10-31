@@ -460,9 +460,12 @@ export async function gradeSpeakingWithAI(
   return parsed
 }
 // 测试连接：发一个极短请求验证 Key/地址/模型可用
-export async function testAIConnection(): Promise<string> {
-  const settings = getAISettings()
-  if (!hasAISettings())
+export async function testAIConnection(
+  settings: AISettings = getAISettings(),
+): Promise<string> {
+  if (
+    ![settings.baseUrl, settings.apiKey, settings.model].every(s => s.trim())
+  )
     throw new Error('请先填写 API 地址、Key 和模型')
   const content = await callChatApi(settings, '只回复 {"ok":true}', 'ping')
   // 能拿到模型回复即算连通，不强求标准 JSON

@@ -1,3 +1,4 @@
+import { pruneCollectionData } from '../utils/retention'
 import { mergeLegacy } from '../utils/legacyMerge'
 import { migrateStudy } from '../utils/migrateStudy'
 import { pruneArchives } from '../utils/archives'
@@ -12,6 +13,7 @@ import {
   notifyStorage,
   readRecords,
   readValue,
+  removeStoredValue,
   saveEnvelope,
   saveValue,
   storageFailures,
@@ -91,20 +93,17 @@ export interface ApiResult {
    * （部署窗口内前后端可能错位），见 rejectedKeysOf。
    */
   rejected?: RejectedEntry[]
+  sentData?: Record<string, string>
   updatedAt?: number
   protocolVersion?: number
 }
 /** 服务端 rejected 原因三类：未知/跨账号 base、非字符串原始值、decode 失败。 */
-export type RejectedReason = 'unknown-base' | 'non-string' | 'decode-failed'
+export type RejectedReason = 'unknown-base' | 'non-string' | 'decode-failed' | 'entry-too-large'
 export type RejectedEntry = string | { key: string; reason?: string }
 /** 归一化 rejected 为纯 key 列表（兼容 string[] 旧形状与对象新形状）。 */
 export function rejectedKeysOf(rejected?: RejectedEntry[]): string[] {
   return (rejected ?? []).flatMap(e =>
-    typeof e === 'string'
-      ? [e]
-      : e && typeof e.key === 'string'
-        ? [e.key]
-        : [],
+    typeof e === 'string' ? [e] : e && typeof e.key === 'string' ? [e.key] : [],
   )
 }
 /** 从一次 rejected 响应中取出 key → 原因（无原因的条目不进表）。 */
@@ -117,7 +116,9 @@ export function rejectedReasonsOf(
       e
       && typeof e !== 'string'
       && typeof e.key === 'string'
-      && (e.reason === 'unknown-base' || e.reason === 'non-string' || e.reason === 'decode-failed')
+      && (e.reason === 'unknown-base'
+        || e.reason === 'non-string'
+        || e.reason === 'decode-failed' || e.reason === 'entry-too-large')
     )
       out[e.key] = e.reason
   }
@@ -127,6 +128,7 @@ export const REJECTED_REASON_LABELS: Record<RejectedReason, string> = {
   'unknown-base': '未知或跨账号条目',
   'non-string': '原始值非字符串',
   'decode-failed': '版本戳非法',
+  'entry-too-large': '单条记录超出上传上限，原文保留在本机备份',
 }
 // Keys the server rejected: quarantined locally so they are never re-uploaded
 // (otherwise every push would carry the same poisoned entry again).
@@ -155,21 +157,25 @@ export function getQuarantineEntries(owner: string | null): QuarantineEntry[] {
       if (typeof item === 'string')
         return [{ key: item, stamp: null, at: 0 }]
       if (item && typeof item.k === 'string') {
-        return [{
-          key: item.k,
-          stamp: typeof item.s === 'string' ? item.s : null,
-          at: typeof item.t === 'number' ? item.t : 0,
-        }]
+        return [
+          {
+            key: item.k,
+            stamp: typeof item.s === 'string' ? item.s : null,
+            at: typeof item.t === 'number' ? item.t : 0,
+          },
+        ]
       }
       // 写入侧存的是 { key, stamp, at }（见 quarantineKeys）：读取必须认
       // 这种形状，否则隔离表经 localStorage 往返后全丢、隔离整体失效。
       // 旧的 { k, s, t } 紧凑形状仍兼容（已存的老条目不丢）。
       if (item && typeof item.key === 'string') {
-        return [{
-          key: item.key,
-          stamp: typeof item.stamp === 'string' ? item.stamp : null,
-          at: typeof item.at === 'number' ? item.at : 0,
-        }]
+        return [
+          {
+            key: item.key,
+            stamp: typeof item.stamp === 'string' ? item.stamp : null,
+            at: typeof item.at === 'number' ? item.at : 0,
+          },
+        ]
       }
       return []
     })
@@ -215,15 +221,18 @@ export function unquarantineKeys(owner: string, keys: string[]) {
     return
   const drop = new Set(keys)
   const entries = getQuarantineEntries(owner)
-  if (entries.some(e => drop.has(e.key)))
-    writeQuarantineEntries(owner, entries.filter(e => !drop.has(e.key)))
+  if (entries.some(e => drop.has(e.key))) {
+    writeQuarantineEntries(
+      owner,
+      entries.filter(e => !drop.has(e.key)),
+    )
+  }
   try {
     const prev = JSON.parse(
       localStorage.getItem(rejectedReasonKey(owner)) || '{}',
     )
     if (prev && typeof prev === 'object') {
-      for (const k of drop)
-        delete prev[k]
+      for (const k of drop) delete prev[k]
       localStorage.setItem(rejectedReasonKey(owner), JSON.stringify(prev))
     }
   }
@@ -244,9 +253,11 @@ export function getRejectedReason(
   if (!owner)
     return null
   try {
-    const v = JSON.parse(localStorage.getItem(rejectedReasonKey(owner)) || '{}')
+    const v = JSON.parse(
+      localStorage.getItem(rejectedReasonKey(owner)) || '{}',
+    )
     const r = v?.[key]
-    return r === 'unknown-base' || r === 'non-string' || r === 'decode-failed'
+    return r === 'unknown-base' || r === 'non-string' || r === 'decode-failed' || r === 'entry-too-large'
       ? r
       : null
   }
@@ -266,7 +277,10 @@ function storeRejectedReasons(
     )
     localStorage.setItem(
       rejectedReasonKey(owner),
-      JSON.stringify({ ...(prev && typeof prev === 'object' ? prev : {}), ...reasons }),
+      JSON.stringify({
+        ...(prev && typeof prev === 'object' ? prev : {}),
+        ...reasons,
+      }),
     )
   }
   catch {
@@ -276,9 +290,23 @@ function storeRejectedReasons(
 /** Quarantine the keys a successful push reported as rejected, if any. */
 export function handleRejectedKeys(
   owner: string,
-  result: { ok: boolean; rejected?: RejectedEntry[] },
+  result: { ok: boolean; rejected?: RejectedEntry[]; sentData?: Record<string, string> },
+  sent?: Record<string, string>,
 ): boolean {
-  const keys = rejectedKeysOf(result.rejected)
+  sent ??= result.sentData
+  const keys = rejectedKeysOf(result.rejected).filter((key) => {
+    if (!sent)
+      return true
+    const raw = sent[key]
+    if (raw === undefined)
+      return false
+    try {
+      return snapshotOf(key) === JSON.stringify(envelope(raw).stamp)
+    }
+    catch {
+      return localStorage.getItem(key) === raw
+    }
+  })
   if (!result.ok || !keys.length)
     return false
   quarantineKeys(owner, keys)
@@ -310,9 +338,7 @@ async function api(
   const timeout = setTimeout(
     () => controller.abort(),
     syncTimeoutMs(
-      bodyText === undefined
-        ? 0
-        : new TextEncoder().encode(bodyText).length,
+      bodyText === undefined ? 0 : new TextEncoder().encode(bodyText).length,
     ),
   )
   try {
@@ -426,7 +452,59 @@ export function apiPush(
       if (probe.data)
         applySyncData(probe.data, username)
     }
-    return api('/sync', 'PUT', { protocolVersion: 2, data }, username)
+    const result: ApiResult = { ok: true, status: 200, data: {}, rejected: [], sentData: data }
+    const encoder = new TextEncoder()
+    const send = async (
+      entries: Array<[string, string]>,
+    ): Promise<ApiResult> => {
+      if (getToken(username) !== token) {
+        return {
+          ok: false,
+          status: 401,
+          message: '账号会话已变化，未继续上传',
+        }
+      }
+      const reply = await api(
+        '/sync',
+        'PUT',
+        { protocolVersion: 2, data: Object.fromEntries(entries) },
+        username,
+      )
+      if (reply.status === 413 && entries.length > 1) {
+        const middle = Math.ceil(entries.length / 2)
+        const left = await send(entries.slice(0, middle))
+        return left.ok ? send(entries.slice(middle)) : left
+      }
+      if (reply.ok) {
+        if (reply.data)
+          applySyncData(reply.data, username)
+        result.rejected!.push(...(reply.rejected ?? []))
+        Object.assign(result.data!, reply.data ?? {})
+      }
+      return reply
+    }
+    let batch: Array<[string, string]> = []
+    let bytes = 0
+    for (const entry of Object.entries(data)) {
+      const size = encoder.encode(JSON.stringify(entry)).length + 2
+      if (size > 4 * 1024 * 1024) {
+        result.rejected!.push({ key: entry[0], reason: 'entry-too-large' })
+        continue
+      }
+      if (batch.length && bytes + size > 256 * 1024) {
+        const reply = await send(batch)
+        if (!reply.ok)
+          return reply
+        batch = []
+        bytes = 0
+      }
+      batch.push(entry)
+      bytes += size
+    }
+    const reply = await send(batch)
+    if (!reply.ok)
+      return reply
+    return { ...reply, ...result }
   })
   pushQueue = task.then(
     () => {},
@@ -471,6 +549,7 @@ export function collectSyncData(username: string): Record<string, string> {
       || quarantined.has(key)
       || collectionBases.includes(base)
       || [
+        'vocabulary_spell_v1',
         'mistakes_v1',
         'stats_attempts_v1',
         'study_time_v1',
@@ -489,7 +568,18 @@ export function collectSyncData(username: string): Record<string, string> {
       /* Invalid originals remain available in the local backup export. */
     }
   }
-  return result
+  const pruned = pruneCollectionData(result, username)
+  for (const key of Object.keys(result)) {
+    if (!(key in pruned))
+      removeStoredValue(key)
+  }
+
+  for (const [key, raw] of Object.entries(pruned)) {
+    if (raw !== result[key])
+      saveEnvelope(key, envelope(String(raw)), 'remote')
+  }
+
+  return pruned
 }
 export function onSyncApplied(cb: () => void) {
   return subscribeStorage((_key, source) => {
@@ -498,6 +588,7 @@ export function onSyncApplied(cb: () => void) {
   })
 }
 export function applySyncData(data: Record<string, string>, username: string) {
+  data = pruneCollectionData(data, username)
   let count = 0
   batchStorage(() => {
     for (const [key, raw] of Object.entries(data)) {
@@ -532,6 +623,23 @@ export function applySyncData(data: Record<string, string>, username: string) {
           continue
         }
         const previousRaw = localStorage.getItem(key)
+        if (base === 'collection_retention_v3') {
+          const previous = previousRaw ? envelope(previousRaw) : undefined
+          const cuts: Record<string, string> = { ...(previous?.value as any) }
+          for (const [table, cut] of Object.entries(
+            (incoming.value as Record<string, string>) ?? {},
+          )) {
+            if (typeof cut === 'string' && cut > (cuts[table] ?? ''))
+              cuts[table] = cut
+          }
+
+          const latest
+            = previous && compareStamp(previous, incoming) > 0
+              ? previous
+              : incoming
+          saveEnvelope(key, { ...latest, value: cuts }, 'remote')
+          continue
+        }
         if (base === 'archive_retention_v2') {
           const previous = previousRaw ? envelope(previousRaw) : undefined
           const cuts = [
@@ -606,6 +714,7 @@ export function applySyncData(data: Record<string, string>, username: string) {
     }
     migrateStudy(username)
     pruneArchives(username)
+    collectSyncData(username)
     if (count)
       notifyStorage('', 'remote')
   })

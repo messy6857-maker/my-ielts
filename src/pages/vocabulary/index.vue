@@ -1,5 +1,13 @@
 <!-- eslint-disable eslint-comments/no-unlimited-disable -->
 <script setup>
+import {
+  entryKey,
+  readRecords,
+  saveEnvelope,
+  saveRecord,
+  subscribeStorage,
+} from '../../utils/storage'
+import { loadVocabularyDetails } from '../../composables/useVocabularyDetails'
 import { useAudioGroup } from '../../composables/useAudioGroup'
 
 import { resolveAudioUrl } from '../../composables/useAudio'
@@ -32,43 +40,73 @@ const category = ref(
 
 const loaded = ref(false)
 const refVocabulary = reactive(structuredClone(vocabulary))
+const chapterDetailError = ref(false)
+async function loadDetails() {
+  const chapter = category.value
+  chapterDetailError.value = false
+  try {
+    const data = await loadVocabularyDetails(chapter)
+    for (const word of refVocabulary[chapter].words.flat())
+      Object.assign(word, data[String(word.id)] || {})
+  }
+  catch {
+    if (category.value === chapter)
+      chapterDetailError.value = true
+  }
+}
+watch(category, loadDetails)
+onMounted(loadDetails)
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
 
 // 逐词拼写答案按账号持久化（只存非空输入；进度总数仍走 setProgress 持久化，不改回会话内计算）。
 // 键：nsKey('vocabulary_spell_v1')（按账号隔离）；值：{ 章名: { 词 id: 输入 } }。
-const SPELL_KEY = 'vocabulary_spell_v1'
+const SPELL_KEY = 'vocabulary_spell_v2'
 function readSpellMap() {
+  const owner = useAuth().currentUser.value
+  let old = {}
   try {
-    const raw = localStorage.getItem(nsKey(SPELL_KEY))
-    const parsed = raw ? JSON.parse(raw) : {}
-    return parsed && typeof parsed === 'object' ? parsed : {}
+    old = JSON.parse(
+      localStorage.getItem(nsKey('vocabulary_spell_v1')) || '{}',
+    )
   }
   catch {
-    return {}
+    /* Keep backup original. */
   }
-}
-function saveSpellMap() {
-  const map = {}
-  for (const [chapter, cur] of Object.entries(refVocabulary)) {
-    if (!cur)
-      continue
-    for (const group of cur.words) {
-      for (const item of group) {
-        if (item.spellValue) {
-          if (!map[chapter])
-            map[chapter] = {}
-          map[chapter][item.id] = item.spellValue
-        }
+  for (const [chapter, words] of Object.entries(old)) {
+    for (const [id, value] of Object.entries(words || {})) {
+      const key = entryKey(SPELL_KEY, `${chapter}|${id}`, owner)
+      if (typeof value === 'string' && localStorage.getItem(key) === null) {
+        saveEnvelope(
+          key,
+          { __ielts: 2, stamp: [0, 'legacy'], value },
+          'remote',
+        )
       }
     }
   }
-  try {
-    localStorage.setItem(nsKey(SPELL_KEY), JSON.stringify(map))
+  const map = {}
+  for (const [key, value] of Object.entries(readRecords(SPELL_KEY, owner))) {
+    const split = key.lastIndexOf('|')
+    const chapter = key.slice(0, split)
+    const id = key.slice(split + 1);
+    (map[chapter] ||= {})[id] = value
   }
-  catch {
-    // 存储失败不阻塞拼写（进度仍由 setProgress 持久化）
-  }
+  return map
+}
+function saveSpellMap(item) {
+  if (!item)
+    return
+  saveRecord(
+    SPELL_KEY,
+    `${category.value}|${item.id}`,
+    item.spellValue || undefined,
+    useAuth().currentUser.value,
+  )
+}
+function onSpellInput(event, item) {
+  item.spellValue = event.target.value
+  saveSpellMap(item)
 }
 function restoreSpellValues() {
   const map = readSpellMap()
@@ -93,9 +131,13 @@ function restoreSpellValues() {
     }
   }
   trainingStats.value = calcStats()
-  syncProgress()
 }
 onMounted(restoreSpellValues)
+const offSpell = subscribeStorage((key, source) => {
+  if (source === 'remote' && (!key || key.startsWith(nsKey(SPELL_KEY))))
+    restoreSpellValues()
+})
+onUnmounted(offSpell)
 // 切账号时按新账号恢复（先清旧账号残留，再套用新账号的拼写记录）
 const { currentUser: spellUser } = useAuth()
 watch(spellUser, () => {
@@ -105,7 +147,7 @@ watch(spellUser, () => {
 watch(category, (newVal) => {
   // console.log(newVal, oldVal)
   localStorage.setItem(CHAPTER_KEY, newVal)
-  syncProgress()
+  trainingStats.value = calcStats()
 })
 
 function calcStats() {
@@ -186,15 +228,16 @@ function onAudioKeydown(ev) {
 onMounted(() => document.addEventListener('keydown', onAudioKeydown))
 onUnmounted(() => document.removeEventListener('keydown', onAudioKeydown))
 
-let audio = null
 function play(audioPath) {
-  if (audio) {
-    audio.pause()
-    audio.currentTime = 0
-  }
-  audio = managedAudio.create()
-  audio.src = audioPath
-  audio.play()
+  const word = decodeURIComponent(
+    audioPath
+      .split('/')
+      .pop()
+      .replace(/\.mp3$/, ''),
+  )
+  managedAudio.play(audioPath, word, () => {
+    mediaError.value = '单词音频加载失败，已尝试浏览器朗读，可重试音频'
+  })
 }
 
 function copyText(item) {
@@ -236,7 +279,7 @@ function onInputFocusOut(e, item) {
       // 只有本次输入与聚焦时不一致才记入错词本，同一错词反复失焦不重复计数
       if (spellValue !== focusSpellValues[target.id]) {
         addMistake('vocabulary', {
-          key: `vocabulary:${item.id}`,
+          key: `spelling:${item.id}`,
           title: item.word.join(' / '),
           detail: `${item.pos} ${item.meaning}`,
           hint: item.example,
@@ -246,7 +289,7 @@ function onInputFocusOut(e, item) {
   }
   trainingStats.value = calcStats()
   syncProgress()
-  saveSpellMap()
+  saveSpellMap(item)
 }
 
 function syncProgress() {
@@ -263,6 +306,7 @@ function syncProgress() {
     }
   }
   setProgress('vocabulary', done, total)
+  setProgress(`spelling:${category.value}`, done, total)
 }
 
 function getInputStyleClass(item) {
@@ -297,6 +341,11 @@ function copyAllError() {
 </script>
 
 <template>
+  <p v-if="chapterDetailError" class="m-4 text-amber-700" role="alert">
+    例句加载失败。<button class="underline" @click="loadDetails">
+      重试加载
+    </button>
+  </p>
   <div ref="mediaRoot" class="px-4 pt-6 2xl:px-0">
     <p
       v-if="mediaError"
@@ -343,7 +392,7 @@ function copyAllError() {
               </div>
               <input v-model="keyword" type="search"
                 class="block w-full border border-gray-300 rounded-lg bg-gray-50 p-2.5 pl-10 text-sm text-gray-900 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500 dark:placeholder-gray-400"
-                placeholder="Search">
+                placeholder="搜索">
             </div> -->
             <label class="ml-2 inline-flex cursor-pointer items-center">
               <input
@@ -542,6 +591,7 @@ function copyAllError() {
                             autocomplete="off"
                             :class="getInputStyleClass(item)"
                             type="text"
+                            @input="onSpellInput($event, item)"
                             @focusout="onInputFocusOut($event, item)"
                             @focusin="
                               onInputFocusIn(
@@ -570,7 +620,8 @@ function copyAllError() {
                             <a
                               class="hover:underline"
                               :title="`在剑桥词典中查询 ${w}`"
-                              target="_blank" rel="noopener noreferrer"
+                              target="_blank"
+                              rel="noopener noreferrer"
                               :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${w}`"
                             >{{ w }}</a>
                           </p>
@@ -587,13 +638,13 @@ function copyAllError() {
                         {{ item.pos }}
                       </td>
                       <td class="whitespace-nowrap p-4">
-                        {{ isShowMeaning ? item.meaning : '' }}
+                        {{ isShowMeaning ? item.meaning : "" }}
                       </td>
                       <td class="p-4">
-                        {{ isTrainingModel ? '' : item.example }}
+                        {{ isTrainingModel ? "" : item.example }}
                       </td>
                       <td class="p-4">
-                        {{ isTrainingModel ? '' : item.extra }}
+                        {{ isTrainingModel ? "" : item.extra }}
                       </td>
                     </tr>
                   </template>
@@ -623,7 +674,7 @@ function copyAllError() {
             class="ml-2 rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
             @click="isOnlyShowErrors = !isOnlyShowErrors"
           >
-            {{ isOnlyShowErrors ? '展示所有' : '仅展示错词' }}
+            {{ isOnlyShowErrors ? "展示所有" : "仅展示错词" }}
           </button>
           <button
             type="button"

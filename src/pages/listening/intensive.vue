@@ -71,10 +71,13 @@ const sentenceEntries = computed(() =>
     .split('\n')
     .filter(line => line.trim())
     .flatMap((line) => {
-      const match = line.match(/^([A-Z][A-Z '\-]{1,30}|[A-Z][a-z]+):\s+(.*)$/)
+      const match = line.match(
+        /^(Speaker\s+\d+(?:\s*\([^)]*\))?|[A-Z][A-Z '\-]{1,30}|[A-Z][a-z]+):\s+(.*)$/i,
+      )
       const speaker = match?.[1] ?? ''
       return splitSentences(match?.[2] ?? line).map((text, index) => ({
         text,
+        speaker: index === 0 ? speaker : '',
         display: speaker && index === 0 ? `${speaker}: ${text}` : text,
       }))
     }),
@@ -272,9 +275,9 @@ function setRate(r: number) {
         @click="showTranscript = !showTranscript"
       >
         <span class="font-medium text-gray-900 dark:text-white">
-          📄 {{ showTranscript ? '隐藏原文' : '查看原文对照' }}
+          📄 {{ showTranscript ? "隐藏原文" : "查看原文对照" }}
         </span>
-        <span class="text-gray-500">{{ showTranscript ? '▲' : '▼' }}</span>
+        <span class="text-gray-500">{{ showTranscript ? "▲" : "▼" }}</span>
       </button>
       <div
         v-if="showTranscript"
@@ -288,7 +291,7 @@ function setRate(r: number) {
             🔊 点读为浏览器语音朗读，非原录音分句，音色与上方录音不同。
           </p>
           <div
-            v-for="(s, i) in sentences"
+            v-for="(entry, i) in sentenceEntries"
             :key="i"
             :class="speakingIndex === i ? 'bg-blue-50 dark:bg-blue-900/20' : ''"
             class="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50"
@@ -305,7 +308,10 @@ function setRate(r: number) {
               <span v-else class="i-carbon-volume-up-filled block h-4 w-4" />
             </button>
             <p class="text-sm leading-7 text-gray-800 dark:text-gray-200">
-              {{ s }}
+              <span
+                v-if="entry.speaker"
+                class="mr-2 rounded bg-gray-100 px-1 text-xs font-bold text-gray-600 dark:bg-gray-700"
+              >{{ entry.speaker }}</span>{{ entry.text }}
             </p>
           </div>
         </div>

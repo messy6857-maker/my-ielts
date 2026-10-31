@@ -1,4 +1,14 @@
-import type { ReadingMockTest } from './types'
+import type { ReadingMockTest } from "./types";
+
+/** Cambridge IELTS 21 p.71 (PDF p.72); endings paraphrased, original letter order retained */
+const PREHISTORY_ENDINGS = [
+  "Homo sapiens appeared sooner than previously estimated.",
+  "Earlier beliefs about prehistoric holders of power were wrong.",
+  "Extinct hominins and Homo sapiens had different gender roles.",
+  "Researchers may have misidentified who gathered food in early communities.",
+  "Complex craftsmanship was probably possible for species besides Homo sapiens.",
+  "Species preceding Homo sapiens survived in severe environments.",
+];
 
 /**
  * 剑桥雅思 21 Test 3 阅读（40 题）
@@ -10,12 +20,12 @@ import type { ReadingMockTest } from './types'
  * 注意：Q31–34 为配对题，保持原生"写字母"格式（map-label）。
  */
 export const cam21Test3Reading: ReadingMockTest = {
-  id: 'cam21-test3-reading',
-  title: '剑21 Test 3 阅读',
+  id: "cam21-test3-reading",
+  title: "剑21 Test 3 阅读",
   timeLimit: 3600,
   passages: [
     {
-      title: 'Saving the saiga',
+      title: "Saving the saiga",
       passage: `The saiga, a species of antelope native to Central Asia, once roamed the vast grasslands of this region in enormous herds, many millions strong. Regrettably, such spectacular sights are a thing of the past. Today, the saiga is largely confined to a single country: Kazakhstan. This country is estimated to be home to well over 90% of the global saiga population, with Russia, Mongolia and Uzbekistan accounting for the rest.
 
 The saiga is perfectly adapted to the tough conditions of the remote wilderness of the steppes of Central Asia. One such adaptation is its bizarre bulbous nose, which enables the animal to survive the extreme seasonal temperature swings of the region. The swollen nostrils of the nose serve several purposes: they filter out dust and cool the blood during hot, dry summers, and they warm the cold air before it enters the saiga's lungs in winter. Other seasonal adaptations include a heavy winter coat that the saiga sheds when the weather warms up.
@@ -34,23 +44,106 @@ Recent efforts to save the saiga have been spearheaded by the Altyn Dala Conserv
 
 So, how many saiga are there now? By 2000, the global saiga population had hit an all-time low of just 21,000 individuals. There was some recovery in the first decade of the new millennium but this was then crushed by devastating mass mortality events that saw the loss of hundreds of thousands of the species. But thanks to the intervention of the Altyn Dala Conservation Initiative, the most recent episodes in the ongoing story of the saiga have been relatively uplifting. Three years ago, the Ustyurt Plateau population in Kazakhstan experienced its largest mass birth of saiga calves in many years. An aerial census two years ago recorded an estimated 842,000 saiga across Kazakhstan as a whole, and according to an aerial survey earlier this year, the saiga population in Kazakhstan now exceeds 1.9 million. The world's strangest-looking antelope remains critically endangered, but the direction of travel is positive.`,
       questions: [
-        { id: 'Q1', type: 'fill-blank', question: 'keep 1 .................... out', answer: 'dust' },
-        { id: 'Q2', type: 'fill-blank', question: 'lower the temperature of its 2 .................... in summer', answer: 'blood' },
-        { id: 'Q3', type: 'fill-blank', question: 'grows a thick 3 .................... in winter, which it loses in spring', answer: 'coat' },
-        { id: 'Q4', type: 'fill-blank', question: 'poaching, especially for the 4 .................... of male saiga', answer: 'horns' },
-        { id: 'Q5', type: 'fill-blank', question: 'reduction in the size of the saiga\'s 5 ....................', answer: 'habitat' },
-        { id: 'Q6', type: 'fill-blank', question: 'loss of access to the 6 .................... which they use for migration', answer: 'routes' },
-        { id: 'Q7', type: 'fill-blank', question: 'climate change, causing the disappearance of 7 .................... which the saiga relied on', answer: 'streams' },
-        { id: 'Q8', type: 'tfng', question: 'Today, numbers of saiga are distributed evenly across four nations in Central Asia: Kazakhstan, Russia, Mongolia and Uzbekistan.', options: ['True', 'False', 'Not Given'], answer: 1 },
-        { id: 'Q9', type: 'tfng', question: 'For most of the 20th century, the population of saiga were falling.', options: ['True', 'False', 'Not Given'], answer: 1 },
-        { id: 'Q10', type: 'tfng', question: 'Efforts to protect rhinos in Africa had a significant effect on saiga populations.', options: ['True', 'False', 'Not Given'], answer: 0 },
-        { id: 'Q11', type: 'tfng', question: 'Unpredictable fluctuations in climate are threatening the wildlife of Central Asia more than in other parts of the world.', options: ['True', 'False', 'Not Given'], answer: 2 },
-        { id: 'Q12', type: 'tfng', question: 'The Altyn Dala Conservation Initiative was formed for the benefit of a number of different animals.', options: ['True', 'False', 'Not Given'], answer: 0 },
-        { id: 'Q13', type: 'tfng', question: 'The Altyn Dala Conservation Initiative\'s recognition as a World Restoration Flagship project attracted additional international funding for the scheme.', options: ['True', 'False', 'Not Given'], answer: 2 },
+        {
+          id: "Q1",
+          type: "fill-blank",
+          question: "keep 1 .................... out",
+          answer: "dust",
+        },
+        {
+          id: "Q2",
+          type: "fill-blank",
+          question:
+            "lower the temperature of its 2 .................... in summer",
+          answer: "blood",
+        },
+        {
+          id: "Q3",
+          type: "fill-blank",
+          question:
+            "grows a thick 3 .................... in winter, which it loses in spring",
+          answer: "coat",
+        },
+        {
+          id: "Q4",
+          type: "fill-blank",
+          question:
+            "poaching, especially for the 4 .................... of male saiga",
+          answer: "horns",
+        },
+        {
+          id: "Q5",
+          type: "fill-blank",
+          question:
+            "reduction in the size of the saiga's 5 ....................",
+          answer: "habitat",
+        },
+        {
+          id: "Q6",
+          type: "fill-blank",
+          question:
+            "loss of access to the 6 .................... which they use for migration",
+          answer: "routes",
+        },
+        {
+          id: "Q7",
+          type: "fill-blank",
+          question:
+            "climate change, causing the disappearance of 7 .................... which the saiga relied on",
+          answer: "streams",
+        },
+        {
+          id: "Q8",
+          type: "tfng",
+          question:
+            "Today, numbers of saiga are distributed evenly across four nations in Central Asia: Kazakhstan, Russia, Mongolia and Uzbekistan.",
+          options: ["True", "False", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q9",
+          type: "tfng",
+          question:
+            "For most of the 20th century, the population of saiga were falling.",
+          options: ["True", "False", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q10",
+          type: "tfng",
+          question:
+            "Efforts to protect rhinos in Africa had a significant effect on saiga populations.",
+          options: ["True", "False", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q11",
+          type: "tfng",
+          question:
+            "Unpredictable fluctuations in climate are threatening the wildlife of Central Asia more than in other parts of the world.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q12",
+          type: "tfng",
+          question:
+            "The Altyn Dala Conservation Initiative was formed for the benefit of a number of different animals.",
+          options: ["True", "False", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q13",
+          type: "tfng",
+          question:
+            "The Altyn Dala Conservation Initiative's recognition as a World Restoration Flagship project attracted additional international funding for the scheme.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
       ],
     },
     {
-      title: 'The problems of getting around the city of Dar es Salaam',
+      title: "The problems of getting around the city of Dar es Salaam",
       passage: `Dar es Salaam in Tanzania is one of the fastest growing cities in Africa. Its population has increased eightfold since 1980 and swells by half a million people every year. United Nations projections anticipate it will become a megacity within seven years as its population passes 10 million, reaching 13.4 million by 2035. Daniel Hoornweg for the Global Cities Institute forecasts the city could be home to an incredible 73.7 million people by 2100.
 
 Today, four out of five of its people live in single-storey informal settlements on the spreading edges of the city, where the journey to and from the centre regularly takes over two hours. It can be longer if rain turns the dirt roads to mud.
@@ -71,23 +164,105 @@ Morogoro Road to the north-west of the city was phase I of the BRT project. Phas
 
 The ITDP regrets Africa's obsession with metros. 'With a metro, an international firm will often just parachute in its own system,' says Kost. 'Bus rapid transit allows existing stakeholders to get involved. That's what we did in Dar es Salaam and what we're planning in Nairobi, where the bus bodies will be built in the city and local operators will look after tickets, fare collection and IT ... Bus rapid transit has been transformational for Dar es Salaam. For millions of people in African cities, this is their best hope of ever being connected.'`,
       questions: [
-        { id: 'Q14', type: 'tfng', question: 'The population of Dar es Salaam is rising more rapidly than was previously predicted.', options: ['True', 'False', 'Not Given'], answer: 2 },
-        { id: 'Q15', type: 'tfng', question: 'Most of the residents of Dar es Salaam live in high-rise blocks on the edge of the city.', options: ['True', 'False', 'Not Given'], answer: 1 },
-        { id: 'Q16', type: 'tfng', question: 'Residents have been consulted about their views on the suburban rail line in Dar es Salaam.', options: ['True', 'False', 'Not Given'], answer: 2 },
-        { id: 'Q17', type: 'tfng', question: 'The majority of the present residential development in Dar es Salaam is unplanned.', options: ['True', 'False', 'Not Given'], answer: 0 },
-        { id: 'Q18', type: 'tfng', question: 'Dar es Salaam\'s authorities have decided to follow the public transport plan adopted by a large number of African cities.', options: ['True', 'False', 'Not Given'], answer: 1 },
-        { id: 'Q19', type: 'fill-blank', question: 'the buses use designated 19 .................... to cut down on delays', answer: 'lanes' },
-        { id: 'Q20', type: 'fill-blank', question: 'passengers pay fares before 20 ....................', answer: 'boarding' },
-        { id: 'Q21', type: 'fill-blank', question: 'passengers in 21 .................... can use every part of the system', answer: 'wheelchairs' },
-        { id: 'Q22', type: 'fill-blank', question: 'the temperature control is sometimes not activated in order to reduce 22 .................... use', answer: 'fuel' },
-        { id: 'Q23', type: 'fill-blank', question: 'insufficient number of vehicles are available due to the effects of a severe 23 ....................', answer: 'flood' },
-        { id: 'Q24', type: 'fill-blank', question: 'passengers are unable to use 24 .................... because some equipment is out of action', answer: 'smartcards' },
-        { id: 'Q25', type: 'fill-blank', question: 'tickets have to be checked manually at station 25 ....................', answer: 'gates' },
-        { id: 'Q26', type: 'fill-blank', question: '26 .................... frequently build up during rush hours', answer: 'queues' },
+        {
+          id: "Q14",
+          type: "tfng",
+          question:
+            "The population of Dar es Salaam is rising more rapidly than was previously predicted.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q15",
+          type: "tfng",
+          question:
+            "Most of the residents of Dar es Salaam live in high-rise blocks on the edge of the city.",
+          options: ["True", "False", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q16",
+          type: "tfng",
+          question:
+            "Residents have been consulted about their views on the suburban rail line in Dar es Salaam.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q17",
+          type: "tfng",
+          question:
+            "The majority of the present residential development in Dar es Salaam is unplanned.",
+          options: ["True", "False", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q18",
+          type: "tfng",
+          question:
+            "Dar es Salaam's authorities have decided to follow the public transport plan adopted by a large number of African cities.",
+          options: ["True", "False", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q19",
+          type: "fill-blank",
+          question:
+            "the buses use designated 19 .................... to cut down on delays",
+          answer: "lanes",
+        },
+        {
+          id: "Q20",
+          type: "fill-blank",
+          question: "passengers pay fares before 20 ....................",
+          answer: "boarding",
+        },
+        {
+          id: "Q21",
+          type: "fill-blank",
+          question:
+            "passengers in 21 .................... can use every part of the system",
+          answer: "wheelchairs",
+        },
+        {
+          id: "Q22",
+          type: "fill-blank",
+          question:
+            "the temperature control is sometimes not activated in order to reduce 22 .................... use",
+          answer: "fuel",
+        },
+        {
+          id: "Q23",
+          type: "fill-blank",
+          question:
+            "insufficient number of vehicles are available due to the effects of a severe 23 ....................",
+          answer: "flood",
+        },
+        {
+          id: "Q24",
+          type: "fill-blank",
+          question:
+            "passengers are unable to use 24 .................... because some equipment is out of action",
+          answer: "smartcards",
+        },
+        {
+          id: "Q25",
+          type: "fill-blank",
+          question:
+            "tickets have to be checked manually at station 25 ....................",
+          answer: "gates",
+        },
+        {
+          id: "Q26",
+          type: "fill-blank",
+          question:
+            "26 .................... frequently build up during rush hours",
+          answer: "queues",
+        },
       ],
     },
     {
-      title: 'Rethinking the Past',
+      title: "Rethinking the Past",
       passage: `It is by now a truism that the story of human evolution is being rethought. Discoveries have come thick and fast over the last decade or so, and these have forced us to rethink many crucial points, such as how old our species is – about 300,000 years old as opposed to 200,000 – and what extinct hominins, such as our cousins the Neanderthals, were really like. But because there are so many species and eras involved, it's hard to discern the common threads linking them.
 
 However, I do think it's possible to draw out some overall messages from the blizzard of archaeological finds in recent years. Two things stand out to me. One is the growing evidence that many supposedly 'advanced' behaviours, such as architecture and art, can be traced much further back in time than we thought, often to hominin species that existed before modern humans. And the other is that we have badly misunderstood gender roles in prehistoric societies, imposing patriarchal values onto cultures that had very different ideas about how women should behave.
@@ -106,21 +281,133 @@ Perhaps the most dramatic was the demolition of 'Man the Hunter'. This was the i
 
 It seems that the more we find out about past societies, the more our preconceptions about the ways society 'has to be' turn out to be wrong. Inequality, authoritarianism and patriarchy aren't inevitable. They're choices, and prehistory shows us that we can choose differently.`,
       questions: [
-        { id: 'Q27', type: 'multiple-choice', question: 'What is the writer doing in the second paragraph?', options: ['A pinpointing some key changes in our understanding of prehistory', 'B outlining some aspects of prehistory which are still poorly understood', 'C summarising some attitudes towards recent archaeological revelations', 'D giving an overview of some current disagreements among archaeologists'], answer: 0 },
-        { id: 'Q28', type: 'multiple-choice', question: 'In the sixth paragraph, the writer mentions mobile phones to make the point that', options: ['A most developments happen in a gradual way.', 'B innovation can come from a variety of sources.', 'C not all technological advancements are positive.', 'D the path of evolution can often be unpredictable.'], answer: 0 },
-        { id: 'Q29', type: 'multiple-choice', question: 'In the seventh paragraph, the phrase \'unpick this stuff\' refers to the task of', options: ['A assessing the impact of certain recent research findings.', 'B questioning the authenticity of evidence used in earlier research.', 'C conducting research into how prehistoric societies were organised.', 'D reevaluating research influenced by outdated beliefs about society.'], answer: 3 },
-        { id: 'Q30', type: 'multiple-choice', question: 'What does the writer suggest in the final paragraph?', options: ['A Studying past societies could help us create a fairer society today.', 'B We should not judge past societies by the standards of modern society.', 'C We still have much to learn about how societies have evolved over history.', 'D There is more than one way to interpret evidence about societies in prehistoric times.'], answer: 0 },
-        { id: 'Q31', type: 'map-label', question: 'The findings at Kalambo Falls revealed that', answer: 'E' },
-        { id: 'Q32', type: 'map-label', question: 'Evidence from high-altitude regions suggests that', answer: 'F' },
-        { id: 'Q33', type: 'map-label', question: 'An academic publication from June 2023 shows that', answer: 'D' },
-        { id: 'Q34', type: 'map-label', question: 'Analysis of a 4000-year-old Iberian leader indicates that', answer: 'B' },
-        { id: 'Q35', type: 'tfng', question: 'It seems likely that the Neanderthals\' cave paintings were the first examples of artwork ever created.', options: ['Yes', 'No', 'Not Given'], answer: 1 },
-        { id: 'Q36', type: 'tfng', question: 'It is very rare to find prehistoric artwork carved onto shells.', options: ['Yes', 'No', 'Not Given'], answer: 2 },
-        { id: 'Q37', type: 'tfng', question: 'The methods which the researchers used to examine the Rising Star cave system were rather unconventional.', options: ['Yes', 'No', 'Not Given'], answer: 2 },
-        { id: 'Q38', type: 'tfng', question: 'It is unclear how old the etchings in the Rising Star cave system are.', options: ['Yes', 'No', 'Not Given'], answer: 0 },
-        { id: 'Q39', type: 'tfng', question: 'The means used to publicise the findings from the Rising Star cave system added to the controversy that surrounds them.', options: ['Yes', 'No', 'Not Given'], answer: 0 },
-        { id: 'Q40', type: 'tfng', question: 'The size of H. naledi brains is a key factor in the question of whether these hominins were able to produce art.', options: ['Yes', 'No', 'Not Given'], answer: 1 },
+        {
+          id: "Q27",
+          type: "multiple-choice",
+          question: "What is the writer doing in the second paragraph?",
+          options: [
+            "A pinpointing some key changes in our understanding of prehistory",
+            "B outlining some aspects of prehistory which are still poorly understood",
+            "C summarising some attitudes towards recent archaeological revelations",
+            "D giving an overview of some current disagreements among archaeologists",
+          ],
+          answer: 0,
+        },
+        {
+          id: "Q28",
+          type: "multiple-choice",
+          question:
+            "In the sixth paragraph, the writer mentions mobile phones to make the point that",
+          options: [
+            "A most developments happen in a gradual way.",
+            "B innovation can come from a variety of sources.",
+            "C not all technological advancements are positive.",
+            "D the path of evolution can often be unpredictable.",
+          ],
+          answer: 0,
+        },
+        {
+          id: "Q29",
+          type: "multiple-choice",
+          question:
+            "In the seventh paragraph, the phrase 'unpick this stuff' refers to the task of",
+          options: [
+            "A assessing the impact of certain recent research findings.",
+            "B questioning the authenticity of evidence used in earlier research.",
+            "C conducting research into how prehistoric societies were organised.",
+            "D reevaluating research influenced by outdated beliefs about society.",
+          ],
+          answer: 3,
+        },
+        {
+          id: "Q30",
+          type: "multiple-choice",
+          question: "What does the writer suggest in the final paragraph?",
+          options: [
+            "A Studying past societies could help us create a fairer society today.",
+            "B We should not judge past societies by the standards of modern society.",
+            "C We still have much to learn about how societies have evolved over history.",
+            "D There is more than one way to interpret evidence about societies in prehistoric times.",
+          ],
+          answer: 0,
+        },
+        {
+          id: "Q31",
+          type: "map-label",
+          question: "The findings at Kalambo Falls revealed that",
+          answer: "E",
+          options: PREHISTORY_ENDINGS,
+        },
+        {
+          id: "Q32",
+          type: "map-label",
+          question: "Evidence from high-altitude regions suggests that",
+          answer: "F",
+          options: PREHISTORY_ENDINGS,
+        },
+        {
+          id: "Q33",
+          type: "map-label",
+          question: "An academic publication from June 2023 shows that",
+          answer: "D",
+          options: PREHISTORY_ENDINGS,
+        },
+        {
+          id: "Q34",
+          type: "map-label",
+          question: "Analysis of a 4000-year-old Iberian leader indicates that",
+          answer: "B",
+          options: PREHISTORY_ENDINGS,
+        },
+        {
+          id: "Q35",
+          type: "tfng",
+          question:
+            "It seems likely that the Neanderthals' cave paintings were the first examples of artwork ever created.",
+          options: ["Yes", "No", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q36",
+          type: "tfng",
+          question:
+            "It is very rare to find prehistoric artwork carved onto shells.",
+          options: ["Yes", "No", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q37",
+          type: "tfng",
+          question:
+            "The methods which the researchers used to examine the Rising Star cave system were rather unconventional.",
+          options: ["Yes", "No", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q38",
+          type: "tfng",
+          question:
+            "It is unclear how old the etchings in the Rising Star cave system are.",
+          options: ["Yes", "No", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q39",
+          type: "tfng",
+          question:
+            "The means used to publicise the findings from the Rising Star cave system added to the controversy that surrounds them.",
+          options: ["Yes", "No", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q40",
+          type: "tfng",
+          question:
+            "The size of H. naledi brains is a key factor in the question of whether these hominins were able to produce art.",
+          options: ["Yes", "No", "Not Given"],
+          answer: 1,
+        },
       ],
     },
   ],
-}
+};

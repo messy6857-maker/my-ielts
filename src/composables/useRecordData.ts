@@ -3,6 +3,8 @@ import type { Ref } from 'vue'
 import {
   accountKey,
   batchStorage,
+  decodeId,
+  readRecord,
   readRecords,
   saveRecord,
   subscribeStorage,
@@ -30,11 +32,19 @@ export function useRecordMap<T>(base: string) {
   const off = subscribeStorage((key) => {
     if (writing)
       return
-    if (
-      !key
-      || key.startsWith(`${accountKey(base, currentUser.value)}__entry_`)
-    )
+    const prefix = `${accountKey(base, currentUser.value)}__entry_`
+    if (!key) {
       reload()
+    }
+    else if (key.startsWith(prefix)) {
+      const id = decodeId(key.slice(prefix.length))
+      if (id === null)
+        return
+      const value = readRecord<T>(base, id, currentUser.value)
+      if (value === undefined)
+        delete state.value[id]
+      else state.value[id] = value
+    }
   })
   if (getCurrentScope())
     onScopeDispose(off)

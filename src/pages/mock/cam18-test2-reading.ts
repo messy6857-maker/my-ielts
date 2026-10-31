@@ -1,4 +1,14 @@
-import type { ReadingMockTest } from './types'
+import type { ReadingMockTest } from "./types";
+
+/** Cambridge IELTS 18 p.47 (PDF p.49) */
+const AI_HEALTH_OPTIONS = [
+  "medical practitioners",
+  "specialised tasks",
+  "available resources",
+  "reduced illness",
+  "professional authority",
+  "technology experts",
+];
 
 /**
  * 剑桥雅思 18 Test 2 阅读（40 题）
@@ -6,12 +16,12 @@ import type { ReadingMockTest } from './types'
  * 全部 40 题逐题核对，配对/选词题用 map-label 原生格式
  */
 export const cam18Test2Reading: ReadingMockTest = {
-  id: 'cam18-test2-reading',
-  title: '剑18 Test 2 阅读',
+  id: "cam18-test2-reading",
+  title: "剑18 Test 2 阅读",
   timeLimit: 3600,
   passages: [
     {
-      title: 'Stonehenge',
+      title: "Stonehenge",
       passage: `For centuries, historians and archaeologists have puzzled over the many mysteries of Stonehenge, a prehistoric monument that took an estimated 1,500 years to erect. Located on Salisbury Plain in southern England, it is comprised of roughly 100 massive upright stones placed in a circular layout.
 
 Archaeologists believe England's most iconic prehistoric ruin was built in several stages, with the earliest constructed 5,000 or more years ago. First, Neolithic* Britons used primitive tools, which may have been fashioned out of deer antlers, to dig a massive circular ditch and bank, or henge. Deep pits dating back to that era and located within the circle may have once held a ring of timber posts, according to some scholars.
@@ -37,23 +47,105 @@ More recently, signs of illness and injury in the human remains unearthed at Sto
 * Neolithic – The era, also known as the New Stone Age, which began around 12,000 years ago and ended around 3500 BCE
 ** Celtic – The Celts were people who lived in Britain and northwest Europe during the Iron Age from 600 BCE to 43 CE`,
       questions: [
-        { id: 'Q1', type: 'fill-blank', question: 'Construction Stage 1: the ditch and henge were dug, possibly using tools made from ____', answer: ['deer antlers', 'antlers'] },
-        { id: 'Q2', type: 'fill-blank', question: '____ may have been arranged in deep pits inside the circle', answer: ['timber posts', 'posts'] },
-        { id: 'Q3', type: 'fill-blank', question: 'Stage 2 archaeological theory: builders used ____ to make sledges and rollers', answer: 'tree trunks' },
-        { id: 'Q4', type: 'fill-blank', question: '____ pulled them on giant baskets', answer: 'oxen' },
-        { id: 'Q5', type: 'fill-blank', question: 'Stage 2 geological theory: they were brought from Wales by ____', answer: 'glaciers' },
-        { id: 'Q6', type: 'fill-blank', question: 'Builders: a theory arose in the 17th century that its builders were Celtic ____', answer: 'druids' },
-        { id: 'Q7', type: 'fill-blank', question: 'Purpose: many experts agree it has been used as a ____ site', answer: 'burial' },
-        { id: 'Q8', type: 'fill-blank', question: 'in the 1960s, it was suggested that it worked as a kind of ____', answer: 'calendar' },
-        { id: 'Q9', type: 'tfng', question: 'During the third phase of construction, sandstone slabs were placed in both the outer areas and the middle of the Stonehenge site.', options: ['True', 'False', 'Not Given'], answer: 0 },
-        { id: 'Q10', type: 'tfng', question: 'There is scientific proof that the bluestones stood in the same spot until approximately 1600 BCE.', options: ['True', 'False', 'Not Given'], answer: 1 },
-        { id: 'Q11', type: 'tfng', question: 'John Aubrey\'s claim about Stonehenge was supported by 20th-century findings.', options: ['True', 'False', 'Not Given'], answer: 1 },
-        { id: 'Q12', type: 'tfng', question: 'Objects discovered at Stonehenge seem to indicate that it was constructed by a number of different groups of people.', options: ['True', 'False', 'Not Given'], answer: 0 },
-        { id: 'Q13', type: 'tfng', question: 'Criticism of Gerald Hawkins\' theory about Stonehenge has come mainly from other astronomers.', options: ['True', 'False', 'Not Given'], answer: 2 },
+        {
+          id: "Q1",
+          type: "fill-blank",
+          question:
+            "Construction Stage 1: the ditch and henge were dug, possibly using tools made from ____",
+          answer: ["deer antlers", "antlers"],
+        },
+        {
+          id: "Q2",
+          type: "fill-blank",
+          question:
+            "____ may have been arranged in deep pits inside the circle",
+          answer: ["timber posts", "posts"],
+        },
+        {
+          id: "Q3",
+          type: "fill-blank",
+          question:
+            "Stage 2 archaeological theory: builders used ____ to make sledges and rollers",
+          answer: "tree trunks",
+        },
+        {
+          id: "Q4",
+          type: "fill-blank",
+          question: "____ pulled them on giant baskets",
+          answer: "oxen",
+        },
+        {
+          id: "Q5",
+          type: "fill-blank",
+          question:
+            "Stage 2 geological theory: they were brought from Wales by ____",
+          answer: "glaciers",
+        },
+        {
+          id: "Q6",
+          type: "fill-blank",
+          question:
+            "Builders: a theory arose in the 17th century that its builders were Celtic ____",
+          answer: "druids",
+        },
+        {
+          id: "Q7",
+          type: "fill-blank",
+          question:
+            "Purpose: many experts agree it has been used as a ____ site",
+          answer: "burial",
+        },
+        {
+          id: "Q8",
+          type: "fill-blank",
+          question:
+            "in the 1960s, it was suggested that it worked as a kind of ____",
+          answer: "calendar",
+        },
+        {
+          id: "Q9",
+          type: "tfng",
+          question:
+            "During the third phase of construction, sandstone slabs were placed in both the outer areas and the middle of the Stonehenge site.",
+          options: ["True", "False", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q10",
+          type: "tfng",
+          question:
+            "There is scientific proof that the bluestones stood in the same spot until approximately 1600 BCE.",
+          options: ["True", "False", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q11",
+          type: "tfng",
+          question:
+            "John Aubrey's claim about Stonehenge was supported by 20th-century findings.",
+          options: ["True", "False", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q12",
+          type: "tfng",
+          question:
+            "Objects discovered at Stonehenge seem to indicate that it was constructed by a number of different groups of people.",
+          options: ["True", "False", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q13",
+          type: "tfng",
+          question:
+            "Criticism of Gerald Hawkins' theory about Stonehenge has come mainly from other astronomers.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
       ],
     },
     {
-      title: 'Living with artificial intelligence',
+      title: "Living with artificial intelligence",
       passage: `Powerful artificial intelligence (AI) needs to be reliably aligned with human values, but does this mean AI will eventually have to police those values?
 
 This has been the decade of AI, with one astonishing feat after another. A chess-playing AI that can defeat not only all human chess players, but also all previous human-programmed chess machines, after learning the game in just four hours? That's yesterday's news, what's next? True, these prodigious accomplishments are all in so-called narrow AI, where machines perform highly specialised tasks. But many experts believe this restriction is very temporary. By mid-century, we may have artificial general intelligence (AGI) – machines that can achieve human-level performance on the full range of tasks that we ourselves can tackle.
@@ -78,23 +170,141 @@ We have a new powerful technology to deal with – itself, literally, a new way 
 
 Both general intelligence and moral reasoning are often thought to be uniquely human capacities. But safety seems to require that we think of them as a package: if we are to give general intelligence to machines, we'll need to give them moral authority, too. And where exactly would that leave human beings? All the more reason to think about the destination now, and to be careful about what we wish for.`,
       questions: [
-        { id: 'Q14', type: 'multiple-choice', question: 'What point does the writer make about AI in the first paragraph?', options: ['A It is difficult to predict how quickly AI will progress.', 'B Much can be learned about the use of AI in chess machines.', 'C The future is unlikely to see limitations on the capabilities of AI.', 'D Experts disagree on which specialised tasks AI will be able to perform.'], answer: 2 },
-        { id: 'Q15', type: 'multiple-choice', question: 'What is the writer doing in the second paragraph?', options: ['A explaining why machines will be able to outperform humans', 'B describing the characteristics that humans and machines share', 'C giving information about the development of machine intelligence', 'D indicating which aspects of humans are the most advanced'], answer: 0 },
-        { id: 'Q16', type: 'multiple-choice', question: 'Why does the writer mention the story of King Midas?', options: ['A to compare different visions of progress', 'B to illustrate that poorly defined objectives can go wrong', 'C to emphasise the need for cooperation', 'D to point out the financial advantages of a course of action'], answer: 1 },
-        { id: 'Q17', type: 'multiple-choice', question: 'What challenge does the writer refer to in the fourth paragraph?', options: ['A encouraging humans to behave in a more principled way', 'B deciding which values we want AI to share with us', 'C creating a better world for all creatures on the planet', 'D ensuring AI is more human-friendly than we are ourselves'], answer: 3 },
-        { id: 'Q18', type: 'multiple-choice', question: 'What does the writer suggest about the future of AI in the fifth paragraph?', options: ['A The safety of machines will become a key issue.', 'B It is hard to know what impact machines will have on the world.', 'C Machines will be superior to humans in certain respects.', 'D Many humans will oppose machines having a wider role.'], answer: 2 },
-        { id: 'Q19', type: 'multiple-choice', question: 'Which of the following best summarises the writer\'s argument in the sixth paragraph?', options: ['A More intelligent machines will result in greater abuses of power.', 'B Machine learning will share very few features with human learning.', 'C There are a limited number of people with the knowledge to program machines.', 'D Human shortcomings will make creating the machines we need more difficult.'], answer: 3 },
-        { id: 'Q20', type: 'tfng', question: 'Machines with the ability to make moral decisions may prevent us from promoting the interests of our communities.', options: ['Yes', 'No', 'Not Given'], answer: 0 },
-        { id: 'Q21', type: 'tfng', question: 'Silicon police would need to exist in large numbers in order to be effective.', options: ['Yes', 'No', 'Not Given'], answer: 2 },
-        { id: 'Q22', type: 'tfng', question: 'Many people are comfortable with the prospect of their independence being restricted by machines.', options: ['Yes', 'No', 'Not Given'], answer: 1 },
-        { id: 'Q23', type: 'tfng', question: 'If we want to ensure that machines act in our best interests, we all need to work together.', options: ['Yes', 'No', 'Not Given'], answer: 0 },
-        { id: 'Q24', type: 'map-label', question: 'AI currently has a limited role in the way ____ are allocated in the health service.', answer: 'C' },
-        { id: 'Q25', type: 'map-label', question: 'such a change would result, for example, in certain ____ not having their current level of', answer: 'A' },
-        { id: 'Q26', type: 'map-label', question: 'not having their current level of ____.', answer: 'E' },
+        {
+          id: "Q14",
+          type: "multiple-choice",
+          question:
+            "What point does the writer make about AI in the first paragraph?",
+          options: [
+            "A It is difficult to predict how quickly AI will progress.",
+            "B Much can be learned about the use of AI in chess machines.",
+            "C The future is unlikely to see limitations on the capabilities of AI.",
+            "D Experts disagree on which specialised tasks AI will be able to perform.",
+          ],
+          answer: 2,
+        },
+        {
+          id: "Q15",
+          type: "multiple-choice",
+          question: "What is the writer doing in the second paragraph?",
+          options: [
+            "A explaining why machines will be able to outperform humans",
+            "B describing the characteristics that humans and machines share",
+            "C giving information about the development of machine intelligence",
+            "D indicating which aspects of humans are the most advanced",
+          ],
+          answer: 0,
+        },
+        {
+          id: "Q16",
+          type: "multiple-choice",
+          question: "Why does the writer mention the story of King Midas?",
+          options: [
+            "A to compare different visions of progress",
+            "B to illustrate that poorly defined objectives can go wrong",
+            "C to emphasise the need for cooperation",
+            "D to point out the financial advantages of a course of action",
+          ],
+          answer: 1,
+        },
+        {
+          id: "Q17",
+          type: "multiple-choice",
+          question:
+            "What challenge does the writer refer to in the fourth paragraph?",
+          options: [
+            "A encouraging humans to behave in a more principled way",
+            "B deciding which values we want AI to share with us",
+            "C creating a better world for all creatures on the planet",
+            "D ensuring AI is more human-friendly than we are ourselves",
+          ],
+          answer: 3,
+        },
+        {
+          id: "Q18",
+          type: "multiple-choice",
+          question:
+            "What does the writer suggest about the future of AI in the fifth paragraph?",
+          options: [
+            "A The safety of machines will become a key issue.",
+            "B It is hard to know what impact machines will have on the world.",
+            "C Machines will be superior to humans in certain respects.",
+            "D Many humans will oppose machines having a wider role.",
+          ],
+          answer: 2,
+        },
+        {
+          id: "Q19",
+          type: "multiple-choice",
+          question:
+            "Which of the following best summarises the writer's argument in the sixth paragraph?",
+          options: [
+            "A More intelligent machines will result in greater abuses of power.",
+            "B Machine learning will share very few features with human learning.",
+            "C There are a limited number of people with the knowledge to program machines.",
+            "D Human shortcomings will make creating the machines we need more difficult.",
+          ],
+          answer: 3,
+        },
+        {
+          id: "Q20",
+          type: "tfng",
+          question:
+            "Machines with the ability to make moral decisions may prevent us from promoting the interests of our communities.",
+          options: ["Yes", "No", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q21",
+          type: "tfng",
+          question:
+            "Silicon police would need to exist in large numbers in order to be effective.",
+          options: ["Yes", "No", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q22",
+          type: "tfng",
+          question:
+            "Many people are comfortable with the prospect of their independence being restricted by machines.",
+          options: ["Yes", "No", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q23",
+          type: "tfng",
+          question:
+            "If we want to ensure that machines act in our best interests, we all need to work together.",
+          options: ["Yes", "No", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q24",
+          type: "map-label",
+          question:
+            "AI currently has a limited role in the way ____ are allocated in the health service.",
+          answer: "C",
+          options: AI_HEALTH_OPTIONS,
+        },
+        {
+          id: "Q25",
+          type: "map-label",
+          question:
+            "such a change would result, for example, in certain ____ not having their current level of",
+          answer: "A",
+          options: AI_HEALTH_OPTIONS,
+        },
+        {
+          id: "Q26",
+          type: "map-label",
+          question: "not having their current level of ____.",
+          answer: "E",
+          options: AI_HEALTH_OPTIONS,
+        },
       ],
     },
     {
-      title: 'An ideal city',
+      title: "An ideal city",
       passage: `Leonardo da Vinci's ideal city was centuries ahead of its time
 
 The word 'genius' is universally associated with the name of Leonardo da Vinci. A true Renaissance man, he embodied scientific spirit, artistic talent and humanist sensibilities. Five hundred years have passed since Leonardo died in his home at Château du Clos Lucé, outside Tours, France. Yet far from fading into insignificance, his thinking has carried down the centuries and still surprises today.
@@ -115,21 +325,112 @@ Although some of these features existed in Roman cities, before Leonardo's drawi
 
 Today, Leonardo's ideas are not simply valid, they actually suggest a way forward for urban planning. Many scholars think that the compact city, built upwards instead of outwards, integrated with nature (especially water systems), with efficient transport infrastructure, could help modern cities become more efficient and sustainable. This is yet another reason why Leonardo was aligned so closely with modern urban planning and centuries ahead of his time.`,
       questions: [
-        { id: 'Q27', type: 'tfng', question: 'People first referred to Leonardo da Vinci as a genius 500 years ago.', options: ['True', 'False', 'Not Given'], answer: 2 },
-        { id: 'Q28', type: 'tfng', question: 'The current climate crisis is predicted to cause more deaths than the plague.', options: ['True', 'False', 'Not Given'], answer: 2 },
-        { id: 'Q29', type: 'tfng', question: 'Some of the challenges we face today can be compared to those of earlier times.', options: ['True', 'False', 'Not Given'], answer: 0 },
-        { id: 'Q30', type: 'tfng', question: 'Leonardo da Vinci\'s \'ideal city\' was constructed in the 15th century.', options: ['True', 'False', 'Not Given'], answer: 1 },
-        { id: 'Q31', type: 'tfng', question: 'Poor town planning is a major contributor to climate change.', options: ['True', 'False', 'Not Given'], answer: 0 },
-        { id: 'Q32', type: 'tfng', question: 'In Renaissance times, local people fought against the changes to Pienza and Ferrara.', options: ['True', 'False', 'Not Given'], answer: 2 },
-        { id: 'Q33', type: 'tfng', question: 'Leonardo da Vinci kept a neat, organised record of his designs.', options: ['True', 'False', 'Not Given'], answer: 1 },
-        { id: 'Q34', type: 'fill-blank', question: 'This was to provide better ____ for trade and a less polluted environment.', answer: 'transport' },
-        { id: 'Q35', type: 'fill-blank', question: 'They included features that can be seen in some tower blocks today, such as ____ on the exterior of a building.', answer: 'staircases' },
-        { id: 'Q36', type: 'fill-blank', question: 'His expertise in ____ was evident in his plans for artificial canals within his ideal city.', answer: 'engineering' },
-        { id: 'Q37', type: 'fill-blank', question: 'The design of many cities in Italy today follows this ____.', answer: 'rule' },
-        { id: 'Q38', type: 'fill-blank', question: 'While some cities from ____ times have aspects that can also be found in Leonardo\'s designs', answer: 'Roman' },
-        { id: 'Q39', type: 'fill-blank', question: '____ is one example of a city that was redesigned in the 19th century in the way that Leonardo had envisaged.', answer: 'Paris' },
-        { id: 'Q40', type: 'fill-blank', question: 'His ideas are also relevant to today\'s world, where building ____ no longer seems to be the best approach.', answer: 'outwards' },
+        {
+          id: "Q27",
+          type: "tfng",
+          question:
+            "People first referred to Leonardo da Vinci as a genius 500 years ago.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q28",
+          type: "tfng",
+          question:
+            "The current climate crisis is predicted to cause more deaths than the plague.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q29",
+          type: "tfng",
+          question:
+            "Some of the challenges we face today can be compared to those of earlier times.",
+          options: ["True", "False", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q30",
+          type: "tfng",
+          question:
+            "Leonardo da Vinci's 'ideal city' was constructed in the 15th century.",
+          options: ["True", "False", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q31",
+          type: "tfng",
+          question:
+            "Poor town planning is a major contributor to climate change.",
+          options: ["True", "False", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q32",
+          type: "tfng",
+          question:
+            "In Renaissance times, local people fought against the changes to Pienza and Ferrara.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q33",
+          type: "tfng",
+          question:
+            "Leonardo da Vinci kept a neat, organised record of his designs.",
+          options: ["True", "False", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q34",
+          type: "fill-blank",
+          question:
+            "This was to provide better ____ for trade and a less polluted environment.",
+          answer: "transport",
+        },
+        {
+          id: "Q35",
+          type: "fill-blank",
+          question:
+            "They included features that can be seen in some tower blocks today, such as ____ on the exterior of a building.",
+          answer: "staircases",
+        },
+        {
+          id: "Q36",
+          type: "fill-blank",
+          question:
+            "His expertise in ____ was evident in his plans for artificial canals within his ideal city.",
+          answer: "engineering",
+        },
+        {
+          id: "Q37",
+          type: "fill-blank",
+          question:
+            "The design of many cities in Italy today follows this ____.",
+          answer: "rule",
+        },
+        {
+          id: "Q38",
+          type: "fill-blank",
+          question:
+            "While some cities from ____ times have aspects that can also be found in Leonardo's designs",
+          answer: "Roman",
+        },
+        {
+          id: "Q39",
+          type: "fill-blank",
+          question:
+            "____ is one example of a city that was redesigned in the 19th century in the way that Leonardo had envisaged.",
+          answer: "Paris",
+        },
+        {
+          id: "Q40",
+          type: "fill-blank",
+          question:
+            "His ideas are also relevant to today's world, where building ____ no longer seems to be the best approach.",
+          answer: "outwards",
+        },
       ],
     },
   ],
-}
+};

@@ -1,7 +1,7 @@
 import { computed, effectScope, ref } from 'vue'
 import {
   entryKey,
-  readRecords,
+  readRecord,
   saveEnvelope,
   subscribeStorage,
   writerId,
@@ -90,10 +90,11 @@ function createDaily(ns: string) {
   function recordNewWord(id: string | number = crypto.randomUUID()) {
     refreshDay()
     const epoch
-      = readRecords<{
-        epoch: string
-      }>('daily_resets_v2', currentUser.value)[`${ns}|${day.value}`]?.epoch
-      ?? ''
+      = readRecord<{ epoch: string }>(
+        'daily_resets_v2',
+        `${ns}|${day.value}`,
+        currentUser.value,
+      )?.epoch ?? ''
     const key = `${ns}|${day.value}|${String(id)}|${writerId()}`
     records.set(key, {
       ns,

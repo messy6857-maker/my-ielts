@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { speechLanguage, useAudioGroup } from '../../composables/useAudioGroup'
+import { useAudioGroup } from '../../composables/useAudioGroup'
 
 import { studyDay } from '../../composables/useStudyData'
 
@@ -12,7 +12,8 @@ import {
   formatDuration,
   useStudyTimer,
 } from '../../composables/useStudyTimer'
-import { getWordInfoWithFallback } from '../../composables/useWordInfo'
+import { loadVocabularyDetails } from '../../composables/useVocabularyDetails'
+import { loadWordInfoWithFallback } from '../../composables/useWordInfo'
 import type { WordInfo } from '../../composables/useWordInfo'
 import { wordPhonetics } from './wordPhonetics'
 import { parseExtra } from './extraParser'
@@ -35,11 +36,17 @@ interface Card {
   attempts: number
   isNew: boolean
   counted: boolean // 是否已计入今日新词
+  chapter: string
   hintWords: string[] // 联网找例句时的备选词（派生词等）
 }
 
 const CHAPTER_KEY = 'vocabulary_flashcard_chapter'
 const chapters = Object.keys(vocabulary)
+const chapterById = new Map<string, string>(
+  Object.entries(vocabulary).flatMap(([chapter, data]: [string, any]) =>
+    data.words.flat().map((w: any) => [String(w.id), chapter] as const),
+  ),
+)
 const crossChapter = ref(false)
 const storedChapter = localStorage.getItem(CHAPTER_KEY)
 const category = ref(
@@ -93,6 +100,7 @@ const studying = ref<Card | null>(null)
 const lastGrade = ref<0 | 3 | 5 | null>(null)
 // 联网例句/同义词（自评前展示的提示；数据为构建时预抓取，运行时零等待）
 const wordInfo = ref<WordInfo | null>(null)
+let wordLoadSequence = 0
 
 const current = computed(() =>
   !studying.value ? (queue.value[0] ?? null) : null,
@@ -154,16 +162,22 @@ const wordPosMap = computed(() => {
   return map
 })
 // 抓取表懒加载缓存：只 import 一次，失败则保持空态（不显示词性，不重试刷屏）
+const synonymPosError = ref(false)
 const synonymPosLazy = ref<Record<string, string> | null>(null)
 let synonymPosPromise: Promise<Record<string, string> | null> | null = null
 function ensureSynonymPos() {
   if (!synonymPosPromise) {
+    synonymPosError.value = false
     synonymPosPromise = import('./synonymPos')
       .then((m) => {
         synonymPosLazy.value = m.synonymPosData
         return m.synonymPosData
       })
-      .catch(() => null)
+      .catch(() => {
+        synonymPosPromise = null
+        synonymPosError.value = true
+        return null
+      })
   }
   return synonymPosPromise
 }
@@ -214,51 +228,28 @@ function phonetic(word: string): string {
 }
 
 let audio: HTMLAudioElement | null = null
-function speakWord(w: string) {
-  try {
-    speechSynthesis.cancel()
-    const u = new SpeechSynthesisUtterance(w)
-    u.lang = speechLanguage()
-    speechSynthesis.speak(u)
-  }
-  catch {
-    // 忽略朗读异常
-  }
-}
-function playAudio(word?: string) {
+function playAudio(word?: string, chapter?: string) {
   const w = word || current.value?.word || studying.value?.word
   if (!w)
     return
-  try {
-    speechSynthesis.cancel()
-    if (audio) {
-      audio.pause()
-      audio.currentTime = 0
-    }
-    audio = managedAudio.create()
-    let fellBack = false
-    const fallback = () => {
-      if (!fellBack) {
-        fellBack = true
-        speakWord(w)
-      }
-    }
-    audio.onerror = fallback
-    audio.src = resolveAudioUrl(`vocabulary/audio/${category.value}/${w}.mp3`)
-    audio.play().catch(fallback)
-  }
-  catch {
-    // 忽略音频异常
-  }
+  const origin
+    = chapter
+    ?? current.value?.chapter
+    ?? studying.value?.chapter
+    ?? category.value
+  audio = managedAudio.play(
+    resolveAudioUrl(`vocabulary/audio/${origin}/${w}.mp3`),
+    w,
+  )
 }
 // 学习面板展示期间预加载下一个词的音频，切词时不再现取现播
 let preloadAudioEl: HTMLAudioElement | null = null
-function preloadAudio(word: string) {
+function preloadAudio(word: string, chapter: string) {
   try {
     preloadAudioEl = managedAudio.create()
     preloadAudioEl.preload = 'auto'
     preloadAudioEl.src = resolveAudioUrl(
-      `vocabulary/audio/${category.value}/${word}.mp3`,
+      `vocabulary/audio/${chapter}/${word}.mp3`,
     )
   }
   catch {
@@ -269,6 +260,7 @@ function preloadAudio(word: string) {
 function toCard(w: any, isNew: boolean): Card {
   const extras = parseExtra(w.extra)
   return {
+    chapter: chapterById.get(String(w.id)) ?? category.value,
     id: w.id,
     word: w.word[0],
     pos: w.pos,
@@ -333,6 +325,7 @@ function buildQueue() {
   gradeHistory.value = []
   stats.value = { known: 0, vague: 0, unknown: 0 }
   finished.value = initialTotal.value === 0
+  wordLoadSequence++
   studying.value = null
   lastGrade.value = null
   wordInfo.value = null
@@ -392,7 +385,7 @@ function grade(g: 0 | 3 | 5) {
     // 模糊 / 不认识：记入错词本。单词自测用独立模块 flashcard，与词表拼写
     // （vocabulary）分开，错词本不再把“没认出”和“没拼对”混在“词汇拼写”组里
     addMistake('flashcard', {
-      key: `vocabulary:${card.id}`,
+      key: `flashcard:${card.id}`,
       title: card.word,
       detail: `${card.pos} ${card.meaning}`,
       hint: card.example,
@@ -410,10 +403,10 @@ function grade(g: 0 | 3 | 5) {
   showMnemonic.value = true // 自评后直接展开巧记，无需点击
   showAnswer.value = false
   studying.value = card
-  playAudio(card.word)
+  playAudio(card.word, card.chapter)
   // 预加载下一个词的音频，切词时不再现取现播
   if (queue.value.length > 0)
-    preloadAudio(queue.value[0].word)
+    preloadAudio(queue.value[0].word, queue.value[0].chapter)
 }
 
 // 返回上一个单词，重新测试：还原自评前调度、本轮统计、统计页累计、复现次数与新词计数，错词本计数减一
@@ -449,7 +442,7 @@ function goBackOne() {
   else stats.value.unknown = Math.max(0, stats.value.unknown - 1)
   decrementAttempt('vocabulary', g, entry.date)
   if (g !== 5)
-    decrementMistake(`vocabulary:${card.id}`, entry.date)
+    decrementMistake(`flashcard:${card.id}`, entry.date)
   // 本次自评计入的新词要扣回，并恢复 counted 标记（换章重建队列也不会重复计数）
   if (countedNew) {
     daily.decrementNewWord(card.id, entry.date)
@@ -459,12 +452,13 @@ function goBackOne() {
   // 去掉本轮内复现排队的副本，再把该词放回队首
   queue.value = queue.value.filter(c => c.id !== card.id)
   queue.value.unshift(card)
+  wordLoadSequence++
   studying.value = null
   lastGrade.value = null
   showAnswer.value = false
   showPreAnswer.value = false
   showMnemonic.value = false
-  playAudio(card.word)
+  playAudio(card.word, card.chapter)
 }
 
 const finishStats = computed(() => {
@@ -476,6 +470,7 @@ const finishStats = computed(() => {
   }
 })
 function next() {
+  wordLoadSequence++
   studying.value = null
   lastGrade.value = null
   showAnswer.value = false
@@ -486,10 +481,32 @@ function next() {
 }
 
 /** 自评前加载例句/同义词：查内置预抓取数据（本词 → 派生词），同步返回 */
-function loadWordInfo(card: Card) {
-  wordInfo.value = getWordInfoWithFallback([card.word, ...card.hintWords])
+async function loadWordInfo(card: Card) {
+  const sequence = ++wordLoadSequence
+  wordInfo.value = null
+  try {
+    const details = await loadVocabularyDetails(card.chapter)
+    if (sequence !== wordLoadSequence)
+      return
+    const detail = details[String(card.id)]
+    if (detail) {
+      card.example = detail.example
+      card.extra = detail.extra
+      card.hintWords = parseExtra(detail.extra)
+        .map(x => x.word)
+        .slice(0, 3)
+    }
+    const info = await loadWordInfoWithFallback([card.word, ...card.hintWords])
+    if (sequence !== wordLoadSequence)
+      return
+    wordInfo.value = info
+  }
+  catch {
+    /* Local word/meaning remains usable and next request can retry. */
+  }
   // 同义词词性首次需要时才加载抓取表（懒加载，带缓存与未加载空态）
-  ensureSynonymPos()
+  if (wordInfo.value?.synonyms.length)
+    ensureSynonymPos()
 }
 
 function finishSession() {
@@ -534,6 +551,7 @@ watch([category, crossChapter], () => {
 
 // 卡片切换时预加载联网例句/同义词
 watch(current, (c) => {
+  wordLoadSequence++
   if (c)
     loadWordInfo(c)
 })
@@ -565,6 +583,7 @@ onMounted(() => {
 
 // 离页时停掉 TTS 与音频，避免后台继续出声（useAudioGroup 的 dispose 已有同类取消，此处显式兜底，与 KeywordFlashcard 对齐）
 onUnmounted(() => {
+  wordLoadSequence++
   speechSynthesis.cancel()
   if (audio) {
     audio.pause()
@@ -578,6 +597,17 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <p v-if="synonymPosError" class="mx-4 text-sm text-amber-700" role="status">
+    同义词词性暂未加载。<button class="underline" @click="ensureSynonymPos">
+      重试
+    </button>
+  </p>
+  <p
+    v-if="crossChapter && (current || studying)"
+    class="mx-4 text-sm text-gray-500"
+  >
+    原章节：{{ (current || studying)?.chapter }}
+  </p>
   <label class="mx-4 mt-4 flex items-center gap-2 text-sm"><input
     v-model="crossChapter"
     type="checkbox"
@@ -730,7 +760,7 @@ onUnmounted(() => {
         class="border border-gray-200 rounded-2xl bg-white p-8 text-center shadow-lg dark:border-gray-700 dark:bg-gray-800"
       >
         <h2 class="mb-4 text-2xl font-bold dark:text-white">
-          {{ initialTotal === 0 ? '今日目标已完成 🎉' : '本轮完成 🎉' }}
+          {{ initialTotal === 0 ? "今日目标已完成 🎉" : "本轮完成 🎉" }}
         </h2>
         <div
           v-if="initialTotal > 0"
@@ -744,7 +774,7 @@ onUnmounted(() => {
           {{
             initialTotal === 0
               ? `今日新词已学完（${daily.dailyCount} / ${daily.goal}），到期复习会按时出现`
-              : '没掌握的词已按记忆曲线安排复现，并记入错词本'
+              : "没掌握的词已按记忆曲线安排复现，并记入错词本"
           }}
         </p>
         <div class="flex justify-center gap-3">
@@ -778,7 +808,7 @@ onUnmounted(() => {
                   : 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300'
               "
             >
-              {{ current.isNew ? '新词' : '复习' }}
+              {{ current.isNew ? "新词" : "复习" }}
             </span>
           </div>
           <div class="mb-2 flex items-center justify-center gap-3">
@@ -823,7 +853,7 @@ onUnmounted(() => {
                 🧠 拆词：{{
                   (preMnemonic.parts ?? [])
                     .map((p) => `${p.text}（${p.gloss}）`)
-                    .join(' + ')
+                    .join(" + ")
                 }}
                 <button
                   v-if="!showPreAnswer"
@@ -945,10 +975,10 @@ onUnmounted(() => {
             >
               {{
                 lastGrade === 5
-                  ? '认识 · 确认一下'
+                  ? "认识 · 确认一下"
                   : lastGrade === 0
-                    ? '不认识 · 记一下'
-                    : '模糊 · 再看看'
+                    ? "不认识 · 记一下"
+                    : "模糊 · 再看看"
               }}
             </span>
           </div>
@@ -1099,7 +1129,7 @@ onUnmounted(() => {
               @click="showMnemonic = !showMnemonic"
             >
               <i class="i-carbon-idea block" />
-              {{ studyMnemonic ? studyMnemonic.title : '巧记提示' }}
+              {{ studyMnemonic ? studyMnemonic.title : "巧记提示" }}
               <span
                 v-if="studyLapses >= 2"
                 class="text-xs font-normal text-amber-500"
@@ -1201,7 +1231,7 @@ onUnmounted(() => {
           <p class="mb-4 text-xs text-gray-400">
             {{
               timer.dailySeconds.value >= timer.dailyGoal
-                ? '今日目标已达成 🎉'
+                ? "今日目标已达成 🎉"
                 : `距离今日目标 2 小时还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}`
             }}
           </p>

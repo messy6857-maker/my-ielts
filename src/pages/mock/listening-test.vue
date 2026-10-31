@@ -1,8 +1,14 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
+import { useExamClock } from '../../composables/useExamClock'
 import { useExamRecovery } from '../../composables/useExamRecovery'
 
-import { loadMockTest, loadMockTranscript, mockTestList, withTranscripts } from './registry'
+import {
+  loadMockTest,
+  loadMockTranscript,
+  mockTestList,
+  withTranscripts,
+} from './registry'
 import type { MockTestPair } from './registry'
 import {
   bandScore,
@@ -16,7 +22,6 @@ import {
   totalScorePoints,
 } from './types'
 import type { MockQuestion } from './types'
-import { saveMockRecord } from '~/composables/useMockHistory'
 import { resolveMediaUrl } from '~/composables/useAudio'
 import { useGoBack } from '~/composables/useGoBack'
 import ListeningTabs from '~/components/ListeningTabs.vue'
@@ -50,31 +55,19 @@ function onAudioLoaded(pi: number) {
   delete mediaErrors.value[pi]
 }
 const audioEl = ref<HTMLAudioElement | null>(null)
-let timer: ReturnType<typeof setInterval> | null = null
+const mapLabelHints = ref<Record<string, string>>({})
+const zoomImage = ref<string | null>(null)
+const transcriptError = ref(false)
 let loadSeq = 0
-let endAt = 0
-
-function pauseExam() {
-  if (endAt)
-    timeLeft.value = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
-  endAt = 0
-  if (timer)
-    clearInterval(timer)
-  timer = null
-  pauseAllAudio()
-}
-// 阻断解除后恢复计时：按暂停时冻结的 timeLeft 重建墙钟锚点与 interval
-function startTimer() {
-  if (timer)
-    clearInterval(timer)
-  // 墙钟锚点：后台节流导致 tick 稀疏时，剩余时间仍按真实时间重算
-  endAt = Date.now() + timeLeft.value * 1000
-  timer = setInterval(() => {
-    timeLeft.value = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
-    if (timeLeft.value <= 0)
-      submit()
-  }, 1000)
-}
+const examClock = useExamClock(
+  timeLeft,
+  () => {
+    submit()
+  },
+  pauseAllAudio,
+)
+const pauseExam = examClock.pause
+const startTimer = examClock.start
 const recovery = useExamRecovery({
   kind: 'listening',
   testId,
@@ -83,10 +76,7 @@ const recovery = useExamRecovery({
   answers,
   timeLeft,
   pause: pauseExam,
-  remaining: () =>
-    endAt
-      ? Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
-      : timeLeft.value,
+  remaining: examClock.remaining,
   extra: () => ({ active: activePart.value }),
   onUnblocked: startTimer,
 })
@@ -118,6 +108,16 @@ function pauseAllAudio() {
   else els?.pause?.()
 }
 
+const recordSaveFailed = ref(false)
+let resultsOwner: string | null = null
+function retrySaveResult() {
+  if (useAuth().currentUser.value !== resultsOwner) {
+    recovery.error.value = '请先回到本次作答的原身份，再重试保存成绩。'
+    return
+  }
+  submitted.value = false
+  submit()
+}
 // 异步加载选中的套题（按需加载，不一次全载入）
 // loadSeq 防止快速切换时旧的加载覆盖新的；try/finally 保证 loading 一定复位
 async function loadTest() {
@@ -141,8 +141,7 @@ async function loadTest() {
   const seq = ++loadSeq
   loading.value = true
   loadError.value = false
-  if (timer)
-    clearInterval(timer)
+  pauseExam()
   pauseAllAudio()
   try {
     const pair = await loadMockTest(testId.value)
@@ -155,6 +154,12 @@ async function loadTest() {
         router.replace({ query: { ...route.query, test: active } })
       return
     }
+    partImageFailed.value = {}
+    mediaErrors.value = {}
+    mapLabelHints.value = {}
+    zoomImage.value = null
+    transcriptError.value = false
+    recordSaveFailed.value = false
     testPair.value = pair
     answers.value = {}
     submitted.value = false
@@ -180,14 +185,19 @@ function startTest() {
   if (!testPair.value || started.value)
     return
   // 已交卷的草稿不再续做：按全新测试开始
-  let saved = recovery.draft.value && !recovery.draft.value.submitted
-    ? recovery.draft.value
-    : null
+  let saved
+    = recovery.draft.value && !recovery.draft.value.submitted
+      ? recovery.draft.value
+      : null
   // M-Opt-#4：0 秒草稿不再 1 秒后自动交卷，给二选一：确定 = 直接交卷查看
   // 成绩，取消 = 放弃草稿、全新开始。
   if (saved && saved.timeLeft <= 0) {
     recovery.begin()
-    if (window.confirm('该草稿剩余时间已到（0 秒）。点“确定”直接交卷查看成绩，点“取消”放弃草稿、全新开始。')) {
+    if (
+      window.confirm(
+        '该草稿剩余时间已到（0 秒）。点“确定”直接交卷查看成绩，点“取消”放弃草稿、全新开始。',
+      )
+    ) {
       answers.value = saved.answers ?? {}
       activePart.value = saved.extra?.active ?? 0
       started.value = true
@@ -198,7 +208,10 @@ function startTest() {
     saved = null
   }
   recovery.begin()
-  timeLeft.value = restoreTimeLeft(saved?.timeLeft, testPair.value.listening.timeLimit)
+  timeLeft.value = restoreTimeLeft(
+    saved?.timeLeft,
+    testPair.value.listening.timeLimit,
+  )
   answers.value = saved?.answers ?? {}
   submitted.value = false
   activePart.value = saved?.extra?.active ?? 0
@@ -224,8 +237,7 @@ watch(testId, loadTest)
 watch(activePart, () => pauseAllAudio())
 
 onUnmounted(() => {
-  if (timer)
-    clearInterval(timer)
+  pauseExam()
   pauseAllAudio()
   document.body.classList.remove('listening-sticky-page')
 })
@@ -239,7 +251,6 @@ onMounted(() => {
 })
 
 // ---------- 图片全屏查看器（双指缩放 / 拖动 / 双击切换） ----------
-const zoomImage = ref<string | null>(null)
 const zoomScale = ref(1)
 const zoomPos = ref({ x: 0, y: 0 })
 
@@ -286,7 +297,10 @@ function onZoomTouchStart(e: TouchEvent) {
   }
   else if (e.touches.length === 1 && zoomScale.value > 1) {
     const t = e.touches[0]
-    panBase = { x: t.clientX - zoomPos.value.x, y: t.clientY - zoomPos.value.y }
+    panBase = {
+      x: t.clientX - zoomPos.value.x,
+      y: t.clientY - zoomPos.value.y,
+    }
   }
 }
 
@@ -345,7 +359,6 @@ function setAnswer(qid: string, val: string) {
 // 听力 map-label 答案均为单个字母：maxlength=1 挡住多字符输入，
 // 并把非字母/多余字符过滤掉且给出提示，避免“AB”之类误输入交卷后静默判错。
 // 阅读侧不走这里（阅读标题题最长 viii 需保留 maxlength=4，见 reading-test.vue）。
-const mapLabelHints = ref<Record<string, string>>({})
 function setMapLabelAnswer(qid: string, raw: string) {
   if (recovery.mismatch())
     return
@@ -364,8 +377,7 @@ function setMapLabelAnswer(qid: string, raw: string) {
   }
   if (raw.trim().length > 1 || letters.length > 1)
     mapLabelHints.value[qid] = '只填一个字母，已取首个字母'
-  else
-    mapLabelHints.value[qid] = ''
+  else mapLabelHints.value[qid] = ''
   answers.value[qid] = letters[0]
 }
 
@@ -378,7 +390,11 @@ function toggleMultiSelect(qid: string, idx: number) {
   const q = allQuestions.value.find(q => q.id === qid)
   const max
     = q && Array.isArray(q.answer) ? q.answer.length : Number.POSITIVE_INFINITY
-  answers.value[qid] = toggleMultiSelectValue(answers.value[qid] ?? '', idx, max)
+  answers.value[qid] = toggleMultiSelectValue(
+    answers.value[qid] ?? '',
+    idx,
+    max,
+  )
 }
 
 // 切换套题：已开始且未交卷且已有答案时先确认，避免误触丢进度；
@@ -408,19 +424,36 @@ onBeforeRouteLeave(
     || submitted.value
     || window.confirm('尚未交卷，离开将暂停计时并保留本机草稿，确定吗？'),
 )
+const transcriptLoading = ref(false)
+async function fetchTranscript() {
+  const pair = testPair.value
+  const id = testId.value
+  transcriptLoading.value = true
+  transcriptError.value = false
+  try {
+    const transcript = await loadMockTranscript(id)
+    if (testPair.value !== pair || testId.value !== id)
+      return
+    if (!transcript)
+      throw new Error('原文加载失败')
+    testPair.value = {
+      ...pair!,
+      listening: withTranscripts(pair!.listening, transcript),
+    }
+  }
+  catch {
+    if (testId.value === id)
+      transcriptError.value = true
+  }
+  finally {
+    if (testId.value === id)
+      transcriptLoading.value = false
+  }
+}
 async function submit() {
-  if (recovery.mismatch())
-    return
-  if (submitted.value)
-    return
-  submitted.value = true
-  if (timer)
-    clearInterval(timer)
-  pauseAllAudio()
-  // 保存做题记录
   const qs = allQuestions.value
   const total = totalScorePoints(qs)
-  const saved = saveMockRecord({
+  const result = recovery.submitResult({
     id: testId.value,
     label: testPair.value?.label ?? testId.value,
     kind: 'listening',
@@ -428,22 +461,39 @@ async function submit() {
     total,
     band: band.value,
   })
-  recovery.markSubmitted()
-  if (saved)
-    recovery.clear()
-  else
-    recovery.error.value = '交卷记录保存失败，成绩已在当前页显示；本机草稿已标记为已交卷，不会再提示继续作答。'
+  if (!result)
+    return
+  recordSaveFailed.value = !result.saved
+  if (!result.saved)
+    resultsOwner = recovery.owner.value
   // M-Opt1：交卷后才按需加载录音脚本，选加载不再顺带下载整套脚本；
   // 加载失败时脚本区保持隐藏（原有 v-if 分支），不阻塞交卷主流程。
   // M-Opt2 的音频保留见模板：交卷后 audio 不再 v-if 销毁，仍可边听边对脚本。
-  const pairAtSubmit = testPair.value
-  const transcript = await loadMockTranscript(testId.value)
-  if (transcript && testPair.value && testPair.value === pairAtSubmit)
-    testPair.value = { ...testPair.value, listening: withTranscripts(testPair.value.listening, transcript) }
+  await fetchTranscript()
 }
 </script>
 
 <template>
+  <p
+    v-if="submitted && transcriptError"
+    role="alert"
+    class="m-4 text-amber-700"
+  >
+    录音脚本加载失败。<button
+      class="underline"
+      :disabled="transcriptLoading"
+      @click="fetchTranscript"
+    >
+      重试加载
+    </button>
+  </p>
+  <button
+    v-if="recordSaveFailed"
+    class="m-4 rounded bg-amber-100 p-2 text-amber-900"
+    @click="retrySaveResult"
+  >
+    重试保存成绩
+  </button>
   <div ref="mediaRoot" class="mx-auto max-w-5xl px-4 pt-6 2xl:px-0">
     <p
       v-if="recovery.error.value"
@@ -452,7 +502,11 @@ async function submit() {
       class="my-3 rounded-lg bg-amber-50 p-3 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
     >
       {{ recovery.error.value }}
-      <button type="button" class="ml-2 underline" @click="recovery.dismissNotice()">
+      <button
+        type="button"
+        class="ml-2 underline"
+        @click="recovery.dismissNotice()"
+      >
         知道了
       </button>
     </p>
@@ -529,8 +583,8 @@ async function submit() {
         >
           {{
             recovery.draft.value && !recovery.draft.value.submitted
-              ? '继续上次作答（从剩余时间计时）'
-              : '▶ 开始测试'
+              ? "继续上次作答（从剩余时间计时）"
+              : "▶ 开始测试"
           }}
         </button>
         <button
@@ -541,11 +595,21 @@ async function submit() {
         >
           放弃草稿，重新开始
         </button>
-        <p v-if="recovery.draft.value?.submitted" class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+        <p
+          v-if="recovery.draft.value?.submitted"
+          class="mt-4 text-sm text-gray-500 dark:text-gray-400"
+        >
           该套题已交卷，重新开始将是一次新的测试
         </p>
-        <p v-if="recovery.draft.value && !recovery.draft.value.submitted" class="mt-4 text-sm text-gray-500 dark:text-gray-400">
-          草稿最后保存：{{ new Date(recovery.draft.value.updatedAt).toLocaleString() }}
+        <p
+          v-if="recovery.draft.value && !recovery.draft.value.submitted"
+          class="mt-4 text-sm text-gray-500 dark:text-gray-400"
+        >
+          草稿最后保存：{{
+            recovery.draft.value.updatedAt
+              ? new Date(recovery.draft.value.updatedAt).toLocaleString()
+              : "时间未知（答案已保留）"
+          }}
         </p>
       </div>
       <div v-else :inert="recovery.blocked.value ? true : undefined">
@@ -768,9 +832,9 @@ async function submit() {
                         "
                       >
                         {{
-                          (answers[q.id] ?? '').split(',').includes(String(oi))
-                            ? '✓'
-                            : ''
+                          (answers[q.id] ?? "").split(",").includes(String(oi))
+                            ? "✓"
+                            : ""
                         }}
                       </span>
                       {{ opt }}
@@ -811,7 +875,10 @@ async function submit() {
                     maxlength="1"
                     class="w-24 border border-gray-300 rounded-lg px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                     @input="
-                      setMapLabelAnswer(q.id, ($event.target as HTMLInputElement).value)
+                      setMapLabelAnswer(
+                        q.id,
+                        ($event.target as HTMLInputElement).value,
+                      )
                     "
                   >
                   <p
@@ -829,19 +896,19 @@ async function submit() {
                       v-if="questionStatus(q) === 'partial'"
                       class="font-bold text-amber-700"
                     >部分正确（{{
-                      multiSelectScore(q, answers[q.id] ?? '')
+                      multiSelectScore(q, answers[q.id] ?? "")
                     }}
                       / {{ Array.isArray(q.answer) ? q.answer.length : 1 }} 分）
                       · </span>正确答案：{{
-                      q.type === 'multi-select'
+                      q.type === "multi-select"
                         ? (q.answer as number[])
                           .map((i) => q.options?.[i])
-                          .join(' / ')
-                        : q.type === 'fill-blank'
+                          .join(" / ")
+                        : q.type === "fill-blank"
                           ? Array.isArray(q.answer)
-                            ? q.answer.join(' / ')
+                            ? q.answer.join(" / ")
                             : q.answer
-                          : q.type === 'map-label'
+                          : q.type === "map-label"
                             ? q.answer
                             : q.options?.[q.answer as number]
                     }}
@@ -875,7 +942,11 @@ async function submit() {
   <!-- 图片全屏查看器：双指缩放 / 单指拖动 / 双击切换 / 滚轮缩放 -->
   <!-- 查看器在考试区 inert 子树之外：阻断时同样 inert，否则阻断前已打开的
        查看器在阻断期间仍可缩放/关闭。 -->
-  <div v-if="zoomImage" :inert="recovery.blocked.value ? true : undefined" class="fixed inset-0 z-50 flex flex-col bg-black/95">
+  <div
+    v-if="zoomImage"
+    :inert="recovery.blocked.value ? true : undefined"
+    class="fixed inset-0 z-50 flex flex-col bg-black/95"
+  >
     <div class="flex items-center justify-between gap-2 p-3">
       <div class="flex items-center gap-2">
         <button

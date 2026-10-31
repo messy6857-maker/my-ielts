@@ -19,7 +19,9 @@ const p1Filtered = computed(() => {
   if (!kw)
     return PART1_TOPICS
   return PART1_TOPICS.filter(
-    t => t.topic.toLowerCase().includes(kw) || t.topicCn.includes(kw)
+    t =>
+      t.topic.toLowerCase().includes(kw)
+      || t.topicCn.includes(kw)
       || t.questions.some(q => q.toLowerCase().includes(kw)),
   )
 })
@@ -41,6 +43,14 @@ const p2Filtered = computed(() =>
 const activeCard = ref<Part2Card | null>(null)
 
 // Part 3
+const p3Keyword = ref('')
+const p3Filtered = computed(() => {
+  const keyword = p3Keyword.value.trim().toLowerCase()
+  return PART3_TOPICS.filter(
+    topic =>
+      !keyword || JSON.stringify(topic).toLowerCase().includes(keyword),
+  )
+})
 const p3Expanded = ref<string | null>(null)
 function toggleP3(id: string) {
   p3Expanded.value = p3Expanded.value === id ? null : id
@@ -103,7 +113,7 @@ function tabBtn(t: Tab) {
                 t.topicCn
               }}</span></span>
             <span class="text-gray-400">{{
-              p1Expanded === t.id ? '▲' : '▼'
+              p1Expanded === t.id ? "▲" : "▼"
             }}</span>
           </button>
           <div
@@ -170,13 +180,18 @@ function tabBtn(t: Tab) {
 
     <!-- Part 3 -->
     <div v-if="tab === 'part3'">
+      <input
+        v-model="p3Keyword"
+        placeholder="搜索 Part 3 话题或问题…"
+        class="mb-4 w-full border rounded p-2 dark:bg-gray-800"
+      >
       <p class="mb-3 text-xs text-gray-400">
-        {{ PART3_TOPICS.length }} 个讨论话题 · 回答要有观点 + 解释 +
+        {{ p3Filtered.length }} 个讨论话题 · 回答要有观点 + 解释 +
         例子，可录音自测
       </p>
       <div class="space-y-2">
         <div
-          v-for="t in PART3_TOPICS"
+          v-for="t in p3Filtered"
           :key="t.id"
           class="border border-gray-200 rounded-xl bg-white dark:border-gray-700 dark:bg-gray-800"
         >
@@ -189,7 +204,7 @@ function tabBtn(t: Tab) {
                 t.topicCn
               }}</span></span>
             <span class="text-gray-400">{{
-              p3Expanded === t.id ? '▲' : '▼'
+              p3Expanded === t.id ? "▲" : "▼"
             }}</span>
           </button>
           <div

@@ -45,7 +45,7 @@ function findPrompt(id: string): AnyPrompt | null {
 }
 
 interface SavedEssay {
-  id: number
+  id: number | string
   promptId: string
   promptTitleCn: string
   text: string
@@ -80,13 +80,15 @@ watch(currentUser, () => {
   restoreDraft()
 })
 function saveEssay(e: SavedEssay) {
-  saveRecord(ESSAY_KEY, String(e.id), e, currentUser.value)
+  if (!saveRecord(ESSAY_KEY, String(e.id), e, currentUser.value))
+    return false
   loadHistory()
   for (const old of history.value.slice(50))
     saveRecord(ESSAY_KEY, String(old.id), undefined, currentUser.value)
   loadHistory()
+  return true
 }
-function removeEssay(id: number) {
+function removeEssay(id: number | string) {
   saveRecord(ESSAY_KEY, String(id), undefined, currentUser.value)
   loadHistory()
 }
@@ -213,10 +215,10 @@ function restoreDraft() {
 }
 restoreDraft()
 
-function startWrite(p: AnyPrompt) {
+function startWrite(p: AnyPrompt, versionId?: string) {
   if (!saveDraftNow())
     return
-  const saved = readDraft('task1', draftOwner, p.id)
+  const saved = readDraft('task1', draftOwner, p.id, versionId)
   prompt.value = p
   essayText.value = saved?.text ?? ''
   secondsLeft.value = saved?.secondsLeft ?? TIME_LIMIT
@@ -300,6 +302,24 @@ const resultQuestion = ref('')
 const secondsUsed = ref(0)
 const secondsTimed = ref(true)
 
+const archiveError = ref('')
+let pendingEssay: { owner: string | null; record: SavedEssay } | null = null
+function persistEssay(record: SavedEssay) {
+  pendingEssay = { owner: currentUser.value, record }
+  if (saveEssay(record)) {
+    pendingEssay = null
+    archiveError.value = ''
+    clearDraft()
+  }
+  else {
+    archiveError.value
+      = '作文存档失败，原文仍保留在草稿中。请重试保存或复制原文后再离开。'
+  }
+}
+function retryArchive() {
+  if (pendingEssay?.owner === currentUser.value)
+    persistEssay(pendingEssay.record)
+}
 function submitEssay() {
   if (wordCount.value < 50) {
     alert('词数太少（<50），先多写一点再批改吧')
@@ -318,11 +338,13 @@ function submitEssay() {
   result.value = gradeTask1(essayText.value)
   resultPrompt.value = prompt.value
   resultQuestion.value = prompt.value ? titleOf(prompt.value) : ''
+  if (!saveDraftNow())
+    return
   view.value = 'result'
   // 自动存档
   if (prompt.value && result.value) {
-    saveEssay({
-      id: Date.now(),
+    persistEssay({
+      id: `${Date.now()}-${crypto.randomUUID()}`,
       promptId: prompt.value.id,
       promptTitleCn: titleCnOf(prompt.value),
       text: essayText.value,
@@ -338,7 +360,6 @@ function submitEssay() {
       createdAt: Date.now(),
     })
   }
-  clearDraft()
 }
 
 function reviewEssay(e: SavedEssay) {
@@ -369,14 +390,24 @@ function formatDate(ts: number): string {
 function formatDuration(s: number): string {
   return `${Math.floor(s / 60)}分${s % 60}秒`
 }
-function resumeDraft(promptId: string) {
+function resumeDraft(promptId: string, versionId?: string) {
   const selected = findPrompt(promptId)
   if (selected)
-    startWrite(selected)
+    startWrite(selected, versionId)
 }
 </script>
 
 <template>
+  <div
+    v-if="archiveError"
+    role="alert"
+    class="m-4 border border-red-300 rounded bg-red-50 p-3 text-red-800"
+  >
+    {{ archiveError }}
+    <button class="ml-2 underline" @click="retryArchive">
+      重试保存
+    </button>
+  </div>
   <div>
     <!-- ============ 首页：选题 + 评分标准 + 历史 ============ -->
     <div v-if="view === 'home'">
@@ -389,9 +420,9 @@ function resumeDraft(promptId: string) {
         </h3>
         <button
           v-for="draft in drafts"
-          :key="draft.promptId"
+          :key="draft.versionId || draft.promptId"
           class="mb-2 mr-2 border rounded px-3 py-2 text-sm"
-          @click="resumeDraft(draft.promptId)"
+          @click="resumeDraft(draft.promptId, draft.versionId)"
         >
           继续 {{ draft.promptId }} ·
           {{ draft.text.trim().split(/\s+/).length }} 词
@@ -407,7 +438,7 @@ function resumeDraft(promptId: string) {
         >
           <span class="font-bold dark:text-white">📏 雅思小作文四项评分标准
             <span class="text-xs font-normal text-gray-400">（了解规则才能拿分）</span></span>
-          <span class="text-gray-400">{{ showGuide ? '▲' : '▼' }}</span>
+          <span class="text-gray-400">{{ showGuide ? "▲" : "▼" }}</span>
         </button>
         <div v-if="showGuide" class="grid gap-4 px-5 pb-5 md:grid-cols-2">
           <div
@@ -505,8 +536,9 @@ function resumeDraft(promptId: string) {
               {{ e.promptTitleCn }}
             </div>
             <div class="text-xs text-gray-400">
-              {{ e.wordCount }} 词 · 用时 {{ e.timed === false ? '未计时' : formatDuration(e.secondsUsed)
-              }}{{ e.overtime ? '（含不限时续写）' : '' }} ·
+              {{ e.wordCount }} 词 · 用时
+              {{ e.timed === false ? "未计时" : formatDuration(e.secondsUsed)
+              }}{{ e.overtime ? "（含不限时续写）" : "" }} ·
               {{ formatDate(e.createdAt) }}
             </div>
           </div>
@@ -588,7 +620,7 @@ function resumeDraft(promptId: string) {
               :disabled="timeUp || overtime"
               @click="toggleTimer"
             >
-              {{ timerOn ? '⏸ 暂停' : '▶ 开始' }}
+              {{ timerOn ? "⏸ 暂停" : "▶ 开始" }}
             </button>
             <button
               class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm dark:border-gray-600 dark:text-white"
@@ -624,8 +656,8 @@ function resumeDraft(promptId: string) {
           >
             {{
               overtime
-                ? '当前为不限时续写：保留原稿和已结束的限时计时，提交记录标为不限时续写。'
-                : '限时时间已到。可以提交，或在原稿上不限时续写；续写不会重置倒计时。'
+                ? "当前为不限时续写：保留原稿和已结束的限时计时，提交记录标为不限时续写。"
+                : "限时时间已到。可以提交，或在原稿上不限时续写；续写不会重置倒计时。"
             }}
             <button
               v-if="!overtime"
@@ -668,9 +700,10 @@ function resumeDraft(promptId: string) {
         class="mb-6 border border-gray-200 rounded-xl bg-white p-6 text-center dark:border-gray-700 dark:bg-gray-800"
       >
         <div class="mb-1 text-sm text-gray-400">
-          {{ resultPrompt ? titleCnOf(resultPrompt) : '' }} ·
-          {{ result.stats.words }} 词 · 用时 {{ secondsTimed ? formatDuration(secondsUsed) : '未计时'
-          }}{{ overtime ? '（另含不限时续写）' : '' }}
+          {{ resultPrompt ? titleCnOf(resultPrompt) : "" }} ·
+          {{ result.stats.words }} 词 · 用时
+          {{ secondsTimed ? formatDuration(secondsUsed) : "未计时"
+          }}{{ overtime ? "（另含不限时续写）" : "" }}
         </div>
         <div class="text-6xl font-bold" :class="scoreColor(result.overall)">
           {{ result.overall.toFixed(1) }}

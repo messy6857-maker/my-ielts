@@ -7,6 +7,7 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    ImageViewer: typeof import('./src/components/ImageViewer.vue')['default']
     KeywordFlashcard: typeof import('./src/components/KeywordFlashcard.vue')['default']
     ListeningTabs: typeof import('./src/components/ListeningTabs.vue')['default']
     ReadingTabs: typeof import('./src/components/ReadingTabs.vue')['default']

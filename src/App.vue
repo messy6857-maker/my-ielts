@@ -1,5 +1,10 @@
 <script setup>
-import { accountNotice, storageFailures, useAuth } from './composables/useAuth'
+import {
+  accountNotices,
+  dismissAccountNotice,
+  storageFailures,
+  useAuth,
+} from './composables/useAuth'
 import { initSingleAudio, stopAllAudio } from './composables/useSingleAudio'
 
 // 全站单音频：同一时间只播放一个音频，点新的自动暂停旧的
@@ -11,7 +16,11 @@ router.afterEach((_to, _from, failure) => {
     stopAllAudio()
 })
 watch(currentUser, (user, previous) => {
-  if (previous && user !== previous)
+  if (
+    previous
+    && user !== previous
+    && !router.currentRoute.value.path.startsWith('/mock/')
+  )
     router.replace('/')
 })
 // 存储失败横幅：会话内可关闭；失败列表变化（新 key 失败或旧失败清除后重现）时自动重现。
@@ -23,20 +32,22 @@ watch(storageFailures, () => {
 
 <template>
   <TheHeader />
+  <div aria-hidden="true" class="h-16" />
   <div
-    v-if="accountNotice"
+    v-for="notice in accountNotices"
+    :key="notice.id"
     role="alert"
-    class="mx-4 mt-16 border border-amber-300 rounded bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900 dark:text-amber-100"
+    class="mx-4 mt-2 border border-amber-300 rounded bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-900 dark:text-amber-100"
   >
-    {{ accountNotice }}
-    <button class="ml-2 underline" @click="accountNotice = ''">
+    {{ notice.message }}
+    <button class="ml-2 underline" @click="dismissAccountNotice(notice.id)">
       知道了
     </button>
   </div>
   <div
     v-if="storageFailures.length && !storageBannerClosed"
     role="alert"
-    class="fixed left-0 right-0 top-16 z-50 border border-red-300 bg-red-50 p-3 text-sm text-red-800"
+    class="mx-4 mt-2 border border-red-300 bg-red-50 p-3 text-sm text-red-800"
   >
     有学习记录未能写入本机。请先
     <RouterLink to="/settings" class="underline">
@@ -59,7 +70,7 @@ watch(storageFailures, () => {
     />
   </div> -->
   <div
-    class="flex flex-1 overflow-hidden bg-gray-50 py-16 leading-8 dark:bg-gray-900"
+    class="flex flex-1 overflow-hidden bg-gray-50 pb-16 leading-8 dark:bg-gray-900"
   >
     <div
       class="relative mx-auto h-full w-full max-w-screen-2xl overflow-y-auto bg-gray-50 dark:bg-gray-900 dark:text-white"

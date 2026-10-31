@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { speechLanguage, useAudioGroup } from '../../composables/useAudioGroup'
+import { useAudioGroup } from '../../composables/useAudioGroup'
 
 import { resolveAudioUrl } from '../../composables/useAudio'
 import vocabulary from './vocabulary'
@@ -15,6 +15,12 @@ const selectedChapter = ref(
 
 const currentWordIndex = ref(0)
 const userInput = ref('')
+const ignoreCase = ref(
+  localStorage.getItem('myielts_typing_ignore_case') === '1',
+)
+watch(ignoreCase, v =>
+  localStorage.setItem('myielts_typing_ignore_case', v ? '1' : '0'),
+)
 const startTime = ref<number | null>(null)
 const wpm = ref(0)
 const accuracy = ref(100)
@@ -69,20 +75,7 @@ function playAudio() {
     audio.pause()
     audio.currentTime = 0
   }
-  audio = managedAudio.create()
-  audio.src = audioPath
-  // MP3 不存在时用浏览器朗读兜底（onerror 与 play().catch 只触发一次）
-  let fellBack = false
-  const fallback = () => {
-    if (fellBack)
-      return
-    fellBack = true
-    const u = new SpeechSynthesisUtterance(word)
-    u.lang = speechLanguage()
-    speechSynthesis.speak(u)
-  }
-  audio.onerror = fallback
-  audio.play().catch(fallback)
+  audio = managedAudio.play(audioPath, word)
 }
 
 // Normalize whitespace: replace non-breaking spaces and other unicode spaces with regular space
@@ -113,7 +106,11 @@ function handleInput(e: Event) {
   // Calculate Accuracy
   let correctChars = 0
   for (let i = 0; i < input.length; i++) {
-    if (input[i] === currentWord.value[i]) {
+    if (
+      ignoreCase.value
+        ? input[i]?.toLowerCase() === currentWord.value[i]?.toLowerCase()
+        : input[i] === currentWord.value[i]
+    ) {
       correctChars++
     }
     else if (!wordHadError.value) {
@@ -131,7 +128,12 @@ function handleInput(e: Event) {
     wpm.value = Math.round(input.length / 5 / timeElapsed)
 
   // Check if finished
-  if (input === currentWord.value && !advancing) {
+  if (
+    (ignoreCase.value
+      ? input.toLowerCase() === currentWord.value.toLowerCase()
+      : input === currentWord.value)
+    && !advancing
+  ) {
     advancing = true
     advanceTimer = setTimeout(nextWord, 200)
   }
@@ -188,6 +190,10 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <label class="m-4 flex gap-2 text-sm"><input
+    v-model="ignoreCase"
+    type="checkbox"
+  >忽略大小写（关闭时按原词拼写）</label>
   <div
     class="min-h-screen bg-gray-50 px-4 py-12 dark:bg-gray-900 lg:px-8 sm:px-6"
   >

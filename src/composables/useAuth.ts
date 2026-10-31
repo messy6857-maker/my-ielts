@@ -33,6 +33,43 @@ import {
 
 export { storageFailures }
 export const accountNotice = ref('')
+export interface AccountNotice {
+  id: string
+  message: string
+  priority: number
+}
+export const accountNotices = ref<AccountNotice[]>([])
+export function dismissAccountNotice(id: string) {
+  const removed = accountNotices.value.find(n => n.id === id)
+  accountNotices.value = accountNotices.value.filter(n => n.id !== id)
+  if (removed?.message === accountNotice.value)
+    accountNotice.value = ''
+}
+export function pushAccountNotice(message: string, id = message, priority = 1) {
+  accountNotices.value = [
+    ...accountNotices.value.filter(n => n.id !== id && n.message !== message),
+    { id, message, priority },
+  ].sort((a, b) => b.priority - a.priority)
+  accountNotice.value = message
+}
+// Compatibility for callers that still assign the original public ref.
+watch(
+  accountNotice,
+  (message, previous) => {
+    if (!message && previous) {
+      accountNotices.value = accountNotices.value.filter(
+        n => n.message !== previous,
+      )
+    }
+    if (message && !accountNotices.value.some(n => n.message === message)) {
+      accountNotices.value = [
+        ...accountNotices.value,
+        { id: message, message, priority: 1 },
+      ]
+    }
+  },
+  { flush: 'sync' },
+)
 export interface AccountRecord {
   salt: string
   hash: string
@@ -276,12 +313,12 @@ export const useAuth = createGlobalState(() => {
         finishGuestMigration(username)
       }
       else {
-        // 离线登录也先做本机游客迁移（仅填空缺，不覆盖云端）：否则账号页
-        // 一片空白，用户会误以为游客数据丢了。pending 标记保留，联网后
-        // pullNow 成功时 finishGuestMigration 会再跑一次（幂等）。
-        migrateGuestData(username)
-        accountNotice.value = '游客数据已先合并到本机，联网后将与云端同步'
+        pushAccountNotice(
+          '云端首次拉取未完成，游客进度仍保留在游客身份；联网后会自动合并缺失记录。',
+          'guest-migration',
+        )
       }
+
       // Merge independently versioned entries; never choose one whole table over another.
       const pushed = pull.ok
         ? await apiPush(collectSyncData(username), username)
@@ -413,6 +450,14 @@ export const useAuth = createGlobalState(() => {
     let pushOk = true
     if (syncEnabled && currentUser.value && getToken(currentUser.value)) {
       try {
+        if (owner && hasPendingGuestMigration(owner)) {
+          const pull = await apiPull(owner)
+          if (!pull.ok || getToken(owner) !== tokenAtStart)
+            throw new Error('首次拉取尚未完成，暂不上传游客迁移数据')
+          if (pull.data)
+            applySyncData(pull.data, owner)
+          finishGuestMigration(owner)
+        }
         const pr = await apiPush(
           collectSyncData(currentUser.value),
           currentUser.value,
@@ -427,9 +472,7 @@ export const useAuth = createGlobalState(() => {
         else {
           // 退出推送全量成功且无 rejected：本机已无待传数据，清 pending，
           // 下次登录不再多一次空推；有 rejected 时仍走补推标记路径。
-          localStorage.removeItem(
-            `${SYNC_PENDING_KEY}:${currentUser.value}`,
-          )
+          localStorage.removeItem(`${SYNC_PENDING_KEY}:${currentUser.value}`)
         }
       }
       catch {

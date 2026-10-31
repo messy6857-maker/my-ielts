@@ -1,16 +1,28 @@
-import type { ReadingMockTest } from './types'
+import type { ReadingMockTest } from "./types";
+
+/** Cambridge IELTS 20 p.61 */
+const UMPIRE_OPTIONS = [
+  "pitch boundary",
+  "numerous disputes",
+  "team tactics",
+  "subjective assessment",
+  "widespread approval",
+  "former roles",
+  "total silence",
+  "perceived area",
+];
 
 /**
  * 剑桥雅思 20 Test 2 阅读（40 题）
  * 转录自 Cambridge IELTS 20 PDF (Test 2, pp.47-62)，答案来自书后 answer key (p.63)
  */
 export const cam20Test2Reading: ReadingMockTest = {
-  id: 'cam20-test2-reading',
-  title: '剑20 Test 2 阅读',
+  id: "cam20-test2-reading",
+  title: "剑20 Test 2 阅读",
   timeLimit: 3600,
   passages: [
     {
-      title: 'Manatees',
+      title: "Manatees",
       passage: `Manatees, also known as sea cows, are aquatic mammals that belong to a group of animals called Sirenia. This group also contains dugongs. Dugongs and manatees look quite alike - they are similar in size, colour and shape, and both have flexible flippers for forelimbs. However, the manatee has a broad, rounded tail, whereas the dugong's is fluked, like that of a whale. There are three species of manatees: The West Indian manatee (Trichechus manatus), the African manatee (Trichechus senegalensis) and the Amazonian manatee (Trichechus inunguis).
 
 Unlike most mammals, manatees have only six bones in their neck - most others, including humans and giraffes, have seven. This short neck allows a manatee to move its head up and down, but not side to side. To see something on its left or its right, a manatee must turn its entire body, steering with its flippers. Manatees have pectoral flippers but no back limbs, only a tail for propulsion. They do have pelvic bones, however - a leftover from their evolution from a four-legged to a fully aquatic animal. Manatees share some visual similarities to elephants. Like elephants, manatees have thick, wrinkled skin. They also have some hairs covering their bodies which help them sense vibrations in the water around them.
@@ -31,23 +43,106 @@ All three manatee species are endangered or at a heightened risk of extinction. 
 
 The two subspecies of West Indian manatee are listed as Endangered by the IUCN. Both are also expected to undergo a decline of 20% over the next 40 years. A review of almost 1,800 cases of entanglement in fishing nets and of plastic consumption among marine mammals in US waters from 2009 to 2020 found that at least 700 cases involved manatees. The chief cause of death in Florida manatees is boat strikes. However, laws in certain parts of Florida now limit boat speeds during winter, allowing slow-moving manatees more time to respond.`,
       questions: [
-        { id: 'Q1', type: 'fill-blank', question: 'look similar to dugongs, but with a differently shaped ____', answer: 'tail' },
-        { id: 'Q2', type: 'fill-blank', question: 'need to use their ____ to help to turn their bodies around in order to look sideways', answer: 'flippers' },
-        { id: 'Q3', type: 'fill-blank', question: 'sense vibrations in the water by means of ____ on their skin', answer: 'hair' },
-        { id: 'Q4', type: 'fill-blank', question: 'eat mainly aquatic vegetation, such as ____', answer: 'seagrasses' },
-        { id: 'Q5', type: 'fill-blank', question: 'grasp and pull up plants with their ____', answer: 'lips' },
-        { id: 'Q6', type: 'fill-blank', question: 'may regulate the ____ of their bodies by using muscles of diaphragm to store air internally', answer: 'buoyancy' },
-        { id: 'Q7', type: 'tfng', question: 'West Indian manatees can be found in a variety of different aquatic habitats.', options: ['True', 'False', 'Not Given'], answer: 0 },
-        { id: 'Q8', type: 'tfng', question: 'The Florida manatee lives in warmer waters than the Antillean manatee.', options: ['True', 'False', 'Not Given'], answer: 2 },
-        { id: 'Q9', type: 'tfng', question: "The African manatee's range is limited to coastal waters between the West African countries of Mauritania and Angola.", options: ['True', 'False', 'Not Given'], answer: 1 },
-        { id: 'Q10', type: 'tfng', question: 'The extent of the loss of Amazonian manatees in the mid-twentieth century was only revealed many years later.', options: ['True', 'False', 'Not Given'], answer: 2 },
-        { id: 'Q11', type: 'tfng', question: 'It is predicted that West Indian manatee populations will fall in the coming decades.', options: ['True', 'False', 'Not Given'], answer: 0 },
-        { id: 'Q12', type: 'tfng', question: 'The risk to manatees from entanglement and plastic consumption increased significantly in the period 2009-2020.', options: ['True', 'False', 'Not Given'], answer: 2 },
-        { id: 'Q13', type: 'tfng', question: 'There is some legislation in place which aims to reduce the likelihood of boat strikes on manatees in Florida.', options: ['True', 'False', 'Not Given'], answer: 0 },
+        {
+          id: "Q1",
+          type: "fill-blank",
+          question:
+            "look similar to dugongs, but with a differently shaped ____",
+          answer: "tail",
+        },
+        {
+          id: "Q2",
+          type: "fill-blank",
+          question:
+            "need to use their ____ to help to turn their bodies around in order to look sideways",
+          answer: "flippers",
+        },
+        {
+          id: "Q3",
+          type: "fill-blank",
+          question:
+            "sense vibrations in the water by means of ____ on their skin",
+          answer: "hair",
+        },
+        {
+          id: "Q4",
+          type: "fill-blank",
+          question: "eat mainly aquatic vegetation, such as ____",
+          answer: "seagrasses",
+        },
+        {
+          id: "Q5",
+          type: "fill-blank",
+          question: "grasp and pull up plants with their ____",
+          answer: "lips",
+        },
+        {
+          id: "Q6",
+          type: "fill-blank",
+          question:
+            "may regulate the ____ of their bodies by using muscles of diaphragm to store air internally",
+          answer: "buoyancy",
+        },
+        {
+          id: "Q7",
+          type: "tfng",
+          question:
+            "West Indian manatees can be found in a variety of different aquatic habitats.",
+          options: ["True", "False", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q8",
+          type: "tfng",
+          question:
+            "The Florida manatee lives in warmer waters than the Antillean manatee.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q9",
+          type: "tfng",
+          question:
+            "The African manatee's range is limited to coastal waters between the West African countries of Mauritania and Angola.",
+          options: ["True", "False", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q10",
+          type: "tfng",
+          question:
+            "The extent of the loss of Amazonian manatees in the mid-twentieth century was only revealed many years later.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q11",
+          type: "tfng",
+          question:
+            "It is predicted that West Indian manatee populations will fall in the coming decades.",
+          options: ["True", "False", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q12",
+          type: "tfng",
+          question:
+            "The risk to manatees from entanglement and plastic consumption increased significantly in the period 2009-2020.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q13",
+          type: "tfng",
+          question:
+            "There is some legislation in place which aims to reduce the likelihood of boat strikes on manatees in Florida.",
+          options: ["True", "False", "Not Given"],
+          answer: 0,
+        },
       ],
     },
     {
-      title: 'Procrastination',
+      title: "Procrastination",
       passage: `A psychologist explains why we put off important tasks and how we can break this habit
 
 A Procrastination is the habit of delaying a necessary task, usually by focusing on less urgent, more enjoyable, and easier activities instead. We all do it from time to time. We might be composing a message to a friend who we have to let down, or putting together an important report for college or work; we're doing our best to avoid doing the job at hand, but deep down we know that we should just be getting on with it. Unfortunately, berating ourselves won't stop us procrastinating again. In fact, it's one of the worst things we can do. This matters because, as my research shows, procrastination doesn't just waste time, but is actually linked to other problems, too.
@@ -64,21 +159,101 @@ F Finding better ways of managing our emotions is one route out of the vicious c
 
 Forgiving ourselves and feeling compassion when we procrastinate can help break the procrastination cycle. We should admit that we feel bad, but not be overly critical of ourselves. We should remind ourselves that we're not the first person to procrastinate, nor the last. Doing this can take the edge off the negative feelings we have about ourselves when we procrastinate. This can all make it easier to get back on track.`,
       questions: [
-        { id: 'Q14', type: 'map-label', question: 'mention of false assumptions about why people procrastinate', answer: 'B' },
-        { id: 'Q15', type: 'map-label', question: 'reference to the realisation that others also procrastinate', answer: 'F' },
-        { id: 'Q16', type: 'map-label', question: 'neurological evidence of a link between procrastination and emotion', answer: 'B' },
-        { id: 'Q17', type: 'fill-blank', question: 'Many people think that procrastination is the result of ____', answer: 'laziness' },
-        { id: 'Q18', type: 'fill-blank', question: 'damage our self-esteem or cause us to feel ____ when we think about them.', answer: 'anxious' },
-        { id: 'Q19', type: 'fill-blank', question: 'found differences in the brain regions associated with regulating emotions and identifying ____', answer: 'threats' },
-        { id: 'Q20', type: 'fill-blank', question: 'Getting ready to take ____ might be a typical example of one such task.', answer: 'exams' },
-        { id: 'Q21', type: 'fill-blank', question: 'People who are likely to procrastinate tend to be either ____ or those with low self-esteem.', answer: 'perfectionists' },
-        { id: 'Q22', type: 'fill-blank', question: "Procrastination is only a short-term measure for managing emotions. It's often followed by a feeling of ____, which worsens our mood and leads to more procrastination.", answer: 'guilt' },
-        { id: 'Q23-24', type: 'multi-select', question: 'Which TWO comparisons between employees who often procrastinate and those who do not are mentioned in the text? (Choose TWO letters, A–E)', options: ['A Their salaries are lower.', 'B The quality of their work is inferior.', "C They don't keep their jobs for as long.", "D They don't enjoy their working lives as much.", 'E They have poorer relationships with colleagues.'], answer: [0, 2] },
-        { id: 'Q25-26', type: 'multi-select', question: 'Which TWO recommendations for getting out of a cycle of procrastination does the writer give? (Choose TWO letters, A–E)', options: ['A not judging ourselves harshly', 'B setting ourselves manageable aims', 'C rewarding ourselves for tasks achieved', 'D prioritising tasks according to their importance', 'E avoiding things that stop us concentrating on our tasks'], answer: [0, 4] },
+        {
+          id: "Q14",
+          type: "map-label",
+          question:
+            "mention of false assumptions about why people procrastinate",
+          answer: "B",
+        },
+        {
+          id: "Q15",
+          type: "map-label",
+          question:
+            "reference to the realisation that others also procrastinate",
+          answer: "F",
+        },
+        {
+          id: "Q16",
+          type: "map-label",
+          question:
+            "neurological evidence of a link between procrastination and emotion",
+          answer: "B",
+        },
+        {
+          id: "Q17",
+          type: "fill-blank",
+          question:
+            "Many people think that procrastination is the result of ____",
+          answer: "laziness",
+        },
+        {
+          id: "Q18",
+          type: "fill-blank",
+          question:
+            "damage our self-esteem or cause us to feel ____ when we think about them.",
+          answer: "anxious",
+        },
+        {
+          id: "Q19",
+          type: "fill-blank",
+          question:
+            "found differences in the brain regions associated with regulating emotions and identifying ____",
+          answer: "threats",
+        },
+        {
+          id: "Q20",
+          type: "fill-blank",
+          question:
+            "Getting ready to take ____ might be a typical example of one such task.",
+          answer: "exams",
+        },
+        {
+          id: "Q21",
+          type: "fill-blank",
+          question:
+            "People who are likely to procrastinate tend to be either ____ or those with low self-esteem.",
+          answer: "perfectionists",
+        },
+        {
+          id: "Q22",
+          type: "fill-blank",
+          question:
+            "Procrastination is only a short-term measure for managing emotions. It's often followed by a feeling of ____, which worsens our mood and leads to more procrastination.",
+          answer: "guilt",
+        },
+        {
+          id: "Q23-24",
+          type: "multi-select",
+          question:
+            "Which TWO comparisons between employees who often procrastinate and those who do not are mentioned in the text? (Choose TWO letters, A–E)",
+          options: [
+            "A Their salaries are lower.",
+            "B The quality of their work is inferior.",
+            "C They don't keep their jobs for as long.",
+            "D They don't enjoy their working lives as much.",
+            "E They have poorer relationships with colleagues.",
+          ],
+          answer: [0, 2],
+        },
+        {
+          id: "Q25-26",
+          type: "multi-select",
+          question:
+            "Which TWO recommendations for getting out of a cycle of procrastination does the writer give? (Choose TWO letters, A–E)",
+          options: [
+            "A not judging ourselves harshly",
+            "B setting ourselves manageable aims",
+            "C rewarding ourselves for tasks achieved",
+            "D prioritising tasks according to their importance",
+            "E avoiding things that stop us concentrating on our tasks",
+          ],
+          answer: [0, 4],
+        },
       ],
     },
     {
-      title: 'Invasion of the Robot Umpires',
+      title: "Invasion of the Robot Umpires",
       passage: `A few years ago, Fred DeJesus from Brooklyn, New York became the first umpire in a minor league baseball game to use something called the Automated Ball-Strike System (ABS), often referred to as the 'robe-umpire'. Instead of making any judgments himself about a strike*, DeJesus had decisions fed to him through an earpiece, connected to a modified missile-tracking system. The contraption looked like a large black pizza box with one glowing green eye; it was mounted above the press stand.
 
 Major League Baseball (MLB), who had commissioned the system, wanted human umpires to announce the calls, just as they would have done in the past. When the first pitch came in, a recorded voice told DeJesus it was a strike. Previously, calling a strike was a judgment call on the part of the umpire. Even if the batter does not hit the ball, a pitch that passes through the 'strike zone' (an imaginary zone about seventeen inches wide, stretching from the batter's knees to the middle of his chest) is considered a strike. During that first game, when DeJesus announced calls, there was no heckling and no shouted disagreement. Nobody said a word.
@@ -99,21 +274,128 @@ I decided to email Alva Noe, a professor at Berkeley University and a baseball f
 
 * strike: a strike is when the batter swings at a ball and misses or when the batter does not swing at a ball that passes through the strike zone.`,
       questions: [
-        { id: 'Q27', type: 'tfng', question: 'When DeJesus first used ABS, he shared decision-making about strikes with it.', options: ['YES', 'NO', 'NOT GIVEN'], answer: 1 },
-        { id: 'Q28', type: 'tfng', question: 'MLB considered it necessary to amend the size of the strike zone when criticisms were received from players.', options: ['YES', 'NO', 'NOT GIVEN'], answer: 0 },
-        { id: 'Q29', type: 'tfng', question: "MLB is keen to justify the money spent on improving the accuracy of ABS's calculations.", options: ['YES', 'NO', 'NOT GIVEN'], answer: 2 },
-        { id: 'Q30', type: 'tfng', question: 'The hundred-mile-an-hour fastball led to a more exciting style of play.', options: ['YES', 'NO', 'NOT GIVEN'], answer: 1 },
-        { id: 'Q31', type: 'tfng', question: "The differing proposals for alterations to the baseball bat led to fierce debate on Sword's team.", options: ['YES', 'NO', 'NOT GIVEN'], answer: 2 },
-        { id: 'Q32', type: 'tfng', question: 'ABS makes changes to the shape of the strike zone feasible.', options: ['YES', 'NO', 'NOT GIVEN'], answer: 0 },
-        { id: 'Q33', type: 'map-label', question: 'as they had in their ____', answer: 'F' },
-        { id: 'Q34', type: 'map-label', question: 'required a ____ about whether a ball was a strike.', answer: 'D' },
-        { id: 'Q35', type: 'map-label', question: 'crosses through a ____ extending approximately from the batter\'s knee to his chest.', answer: 'H' },
-        { id: 'Q36', type: 'map-label', question: 'In the past, ____ over strike calls were not uncommon', answer: 'B' },
-        { id: 'Q37', type: 'map-label', question: 'strike calls were met with ____', answer: 'G' },
-        { id: 'Q38', type: 'multiple-choice', question: 'What does the writer suggest about ABS in the fifth paragraph?', options: ['A It is bound to make key decisions that are wrong.', 'B It may reduce some of the appeal of the game.', 'C It will lead to the disappearance of human umpires.', 'D It may increase calls for the rules of baseball to be changed.'], answer: 1 },
-        { id: 'Q39', type: 'multiple-choice', question: 'Morgan Sword says that the introduction of ABS', options: ['A was regarded as an experiment without a guaranteed outcome.', 'B was intended to keep up with developments in other sports.', 'C was a response to changing attitudes about the role of sport.', 'D was an attempt to ensure baseball retained a young audience.'], answer: 3 },
-        { id: 'Q40', type: 'multiple-choice', question: 'Why does the writer include the views of Noe and Russo?', options: ['A to show that attitudes to technology vary widely', 'B to argue that people have unrealistic expectations of sport', 'C to indicate that accuracy is not the same thing as enjoyment', 'D to suggest that the number of baseball fans needs to increase'], answer: 2 },
+        {
+          id: "Q27",
+          type: "tfng",
+          question:
+            "When DeJesus first used ABS, he shared decision-making about strikes with it.",
+          options: ["YES", "NO", "NOT GIVEN"],
+          answer: 1,
+        },
+        {
+          id: "Q28",
+          type: "tfng",
+          question:
+            "MLB considered it necessary to amend the size of the strike zone when criticisms were received from players.",
+          options: ["YES", "NO", "NOT GIVEN"],
+          answer: 0,
+        },
+        {
+          id: "Q29",
+          type: "tfng",
+          question:
+            "MLB is keen to justify the money spent on improving the accuracy of ABS's calculations.",
+          options: ["YES", "NO", "NOT GIVEN"],
+          answer: 2,
+        },
+        {
+          id: "Q30",
+          type: "tfng",
+          question:
+            "The hundred-mile-an-hour fastball led to a more exciting style of play.",
+          options: ["YES", "NO", "NOT GIVEN"],
+          answer: 1,
+        },
+        {
+          id: "Q31",
+          type: "tfng",
+          question:
+            "The differing proposals for alterations to the baseball bat led to fierce debate on Sword's team.",
+          options: ["YES", "NO", "NOT GIVEN"],
+          answer: 2,
+        },
+        {
+          id: "Q32",
+          type: "tfng",
+          question:
+            "ABS makes changes to the shape of the strike zone feasible.",
+          options: ["YES", "NO", "NOT GIVEN"],
+          answer: 0,
+        },
+        {
+          id: "Q33",
+          type: "map-label",
+          question: "as they had in their ____",
+          answer: "F",
+          options: UMPIRE_OPTIONS,
+        },
+        {
+          id: "Q34",
+          type: "map-label",
+          question: "required a ____ about whether a ball was a strike.",
+          answer: "D",
+          options: UMPIRE_OPTIONS,
+        },
+        {
+          id: "Q35",
+          type: "map-label",
+          question:
+            "crosses through a ____ extending approximately from the batter's knee to his chest.",
+          answer: "H",
+          options: UMPIRE_OPTIONS,
+        },
+        {
+          id: "Q36",
+          type: "map-label",
+          question: "In the past, ____ over strike calls were not uncommon",
+          answer: "B",
+          options: UMPIRE_OPTIONS,
+        },
+        {
+          id: "Q37",
+          type: "map-label",
+          question: "strike calls were met with ____",
+          answer: "G",
+          options: UMPIRE_OPTIONS,
+        },
+        {
+          id: "Q38",
+          type: "multiple-choice",
+          question:
+            "What does the writer suggest about ABS in the fifth paragraph?",
+          options: [
+            "A It is bound to make key decisions that are wrong.",
+            "B It may reduce some of the appeal of the game.",
+            "C It will lead to the disappearance of human umpires.",
+            "D It may increase calls for the rules of baseball to be changed.",
+          ],
+          answer: 1,
+        },
+        {
+          id: "Q39",
+          type: "multiple-choice",
+          question: "Morgan Sword says that the introduction of ABS",
+          options: [
+            "A was regarded as an experiment without a guaranteed outcome.",
+            "B was intended to keep up with developments in other sports.",
+            "C was a response to changing attitudes about the role of sport.",
+            "D was an attempt to ensure baseball retained a young audience.",
+          ],
+          answer: 3,
+        },
+        {
+          id: "Q40",
+          type: "multiple-choice",
+          question: "Why does the writer include the views of Noe and Russo?",
+          options: [
+            "A to show that attitudes to technology vary widely",
+            "B to argue that people have unrealistic expectations of sport",
+            "C to indicate that accuracy is not the same thing as enjoyment",
+            "D to suggest that the number of baseball fans needs to increase",
+          ],
+          answer: 2,
+        },
       ],
     },
   ],
-}
+};

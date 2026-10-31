@@ -1,6 +1,11 @@
 // 模考通用类型定义
 
-export type MockQuestionType = 'multiple-choice' | 'multi-select' | 'tfng' | 'fill-blank' | 'map-label'
+export type MockQuestionType =
+  | 'multiple-choice'
+  | 'multi-select'
+  | 'tfng'
+  | 'fill-blank'
+  | 'map-label'
 
 export interface MockQuestion {
   /** 题号，如 "Q1" */
@@ -95,12 +100,21 @@ export function isCorrect(q: MockQuestion, userAnswer: string): boolean {
   }
   if (q.type === 'map-label') {
     // 地图标注：字母不区分大小写
-    return userAnswer.trim().toUpperCase() === String(q.answer).trim().toUpperCase()
+    return (
+      userAnswer.trim().toUpperCase() === String(q.answer).trim().toUpperCase()
+    )
   }
   if (q.type === 'multi-select' && Array.isArray(q.answer)) {
-    const userSet = new Set(userAnswer.split(',').filter(Boolean).map(s => Number(s)))
+    const userSet = new Set(
+      userAnswer
+        .split(',')
+        .filter(Boolean)
+        .map(s => Number(s)),
+    )
     const ansSet = new Set(q.answer as number[])
-    return userSet.size === ansSet.size && [...ansSet].every(a => userSet.has(a))
+    return (
+      userSet.size === ansSet.size && [...ansSet].every(a => userSet.has(a))
+    )
   }
   return userAnswer === String(q.answer)
 }
@@ -109,7 +123,12 @@ export function isCorrect(q: MockQuestion, userAnswer: string): boolean {
 export function multiSelectScore(q: MockQuestion, userAnswer: string): number {
   if (q.type !== 'multi-select' || !Array.isArray(q.answer))
     return isCorrect(q, userAnswer) ? 1 : 0
-  const userSet = new Set(userAnswer.split(',').filter(Boolean).map(s => Number(s)))
+  const userSet = new Set(
+    userAnswer
+      .split(',')
+      .filter(Boolean)
+      .map(s => Number(s)),
+  )
   const ansSet = new Set(q.answer as number[])
   // 防御：选项数超过答案数（例如全选）直接 0 分；界面层 toggleMultiSelect 也限制最多选答案个数
   if (userSet.size > ansSet.size)
@@ -119,6 +138,7 @@ export function multiSelectScore(q: MockQuestion, userAnswer: string): number {
     if (ansSet.has(a))
       score++
   }
+
   return score
 }
 
@@ -225,4 +245,13 @@ export function formatCountdown(sec: number): string {
   const m = Math.floor(sec / 60)
   const s = sec % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+export function isRomanLabel(q: MockQuestion) {
+  return (
+    q.type === 'map-label'
+    && typeof q.answer === 'string'
+    && (/^[ivxlcdm]+$/.test(q.answer)
+      || (q.answer.length > 1 && /^[IVXLCDM]+$/.test(q.answer)))
+  )
 }

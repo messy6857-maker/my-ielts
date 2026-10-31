@@ -1,4 +1,17 @@
-import type { ReadingMockTest } from './types'
+import type { ReadingMockTest } from "./types";
+
+/** Cambridge IELTS 21 p.49 (PDF p.50) */
+const AI_GOVERNMENT_OPTIONS = [
+  "reliability",
+  "funding",
+  "skills",
+  "prejudices",
+  "computers",
+  "equality",
+  "framework",
+  "confidentiality",
+  "approval",
+];
 
 /**
  * 剑桥雅思 21 Test 2 阅读（40 题）
@@ -13,12 +26,12 @@ import type { ReadingMockTest } from './types'
  * - Q27-29 / Q40 为单选题
  */
 export const cam21Test2Reading: ReadingMockTest = {
-  id: 'cam21-test2-reading',
-  title: '剑21 Test 2 阅读',
+  id: "cam21-test2-reading",
+  title: "剑21 Test 2 阅读",
   timeLimit: 3600,
   passages: [
     {
-      title: 'Do animals dream?',
+      title: "Do animals dream?",
       passage: `Studies using electrodes attached to the heads of sleepers have shown that when we sleep, we do so in two ways that alternate throughout the night. The first is rapid eye movement (REM) or active sleep. During this stage our eyes move, even though our eyelids are closed. Our muscles also twitch slightly, though they are largely paralysed so we don't hurt ourselves. In contrast, we also engage in non-REM sleep, during which we barely move at all. Most dream states, and certainly those with the most vivid dreams, happen during REM sleep.
 
 There's some evidence that other mammals may also dream. For example, researchers compared the brain patterns of rats running through a maze when awake with their brain patterns during REM sleep. They found the patterns were very similar and concluded that the sleeping rats were dreaming about going through the maze.
@@ -39,23 +52,109 @@ The trouble is that we will never be able to experience any animal's dreams. Tha
 
 It is likely that dreaming has served multiple purposes since the first complex animals evolved. And if this is the case, it is possible that better understanding of these purposes might shed light on the true purpose of our own dreams.`,
       questions: [
-        { id: 'Q1', type: 'fill-blank', question: 'Research into sleep and dreaming – 1 ..................... : similar brain patterns were observed when active and sleeping', answer: 'rats' },
-        { id: 'Q2', type: 'fill-blank', question: 'Pigeons – when sleeping, pigeons displayed activity in parts of the brain that deal with 2 ..................... input', answer: 'visual' },
-        { id: 'Q3', type: 'fill-blank', question: 'Whales and dolphins – still have 3 ..................... their brain awake when they sleep', answer: 'half' },
-        { id: 'Q4', type: 'fill-blank', question: 'Whales and dolphins – don\'t experience REM sleep, as this could affect their sensitivity to 4 .....................', answer: 'temperature' },
-        { id: 'Q5', type: 'fill-blank', question: 'Whales and dolphins – their dreams are probably not very 5 .....................', answer: 'vivid' },
-        { id: 'Q6', type: 'tfng', question: 'Dreaming about past experiences helps us to create lasting memories of them.', options: ['True', 'False', 'Not Given'], answer: 0 },
-        { id: 'Q7', type: 'tfng', question: 'It is now possible to tell what type of dream a dog is having.', options: ['True', 'False', 'Not Given'], answer: 1 },
-        { id: 'Q8', type: 'tfng', question: 'David Scheel\'s documentary was influential on other research into the sleeping patterns of octopuses.', options: ['True', 'False', 'Not Given'], answer: 2 },
-        { id: 'Q9', type: 'tfng', question: 'While it was asleep, the octopus called Costello reacted as if it was hunting.', options: ['True', 'False', 'Not Given'], answer: 1 },
-        { id: 'Q10', type: 'tfng', question: 'Scheel believes more research into octopuses\' dreams should be carried out.', options: ['True', 'False', 'Not Given'], answer: 0 },
-        { id: 'Q11', type: 'tfng', question: 'We may soon be able to share the dreams of other human beings.', options: ['True', 'False', 'Not Given'], answer: 1 },
-        { id: 'Q12', type: 'tfng', question: 'Hearing may be an important part of the dreams of some animals.', options: ['True', 'False', 'Not Given'], answer: 2 },
-        { id: 'Q13', type: 'tfng', question: 'Interest in the reasons why humans dream has increased greatly in recent times.', options: ['True', 'False', 'Not Given'], answer: 2 },
+        {
+          id: "Q1",
+          type: "fill-blank",
+          question:
+            "Research into sleep and dreaming – 1 ..................... : similar brain patterns were observed when active and sleeping",
+          answer: "rats",
+        },
+        {
+          id: "Q2",
+          type: "fill-blank",
+          question:
+            "Pigeons – when sleeping, pigeons displayed activity in parts of the brain that deal with 2 ..................... input",
+          answer: "visual",
+        },
+        {
+          id: "Q3",
+          type: "fill-blank",
+          question:
+            "Whales and dolphins – still have 3 ..................... their brain awake when they sleep",
+          answer: "half",
+        },
+        {
+          id: "Q4",
+          type: "fill-blank",
+          question:
+            "Whales and dolphins – don't experience REM sleep, as this could affect their sensitivity to 4 .....................",
+          answer: "temperature",
+        },
+        {
+          id: "Q5",
+          type: "fill-blank",
+          question:
+            "Whales and dolphins – their dreams are probably not very 5 .....................",
+          answer: "vivid",
+        },
+        {
+          id: "Q6",
+          type: "tfng",
+          question:
+            "Dreaming about past experiences helps us to create lasting memories of them.",
+          options: ["True", "False", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q7",
+          type: "tfng",
+          question:
+            "It is now possible to tell what type of dream a dog is having.",
+          options: ["True", "False", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q8",
+          type: "tfng",
+          question:
+            "David Scheel's documentary was influential on other research into the sleeping patterns of octopuses.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q9",
+          type: "tfng",
+          question:
+            "While it was asleep, the octopus called Costello reacted as if it was hunting.",
+          options: ["True", "False", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q10",
+          type: "tfng",
+          question:
+            "Scheel believes more research into octopuses' dreams should be carried out.",
+          options: ["True", "False", "Not Given"],
+          answer: 0,
+        },
+        {
+          id: "Q11",
+          type: "tfng",
+          question:
+            "We may soon be able to share the dreams of other human beings.",
+          options: ["True", "False", "Not Given"],
+          answer: 1,
+        },
+        {
+          id: "Q12",
+          type: "tfng",
+          question:
+            "Hearing may be an important part of the dreams of some animals.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
+        {
+          id: "Q13",
+          type: "tfng",
+          question:
+            "Interest in the reasons why humans dream has increased greatly in recent times.",
+          options: ["True", "False", "Not Given"],
+          answer: 2,
+        },
       ],
     },
     {
-      title: 'Mapungubwe',
+      title: "Mapungubwe",
       passage: `Located in southern Africa just below the Limpopo River, the kingdom of Mapungubwe, flourished between the 11th and 13th century CE
 
 A
@@ -81,22 +180,100 @@ The kingdom of Mapungubwe was already in decline by the late 13th century, proba
 
 * palisade: typically a row of closely placed, high vertical wooden or iron posts used as a means of defence`,
       questions: [
-        { id: 'Q14', type: 'map-label', question: 'Which paragraph contains: a mention of the uncertainty regarding the purpose of certain objects', answer: 'E' },
-        { id: 'Q15', type: 'map-label', question: 'Which paragraph contains: the likelihood that a climatic factor increased the problems Mapungubwe faced', answer: 'G' },
-        { id: 'Q16', type: 'map-label', question: 'Which paragraph contains: a mention of the location where members of the king\'s family are thought to have lived', answer: 'C' },
-        { id: 'Q17', type: 'map-label', question: 'Which paragraph contains: a reference to people who brought goods by ship', answer: 'D' },
-        { id: 'Q18', type: 'map-label', question: 'Which paragraph contains: an estimate of the size to which the Mapungubwe community grew', answer: 'B' },
-        { id: 'Q19', type: 'map-label', question: 'Which paragraph contains: a mention of agricultural produce being exchanged for other items', answer: 'A' },
-        { id: 'Q20-21', type: 'multi-select', question: 'The archaeological record reveals information about gold and the kingdom of Mapungubwe. Which TWO pieces of information are mentioned by the writer? (Choose TWO letters, A–E)', options: ['A Not everyone in Mapungubwe used gold as a form of payment.', 'B Items of gold were placed close to where Mapungubwe kings were buried.', 'C The most valuable item discovered in Mapungubwe was a sceptre made of gold.', 'D The way gold was decorated in Mapungubwe was also practised in another kingdom.', 'E Working with gold was a respected occupation in the Mapungubwe community.'], answer: [1, 3] },
-        { id: 'Q22', type: 'fill-blank', question: 'The Mapungubwe community\'s 22 ..................... is indicated by the amount of professionally made pottery discovered at the site.', answer: 'prosperity' },
-        { id: 'Q23', type: 'fill-blank', question: 'Other finds include round ceramic objects, 23 ..................... and figures of various animals', answer: 'whistles' },
-        { id: 'Q24', type: 'fill-blank', question: 'models of people with stretched 24 .....................', answer: 'bodies' },
-        { id: 'Q25', type: 'fill-blank', question: 'It is possible that these had a role in ceremonies to honour 25 .....................', answer: 'ancestors' },
-        { id: 'Q26', type: 'fill-blank', question: 'In addition, pieces of 26 ..................... made from a local metal have been found at the site.', answer: 'jewellery' },
+        {
+          id: "Q14",
+          type: "map-label",
+          question:
+            "Which paragraph contains: a mention of the uncertainty regarding the purpose of certain objects",
+          answer: "E",
+        },
+        {
+          id: "Q15",
+          type: "map-label",
+          question:
+            "Which paragraph contains: the likelihood that a climatic factor increased the problems Mapungubwe faced",
+          answer: "G",
+        },
+        {
+          id: "Q16",
+          type: "map-label",
+          question:
+            "Which paragraph contains: a mention of the location where members of the king's family are thought to have lived",
+          answer: "C",
+        },
+        {
+          id: "Q17",
+          type: "map-label",
+          question:
+            "Which paragraph contains: a reference to people who brought goods by ship",
+          answer: "D",
+        },
+        {
+          id: "Q18",
+          type: "map-label",
+          question:
+            "Which paragraph contains: an estimate of the size to which the Mapungubwe community grew",
+          answer: "B",
+        },
+        {
+          id: "Q19",
+          type: "map-label",
+          question:
+            "Which paragraph contains: a mention of agricultural produce being exchanged for other items",
+          answer: "A",
+        },
+        {
+          id: "Q20-21",
+          type: "multi-select",
+          question:
+            "The archaeological record reveals information about gold and the kingdom of Mapungubwe. Which TWO pieces of information are mentioned by the writer? (Choose TWO letters, A–E)",
+          options: [
+            "A Not everyone in Mapungubwe used gold as a form of payment.",
+            "B Items of gold were placed close to where Mapungubwe kings were buried.",
+            "C The most valuable item discovered in Mapungubwe was a sceptre made of gold.",
+            "D The way gold was decorated in Mapungubwe was also practised in another kingdom.",
+            "E Working with gold was a respected occupation in the Mapungubwe community.",
+          ],
+          answer: [1, 3],
+        },
+        {
+          id: "Q22",
+          type: "fill-blank",
+          question:
+            "The Mapungubwe community's 22 ..................... is indicated by the amount of professionally made pottery discovered at the site.",
+          answer: "prosperity",
+        },
+        {
+          id: "Q23",
+          type: "fill-blank",
+          question:
+            "Other finds include round ceramic objects, 23 ..................... and figures of various animals",
+          answer: "whistles",
+        },
+        {
+          id: "Q24",
+          type: "fill-blank",
+          question: "models of people with stretched 24 .....................",
+          answer: "bodies",
+        },
+        {
+          id: "Q25",
+          type: "fill-blank",
+          question:
+            "It is possible that these had a role in ceremonies to honour 25 .....................",
+          answer: "ancestors",
+        },
+        {
+          id: "Q26",
+          type: "fill-blank",
+          question:
+            "In addition, pieces of 26 ..................... made from a local metal have been found at the site.",
+          answer: "jewellery",
+        },
       ],
     },
     {
-      title: 'Artificial Intelligence',
+      title: "Artificial Intelligence",
       passage: `In many countries in the West, hysteria about the future of artificial intelligence (AI) is everywhere. There seems to be no shortage of sensationalist news about how AI could cure diseases, accelerate human innovation and improve human creativity. Just looking at the media headlines, you might think that we are already living in a future where AI has infiltrated every aspect of society.
 
 While it is undeniable that AI has opened up a wealth of promising opportunities, it has also led to the emergence of a mindset that can be best described as 'AI solutionism'. This is the philosophy that, given enough data, machine learning algorithms can solve all of humanity's problems. But, in fact, instead of supporting AI progress, this mindset actually jeopardises the value of machine intelligence by disregarding important AI safety principles and setting unrealistic expectations about what AI can really do for humanity.
@@ -123,21 +300,137 @@ Similar difficulties arose in the legal domain when algorithms were used in cour
 
 There are some crucial lessons here for everyone aiming to boost investments in national AI programmes. These examples demonstrate that there is no AI solution for everything. Using AI simply for the sake of AI may not always be productive or useful, and not every issue is best addressed by applying machine intelligence to it. All solutions come with a cost and not everything that can be automated should be.`,
       questions: [
-        { id: 'Q27', type: 'multiple-choice', question: 'What is the writer doing in the first paragraph?', options: ['A predicting the future impact of AI', 'B describing a public perception of AI', 'C outlining some possible benefits of AI', 'D highlighting the breadth of the influence of AI'], answer: 1 },
-        { id: 'Q28', type: 'multiple-choice', question: 'When discussing AI solutionism in the second paragraph, the writer', options: ['A points out a risk involved.', 'B specifies its probable origins.', 'C mentions its chief supporters.', 'D weighs up some pros and cons.'], answer: 0 },
-        { id: 'Q29', type: 'multiple-choice', question: 'In the fourth paragraph, the writer suggests that many politicians may', options: ['A have failed to appreciate the true potential of AI initiatives.', 'B have misunderstood the function of the machine-learning sector.', 'C be unaware of the challenges of implementing national AI initiatives.', 'D be too keen to enter the race to dominate the machine-learning sector.'], answer: 2 },
-        { id: 'Q30', type: 'map-label', question: 'AI in government, medicine and the law – Neural networks are a promising area of AI technology for governments. However, many politicians overestimate their capabilities, believing that the mere addition of a neural network will produce solutions and promote 30 .....................', answer: 'F' },
-        { id: 'Q31', type: 'map-label', question: 'Most public sector organisations have not set up the necessary 31 ..................... to manage the huge amount of data required to enable AI to function.', answer: 'G' },
-        { id: 'Q32', type: 'map-label', question: 'Complex bureaucracy is another issue, as each person involved needs 32 ..................... to access the relevant data, which is often spread across different departments.', answer: 'I' },
-        { id: 'Q33', type: 'map-label', question: 'But the main problem is that few public sector employees have the 33 ..................... to take full advantage of machine intelligence.', answer: 'C' },
-        { id: 'Q34', type: 'map-label', question: 'The medical profession experimented with an AI programme, but their experts had little faith in its 34 ....................., and the programme was abandoned.', answer: 'A' },
-        { id: 'Q35', type: 'map-label', question: 'US courts also abandoned the use of algorithms when it was found that these reflected and magnified the existing 35 ..................... within the legal profession.', answer: 'D' },
-        { id: 'Q36', type: 'tfng', question: 'Stuart Russell\'s proposals regarding the use of AI are impractical.', options: ['YES', 'NO', 'NOT GIVEN'], answer: 1 },
-        { id: 'Q37', type: 'tfng', question: 'Rodney Brooks\' view has attracted unfair criticism from supporters of AI.', options: ['YES', 'NO', 'NOT GIVEN'], answer: 2 },
-        { id: 'Q38', type: 'tfng', question: 'Nowadays, the need to protect AI systems is always taken into account when they are set up.', options: ['YES', 'NO', 'NOT GIVEN'], answer: 1 },
-        { id: 'Q39', type: 'tfng', question: 'In order to benefit from AI and minimise the harms, we have to explore people\'s concerns about its use.', options: ['YES', 'NO', 'NOT GIVEN'], answer: 0 },
-        { id: 'Q40', type: 'multiple-choice', question: 'What would be a suitable subtitle for Reading Passage 3?', options: ['A How to make the most of what AI has to offer', 'B Why AI may not be the answer to our problems', 'C Why governments should not invest in AI systems', 'D How AI could improve the efficiency of the public sector'], answer: 1 },
+        {
+          id: "Q27",
+          type: "multiple-choice",
+          question: "What is the writer doing in the first paragraph?",
+          options: [
+            "A predicting the future impact of AI",
+            "B describing a public perception of AI",
+            "C outlining some possible benefits of AI",
+            "D highlighting the breadth of the influence of AI",
+          ],
+          answer: 1,
+        },
+        {
+          id: "Q28",
+          type: "multiple-choice",
+          question:
+            "When discussing AI solutionism in the second paragraph, the writer",
+          options: [
+            "A points out a risk involved.",
+            "B specifies its probable origins.",
+            "C mentions its chief supporters.",
+            "D weighs up some pros and cons.",
+          ],
+          answer: 0,
+        },
+        {
+          id: "Q29",
+          type: "multiple-choice",
+          question:
+            "In the fourth paragraph, the writer suggests that many politicians may",
+          options: [
+            "A have failed to appreciate the true potential of AI initiatives.",
+            "B have misunderstood the function of the machine-learning sector.",
+            "C be unaware of the challenges of implementing national AI initiatives.",
+            "D be too keen to enter the race to dominate the machine-learning sector.",
+          ],
+          answer: 2,
+        },
+        {
+          id: "Q30",
+          type: "map-label",
+          question:
+            "AI in government, medicine and the law – Neural networks are a promising area of AI technology for governments. However, many politicians overestimate their capabilities, believing that the mere addition of a neural network will produce solutions and promote 30 .....................",
+          answer: "F",
+          options: AI_GOVERNMENT_OPTIONS,
+        },
+        {
+          id: "Q31",
+          type: "map-label",
+          question:
+            "Most public sector organisations have not set up the necessary 31 ..................... to manage the huge amount of data required to enable AI to function.",
+          answer: "G",
+          options: AI_GOVERNMENT_OPTIONS,
+        },
+        {
+          id: "Q32",
+          type: "map-label",
+          question:
+            "Complex bureaucracy is another issue, as each person involved needs 32 ..................... to access the relevant data, which is often spread across different departments.",
+          answer: "I",
+          options: AI_GOVERNMENT_OPTIONS,
+        },
+        {
+          id: "Q33",
+          type: "map-label",
+          question:
+            "But the main problem is that few public sector employees have the 33 ..................... to take full advantage of machine intelligence.",
+          answer: "C",
+          options: AI_GOVERNMENT_OPTIONS,
+        },
+        {
+          id: "Q34",
+          type: "map-label",
+          question:
+            "The medical profession experimented with an AI programme, but their experts had little faith in its 34 ....................., and the programme was abandoned.",
+          answer: "A",
+          options: AI_GOVERNMENT_OPTIONS,
+        },
+        {
+          id: "Q35",
+          type: "map-label",
+          question:
+            "US courts also abandoned the use of algorithms when it was found that these reflected and magnified the existing 35 ..................... within the legal profession.",
+          answer: "D",
+          options: AI_GOVERNMENT_OPTIONS,
+        },
+        {
+          id: "Q36",
+          type: "tfng",
+          question:
+            "Stuart Russell's proposals regarding the use of AI are impractical.",
+          options: ["YES", "NO", "NOT GIVEN"],
+          answer: 1,
+        },
+        {
+          id: "Q37",
+          type: "tfng",
+          question:
+            "Rodney Brooks' view has attracted unfair criticism from supporters of AI.",
+          options: ["YES", "NO", "NOT GIVEN"],
+          answer: 2,
+        },
+        {
+          id: "Q38",
+          type: "tfng",
+          question:
+            "Nowadays, the need to protect AI systems is always taken into account when they are set up.",
+          options: ["YES", "NO", "NOT GIVEN"],
+          answer: 1,
+        },
+        {
+          id: "Q39",
+          type: "tfng",
+          question:
+            "In order to benefit from AI and minimise the harms, we have to explore people's concerns about its use.",
+          options: ["YES", "NO", "NOT GIVEN"],
+          answer: 0,
+        },
+        {
+          id: "Q40",
+          type: "multiple-choice",
+          question: "What would be a suitable subtitle for Reading Passage 3?",
+          options: [
+            "A How to make the most of what AI has to offer",
+            "B Why AI may not be the answer to our problems",
+            "C Why governments should not invest in AI systems",
+            "D How AI could improve the efficiency of the public sector",
+          ],
+          answer: 1,
+        },
       ],
     },
   ],
-}
+};

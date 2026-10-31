@@ -4,6 +4,7 @@ import {
   accountKey,
   batchStorage,
   entryKey,
+  readRecord,
   readRecords,
   readValue,
   saveEnvelope,
@@ -20,6 +21,7 @@ export type MistakeModule =
   | 'reading'
   | 'corpus'
 export type ProgressModule =
+  | `spelling:${string}`
   | 'vocabulary'
   | 'flashcard'
   | 'typing'
@@ -53,7 +55,10 @@ export const MISTAKE_MODULE_LABEL: Record<MistakeModule, string> = {
   reading: '阅读 376',
   corpus: '听力语料库',
 }
-export const PROGRESS_MODULE_LABEL: Record<ProgressModule, string> = {
+export const PROGRESS_MODULE_LABEL: Record<
+  Exclude<ProgressModule, `spelling:${string}`>,
+  string
+> = {
   vocabulary: '词汇拼写',
   flashcard: '单词自测（最近一轮）',
   typing: '打字练习',
@@ -169,12 +174,16 @@ export const useMistakes = createGlobalState(() => {
     const day = studyDay()
     const id = `${input.key}|${writerId()}`
     const epoch
-      = readRecords<{
-        epoch: string
-      }>('mistake_resets_v2', currentUser.value)[input.key]?.epoch ?? ''
-    const old = readRecords<MistakePart>('mistake_parts_v2', currentUser.value)[
-      id
-    ]
+      = readRecord<{ epoch: string }>(
+        'mistake_resets_v2',
+        input.key,
+        currentUser.value,
+      )?.epoch ?? ''
+    const old = readRecord<MistakePart>(
+      'mistake_parts_v2',
+      id,
+      currentUser.value,
+    )
     const previous = old?.epoch === epoch ? old : undefined
     const days = { ...previous?.days, [day]: (previous?.days[day] ?? 0) + 1 }
     const cutoff = now - 90 * 86400000
@@ -210,10 +219,7 @@ export const useMistakes = createGlobalState(() => {
     const candidates = Object.entries(records)
       .filter(
         ([, part]) =>
-          !!part
-          && part.key === key
-          && part.epoch === epoch
-          && part.count > 0,
+          !!part && part.key === key && part.epoch === epoch && part.count > 0,
       )
       .sort((a, b) => b[1].lastAt - a[1].lastAt)
     if (candidates.length === 0)
@@ -267,23 +273,21 @@ export const useMistakes = createGlobalState(() => {
     outstanding: boolean
     failureDate: string | null
   } {
-    const id = `${key}|${writerId()}`
-    const part = readRecords<MistakePart>('mistake_parts_v2', currentUser.value)[
-      id
-    ]
-    if (
-      !part
-      || part.epoch !== (resets.state.value[key]?.epoch ?? '')
-      || part.count <= 0
-    )
+    const epoch = resets.state.value[key]?.epoch ?? ''
+    const candidates = Object.values(
+      readRecords<MistakePart>('mistake_parts_v2', currentUser.value),
+    ).filter(p => p.key === key && p.epoch === epoch && p.count > 0)
+    if (!candidates.length)
       return { outstanding: false, failureDate: null }
     let failureDate: string | null = null
-    for (const [day, count] of Object.entries(part.days ?? {})) {
-      if (
-        count > 0
-        && (failureDate === null || dateTime(day) > dateTime(failureDate))
-      )
-        failureDate = day
+    for (const part of candidates) {
+      for (const [day, count] of Object.entries(part.days ?? {})) {
+        if (
+          count > 0
+          && (failureDate === null || dateTime(day) > dateTime(failureDate))
+        )
+          failureDate = day
+      }
     }
     return { outstanding: true, failureDate }
   }
@@ -343,10 +347,14 @@ export const useProgress = createGlobalState(() => {
     store.state.value[module] || { done: 0, total: 0, updatedAt: 0 }
   const chapterModules = computed(() =>
     Object.entries(store.state.value)
-      .filter(([key]) => key.startsWith('flashcard:'))
+      .filter(
+        ([key]) => key.startsWith('flashcard:') || key.startsWith('spelling:'),
+      )
       .map(([module, value]) => ({
         module,
-        label: `单词自测 · ${module.slice(10)}（该章最近一轮）`,
+        label: module.startsWith('spelling:')
+          ? `词汇拼写 · ${module.slice(9)}`
+          : `单词自测 · ${module.slice(10)}（该章最近一轮）`,
         ...value,
       })),
   )
@@ -357,7 +365,11 @@ export const useProgress = createGlobalState(() => {
       )
       .map(module => ({
         module,
-        label: PROGRESS_MODULE_LABEL[module],
+        label:
+          (PROGRESS_MODULE_LABEL as Record<string, string>)[module]
+          ?? (module.startsWith('spelling:')
+            ? `词汇拼写 · ${module.slice(9)}`
+            : module),
         ...getProgress(module),
       })),
     ...chapterModules.value,

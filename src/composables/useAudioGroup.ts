@@ -7,8 +7,11 @@ export function speechLanguage() {
     : 'en-US'
 }
 export function useAudioGroup() {
+  let generation = 0
+  let wordPlayer: HTMLAudioElement | null = null
   const players = new Map<HTMLAudioElement, () => void>()
   function dispose() {
+    generation++
     for (const [audio, off] of players) {
       audio.onerror = null
       audio.pause()
@@ -32,5 +35,31 @@ export function useAudioGroup() {
     players.set(audio, registerAudio(audio))
     return audio
   }
-  return { create, dispose }
+  function play(src: string, text: string, onFailure?: () => void) {
+    const sequence = ++generation
+    if (wordPlayer) {
+      wordPlayer.onerror = null
+      wordPlayer.pause()
+    }
+    window.speechSynthesis?.cancel()
+    const audio = create()
+    wordPlayer = audio
+    let failed = false
+    const fallback = () => {
+      if (failed || sequence !== generation)
+        return
+      failed = true
+      onFailure?.()
+      if (!text || !window.speechSynthesis)
+        return
+      const utterance = new SpeechSynthesisUtterance(text)
+      utterance.lang = speechLanguage()
+      window.speechSynthesis.speak(utterance)
+    }
+    audio.onerror = fallback
+    audio.src = src
+    audio.play().catch(fallback)
+    return audio
+  }
+  return { create, play, dispose }
 }

@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { selectionInOneParagraph } from '../../utils/text'
+import { useExamClock } from '../../composables/useExamClock'
 import { useExamRecovery } from '../../composables/useExamRecovery'
 
+import ImageViewer from '../../components/ImageViewer.vue'
 import TextHighlights from '../../components/TextHighlights.vue'
 import { loadMockTest, mockTestList } from './registry'
 import type { MockTestPair } from './registry'
@@ -10,6 +12,7 @@ import {
   bandScore,
   countCorrect,
   formatCountdown,
+  isRomanLabel,
   mapLabelPlaceholder,
   mockQuestionStatus,
   multiSelectScore,
@@ -18,7 +21,6 @@ import {
   totalScorePoints,
 } from './types'
 import type { MockQuestion } from './types'
-import { saveMockRecord } from '~/composables/useMockHistory'
 import { resolveMediaUrl } from '~/composables/useAudio'
 import { useGoBack } from '~/composables/useGoBack'
 
@@ -45,34 +47,17 @@ const submitted = ref(false)
 const activePassage = ref(0)
 
 const showPassageModal = ref(false)
+const enlargedImage = ref<string | null>(null)
 // 划词高亮：passageIndex -> 高亮词组列表
 const highlights = ref<Map<number, string[]>>(new Map())
 const selectionHint = ref('')
 const selPopup = ref<{ x: number; y: number; text: string } | null>(null)
-let timer: ReturnType<typeof setInterval> | null = null
 let loadSeq = 0
-let endAt = 0
-
-function pauseExam() {
-  if (endAt)
-    timeLeft.value = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
-  endAt = 0
-  if (timer)
-    clearInterval(timer)
-  timer = null
-}
-// 阻断解除后恢复计时：按暂停时冻结的 timeLeft 重建墙钟锚点与 interval
-function startTimer() {
-  if (timer)
-    clearInterval(timer)
-  // 墙钟锚点：后台节流导致 tick 稀疏时，剩余时间仍按真实时间重算
-  endAt = Date.now() + timeLeft.value * 1000
-  timer = setInterval(() => {
-    timeLeft.value = Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
-    if (timeLeft.value <= 0)
-      submit()
-  }, 1000)
-}
+const examClock = useExamClock(timeLeft, () => {
+  submit()
+})
+const pauseExam = examClock.pause
+const startTimer = examClock.start
 const recovery = useExamRecovery({
   kind: 'reading',
   testId,
@@ -81,10 +66,7 @@ const recovery = useExamRecovery({
   answers,
   timeLeft,
   pause: pauseExam,
-  remaining: () =>
-    endAt
-      ? Math.max(0, Math.ceil((endAt - Date.now()) / 1000))
-      : timeLeft.value,
+  remaining: examClock.remaining,
   extra: () => ({
     active: activePassage.value,
     highlights: [...highlights.value.entries()],
@@ -92,6 +74,16 @@ const recovery = useExamRecovery({
   onUnblocked: startTimer,
 })
 
+const recordSaveFailed = ref(false)
+let resultsOwner: string | null = null
+function retrySaveResult() {
+  if (useAuth().currentUser.value !== resultsOwner) {
+    recovery.error.value = '请先回到本次作答的原身份，再重试保存成绩。'
+    return
+  }
+  submitted.value = false
+  submit()
+}
 // 异步加载选中的套题（按需加载）
 // loadSeq 防止快速切换时旧的加载覆盖新的；try/finally 保证 loading 一定复位
 async function loadTest() {
@@ -115,8 +107,7 @@ async function loadTest() {
   const seq = ++loadSeq
   loading.value = true
   loadError.value = false
-  if (timer)
-    clearInterval(timer)
+  pauseExam()
   try {
     const pair = await loadMockTest(testId.value)
     if (seq !== loadSeq)
@@ -128,6 +119,7 @@ async function loadTest() {
         router.replace({ query: { ...route.query, test: active } })
       return
     }
+    recordSaveFailed.value = false
     testPair.value = pair
     answers.value = {}
     submitted.value = false
@@ -155,14 +147,19 @@ function startTest() {
   if (!testPair.value || started.value)
     return
   // 已交卷的草稿不再续做：按全新测试开始
-  let saved = recovery.draft.value && !recovery.draft.value.submitted
-    ? recovery.draft.value
-    : null
+  let saved
+    = recovery.draft.value && !recovery.draft.value.submitted
+      ? recovery.draft.value
+      : null
   // M-Opt-#4：0 秒草稿不再 1 秒后自动交卷，给二选一：确定 = 直接交卷查看
   // 成绩，取消 = 放弃草稿、全新开始。
   if (saved && saved.timeLeft <= 0) {
     recovery.begin()
-    if (window.confirm('该草稿剩余时间已到（0 秒）。点“确定”直接交卷查看成绩，点“取消”放弃草稿、全新开始。')) {
+    if (
+      window.confirm(
+        '该草稿剩余时间已到（0 秒）。点“确定”直接交卷查看成绩，点“取消”放弃草稿、全新开始。',
+      )
+    ) {
       answers.value = saved.answers ?? {}
       activePassage.value = saved.extra?.active ?? 0
       highlights.value = new Map(saved.extra?.highlights ?? [])
@@ -175,7 +172,10 @@ function startTest() {
     saved = null
   }
   recovery.begin()
-  timeLeft.value = restoreTimeLeft(saved?.timeLeft, testPair.value.reading.timeLimit)
+  timeLeft.value = restoreTimeLeft(
+    saved?.timeLeft,
+    testPair.value.reading.timeLimit,
+  )
   answers.value = saved?.answers ?? {}
   submitted.value = false
   activePassage.value = saved?.extra?.active ?? 0
@@ -199,8 +199,7 @@ onMounted(loadTest)
 watch(testId, loadTest)
 
 onUnmounted(() => {
-  if (timer)
-    clearInterval(timer)
+  pauseExam()
 })
 
 const allQuestions = computed<MockQuestion[]>(
@@ -232,7 +231,11 @@ function toggleMultiSelect(qid: string, idx: number) {
   const q = allQuestions.value.find(q => q.id === qid)
   const max
     = q && Array.isArray(q.answer) ? q.answer.length : Number.POSITIVE_INFINITY
-  answers.value[qid] = toggleMultiSelectValue(answers.value[qid] ?? '', idx, max)
+  answers.value[qid] = toggleMultiSelectValue(
+    answers.value[qid] ?? '',
+    idx,
+    max,
+  )
 }
 
 // 切换套题：已开始且未交卷且已有答案时先确认，避免误触丢进度；
@@ -266,7 +269,8 @@ function handleSelect(pi: number) {
       return
     }
     if (!selectionInOneParagraph(sel)) {
-      selectionHint.value = '请在同一个段落内选择词组后高亮，跨段选择不会保存。'
+      selectionHint.value
+        = '请在同一个段落内选择词组后高亮，跨段选择不会保存。'
       selPopup.value = null
       return
     }
@@ -283,9 +287,9 @@ function handleSelect(pi: number) {
       x: rect.left + rect.width / 2,
       y: rect.top - 8,
       text,
-    }
+    };
     // 记住当前 passage
-    ;(selPopup.value as any).pi = pi
+    (selPopup.value as any).pi = pi
   }, 10)
 }
 
@@ -337,17 +341,8 @@ onBeforeRouteLeave(
     || window.confirm('尚未交卷，离开将暂停计时并保留本机草稿，确定吗？'),
 )
 function submit() {
-  if (recovery.mismatch())
-    return
-  if (submitted.value)
-    return
-  submitted.value = true
-  selPopup.value = null
-  if (timer)
-    clearInterval(timer)
-  // 保存做题记录
   const total = totalScorePoints(allQuestions.value)
-  const saved = saveMockRecord({
+  const result = recovery.submitResult({
     id: testId.value,
     label: testPair.value?.label ?? testId.value,
     kind: 'reading',
@@ -355,13 +350,35 @@ function submit() {
     total,
     band: band.value,
   })
-  recovery.markSubmitted()
-  if (saved)
-    recovery.clear()
-  else
-    recovery.error.value = '交卷记录保存失败，成绩已在当前页显示；本机草稿已标记为已交卷，不会再提示继续作答。'
+  if (!result)
+    return
+  recordSaveFailed.value = !result.saved
+  if (!result.saved)
+    resultsOwner = recovery.owner.value
+  selPopup.value = null
 }
 
+const mapInputHint = ref('')
+function setMapLabel(q: MockQuestion, event: Event) {
+  const input = event.target as HTMLInputElement
+  let value = input.value.trim()
+  if (isRomanLabel(q)) {
+    value = value
+      .toLowerCase()
+      .replace(/[^ivxlcdm]/g, '')
+      .slice(0, 4)
+  }
+  else {
+    const letters = value.toUpperCase().replace(/[^A-Z]/g, '')
+    mapInputHint.value
+      = value && (!letters || letters.length > 1)
+        ? '配对题只填一个字母（A–Z）'
+        : ''
+    value = letters.slice(0, 1)
+  }
+  input.value = value
+  setAnswer(q.id, value)
+}
 function switchPassage(index: number) {
   activePassage.value = index
   selPopup.value = null
@@ -369,7 +386,23 @@ function switchPassage(index: number) {
 </script>
 
 <template>
+  <ImageViewer
+    v-if="enlargedImage"
+    :src="enlargedImage"
+    :disabled="recovery.blocked.value"
+    @close="enlargedImage = null"
+  />
+  <button
+    v-if="recordSaveFailed"
+    class="m-4 rounded bg-amber-100 p-2 text-amber-900"
+    @click="retrySaveResult"
+  >
+    重试保存成绩
+  </button>
   <div class="mx-auto max-w-7xl px-4 pt-6 2xl:px-0">
+    <p v-if="mapInputHint" role="status" class="my-2 text-amber-700">
+      {{ mapInputHint }}
+    </p>
     <p
       v-if="selectionHint"
       role="status"
@@ -379,11 +412,16 @@ function switchPassage(index: number) {
     </p>
     <p
       v-if="recovery.error.value"
+      :inert="recovery.blocked.value ? true : undefined"
       role="alert"
       class="my-3 rounded-lg bg-amber-50 p-3 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200"
     >
       {{ recovery.error.value }}
-      <button type="button" class="ml-2 underline" @click="recovery.dismissNotice()">
+      <button
+        type="button"
+        class="ml-2 underline"
+        @click="recovery.dismissNotice()"
+      >
         知道了
       </button>
     </p>
@@ -451,8 +489,8 @@ function switchPassage(index: number) {
         >
           {{
             recovery.draft.value && !recovery.draft.value.submitted
-              ? '继续上次作答（从剩余时间计时）'
-              : '▶ 开始测试'
+              ? "继续上次作答（从剩余时间计时）"
+              : "▶ 开始测试"
           }}
         </button>
         <button
@@ -463,11 +501,21 @@ function switchPassage(index: number) {
         >
           放弃草稿，重新开始
         </button>
-        <p v-if="recovery.draft.value?.submitted" class="mt-4 text-sm text-gray-500 dark:text-gray-400">
+        <p
+          v-if="recovery.draft.value?.submitted"
+          class="mt-4 text-sm text-gray-500 dark:text-gray-400"
+        >
           该套题已交卷，重新开始将是一次新的测试
         </p>
-        <p v-if="recovery.draft.value && !recovery.draft.value.submitted" class="mt-4 text-sm text-gray-500 dark:text-gray-400">
-          草稿最后保存：{{ new Date(recovery.draft.value.updatedAt).toLocaleString() }}
+        <p
+          v-if="recovery.draft.value && !recovery.draft.value.submitted"
+          class="mt-4 text-sm text-gray-500 dark:text-gray-400"
+        >
+          草稿最后保存：{{
+            recovery.draft.value.updatedAt
+              ? new Date(recovery.draft.value.updatedAt).toLocaleString()
+              : "时间未知（答案已保留）"
+          }}
         </p>
       </div>
       <div v-else :inert="recovery.blocked.value ? true : undefined">
@@ -598,7 +646,8 @@ function switchPassage(index: number) {
                 v-if="p.image"
                 :src="resolveMediaUrl(p.image)"
                 :alt="`${p.title} 示意图`"
-                class="mt-4 max-w-full border border-gray-200 rounded-lg dark:border-gray-700"
+                class="mt-4 max-w-full cursor-zoom-in border border-gray-200 rounded-lg dark:border-gray-700"
+                @click="enlargedImage = resolveMediaUrl(p.image)"
               >
               <div
                 v-if="p.headings?.length"
@@ -698,9 +747,9 @@ function switchPassage(index: number) {
                       "
                     >
                       {{
-                        (answers[q.id] ?? '').split(',').includes(String(oi))
-                          ? '✓'
-                          : ''
+                        (answers[q.id] ?? "").split(",").includes(String(oi))
+                          ? "✓"
+                          : ""
                       }}
                     </span>
                     {{ opt }}
@@ -742,11 +791,9 @@ function switchPassage(index: number) {
                   :disabled="submitted"
                   :value="answers[q.id] ?? ''"
                   :placeholder="mapLabelPlaceholder(q)"
-                  maxlength="4"
-                  class="w-24 border border-gray-300 rounded-lg px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  @input="
-                    setAnswer(q.id, ($event.target as HTMLInputElement).value)
-                  "
+                  :maxlength="isRomanLabel(q) ? 4 : 1"
+                  class="w-24 border border-gray-300 rounded-lg px-4 py-2 text-center text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  @input="setMapLabel(q, $event)"
                 >
 
                 <!-- 交卷后显示正确答案 -->
@@ -757,17 +804,17 @@ function switchPassage(index: number) {
                   <span
                     v-if="questionStatus(q) === 'partial'"
                     class="font-bold text-amber-700"
-                  >部分正确（{{ multiSelectScore(q, answers[q.id] ?? '') }} /
+                  >部分正确（{{ multiSelectScore(q, answers[q.id] ?? "") }} /
                     {{ Array.isArray(q.answer) ? q.answer.length : 1 }} 分） · </span>正确答案：{{
-                    q.type === 'multi-select'
+                    q.type === "multi-select"
                       ? (q.answer as number[])
                         .map((i) => q.options?.[i])
-                        .join(' / ')
-                      : q.type === 'fill-blank'
+                        .join(" / ")
+                      : q.type === "fill-blank"
                         ? Array.isArray(q.answer)
-                          ? q.answer.join(' / ')
+                          ? q.answer.join(" / ")
                           : q.answer
-                        : q.type === 'map-label'
+                        : q.type === "map-label"
                           ? q.answer
                           : q.options?.[q.answer as number]
                   }}
@@ -875,7 +922,12 @@ function switchPassage(index: number) {
               v-if="test.passages[activePassage].image"
               :src="resolveMediaUrl(test.passages[activePassage].image ?? '')"
               :alt="`${test.passages[activePassage].title} 示意图`"
-              class="mt-4 max-w-full border border-gray-200 rounded-lg dark:border-gray-700"
+              class="mt-4 max-w-full cursor-zoom-in border border-gray-200 rounded-lg dark:border-gray-700"
+              @click="
+                enlargedImage = resolveMediaUrl(
+                  test.passages[activePassage].image ?? '',
+                )
+              "
             >
             <div
               v-if="test.passages[activePassage].headings?.length"
@@ -885,7 +937,10 @@ function switchPassage(index: number) {
                 标题列表
               </p>
               <ul class="text-sm text-gray-700 space-y-1 dark:text-gray-300">
-                <li v-for="(h, hi) in test.passages[activePassage].headings" :key="hi">
+                <li
+                  v-for="(h, hi) in test.passages[activePassage].headings"
+                  :key="hi"
+                >
                   {{ h }}
                 </li>
               </ul>

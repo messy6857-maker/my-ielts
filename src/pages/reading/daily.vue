@@ -39,8 +39,8 @@ interface DailyData {
 
 // 加载所有日期数据（构建时打包）
 const modules = import.meta.glob('./daily/[0-9]*.json', {
-  eager: true,
-}) as Record<string, { default: DailyData }>
+  eager: false,
+}) as Record<string, () => Promise<{ default: DailyData }>>
 
 const dates = computed(() => {
   const list = (indexData.dates as string[]).filter(
@@ -50,11 +50,30 @@ const dates = computed(() => {
 })
 
 const selectedDate = ref(dates.value[0] ?? '')
-const daily = computed<DailyData | null>(() => {
-  if (!selectedDate.value)
-    return null
-  return modules[`./daily/${selectedDate.value}.json`]?.default ?? null
-})
+const daily = ref<DailyData | null>(null)
+const dailyLoading = ref(false)
+const dailyLoadError = ref(false)
+let dailySequence = 0
+async function loadDaily() {
+  const sequence = ++dailySequence
+  daily.value = null
+  dailyLoading.value = true
+  dailyLoadError.value = false
+  try {
+    const data = await modules[`./daily/${selectedDate.value}.json`]?.()
+    if (sequence === dailySequence)
+      daily.value = data?.default ?? null
+  }
+  catch {
+    if (sequence === dailySequence)
+      dailyLoadError.value = true
+  }
+  finally {
+    if (sequence === dailySequence)
+      dailyLoading.value = false
+  }
+}
+watch(selectedDate, loadDaily, { immediate: true })
 
 // 当前账号的词汇阅读：从后端按 JWT 取，只能拿到自己的
 const myVocabReading = ref<Reading | null>(null)
@@ -252,6 +271,14 @@ function paragraphs(passage: string): string[] {
 </script>
 
 <template>
+  <p v-if="dailyLoadError" class="m-4 text-amber-700" role="alert">
+    文章加载失败。<button @click="loadDaily">
+      重试
+    </button>
+  </p>
+  <p v-if="dailyLoading" class="m-4" role="status">
+    正在加载文章…
+  </p>
   <div class="mx-auto max-w-3xl px-4 pt-6 2xl:px-0">
     <ReadingTabs />
     <div class="mb-6 flex items-center justify-between">
@@ -424,7 +451,7 @@ function paragraphs(passage: string): string[] {
                 >
                   {{
                     answers[`${selectedDate}-vocab-${qi}`] === qs.answer
-                      ? '✓ 回答正确'
+                      ? "✓ 回答正确"
                       : `✗ 答错了，正确答案是 ${qs.options[qs.answer]}`
                   }}
                 </p>
@@ -589,7 +616,7 @@ function paragraphs(passage: string): string[] {
                 >
                   {{
                     answers[`${selectedDate}-news${ai}-${qi}`] === qs.answer
-                      ? '✓ 回答正确'
+                      ? "✓ 回答正确"
                       : `✗ 答错了，正确答案是 ${qs.options[qs.answer]}`
                   }}
                 </p>
