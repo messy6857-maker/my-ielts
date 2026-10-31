@@ -1,0 +1,1 @@
+const e={ex:[],exFrom:"",syn:[]},o={ex:["Her zeal for helping others seems really sincere.","In his zeal to get his work finished on time, he made a lot of mistakes."],exFrom:"",syn:[]},s={zoologist:e,zeal:o};export{s as default,o as zeal,e as zoologist};

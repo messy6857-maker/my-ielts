@@ -1,0 +1,1 @@
+const e={ex:["Hand me that xerox, would you?","The xerox broke down yesterday."],exFrom:"",syn:[]},o={xerox:e,"x-ray":{ex:["The X-ray showed a slight irregularity in one lung.","You may need to go for an X-ray on that arm."],exFrom:"",syn:[]}};export{o as default,e as xerox};
