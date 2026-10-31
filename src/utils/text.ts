@@ -152,8 +152,43 @@ export function selectionInOneParagraph(selection: Selection): boolean {
     return false
   const range = selection.getRangeAt(0)
   const element = (node: Node) =>
-    node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement
+    node.nodeType === Node.ELEMENT_NODE
+      ? (node as Element)
+      : node.parentElement
   const first = element(range.startContainer)?.closest('p')
   const last = element(range.endContainer)?.closest('p')
   return !!first && first === last && !!first.closest('[data-passage]')
+}
+
+/** Split both line-start and inline speaker turns; times such as 2:30 remain text. */
+export function transcriptSentenceEntries(transcript: string) {
+  const label
+    = /(?:^|\s)((?:Speaker\s+\d+(?:\s*\([^)]*\))?|Student\s+\d+|Narrator(?:\/Instructor)?|Instructor|[A-Z][A-Z '\-]{1,30}|[A-Z][a-z]+)):\s+/g
+  return transcript
+    .split('\n')
+    .filter(line => line.trim())
+    .flatMap((line) => {
+      const turns: Array<{ speaker: string; text: string }> = []
+      let speaker = ''
+      let cursor = 0
+      for (const match of line.matchAll(label)) {
+        if (/^(Note|Time|Example|Answer|Section|Question)$/i.test(match[1]))
+          continue
+        const before = line.slice(cursor, match.index).trim()
+        if (before)
+          turns.push({ speaker, text: before })
+        speaker = match[1]
+        cursor = match.index! + match[0].length
+      }
+      const last = line.slice(cursor).trim()
+      if (last)
+        turns.push({ speaker, text: last })
+      return turns.flatMap(turn =>
+        splitSentences(turn.text).map(text => ({
+          text,
+          speaker: turn.speaker,
+          display: turn.speaker ? `${turn.speaker}: ${text}` : text,
+        })),
+      )
+    })
 }

@@ -1,3 +1,4 @@
+import { mergeDeletionEntries } from './retention'
 import { mergeWriters } from './statsArchive'
 
 /** Merge only unversioned migration snapshots. Versioned deletions always win. */
@@ -6,6 +7,20 @@ export function mergeLegacy(base: string, a: any, b: any): any {
     return b
   if (b === undefined || b === null)
     return a
+  if (base === 'vocabulary_spell_v2') {
+    const values = (value: any): string[] =>
+      typeof value === 'string'
+        ? [value]
+        : Array.isArray(value?.alternatives)
+          ? value.alternatives.filter((v: unknown) => typeof v === 'string')
+          : []
+    const alternatives = [...new Set([...values(a), ...values(b)])].sort()
+    return alternatives.length <= 1
+      ? (alternatives[0] ?? '')
+      : { text: alternatives[0], alternatives }
+  }
+  if (base === 'deletion_archive_v3')
+    return { entries: mergeDeletionEntries(a.entries, b.entries) }
   if (base === 'stats_archive_v3')
     return { writers: mergeWriters(a.writers, b.writers) }
   if (base === 'migration-mistake' || base === 'mistake_parts_v2') {
@@ -13,7 +28,10 @@ export function mergeLegacy(base: string, a: any, b: any): any {
       ...a,
       ...b,
       count: Math.max(a.count || 0, b.count || 0),
-      firstAt: Math.min(a.firstAt ?? Number.POSITIVE_INFINITY, b.firstAt ?? Number.POSITIVE_INFINITY),
+      firstAt: Math.min(
+        a.firstAt ?? Number.POSITIVE_INFINITY,
+        b.firstAt ?? Number.POSITIVE_INFINITY,
+      ),
       lastAt: Math.max(a.lastAt || 0, b.lastAt || 0),
     }
   }
@@ -26,8 +44,12 @@ export function mergeLegacy(base: string, a: any, b: any): any {
       [string, any]
     >) {
       const old = (result.totals[ns] ??= {})
-      for (const field of ['known', 'vague', 'unknown'])
-        old[field] = Math.max(Number(old[field]) || 0, Number(count?.[field]) || 0)
+      for (const field of ['known', 'vague', 'unknown']) {
+        old[field] = Math.max(
+          Number(old[field]) || 0,
+          Number(count?.[field]) || 0,
+        )
+      }
     }
     result.days ??= {}
     for (const [date, modules] of Object.entries(b?.days ?? {}) as Array<
@@ -37,8 +59,12 @@ export function mergeLegacy(base: string, a: any, b: any): any {
         [string, any]
       >) {
         const old = ((result.days[date] ??= {})[ns] ??= {})
-        for (const field of ['known', 'vague', 'unknown'])
-          old[field] = Math.max(Number(old[field]) || 0, Number(count?.[field]) || 0)
+        for (const field of ['known', 'vague', 'unknown']) {
+          old[field] = Math.max(
+            Number(old[field]) || 0,
+            Number(count?.[field]) || 0,
+          )
+        }
       }
     }
     return result

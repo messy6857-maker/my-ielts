@@ -1,13 +1,13 @@
 import type { ReadingMockTest } from "./types";
 
-/** Cambridge IELTS 21 p.71 (PDF p.72); endings paraphrased, original letter order retained */
+/** Cambridge IELTS 21 p.71 (PDF p.72); original wording and letter order verified against printed page */
 const PREHISTORY_ENDINGS = [
-  "Homo sapiens appeared sooner than previously estimated.",
-  "Earlier beliefs about prehistoric holders of power were wrong.",
-  "Extinct hominins and Homo sapiens had different gender roles.",
-  "Researchers may have misidentified who gathered food in early communities.",
-  "Complex craftsmanship was probably possible for species besides Homo sapiens.",
-  "Species preceding Homo sapiens survived in severe environments.",
+  "Homo sapiens emerged at an earlier point in time than experts previously believed.",
+  "previous assumptions about who had power in the prehistoric world were inaccurate.",
+  "gender roles in extinct hominin species were different from those in Homo sapiens societies.",
+  "experts may have been mistaken about who looked for food in early human communities.",
+  "Homo sapiens was probably not the only species capable of sophisticated workmanship.",
+  "other species managed to survive in harsh environments before the arrival of Homo sapiens.",
 ];
 
 /**

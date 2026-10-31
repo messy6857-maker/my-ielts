@@ -3,6 +3,8 @@ import {
   accountKey,
   batchStorage,
   collectionBases,
+  compareStamp,
+  deletionEnvelope,
   envelope,
   importTable,
   saveEnvelope,
@@ -116,6 +118,26 @@ export function restoreStudyBackup(
     for (const [sourceKey, raw] of Object.entries(preview.entries)) {
       const base = sourceKey.slice(accountKey('', preview.source).length)
       const key = accountKey(base, target)
+      if (/^mock_draft_v1_.*__completed_/.test(base)) {
+        try {
+          const incoming = JSON.parse(raw)
+          const previous = JSON.parse(localStorage.getItem(key) || 'null')
+          if (previous) {
+            keptNewer++
+          }
+          else if (Number.isFinite(incoming?.completedAt)) {
+            localStorage.setItem(key, raw)
+            imported++
+          }
+          else {
+            failed++
+          }
+        }
+        catch {
+          failed++
+        }
+        continue
+      }
       if (/^(?:task[12]_draft_v1|mock_draft_v1_)/.test(base)) {
         // Imports are independent recovery versions and never overwrite an active tab.
         try {
@@ -140,8 +162,14 @@ export function restoreStudyBackup(
           continue
         }
         const previous = localStorage.getItem(key)
-        const merged = mergeEntry(base, previous ? envelope(previous) : undefined, incoming)
-        if (previous && JSON.stringify(envelope(previous)) === JSON.stringify(merged)) {
+        const barrier = deletionEnvelope(key, target)
+        const stored = previous ? envelope(previous) : undefined
+        const prior
+          = barrier && (!stored || compareStamp(barrier, stored) > 0)
+            ? barrier
+            : stored
+        const merged = mergeEntry(base, prior, incoming)
+        if (prior && JSON.stringify(prior) === JSON.stringify(merged)) {
           keptNewer++
           continue
         }

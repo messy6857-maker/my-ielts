@@ -2,6 +2,7 @@ import { clearRecords, readRecords, saveRecord } from '../utils/storage'
 import { useAuth } from './useAuth'
 
 export interface MockRecord {
+  attemptId?: string
   id: string // test id, e.g. 'cam19-test1'
   label: string // e.g. '剑19 Test 1'
   kind: 'listening' | 'reading'

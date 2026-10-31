@@ -3,6 +3,7 @@
 import {
   entryKey,
   readRecords,
+  readValue,
   saveEnvelope,
   saveRecord,
   subscribeStorage,
@@ -64,15 +65,7 @@ const { setProgress } = useProgress()
 const SPELL_KEY = 'vocabulary_spell_v2'
 function readSpellMap() {
   const owner = useAuth().currentUser.value
-  let old = {}
-  try {
-    old = JSON.parse(
-      localStorage.getItem(nsKey('vocabulary_spell_v1')) || '{}',
-    )
-  }
-  catch {
-    /* Keep backup original. */
-  }
+  const old = readValue(nsKey('vocabulary_spell_v1'), {})
   for (const [chapter, words] of Object.entries(old)) {
     for (const [id, value] of Object.entries(words || {})) {
       const key = entryKey(SPELL_KEY, `${chapter}|${id}`, owner)
@@ -106,7 +99,11 @@ function saveSpellMap(item) {
 }
 function onSpellInput(event, item) {
   item.spellValue = event.target.value
-  item.spellError = !!item.spellValue.trim() && !item.word.map(v => v.toLowerCase().trim()).includes(item.spellValue.toLowerCase().trim())
+  item.spellError
+    = !!item.spellValue.trim()
+    && !item.word
+      .map(v => v.toLowerCase().trim())
+      .includes(item.spellValue.toLowerCase().trim())
   saveSpellMap(item)
   trainingStats.value = calcStats()
   syncProgress()
@@ -119,7 +116,10 @@ function restoreSpellValues() {
     const saved = map[chapter] || {}
     for (const group of cur.words) {
       for (const item of group) {
-        const value = saved[item.id]
+        const stored = saved[item.id]
+        const value = typeof stored === 'string' ? stored : stored?.text
+        item.spellAlternatives
+          = typeof stored === 'object' ? stored?.alternatives || [] : []
         if (typeof value === 'string' && value.length > 0) {
           item.spellValue = value
           item.spellError = !item.word
@@ -606,6 +606,26 @@ function copyAllError() {
                             "
                             @keydown="onInputKeydown"
                           >
+                          <div
+                            v-if="item.spellAlternatives?.length > 1"
+                            class="text-xs text-amber-700"
+                          >
+                            旧设备答案存在分歧，请选择：
+                            <button
+                              v-for="alternative in item.spellAlternatives"
+                              :key="alternative"
+                              class="mr-2 underline"
+                              @click="
+                                onSpellInput(
+                                  { target: { value: alternative } },
+                                  item,
+                                );
+                                item.spellAlternatives = [];
+                              "
+                            >
+                              {{ alternative }}
+                            </button>
+                          </div>
                         </template>
                       </td>
                       <td class="group relative whitespace-nowrap p-4">

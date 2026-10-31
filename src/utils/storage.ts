@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import { deletedTarget } from './retention'
 import { mergeLegacy } from './legacyMerge'
 
 export interface Envelope<T = unknown> {
@@ -77,6 +78,7 @@ export const mapBases = [
   'daily_resets_v2',
   'stats_parts_v2',
   'stats_archive_v3',
+  'deletion_archive_v3',
   'timer_sessions_v2',
   'checkin_years_v2',
 ]
@@ -92,6 +94,7 @@ export const arrayBases = [
 ]
 export const collectionBases = [...mapBases, ...setBases, ...arrayBases]
 const scalarBases = [
+  'typing_ignore_case_v2',
   'flashcard_daily_goal_v1',
   'listening179_daily_goal_v1',
   'reading538_daily_goal_v1',
@@ -321,7 +324,63 @@ export function legacyEntries(
     ? (value as Record<string, unknown>)
     : {}
 }
-export function importTable(base: string, value: unknown, user: string | null, source: 'local' | 'remote' = 'remote') {
+export function deletionEnvelope(
+  key: string,
+  user: string | null,
+): Envelope | undefined {
+  const target = deletedTarget(key, user)
+  if (!target)
+    return undefined
+  try {
+    const stamp = JSON.parse(localStorage.getItem(target.key) || 'null')?.value
+      ?.entries?.[target.target]
+    if (
+      Array.isArray(stamp)
+      && Number.isSafeInteger(stamp[0])
+      && typeof stamp[1] === 'string'
+    )
+      return { __ielts: 2, stamp: stamp as [number, string], deleted: true }
+  }
+  catch {}
+  return undefined
+}
+function retiredEntry(
+  key: string,
+  stamp: [number, string],
+  user: string | null,
+  cache?: Map<string, any>,
+) {
+  const target = deletedTarget(key, user)
+  if (!target)
+    return false
+  try {
+    if (cache && !cache.has(target.key)) {
+      cache.set(
+        target.key,
+        JSON.parse(localStorage.getItem(target.key) || 'null'),
+      )
+    }
+    const barrier = (
+      cache
+        ? cache.get(target.key)
+        : JSON.parse(localStorage.getItem(target.key) || 'null')
+    )?.value?.entries?.[target.target]
+    return (
+      Array.isArray(barrier)
+      && (barrier[0] > stamp[0]
+        || (barrier[0] === stamp[0] && barrier[1] >= stamp[1]))
+    )
+  }
+  catch {
+    return false
+  }
+}
+export function importTable(
+  base: string,
+  value: unknown,
+  user: string | null,
+  source: 'local' | 'remote' = 'remote',
+) {
   const result = { imported: 0, keptNewer: 0, failed: 0 }
   for (const [id, item] of Object.entries(legacyEntries(base, value))) {
     const key = entryKey(base, id, user)
@@ -335,21 +394,28 @@ export function importTable(base: string, value: unknown, user: string | null, s
       result.failed++
       continue
     }
-    if (old && (old.deleted || old.stamp[0] > 0)) {
+    if (
+      retiredEntry(key, [0, 'legacy'], user)
+      || (old && (old.deleted || old.stamp[0] > 0))
+    ) {
       result.keptNewer++
       continue
     }
     const merged = old ? mergeLegacy(base, old.value, item) : item
     if (!old || JSON.stringify(old.value) !== JSON.stringify(merged)) {
-      if (saveEnvelope(
-        key,
-        { __ielts: 2, stamp: [0, 'legacy'], value: merged },
-        source,
-      ))
+      if (
+        saveEnvelope(
+          key,
+          { __ielts: 2, stamp: [0, 'legacy'], value: merged },
+          source,
+        )
+      )
         result.imported++
       else result.failed++
     }
-    else { result.keptNewer++ }
+    else {
+      result.keptNewer++
+    }
   }
   return result
 }
@@ -378,15 +444,29 @@ export function readRecords<T>(
   }
   const prefix = `${key}__entry_`
   const records: Record<string, T> = Object.create(null)
+  const retirementCache = new Map<string, any>()
   for (const storedKey of Object.keys(localStorage)) {
     if (!storedKey.startsWith(prefix))
       continue
     const id = decodeId(storedKey.slice(prefix.length))
     if (id === null)
       continue
-    const value = readValue<T | undefined>(storedKey, undefined)
-    if (value !== undefined)
-      records[id] = value
+    const raw = localStorage.getItem(storedKey)
+    if (raw) {
+      try {
+        if (retiredEntry(storedKey, envelope(raw).stamp, user, retirementCache))
+          continue
+      }
+      catch {}
+    }
+    if (raw) {
+      try {
+        const e = envelope(raw)
+        if (!e.deleted && e.value !== undefined)
+          records[id] = e.value as T
+      }
+      catch {}
+    }
   }
   return records
 }
@@ -399,7 +479,16 @@ export function readRecord<T>(
   const marker = `myielts_local_migrated:${accountKey(base, user)}`
   if (!localStorage.getItem(marker))
     readRecords(base, user)
-  return readValue<T | undefined>(entryKey(base, String(id), user), undefined)
+  const key = entryKey(base, String(id), user)
+  const raw = localStorage.getItem(key)
+  if (raw) {
+    try {
+      if (retiredEntry(key, envelope(raw).stamp, user))
+        return undefined
+    }
+    catch {}
+  }
+  return readValue<T | undefined>(key, undefined)
 }
 export function removeStoredValue(key: string) {
   try {

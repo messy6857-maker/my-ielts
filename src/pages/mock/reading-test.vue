@@ -51,6 +51,7 @@ const enlargedImage = ref<string | null>(null)
 // 划词高亮：passageIndex -> 高亮词组列表
 const highlights = ref<Map<number, string[]>>(new Map())
 const selectionHint = ref('')
+const mapInputHint = ref('')
 const selPopup = ref<{ x: number; y: number; text: string } | null>(null)
 let loadSeq = 0
 const examClock = useExamClock(timeLeft, () => {
@@ -96,6 +97,10 @@ async function loadTest() {
     return
   }
   recovery.saveFlush()
+  mapInputHint.value = ''
+  enlargedImage.value = null
+  selectionHint.value = ''
+  showPassageModal.value = false
   pauseExam()
   started.value = false
   // 非法 test id（如手写 URL / 过期书签）不再静默 fallback：把 URL 参数规范化为默认套题，
@@ -154,7 +159,8 @@ function startTest() {
   // M-Opt-#4：0 秒草稿不再 1 秒后自动交卷，给二选一：确定 = 直接交卷查看
   // 成绩，取消 = 放弃草稿、全新开始。
   if (saved && saved.timeLeft <= 0) {
-    recovery.begin(saved)
+    if (!recovery.begin(saved))
+      return
     if (
       window.confirm(
         '该草稿剩余时间已到（0 秒）。点“确定”直接交卷查看成绩，点“取消”放弃草稿、全新开始。',
@@ -173,7 +179,8 @@ function startTest() {
       return
     saved = null
   }
-  recovery.begin(saved)
+  if (!recovery.begin(saved))
+    return
   timeLeft.value = restoreTimeLeft(
     saved?.timeLeft,
     testPair.value.reading.timeLimit,
@@ -340,7 +347,9 @@ onBeforeRouteLeave(
     useAuth().currentUser.value !== recovery.owner.value
     || !started.value
     || submitted.value
-    || window.confirm('尚未交卷，离开将暂停计时并保留本机草稿，确定吗？'),
+    || window.confirm(
+      '尚未交卷，离开将暂停本页作答并保留草稿，其他页签独立作答不受影响，确定吗？',
+    ),
 )
 function submit() {
   const total = totalScorePoints(allQuestions.value)
@@ -361,11 +370,14 @@ function submit() {
   selPopup.value = null
 }
 
-const mapInputHint = ref('')
 function setMapLabel(q: MockQuestion, event: Event) {
   const input = event.target as HTMLInputElement
   let value = input.value.trim()
   if (isRomanLabel(q)) {
+    mapInputHint.value
+      = value && !/^[ivxlcdm]{1,4}$/i.test(value)
+        ? '标题配对请填写罗马数字（如 i、iv、ix）'
+        : ''
     value = value
       .toLowerCase()
       .replace(/[^ivxlcdm]/g, '')
@@ -492,7 +504,7 @@ function switchPassage(index: number) {
         >
           {{
             recovery.draft.value && !recovery.draft.value.submitted
-              ? "继续上次作答（从剩余时间计时）"
+              ? "继续所选作答（从剩余时间计时）"
               : "▶ 开始测试"
           }}
         </button>
@@ -510,6 +522,40 @@ function switchPassage(index: number) {
         >
           该套题已交卷，重新开始将是一次新的测试
         </p>
+        <div
+          v-if="
+            recovery.availableDrafts.value.length > 1
+              || (recovery.availableDrafts.value.length && !recovery.draft.value)
+          "
+          class="my-3 text-sm"
+        >
+          <p>
+            不同页签是独立作答。请选择要恢复的草稿，提交或放弃仅影响所选的同次作答。
+          </p>
+          <select
+            aria-label="选择独立作答草稿"
+            :value="recovery.draft.value?.versionId || ''"
+            @change="
+              recovery.selectDraft(($event.target as HTMLSelectElement).value)
+            "
+          >
+            <option value="" disabled>
+              选择要恢复的作答
+            </option>
+            <option
+              v-for="snapshot in recovery.availableDrafts.value"
+              :key="snapshot.versionId"
+              :value="snapshot.versionId"
+            >
+              {{
+                snapshot.updatedAt
+                  ? new Date(snapshot.updatedAt).toLocaleString()
+                  : "时间未知"
+              }}
+              · {{ Object.keys(snapshot.answers).length }} 题
+            </option>
+          </select>
+        </div>
         <p
           v-if="recovery.draft.value && !recovery.draft.value.submitted"
           class="mt-4 text-sm text-gray-500 dark:text-gray-400"

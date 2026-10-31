@@ -9,7 +9,7 @@ import {
   getRejectedReason,
   unquarantineKeys,
 } from '../composables/syncClient'
-import { decodeId } from '../utils/storage'
+import { decodeId, subscribeStorage } from '../utils/storage'
 import {
   downloadStudyBackup,
   previewStudyBackup,
@@ -43,15 +43,30 @@ const importPreview = computed(() => {
     return null
   }
 })
+let backupSelection = 0
 async function chooseBackup(event: Event) {
   const file = (event.target as HTMLInputElement).files?.[0]
   if (!file)
     return
+  backupSelection++
+  importText.value = ''
   if (file.size > 30 * 1024 * 1024) {
     importMessage.value = '备份超过 30MB，请先拆分文件'
     return
   }
-  importText.value = await file.text()
+  const selection = ++backupSelection
+  let text: string
+  try {
+    text = await file.text()
+  }
+  catch {
+    if (selection === backupSelection)
+      importMessage.value = '备份读取失败，请重新选择文件'
+    return
+  }
+  if (selection !== backupSelection)
+    return
+  importText.value = text
   importMessage.value = importPreview.value
     ? ''
     : '备份格式无效，未写入任何数据'
@@ -73,6 +88,11 @@ function refreshQuarantined() {
 }
 watch(currentUser, refreshQuarantined, { immediate: true })
 watch(rejectedNotice, refreshQuarantined)
+const offQuarantine = subscribeStorage((key) => {
+  if (!key || key.startsWith('myielts_sync_quarantined'))
+    refreshQuarantined()
+})
+onUnmounted(offQuarantine)
 // entry 键形如 myielts_u_<用户>_<表>__entry_<hex>：用现有 decodeId 还原记录 ID，
 // 用户才能辨认被隔离的是哪条记录（用户名含下划线时不硬拆，只还原 ID 部分）。
 function describeQuarantinedKey(k: string) {
@@ -274,7 +294,7 @@ async function onTest() {
       </label>
 
       <label class="mb-4 block">
-        <span class="mb-1 block text-sm font-medium dark:text-gray-200">API Key</span>
+        <span class="mb-1 block text-sm font-medium dark:text-gray-200">API 密钥</span>
         <div class="relative">
           <input
             v-model="form.apiKey"

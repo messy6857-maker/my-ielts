@@ -136,9 +136,12 @@ const timeText = computed(() => {
 // 不再按调用时刻的 currentUser 现算——否则退出后卸载 flush 会把旧账号的全文写进游客全局 key。
 // 仍走普通 localStorage（刻意不用 writeJson，草稿不同步）；旧全局草稿不迁移给登录账号
 const emergencyDrafts = {
-  get: (owner: string | null) => emergencyWritingDrafts.get(JSON.stringify(['task2', owner])),
-  set: (owner: string | null, value: WritingDraft) => emergencyWritingDrafts.set(JSON.stringify(['task2', owner]), value),
-  delete: (owner: string | null) => emergencyWritingDrafts.delete(JSON.stringify(['task2', owner])),
+  get: (owner: string | null) =>
+    emergencyWritingDrafts.get(JSON.stringify(['task2', owner])),
+  set: (owner: string | null, value: WritingDraft) =>
+    emergencyWritingDrafts.set(JSON.stringify(['task2', owner]), value),
+  delete: (owner: string | null) =>
+    emergencyWritingDrafts.delete(JSON.stringify(['task2', owner])),
 }
 let draftOwner: string | null = currentUser.value
 let draftTimer: ReturnType<typeof setTimeout> | null = null
@@ -184,14 +187,26 @@ onUnmounted(() => {
     clearInterval(timerId)
   if (draftTimer)
     clearTimeout(draftTimer)
-  if (!saveDraftNow() && prompt.value)
-    emergencyDrafts.set(draftOwner, { promptId: prompt.value.id, text: essayText.value, secondsLeft: secondsLeft.value, overtime: overtime.value })
+  if (!saveDraftNow() && prompt.value) {
+    emergencyDrafts.set(draftOwner, {
+      promptId: prompt.value.id,
+      text: essayText.value,
+      secondsLeft: secondsLeft.value,
+      overtime: overtime.value,
+    })
+  }
 })
 // 恢复草稿：挂载时调用一次；切换账号时也调用，先取消 pending 防抖、再按新身份重载。
 // 新身份有合法草稿则恢复；无草稿则回到选题页（清屏，不再留旧身份的全文）
 function restoreDraft() {
-  if (!saveDraftNow() && prompt.value)
-    emergencyDrafts.set(draftOwner, { promptId: prompt.value.id, text: essayText.value, secondsLeft: secondsLeft.value, overtime: overtime.value })
+  if (!saveDraftNow() && prompt.value) {
+    emergencyDrafts.set(draftOwner, {
+      promptId: prompt.value.id,
+      text: essayText.value,
+      secondsLeft: secondsLeft.value,
+      overtime: overtime.value,
+    })
+  }
   if (draftTimer)
     clearTimeout(draftTimer)
   draftTimer = null
@@ -349,7 +364,7 @@ function checklist(s: EssayStats): { ok: boolean; text: string }[] {
     },
     {
       ok: s.complexRatio >= 0.25,
-      text: `长难句占比 ${(s.complexRatio * 100).toFixed(0)}%（含从句或完整并列分句；规则估算）`,
+      text: `长难句占比 ${(s.complexRatio * 100).toFixed(0)}%（含从句、完整并列分句、被动语态；规则估算）`,
     },
     {
       ok: s.avgSentenceLen >= 12 && s.avgSentenceLen <= 25,
@@ -359,12 +374,26 @@ function checklist(s: EssayStats): { ok: boolean; text: string }[] {
 }
 
 const archiveError = ref('')
-let pendingEssay: { owner: string | null; record: SavedTask2; draft: WritingDraft | null } | null = null
+let pendingEssay: {
+  owner: string | null
+  record: SavedTask2
+  draft: WritingDraft | null
+} | null = null
 function persistEssay(record: SavedTask2) {
-  pendingEssay ??= { owner: draftOwner, record, draft: readOwnDraft('task2', draftOwner, record.promptId) }
+  pendingEssay ??= {
+    owner: draftOwner,
+    record,
+    draft: readOwnDraft('task2', draftOwner, record.promptId),
+  }
   if (saveEssay(record)) {
-    if (pendingEssay.draft)
-      deleteDraft('task2', pendingEssay.owner, record.promptId, pendingEssay.draft)
+    if (pendingEssay.draft) {
+      deleteDraft(
+        'task2',
+        pendingEssay.owner,
+        record.promptId,
+        pendingEssay.draft,
+      )
+    }
     pendingEssay = null
     archiveError.value = ''
     drafts.value = listDrafts('task2', draftOwner)

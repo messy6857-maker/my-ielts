@@ -114,6 +114,22 @@ export function saveDraft(
       : Math.max(Date.now(), (previous?.stateAt ?? 0) + 1)
     const value = { ...draft, editedAt, stateAt, updatedAt: Date.now() }
     localStorage.setItem(target, JSON.stringify(value))
+    if (previous?.versionId && !previous.versionId.includes('__session_')) {
+      const source = previous.versionId
+      try {
+        const old = JSON.parse(localStorage.getItem(source) || 'null')
+        if (
+          old?.promptId === previous.promptId
+          && old.text === previous.text
+          && old.secondsLeft === previous.secondsLeft
+          && !!old.overtime === !!previous.overtime
+        )
+          localStorage.removeItem(source)
+      }
+      catch {
+        /* Keep sources that cannot be validated. */
+      }
+    }
     origins.set(target, value)
     storageFailures.value = storageFailures.value.filter(k => k !== target)
     return true

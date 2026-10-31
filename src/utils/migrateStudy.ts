@@ -2,6 +2,7 @@ import { dateTime, mergeLegacy } from './legacyMerge'
 import {
   accountKey,
   batchStorage,
+  deletionEnvelope,
   entryKey,
   envelope,
   readRecords,
@@ -13,6 +14,8 @@ import {
 
 function seed(base: string, id: string, value: unknown, owner: string | null) {
   const key = entryKey(base, id, owner)
+  if (deletionEnvelope(key, owner))
+    return
   const raw = localStorage.getItem(key)
   let old: any = null
   try {

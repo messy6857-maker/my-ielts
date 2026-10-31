@@ -58,6 +58,7 @@ const audioEl = ref<HTMLAudioElement | null>(null)
 const mapLabelHints = ref<Record<string, string>>({})
 const zoomImage = ref<string | null>(null)
 const transcriptError = ref(false)
+const transcriptLoading = ref(false)
 let loadSeq = 0
 const examClock = useExamClock(
   timeLeft,
@@ -139,6 +140,8 @@ async function loadTest() {
     return
   }
   const seq = ++loadSeq
+  transcriptLoading.value = false
+  transcriptError.value = false
   loading.value = true
   loadError.value = false
   pauseExam()
@@ -192,7 +195,8 @@ function startTest() {
   // M-Opt-#4：0 秒草稿不再 1 秒后自动交卷，给二选一：确定 = 直接交卷查看
   // 成绩，取消 = 放弃草稿、全新开始。
   if (saved && saved.timeLeft <= 0) {
-    recovery.begin(saved)
+    if (!recovery.begin(saved))
+      return
     if (
       window.confirm(
         '该草稿剩余时间已到（0 秒）。点“确定”直接交卷查看成绩，点“取消”放弃草稿、全新开始。',
@@ -209,7 +213,8 @@ function startTest() {
       return
     saved = null
   }
-  recovery.begin(saved)
+  if (!recovery.begin(saved))
+    return
   timeLeft.value = restoreTimeLeft(
     saved?.timeLeft,
     testPair.value.listening.timeLimit,
@@ -426,29 +431,37 @@ onBeforeRouteLeave(
     || submitted.value
     || window.confirm('尚未交卷，离开将暂停计时并保留本机草稿，确定吗？'),
 )
-const transcriptLoading = ref(false)
+watch([submitted, testPair], ([done, pair]) => {
+  if (
+    done
+    && pair
+    && !pair.listening.parts.some(p => p.transcript)
+    && !transcriptLoading.value
+  )
+    fetchTranscript()
+})
 async function fetchTranscript() {
-  const pair = testPair.value
+  const sequence = loadSeq
   const id = testId.value
   transcriptLoading.value = true
   transcriptError.value = false
   try {
     const transcript = await loadMockTranscript(id)
-    if (testPair.value !== pair || testId.value !== id)
+    if (sequence !== loadSeq || testId.value !== id || !submitted.value)
       return
     if (!transcript)
       throw new Error('原文加载失败')
     testPair.value = {
-      ...pair!,
-      listening: withTranscripts(pair!.listening, transcript),
+      ...testPair.value!,
+      listening: withTranscripts(testPair.value!.listening, transcript),
     }
   }
   catch {
-    if (testId.value === id)
+    if (sequence === loadSeq && testId.value === id)
       transcriptError.value = true
   }
   finally {
-    if (testId.value === id)
+    if (sequence === loadSeq && testId.value === id)
       transcriptLoading.value = false
   }
 }
@@ -586,7 +599,7 @@ async function submit() {
         >
           {{
             recovery.draft.value && !recovery.draft.value.submitted
-              ? "继续上次作答（从剩余时间计时）"
+              ? "继续所选作答（从剩余时间计时）"
               : "▶ 开始测试"
           }}
         </button>
@@ -604,6 +617,40 @@ async function submit() {
         >
           该套题已交卷，重新开始将是一次新的测试
         </p>
+        <div
+          v-if="
+            recovery.availableDrafts.value.length > 1
+              || (recovery.availableDrafts.value.length && !recovery.draft.value)
+          "
+          class="my-3 text-sm"
+        >
+          <p>
+            不同页签是独立作答。请选择要恢复的草稿，提交或放弃仅影响所选的同次作答。
+          </p>
+          <select
+            aria-label="选择独立作答草稿"
+            :value="recovery.draft.value?.versionId || ''"
+            @change="
+              recovery.selectDraft(($event.target as HTMLSelectElement).value)
+            "
+          >
+            <option value="" disabled>
+              选择要恢复的作答
+            </option>
+            <option
+              v-for="snapshot in recovery.availableDrafts.value"
+              :key="snapshot.versionId"
+              :value="snapshot.versionId"
+            >
+              {{
+                snapshot.updatedAt
+                  ? new Date(snapshot.updatedAt).toLocaleString()
+                  : "时间未知"
+              }}
+              · {{ Object.keys(snapshot.answers).length }} 题
+            </option>
+          </select>
+        </div>
         <p
           v-if="recovery.draft.value && !recovery.draft.value.submitted"
           class="mt-4 text-sm text-gray-500 dark:text-gray-400"
@@ -710,12 +757,17 @@ async function submit() {
               @error="onAudioError(pi)"
               @loadeddata="onAudioLoaded(pi)"
             />
-            <p
+            <details
               v-if="submitted && p.transcript"
-              class="mt-4 whitespace-pre-line text-sm text-gray-600 dark:text-gray-400"
+              class="mt-4 text-sm text-gray-600 dark:text-gray-400"
             >
-              {{ p.transcript }}
-            </p>
+              <summary class="cursor-pointer font-bold">
+                查看 {{ p.title }} 录音脚本
+              </summary>
+              <p class="whitespace-pre-line">
+                {{ p.transcript }}
+              </p>
+            </details>
           </article>
 
           <!-- 有图的 Part：图片吸顶，滑到题目时一直看得见 -->

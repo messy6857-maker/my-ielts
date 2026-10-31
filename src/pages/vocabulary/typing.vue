@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import {
+  accountKey,
+  readValue,
+  saveValue,
+  subscribeStorage,
+} from '../../utils/storage'
 import { useAudioGroup } from '../../composables/useAudioGroup'
 
 import { resolveAudioUrl } from '../../composables/useAudio'
@@ -15,11 +21,35 @@ const selectedChapter = ref(
 
 const currentWordIndex = ref(0)
 const userInput = ref('')
-const ignoreCase = ref(
-  localStorage.getItem('myielts_typing_ignore_case') === '1',
-)
-watch(ignoreCase, v =>
-  localStorage.setItem('myielts_typing_ignore_case', v ? '1' : '0'),
+const caseOwner = useAuth().currentUser
+const ignoreCase = ref(true)
+let loadingCase = false
+function loadCasePreference() {
+  loadingCase = true
+  const old = localStorage.getItem('myielts_typing_ignore_case')
+  ignoreCase.value = readValue(
+    accountKey('typing_ignore_case_v2', caseOwner.value),
+    old === null || old === '1',
+  )
+  loadingCase = false
+}
+loadCasePreference()
+watch(caseOwner, loadCasePreference, { flush: 'sync' })
+const offCase = subscribeStorage((key, source) => {
+  if (
+    source === 'remote'
+    && (!key || key === accountKey('typing_ignore_case_v2', caseOwner.value))
+  )
+    loadCasePreference()
+})
+onUnmounted(offCase)
+watch(
+  ignoreCase,
+  (value) => {
+    if (!loadingCase)
+      saveValue(accountKey('typing_ignore_case_v2', caseOwner.value), value)
+  },
+  { flush: 'sync' },
 )
 const startTime = ref<number | null>(null)
 const wpm = ref(0)

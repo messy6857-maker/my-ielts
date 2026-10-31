@@ -75,7 +75,7 @@ const menus = reactive([
           style="font-family: Charmonman"
           class="mb-16 text-center text-6xl text-gray-900 dark:text-white"
         >
-          Salvation lies within <span class="font-bold text-#f00">IELTS</span>
+          坚持练习，稳步提升 <span class="font-bold text-#f00">IELTS</span>
         </h1>
         <div class="mb-8 max-w-screen-md lg:mb-16">
           <h2
@@ -96,7 +96,7 @@ const menus = reactive([
             <h3 class="text-xl font-bold text-gray-900 dark:text-white">
               学习进度
               <span class="ml-2 align-middle text-sm font-normal text-gray-400">
-                {{ currentUser ? `当前账号：${currentUser}` : '游客模式' }}
+                {{ currentUser ? `当前账号：${currentUser}` : "游客模式" }}
               </span>
             </h3>
             <RouterLink

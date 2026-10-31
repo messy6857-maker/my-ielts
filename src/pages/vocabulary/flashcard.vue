@@ -52,7 +52,7 @@ const storedChapter = localStorage.getItem(CHAPTER_KEY)
 const category = ref(
   chapters.includes(storedChapter ?? '') ? storedChapter! : chapters[0],
 )
-const { addMistake, decrementMistake } = useMistakes()
+const { addMistake, decrementMistake, patchMistakeHint } = useMistakes()
 const { setProgress, clearChapterProgress } = useProgress()
 const scheduleStore = useWordSchedule()
 const daily = useDailyGoal()
@@ -274,6 +274,15 @@ function toCard(w: any, isNew: boolean): Card {
   }
 }
 
+function wordAliasIds(card: Card) {
+  if (!crossChapter.value)
+    return [card.id]
+  const normalized = card.word.toLowerCase().trim()
+  return Object.values(vocabulary)
+    .flatMap((c: any) => c.words.flat())
+    .filter((w: any) => w.word[0].toLowerCase().trim() === normalized)
+    .map((w: any) => w.id) as number[]
+}
 const gradeHistory = ref<GradeHistoryEntry[]>([])
 
 function buildQueue() {
@@ -295,7 +304,7 @@ function buildQueue() {
     const byWord = new Map<string, any>()
     for (const w of all) {
       // 无词串的条目无法按词去重，用 id 占位键原样保留
-      const key = w.word?.[0] ?? `__id:${w.id}`
+      const key = w.word?.[0]?.toLowerCase().trim() ?? `__id:${w.id}`
       const prev = byWord.get(key)
       if (
         !prev
@@ -343,6 +352,10 @@ interface GradeHistoryEntry {
   prevBest: number | undefined
   prevAttempts: number
   countedNew: boolean
+  aliasSchedules?: Array<{
+    id: string | number
+    previous: ReturnType<typeof scheduleStore.get>
+  }>
   date: string
 }
 
@@ -361,10 +374,13 @@ function grade(g: 0 | 3 | 5) {
     prevBest: bestGrade.value[card.id],
     prevAttempts: card.attempts,
     countedNew,
+    aliasSchedules: wordAliasIds(card)
+      .filter(id => id !== card.id)
+      .map(id => ({ id, previous: scheduleStore.get(id) })),
     date: studyDay(),
   })
   // 更新间隔重复调度
-  scheduleStore.set(card.id, nextSchedule)
+  for (const id of wordAliasIds(card)) scheduleStore.set(id, nextSchedule)
   recordAttempt('vocabulary', g)
   // 统计
   if (g === 5)
@@ -388,7 +404,7 @@ function grade(g: 0 | 3 | 5) {
       key: `flashcard:${card.id}`,
       title: card.word,
       detail: `${card.pos} ${card.meaning}`,
-      hint: card.example,
+      hint: card.example || `${card.word}: ${card.meaning}`,
     })
     // 本轮内复现：不认识放队尾，模糊插到后面第 5 个（最多复现 3 次）
     if (card.attempts < 3) {
@@ -431,6 +447,16 @@ function goBackOne() {
     if (prevSchedule)
       scheduleStore.set(card.id, prevSchedule)
     else scheduleStore.remove(card.id)
+  }
+  for (const alias of entry.aliasSchedules || []) {
+    if (
+      JSON.stringify(scheduleStore.get(alias.id))
+      !== JSON.stringify(postSchedule)
+    )
+      continue
+    if (alias.previous)
+      scheduleStore.set(alias.id, alias.previous)
+    else scheduleStore.remove(alias.id)
   }
   if (prevBest === undefined)
     delete bestGrade.value[card.id]
@@ -481,11 +507,20 @@ function next() {
 }
 
 /** 自评前加载例句/同义词：查内置预抓取数据（本词 → 派生词），同步返回 */
+const wordInfoError = ref(false)
+const cardDetailsError = ref(false)
+const wordInfoLoading = ref(false)
 async function loadWordInfo(card: Card) {
   const sequence = ++wordLoadSequence
   const owner = useAuth().currentUser.value
-  const isActive = () => sequence === wordLoadSequence && owner === useAuth().currentUser.value && (current.value || studying.value) === card
+  const isActive = () =>
+    sequence === wordLoadSequence
+    && owner === useAuth().currentUser.value
+    && (current.value || studying.value) === card
   wordInfo.value = null
+  wordInfoError.value = false
+  cardDetailsError.value = false
+  wordInfoLoading.value = true
   try {
     const details = await loadVocabularyDetails(card.chapter)
     if (!isActive())
@@ -497,18 +532,36 @@ async function loadWordInfo(card: Card) {
       card.hintWords = parseExtra(detail.extra)
         .map(x => x.word)
         .slice(0, 3)
+      if (card.example)
+        patchMistakeHint(`flashcard:${card.id}`, card.example)
     }
-    const info = await loadWordInfoWithFallback([card.word, ...card.hintWords])
-    if (!isActive())
-      return
-    wordInfo.value = info
   }
   catch {
-    /* Local word/meaning remains usable and next request can retry. */
+    if (isActive())
+      cardDetailsError.value = true
   }
-  // 同义词词性首次需要时才加载抓取表（懒加载，带缓存与未加载空态）
-  if (wordInfo.value?.synonyms.length)
+  if (!isActive())
+    return
+  try {
+    const info = await loadWordInfoWithFallback([card.word, ...card.hintWords])
+    if (isActive())
+      wordInfo.value = info
+  }
+  catch {
+    if (isActive())
+      wordInfoError.value = true
+  }
+  finally {
+    if (isActive())
+      wordInfoLoading.value = false
+  }
+  if (isActive() && wordInfo.value?.synonyms.length)
     ensureSynonymPos()
+}
+function retryWordInfo() {
+  const card = current.value || studying.value
+  if (card)
+    loadWordInfo(card)
 }
 
 function finishSession() {
@@ -552,11 +605,14 @@ watch([category, crossChapter], () => {
 })
 
 // 卡片切换时预加载联网例句/同义词
-watch(() => current.value || studying.value, (c) => {
-  wordLoadSequence++
-  if (c)
-    loadWordInfo(c)
-})
+watch(
+  () => current.value || studying.value,
+  (c) => {
+    wordLoadSequence++
+    if (c)
+      loadWordInfo(c)
+  },
+)
 
 const { currentUser: sessionUser } = useAuth()
 watch(
@@ -599,6 +655,24 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <p
+    v-if="wordInfoError || cardDetailsError"
+    role="alert"
+    class="mx-auto max-w-4xl p-3 text-amber-700"
+  >
+    {{
+      cardDetailsError
+        ? "章节例句与词条详情加载失败。"
+        : "例句和同义词加载失败。"
+    }}
+    <button
+      class="underline"
+      :disabled="wordInfoLoading"
+      @click="retryWordInfo"
+    >
+      重试加载
+    </button>
+  </p>
   <p v-if="synonymPosError" class="mx-4 text-sm text-amber-700" role="status">
     同义词词性暂未加载。<button class="underline" @click="ensureSynonymPos">
       重试
@@ -667,8 +741,9 @@ onUnmounted(() => {
       <!-- 打卡 + 今日计划 -->
       <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
         <p class="text-xs text-gray-400">
-          今日计划：复习 {{ reviewCount }}（到期 {{ dueCount }}） · 新词
-          {{ newCount }} ｜ 今日新词 {{ daily.dailyCount }} / {{ daily.goal }}
+          今日计划：复习
+          {{ reviewCount }}（到期 {{ dueCount }}） · 新词 {{ newCount }} ｜
+          今日新词（全账号）{{ daily.dailyCount }} / {{ daily.goal }}
         </p>
         <div class="flex items-center gap-2">
           <span

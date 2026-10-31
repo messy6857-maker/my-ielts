@@ -5,8 +5,12 @@ import {
   accountKey,
   batchStorage,
   collectionBases,
+  compareStamp,
+  deletionEnvelope,
   entryKey,
+  envelope,
   legacyEntries,
+  notifyStorage,
   readRecords,
   readValue,
   saveRecord,
@@ -112,6 +116,17 @@ export function migrateGuestData(username: string) {
       const base = studyBaseOf(key, null)
       if (!base)
         continue
+      const guestBarrier = deletionEnvelope(key, null)
+      const guestRaw = localStorage.getItem(key)
+      if (guestBarrier && guestRaw) {
+        try {
+          if (compareStamp(guestBarrier, envelope(guestRaw)) >= 0)
+            continue
+        }
+        catch {
+          continue
+        }
+      }
       if (collectionBases.includes(base)) {
         const value = readValue<unknown>(key, undefined)
         const current = readRecords<unknown>(base, username)
@@ -119,13 +134,18 @@ export function migrateGuestData(username: string) {
           if (
             !(id in current)
             && localStorage.getItem(entryKey(base, id, username)) === null
+            && !deletionEnvelope(entryKey(base, id, username), username)
+            && !deletionEnvelope(entryKey(base, id, null), null)
           )
             saveRecord(base, id, item, username)
         }
         continue
       }
       const target = accountKey(base, username)
-      if (localStorage.getItem(target) === null) {
+      if (
+        localStorage.getItem(target) === null
+        && !deletionEnvelope(target, username)
+      ) {
         const value = readValue<unknown>(key, undefined)
         if (value !== undefined)
           saveValue(target, value)
@@ -154,8 +174,10 @@ export function finishGuestMigration(username: string) {
   if (!hasPendingGuestMigration(username))
     return
   migrateGuestData(username)
-  if (!storageFailures.value.some(key => studyBaseOf(key, username)))
+  if (!storageFailures.value.some(key => studyBaseOf(key, username))) {
     localStorage.removeItem(guestMigrationKey(username))
+    notifyStorage('', 'remote')
+  }
 }
 function randomSalt(): string {
   const bytes = new Uint8Array(16)
@@ -419,7 +441,8 @@ export const useAuth = createGlobalState(() => {
       return serverLogin(username, password, remember)
     return localLogin(username, password, remember)
   }
-  let logoutJob: Promise<{ pushOk: boolean; cancelled?: boolean }> | null = null
+  let logoutJob: Promise<{ pushOk: boolean; cancelled?: boolean }> | null
+    = null
   function logout(): Promise<{ pushOk: boolean; cancelled?: boolean }> {
     if (logoutJob)
       return logoutJob
@@ -433,25 +456,39 @@ export const useAuth = createGlobalState(() => {
       .catch(() => {})
     return job
   }
-  async function performLogout(): Promise<{ pushOk: boolean; cancelled?: boolean }> {
+  async function performLogout(): Promise<{
+    pushOk: boolean
+    cancelled?: boolean
+  }> {
     const owner = currentUser.value
     const tokenAtStart = owner ? getToken(owner) : null
     loggingOut.value = true
     for (const cb of beforeLogout) {
       try {
-        if (await cb() === false) {
-          pushAccountNotice('草稿保存失败，已取消退出。请复制原文或释放本机空间后重试。', 'logout-save-failed', 3)
+        if ((await cb()) === false) {
+          pushAccountNotice(
+            '草稿保存失败，已取消退出。请复制原文或释放本机空间后重试。',
+            'logout-save-failed',
+            3,
+          )
           loggingOut.value = false
           return { pushOk: false, cancelled: true }
         }
       }
       catch {
-        pushAccountNotice('离开前保存失败，已取消退出，请保留当前页面并重试。', 'logout-save-failed', 3)
+        pushAccountNotice(
+          '离开前保存失败，已取消退出，请保留当前页面并重试。',
+          'logout-save-failed',
+          3,
+        )
         loggingOut.value = false
         return { pushOk: false, cancelled: true }
       }
     }
-    if (currentUser.value !== owner || (owner && getToken(owner) !== tokenAtStart)) {
+    if (
+      currentUser.value !== owner
+      || (owner && getToken(owner) !== tokenAtStart)
+    ) {
       loggingOut.value = false
       return { pushOk: false, cancelled: true }
     }
@@ -491,7 +528,10 @@ export const useAuth = createGlobalState(() => {
         setAuthPendingPush(true)
       }
     }
-    if (currentUser.value !== owner || (owner && getToken(owner) !== tokenAtStart)) {
+    if (
+      currentUser.value !== owner
+      || (owner && getToken(owner) !== tokenAtStart)
+    ) {
       loggingOut.value = false
       return { pushOk: false, cancelled: true }
     }

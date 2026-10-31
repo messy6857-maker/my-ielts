@@ -1,8 +1,10 @@
 import { computed, watch } from 'vue'
+import vocabularyCounts from '../utils/vocabularyCounts.json'
 import { dateTime } from '../utils/legacyMerge'
 import {
   accountKey,
   batchStorage,
+  deletionEnvelope,
   entryKey,
   readRecord,
   readRecords,
@@ -40,6 +42,7 @@ export interface MistakeItem {
   count: number
   firstAt: number
   lastAt: number
+  legacySource?: boolean
   failureDays?: number
 }
 export interface ModuleProgress {
@@ -114,6 +117,9 @@ export function migrateMistakes(user: string | null) {
     localStorage.setItem(marker, '1')
   })
 }
+function canonicalMistakeKey(key: string) {
+  return key.replace(/^vocabulary:/, 'spelling:')
+}
 export const useMistakes = createGlobalState(() => {
   const { currentUser } = useAuth()
   migrateMistakes(currentUser.value)
@@ -136,11 +142,23 @@ export const useMistakes = createGlobalState(() => {
         dates: Set<string>
       }
     >()
-    for (const part of Object.values(parts.state.value)) {
+    for (const rawPart of Object.values(parts.state.value)) {
+      const part = rawPart && {
+        ...rawPart,
+        key: canonicalMistakeKey(rawPart.key),
+        legacySource:
+          rawPart.key.startsWith('vocabulary:') || !!rawPart.legacySource,
+        detail: rawPart.key.startsWith('vocabulary:')
+          ? `${rawPart.detail}（含旧版词汇记录，原活动未区分）`
+          : rawPart.detail,
+      }
       if (
         !part
         || part.count <= 0
-        || part.epoch !== (resets.state.value[part.key]?.epoch ?? '')
+        || part.epoch
+          !== (resets.state.value[part.key]?.epoch
+            ?? resets.state.value[rawPart.key]?.epoch
+            ?? '')
       )
         continue
       const previous = result.get(part.key)
@@ -152,13 +170,21 @@ export const useMistakes = createGlobalState(() => {
       result.set(part.key, {
         ...part,
         count: (previous?.count ?? 0) + part.count,
+        legacySource: !!previous?.legacySource || !!part.legacySource,
         firstAt: Math.min(previous?.firstAt ?? part.firstAt, part.firstAt),
         lastAt: Math.max(previous?.lastAt ?? 0, part.lastAt),
         dates,
       })
     }
     return [...result.values()]
-      .map(({ dates, ...item }) => ({ ...item, failureDays: dates.size }))
+      .map(({ dates, ...item }) => ({
+        ...item,
+        detail:
+          item.legacySource && !item.detail.includes('旧版')
+            ? `${item.detail}（含旧版词汇记录，原活动未区分）`
+            : item.detail,
+        failureDays: dates.size,
+      }))
       .sort((a, b) => b.lastAt - a.lastAt)
   })
   function addMistake(
@@ -207,7 +233,11 @@ export const useMistakes = createGlobalState(() => {
   }
   // 撤销本机评分只扣当前作者；179 纠错显式使用 all，消除跨设备的未解决失败。
   // 指定日期时优先扣原失败日，不触碰其他作者的本机撤销记录。
-  function decrementMistake(key: string, date?: string, scope: 'own' | 'all' = 'own') {
+  function decrementMistake(
+    key: string,
+    date?: string,
+    scope: 'own' | 'all' = 'own',
+  ) {
     const epoch = resets.state.value[key]?.epoch ?? ''
     const records = readRecords<MistakePart>(
       'mistake_parts_v2',
@@ -216,8 +246,11 @@ export const useMistakes = createGlobalState(() => {
     const candidates = Object.entries(records)
       .filter(
         ([id, part]) =>
-          !!part && part.key === key && part.epoch === epoch && part.count > 0
-          && (scope === 'all' || id === `${key}|${writerId()}`),
+          !!part
+          && canonicalMistakeKey(part.key) === key
+          && part.epoch === epoch
+          && part.count > 0
+          && (scope === 'all' || id.endsWith(`|${writerId()}`)),
       )
       .sort((a, b) => b[1].lastAt - a[1].lastAt)
     if (candidates.length === 0)
@@ -288,6 +321,21 @@ export const useMistakes = createGlobalState(() => {
     }
     return { outstanding: true, failureDate }
   }
+  function patchMistakeHint(key: string, hint: string) {
+    const id = `${key}|${writerId()}`
+    const old = readRecord<MistakePart>(
+      'mistake_parts_v2',
+      id,
+      currentUser.value,
+    )
+    if (
+      old
+      && old.count > 0
+      && (!old.hint || old.hint.startsWith(`${old.title}: `))
+      && old.epoch === (resets.state.value[key]?.epoch ?? '')
+    )
+      parts.set(id, { ...old, hint })
+  }
   function removeMistake(key: string) {
     resets.set(key, { epoch: crypto.randomUUID() })
   }
@@ -321,6 +369,7 @@ export const useMistakes = createGlobalState(() => {
   return {
     mistakes,
     addMistake,
+    patchMistakeHint,
     decrementMistake,
     mistakeOutstanding,
     removeMistake,
@@ -333,6 +382,52 @@ export const useMistakes = createGlobalState(() => {
 })
 export const useProgress = createGlobalState(() => {
   const store = useRecordMap<ModuleProgress>('progress_v1')
+  const spelling = useRecordMap<any>('vocabulary_spell_v2')
+  const progress = computed(() => {
+    const out = { ...store.state.value }
+    const grouped = new Map<string, Set<string>>()
+    const add = (chapter: string, id: string, value: any) => {
+      if (typeof value === 'string' ? value.trim() : value?.text?.trim()) {
+        if (!grouped.has(chapter))
+          grouped.set(chapter, new Set())
+        grouped.get(chapter)!.add(id)
+      }
+    }
+    const old = readValue<Record<string, Record<string, string>>>(
+      nsKey('vocabulary_spell_v1'),
+      {},
+    )
+    for (const [chapter, words] of Object.entries(old || {})) {
+      for (const [id, value] of Object.entries(words || {})) {
+        const key = entryKey(
+          'vocabulary_spell_v2',
+          `${chapter}|${id}`,
+          useAuth().currentUser.value,
+        )
+        if (
+          !localStorage.getItem(key)
+          && !deletionEnvelope(key, useAuth().currentUser.value)
+        )
+          add(chapter, id, value)
+      }
+    }
+    for (const [key, value] of Object.entries(spelling.state.value)) {
+      const split = key.lastIndexOf('|')
+      add(key.slice(0, split), key.slice(split + 1), value)
+    }
+    for (const [chapter, ids] of grouped) {
+      const key = `spelling:${chapter}`
+      if (!out[key]) {
+        out[key] = {
+          done: ids.size,
+          total:
+            (vocabularyCounts as Record<string, number>)[chapter] || ids.size,
+          updatedAt: 0,
+        }
+      }
+    }
+    return out
+  })
   function setProgress(
     module: ProgressModule | `flashcard:${string}`,
     done: number,
@@ -341,9 +436,9 @@ export const useProgress = createGlobalState(() => {
     store.set(module, { done, total, updatedAt: Date.now() })
   }
   const getProgress = (module: ProgressModule) =>
-    store.state.value[module] || { done: 0, total: 0, updatedAt: 0 }
+    progress.value[module] || { done: 0, total: 0, updatedAt: 0 }
   const chapterModules = computed(() =>
-    Object.entries(store.state.value)
+    Object.entries(progress.value)
       .filter(
         ([key]) => key.startsWith('flashcard:') || key.startsWith('spelling:'),
       )
@@ -358,8 +453,15 @@ export const useProgress = createGlobalState(() => {
   const modules = computed(() => [
     ...(Object.keys(PROGRESS_MODULE_LABEL) as ProgressModule[])
       .filter(
-        module => (module !== 'flashcard' || !chapterModules.value.some(row => row.module.startsWith('flashcard:')))
-          && (module !== 'vocabulary' || !chapterModules.value.some(row => row.module.startsWith('spelling:'))),
+        module =>
+          (module !== 'flashcard'
+            || !chapterModules.value.some(row =>
+              row.module.startsWith('flashcard:'),
+            ))
+          && (module !== 'vocabulary'
+            || !chapterModules.value.some(row =>
+              row.module.startsWith('spelling:'),
+            )),
       )
       .map(module => ({
         module,
@@ -373,7 +475,7 @@ export const useProgress = createGlobalState(() => {
     ...chapterModules.value,
   ])
   return {
-    progress: store.state,
+    progress,
     setProgress,
     clearChapterProgress() {
       for (const key of Object.keys(store.state.value)) {
@@ -383,7 +485,7 @@ export const useProgress = createGlobalState(() => {
     },
     getProgress,
     modules,
-    hasAnyProgress: computed(() => Object.keys(store.state.value).length > 0),
+    hasAnyProgress: computed(() => Object.keys(progress.value).length > 0),
     reload: store.reload,
   }
 })

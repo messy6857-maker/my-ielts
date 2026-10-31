@@ -443,11 +443,8 @@ function hasFiniteVerb(fragment: string): boolean {
   )
 }
 
-// that / when / where / as 引导的真从句：标记后须有主谓结构才算。
-// 反例（不算）：shows that sales rose（that 前是动词，属宾语从句，上一批
-// 已定为不算）、as a result（as 后是名词短语）、when in 2020（when 后是介词短语）。
-// 正例（算）：that recorded（that 作主语紧跟谓语）、where most tourists
-// stayed、as incomes grew（标记 + 主语 + 谓语）。
+// that / when / where / as 引导的从句：须有主谓结构；宾语从句与关系从句均计入。
+// shows that sales rose / as incomes grew 算；as a result / when in 2020 不算。
 function hasTrueSubordinateClause(sentence: string): boolean {
   const tokens = wordTokens(sentence)
   const PREPOSITIONS = new Set([
@@ -461,7 +458,7 @@ function hasTrueSubordinateClause(sentence: string): boolean {
     'with',
     'by',
   ])
-  // 在标记后 offset 1..3 处找谓语，且谓语前的词不含介词/冠词
+  // 在标记后 offset 1..12 处找谓语，允许带冠词的多词主语，排除介词短语。
   const clauseAfter = (idx: number, allowSubjectRelative: boolean): boolean => {
     if (
       allowSubjectRelative
@@ -503,6 +500,8 @@ function hasTrueSubordinateClause(sentence: string): boolean {
         return true
     }
     else if (t === 'as') {
+      if (tokens[i + 1] === 'a' && tokens[i + 2] === 'result')
+        continue
       if (i + 1 < tokens.length && PREPOSITIONS.has(tokens[i + 1]))
         continue
       if (clauseAfter(i, false))

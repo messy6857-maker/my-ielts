@@ -1,9 +1,19 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { Ref } from 'vue'
-import { accountKey, storageFailures, writerId } from '../utils/storage'
+import {
+  accountKey,
+  readRecords,
+  storageFailures,
+  writerId,
+} from '../utils/storage'
 import type { MockRecord } from './useMockHistory'
 import { saveMockRecord } from './useMockHistory'
-import { dismissAccountNotice, onBeforeLogout, pushAccountNotice, useAuth } from './useAuth'
+import {
+  dismissAccountNotice,
+  onBeforeLogout,
+  pushAccountNotice,
+  useAuth,
+} from './useAuth'
 
 export interface ExamDraft {
   attemptId?: string
@@ -41,6 +51,27 @@ export function useExamRecovery(options: {
   let sourceRaw: string | null = null
   let wasBlocked = false
   const writer = writerId()
+  const leaseKey = `myielts_local_exam_session:${writer}`
+  function heartbeat() {
+    try {
+      localStorage.setItem(leaseKey, String(Date.now()))
+    }
+    catch {}
+  }
+  heartbeat()
+  const leaseTimer = setInterval(heartbeat, 10000)
+  function activeSibling(storedKey: string) {
+    const session = storedKey.split('__session_')[1]
+    return (
+      session
+      && session !== writer
+      && Date.now()
+        - Number(
+          localStorage.getItem(`myielts_local_exam_session:${session}`) || 0,
+        )
+        < 30000
+    )
+  }
   const baseKey = (id = options.testId.value) =>
     accountKey(
       `mock_draft_v1_${options.kind}_${encodeURIComponent(id)}`,
@@ -56,9 +87,16 @@ export function useExamRecovery(options: {
   )
   const error = ref('')
   const draft = ref<ExamDraft | null>(null)
+  const availableDrafts = ref<ExamDraft[]>([])
+  let selectedVersion: string | null = null
   // Session snapshots belong to independent attempts. Clearing/submitting this tab
   // must never retire another tab's answers, even for the same paper.
   function refresh() {
+    const completed = new Set(
+      Object.values(readRecords<MockRecord>('mock_history_v1', owner.value))
+        .map(record => record.attemptId)
+        .filter(Boolean),
+    )
     const prefix = baseKey()
     const candidates = Object.keys(localStorage)
       .filter(k => k === prefix || k.startsWith(`${prefix}__session_`))
@@ -80,7 +118,8 @@ export function useExamRecovery(options: {
                   value: {
                     ...d,
                     versionId: storedKey,
-                    attemptId: d.attemptId || `legacy:${storedKey}:${d.updatedAt}`,
+                    attemptId:
+                      d.attemptId || `legacy:${storedKey}:${d.updatedAt}`,
                     updatedAt:
                       Number.isFinite(d.updatedAt)
                       && d.updatedAt > 0
@@ -96,14 +135,31 @@ export function useExamRecovery(options: {
           return []
         }
       })
-      .filter(c => !localStorage.getItem(`${prefix}__completed_${encodeURIComponent(c.value.attemptId)}`))
+      .filter(
+        c =>
+          !completed.has(c.value.attemptId)
+          && !localStorage.getItem(
+            `${prefix}__completed_${encodeURIComponent(c.value.attemptId)}`,
+          ),
+      )
       .sort((a, b) => b.value.updatedAt - a.value.updatedAt)
+    availableDrafts.value = candidates.map(c => c.value)
+    const selected = candidates.find(
+      c => c.storedKey === (selectedVersion || key()),
+    )
     draft.value
-      = (candidates.find(c => c.storedKey === key()) ?? candidates[0])?.value
-      ?? null
+      = selected?.value
+      ?? (candidates.length === 1 && !activeSibling(candidates[0].storedKey)
+        ? candidates[0].value
+        : null)
   }
   function writeDraft() {
-    if (attemptId && localStorage.getItem(`${baseKey(activeTestId)}__completed_${encodeURIComponent(attemptId)}`))
+    if (
+      attemptId
+      && localStorage.getItem(
+        `${baseKey(activeTestId)}__completed_${encodeURIComponent(attemptId)}`,
+      )
+    )
       return true
     const value: ExamDraft = {
       attemptId,
@@ -147,13 +203,30 @@ export function useExamRecovery(options: {
       sourceRaw = localStorage.getItem(sourceKey)
     }
     try {
-      localStorage.removeItem(key())
+      const retiring = options.started.value
+        ? attemptId
+        : draft.value?.attemptId
+      if (
+        retiring
+        && !localStorage.getItem(
+          `${baseKey()}__completed_${encodeURIComponent(retiring)}`,
+        )
+      ) {
+        localStorage.setItem(
+          `${baseKey()}__completed_${encodeURIComponent(retiring)}`,
+          JSON.stringify({ completedAt: Date.now() }),
+        )
+      }
+      if (options.started.value || sourceKey === key())
+        localStorage.removeItem(key())
       if (sourceKey && localStorage.getItem(sourceKey) === sourceRaw)
         localStorage.removeItem(sourceKey)
     }
     catch {
+      error.value = '草稿处理失败，原答案仍保留。请释放空间后重试。'
       return false
     }
+    selectedVersion = null
     draft.value = null
     return true
   }
@@ -162,7 +235,10 @@ export function useExamRecovery(options: {
     const current = draft.value
     if (current) {
       try {
-        localStorage.setItem(`${baseKey()}__completed_${encodeURIComponent(attemptId)}`, JSON.stringify({ completedAt: Date.now() }))
+        localStorage.setItem(
+          `${baseKey()}__completed_${encodeURIComponent(attemptId)}`,
+          JSON.stringify({ completedAt: Date.now() }),
+        )
         localStorage.setItem(
           key(),
           JSON.stringify({ ...current, submitted: true }),
@@ -180,7 +256,7 @@ export function useExamRecovery(options: {
     options.submitted.value = true
     let saved = false
     try {
-      saved = saveMockRecord(record)
+      saved = saveMockRecord({ ...record, attemptId })
     }
     catch {
       saved = false
@@ -218,6 +294,7 @@ export function useExamRecovery(options: {
         // 未开考或已交卷：owner 跟随当前身份，切号不阻断开始/重开，
         // 也不再误报“已暂停”。
         owner.value = useAuth().currentUser.value
+        selectedVersion = null
         refresh()
         return
       }
@@ -254,7 +331,10 @@ export function useExamRecovery(options: {
       deep: true,
     },
   )
-  const stopTest = watch(options.testId, refresh)
+  const stopTest = watch(options.testId, () => {
+    selectedVersion = null
+    refresh()
+  })
   const offLogout = onBeforeLogout(() => {
     const saved = saveFlush()
     if (saved)
@@ -268,6 +348,11 @@ export function useExamRecovery(options: {
   }
   document.addEventListener('visibilitychange', visibility)
   onUnmounted(() => {
+    clearInterval(leaseTimer)
+    try {
+      localStorage.removeItem(leaseKey)
+    }
+    catch {}
     saveFlush()
     // saveFlush 已立即写了最新答案，挂起的防抖定时器不再需要：清掉它，
     // 避免卸载后多余的一次重复写入。
@@ -286,6 +371,30 @@ export function useExamRecovery(options: {
   refresh()
   return {
     begin(saved?: ExamDraft | null) {
+      owner.value = useAuth().currentUser.value
+      activeTestId = options.testId.value
+      const ownKey = key(activeTestId)
+      const oldRaw = localStorage.getItem(ownKey)
+      if (oldRaw && saved?.versionId !== ownKey) {
+        let old: ExamDraft | null = null
+        try {
+          old = JSON.parse(oldRaw)
+        }
+        catch {}
+        if (!old?.submitted) {
+          try {
+            localStorage.setItem(
+              `${ownKey}__attempt_${encodeURIComponent(old?.attemptId || crypto.randomUUID())}`,
+              oldRaw,
+            )
+          }
+          catch {
+            error.value
+              = '原作答备份失败，未开始新作答。请先导出备份或释放空间。'
+            return false
+          }
+        }
+      }
       attemptId = saved?.attemptId || crypto.randomUUID()
       sourceKey = saved?.versionId
       sourceRaw = sourceKey ? localStorage.getItem(sourceKey) : null
@@ -294,8 +403,14 @@ export function useExamRecovery(options: {
       wasBlocked = false
       error.value = ''
       dismissAccountNotice(pauseNoticeId)
+      return true
     },
     owner,
+    availableDrafts,
+    selectDraft(versionId: string) {
+      selectedVersion = versionId
+      refresh()
+    },
     activeTestId: () => activeTestId,
     blocked,
     error,

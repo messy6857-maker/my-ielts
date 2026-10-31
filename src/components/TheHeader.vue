@@ -126,7 +126,7 @@ async function onManualSync() {
           <router-link to="/" class="mr-14 flex">
             <span
               class="self-center whitespace-nowrap text-xl font-semibold sm:text-2xl dark:text-white"
-            >My
+            >我的
               <span class="ml-1 text-red-600"> IELTS™</span>
             </span>
           </router-link>
@@ -240,7 +240,7 @@ async function onManualSync() {
             class="items-center rounded-lg p-2 text-gray-500 md:ml-2 lg:hidden hover:bg-gray-100 dark:text-gray-400 hover:text-gray-900 focus:ring-4 focus:ring-gray-300 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-600"
             @click="showMobileMenu = !showMobileMenu"
           >
-            <span class="sr-only">Open menu</span>
+            <span class="sr-only">打开菜单</span>
             <svg
               class="h-6 w-6"
               aria-hidden="true"

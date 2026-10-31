@@ -1,6 +1,6 @@
 import { compactStatsData } from '../utils/statsArchive'
 import { mergeEntry } from '../utils/entryMerge'
-import { pruneCollectionData } from '../utils/retention'
+import { compactDeletionData, pruneCollectionData } from '../utils/retention'
 import { migrateStudy } from '../utils/migrateStudy'
 import { pruneArchives } from '../utils/archives'
 import { SYNC_API_BASE } from '../sync-config'
@@ -96,6 +96,7 @@ export interface ApiResult {
   updatedAt?: number
   nextCursor?: string | null
   compactStats?: boolean
+  compactDeletes?: boolean
   protocolVersion?: number
 }
 /** 服务端 rejected 原因三类：未知/跨账号 base、非字符串原始值、decode 失败。 */
@@ -192,6 +193,7 @@ export function getQuarantineEntries(owner: string | null): QuarantineEntry[] {
 }
 function writeQuarantineEntries(owner: string, entries: QuarantineEntry[]) {
   localStorage.setItem(quarantineKey(owner), JSON.stringify(entries))
+  notifyStorage(quarantineKey(owner), 'local')
 }
 export function getQuarantinedKeys(owner: string | null): string[] {
   return getQuarantineEntries(owner).map(e => e.key)
@@ -250,6 +252,7 @@ export function clearQuarantinedKeys(owner: string | null) {
   if (owner) {
     localStorage.removeItem(quarantineKey(owner))
     localStorage.removeItem(rejectedReasonKey(owner))
+    notifyStorage(quarantineKey(owner), 'local')
   }
 }
 export function getRejectedReason(
@@ -338,6 +341,7 @@ export function syncTimeoutMs(bodyBytes: number) {
 }
 const capabilities = new Map<string, number>()
 const compactServers = new Set<string>()
+const deletionServers = new Set<string>()
 async function api(
   path: string,
   method: string,
@@ -360,7 +364,9 @@ async function api(
       method,
       headers: {
         'Content-Type': 'application/json',
-        ...(path.split('?')[0] === '/sync' ? { 'X-IELTS-Compact': '1' } : {}),
+        ...(path.split('?')[0] === '/sync'
+          ? { 'X-IELTS-Compact': '1', 'X-IELTS-Deletes': '1' }
+          : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
       body: bodyText,
@@ -472,6 +478,9 @@ export async function apiPull(username = getTokenOwner() ?? '') {
     }
     if (result.ok) {
       capabilities.set(username, result.protocolVersion ?? 1)
+      if (result.compactDeletes)
+        deletionServers.add(username)
+      else deletionServers.delete(username)
       if (result.compactStats)
         compactServers.add(username)
       else compactServers.delete(username)
@@ -525,6 +534,18 @@ export function apiPush(
         message: '同步服务需要支持统计压缩后才能上传，原记录保留在本机。',
       }
     }
+    if (
+      Object.keys(data).some(k =>
+        k.includes('_deletion_archive_v3__entry_'),
+      )
+      && !deletionServers.has(username)
+    ) {
+      return {
+        ok: false,
+        status: 426,
+        message: '同步服务需要支持删除索引后才能上传，原记录保留在本机。',
+      }
+    }
     const result: ApiResult = {
       ok: true,
       status: 200,
@@ -555,6 +576,12 @@ export function apiPush(
         return left.ok ? send(entries.slice(middle)) : left
       }
       if (reply.ok) {
+        if (reply.compactDeletes)
+          deletionServers.add(username)
+        else deletionServers.delete(username)
+        if (reply.compactStats)
+          compactServers.add(username)
+        else compactServers.delete(username)
         if (reply.data)
           applySyncData(reply.data, username)
         result.rejected!.push(...(reply.rejected ?? []))
@@ -600,6 +627,7 @@ export function collectSyncData(username: string): Record<string, string> {
   if (!storageFailures.value.some(key => studyBaseOf(key, username)))
     saveValue(accountKey('migration_version_v2', username), 2)
   const result: Record<string, string> = Object.create(null)
+  const originals = new Map<string, string>()
   // Quarantined keys are skipped only while the local value is unchanged
   // and the re-probe window has not elapsed. A rewritten value is released
   // at once; an expired or legacy (snapshot-less) entry is included in this
@@ -627,6 +655,7 @@ export function collectSyncData(username: string): Record<string, string> {
       !base
       || quarantined.has(key)
       || collectionBases.includes(base)
+      || (base === 'typing_ignore_case_v2' && !deletionServers.has(username))
       || [
         'vocabulary_spell_v1',
         'mistakes_v1',
@@ -641,26 +670,55 @@ export function collectSyncData(username: string): Record<string, string> {
     if (raw === null)
       continue
     try {
-      result[key] = JSON.stringify(envelope(raw))
+      originals.set(key, raw)
+      const record = envelope(raw)
+      // Old backends/clients still expect a spelling string; keep alternatives locally until capability negotiation succeeds.
+      if (
+        !deletionServers.has(username)
+        && base.startsWith('vocabulary_spell_v2__entry_')
+        && !record.deleted
+        && Array.isArray((record.value as any)?.alternatives)
+      )
+        record.value = (record.value as any).text
+      result[key] = JSON.stringify(record)
     }
     catch {
       /* Invalid originals remain available in the local backup export. */
     }
   }
-  const pruned = compactStatsData(
+  const prunedStats = compactStatsData(
     pruneCollectionData(result, username),
     username,
     compactServers.has(username),
   )
-  for (const key of Object.keys(result)) {
-    if (!(key in pruned))
-      removeStoredValue(key)
-  }
-
-  for (const [key, raw] of Object.entries(pruned)) {
-    if (raw !== result[key])
-      saveEnvelope(key, envelope(String(raw)), 'remote')
-  }
+  const pruned = compactDeletionData(
+    prunedStats,
+    username,
+    deletionServers.has(username),
+  )
+  let durable = true
+  const saved: Record<string, string> = {}
+  batchStorage(() => {
+    // Replacement guards must be durable before their original records are removed.
+    for (const [key, raw] of Object.entries(pruned)) {
+      if (raw !== result[key]) {
+        if (saveEnvelope(key, envelope(String(raw)), 'remote'))
+          saved[key] = String(raw)
+        else durable = false
+      }
+    }
+    if (durable) {
+      for (const key of Object.keys(result)) {
+        if (
+          !(key in pruned)
+          && localStorage.getItem(key) === originals.get(key)
+        )
+          removeStoredValue(key)
+      }
+    }
+  })
+  if (!durable)
+    return { ...result, ...saved }
 
   return pruned
 }

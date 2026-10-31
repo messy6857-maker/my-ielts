@@ -1,11 +1,11 @@
 import type { ReadingMockTest } from "./types";
 
-/** Cambridge IELTS 20 p.100; endings paraphrased, original letter order retained */
+/** Cambridge IELTS 20 p.100; original wording and letter order verified against printed page */
 const ROBOT_ENDINGS = [
-  "sending robots into space",
-  "progress achieved in artificial intelligence to date",
-  "altering other worlds to suit human needs",
-  "damage that AI has already caused",
+  "robots to explore outer space.",
+  "advances made in machine intelligence so far.",
+  "changes made to other planets for our own benefit.",
+  "the harm already done by artificial intelligence.",
 ];
 
 /** Cambridge IELTS 20 p.100 */

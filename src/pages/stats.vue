@@ -2,7 +2,10 @@
 import { onSyncApplied } from '../composables/syncClient'
 import { getMockHistory } from '../composables/useMockHistory'
 import { formatDuration, useStudyTimer } from '../composables/useStudyTimer'
-import { useCheckin, useWordSchedule } from '../composables/useSpacedRepetition'
+import {
+  useCheckin,
+  useWordSchedule,
+} from '../composables/useSpacedRepetition'
 import { useGoBack } from '../composables/useGoBack'
 import {
   attemptModuleLabel,
@@ -170,8 +173,8 @@ const last14Checkin = computed(() => {
         📊 学习数据统计
       </h1>
       <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">
-        {{ currentUser ? `当前账号：${currentUser}` : '游客模式' }} ·
-        按当前账号统计，换账号后数据会切换
+        {{ currentUser ? `当前账号：${currentUser}` : "游客模式" }} ·
+        按当前账号汇总各设备数据；本页撤销只影响本次本机评分，其他设备的学习记录保留
       </p>
 
       <!-- 今日概览 -->
@@ -189,7 +192,7 @@ const last14Checkin = computed(() => {
             目标 2 小时 ·
             {{
               timer.dailySeconds.value >= timer.dailyGoal
-                ? '今日目标已达成 🎉'
+                ? "今日目标已达成 🎉"
                 : `还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}`
             }}
           </p>
@@ -299,7 +302,7 @@ const last14Checkin = computed(() => {
             <span
               class="w-32 shrink-0 text-right text-gray-500 dark:text-gray-400"
             >
-              {{ m.rate ?? '—' }}% · {{ m.known }}认识 / {{ m.vague }}模糊 /
+              {{ m.rate ?? "—" }}% · {{ m.known }}认识 / {{ m.vague }}模糊 /
               {{ m.unknown }}不认识
             </span>
           </div>
@@ -308,7 +311,7 @@ const last14Checkin = computed(() => {
             {{
               totalAttempts.known + totalAttempts.vague + totalAttempts.unknown
             }}
-            次，认识率 {{ knownRate(totalAttempts) ?? '—' }}%。
+            次，认识率 {{ knownRate(totalAttempts) ?? "—" }}%。
           </p>
         </div>
         <p v-else class="mb-6 text-sm text-gray-500 dark:text-gray-400">
@@ -324,7 +327,7 @@ const last14Checkin = computed(() => {
             class="flex flex-1 flex-col items-center gap-1"
           >
             <span class="text-xs text-gray-500 dark:text-gray-400">{{
-              d.total > 0 ? d.total : ''
+              d.total > 0 ? d.total : ""
             }}</span>
             <div
               class="w-full rounded-t bg-blue-500"
@@ -391,8 +394,8 @@ const last14Checkin = computed(() => {
           <div class="text-sm space-y-3">
             <p class="text-gray-700 dark:text-gray-300">
               听力：{{ listeningMock.count }} 次 · 平均正确率
-              {{ listeningMock.accuracy ?? '—' }}% · 平均分
-              {{ listeningMock.band ?? '—' }}
+              {{ listeningMock.accuracy ?? "—" }}% · 平均分
+              {{ listeningMock.band ?? "—" }}
               <span v-if="listeningMock.latest">
                 · 最近 {{ listeningMock.latest.label }}
                 {{ listeningMock.latest.score }}/{{
@@ -401,8 +404,8 @@ const last14Checkin = computed(() => {
             </p>
             <p class="text-gray-700 dark:text-gray-300">
               阅读：{{ readingMock.count }} 次 · 平均正确率
-              {{ readingMock.accuracy ?? '—' }}% · 平均分
-              {{ readingMock.band ?? '—' }}
+              {{ readingMock.accuracy ?? "—" }}% · 平均分
+              {{ readingMock.band ?? "—" }}
               <span v-if="readingMock.latest">
                 · 最近 {{ readingMock.latest.label }}
                 {{ readingMock.latest.score }}/{{
@@ -493,7 +496,7 @@ const last14Checkin = computed(() => {
                     : 'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
                 "
               >
-                {{ d.checked ? '✓' : '' }}
+                {{ d.checked ? "✓" : "" }}
               </span>
               <span class="text-xs text-gray-400">{{ d.label }}</span>
             </div>

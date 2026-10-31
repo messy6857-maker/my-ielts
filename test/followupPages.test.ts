@@ -111,7 +111,7 @@ it.each(['reading', 'listening'])(
     auth.currentUser.value = 'alice'
     setToken('token', 'alice')
     session = await show(Page, `/mock/${kind}-test`)
-    expect(session.w.text()).toContain('继续上次作答')
+    expect(session.w.text()).toContain('继续所选作答')
     session.state.startTest()
     expect(session.state.answers.Q1).toBe('valuable answer')
     expect(JSON.parse(localStorage.getItem(otherKey)!).answers.Q1).toBe(
@@ -388,7 +388,7 @@ it.each(['reading', 'listening'])(
     session.state.startTest()
     await nextTick()
     expect(session.w.html()).not.toContain('▶ 开始测试')
-    expect(session.w.html()).not.toContain('继续上次作答')
+    expect(session.w.html()).not.toContain('继续所选作答')
   },
 )
 it.each(['reading', 'listening'])(
@@ -434,7 +434,7 @@ it.each(['reading', 'listening'])(
     again.state.discardDraftAndStart()
     await nextTick()
     expect(again.state.recovery.draft.value.answers).toEqual({})
-    expect(again.w.html()).not.toContain('继续上次作答')
+    expect(again.w.html()).not.toContain('继续所选作答')
   },
 )
 it.each(['reading', 'listening'])(

@@ -2,7 +2,7 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { speechLanguage } from '../../composables/useAudioGroup'
 
-import { splitSentences } from '../../utils/text'
+import { transcriptSentenceEntries } from '../../utils/text'
 import { resolveMediaUrl } from '../../composables/useAudio'
 
 const mediaError = ref('')
@@ -67,20 +67,7 @@ const loadError = ref(false)
 const speakingIndex = ref(-1)
 
 const sentenceEntries = computed(() =>
-  transcript.value
-    .split('\n')
-    .filter(line => line.trim())
-    .flatMap((line) => {
-      const match = line.match(
-        /^(Speaker\s+\d+(?:\s*\([^)]*\))?|[A-Z][A-Z '\-]{1,30}|[A-Z][a-z]+):\s+(.*)$/i,
-      )
-      const speaker = match?.[1] ?? ''
-      return splitSentences(match?.[2] ?? line).map((text, index) => ({
-        text,
-        speaker: index === 0 ? speaker : '',
-        display: speaker && index === 0 ? `${speaker}: ${text}` : text,
-      }))
-    }),
+  transcriptSentenceEntries(transcript.value),
 )
 const sentences = computed(() => sentenceEntries.value.map(x => x.display))
 let playbackGeneration = 0
