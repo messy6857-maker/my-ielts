@@ -160,10 +160,75 @@ export function selectionInOneParagraph(selection: Selection): boolean {
   return !!first && first === last && !!first.closest('[data-passage]')
 }
 
-/** Split both line-start and inline speaker turns; times such as 2:30 remain text. */
+// Known labels from the transcript corpus; general prose before a colon is never a turn.
+const transcriptSpeakers = [
+  'ADAM',
+  'Archaeologist (Hayden)',
+  'BELLA',
+  'BREDA',
+  'CHANTAL',
+  'CHARLOTTE',
+  'CLARE',
+  'COLEMAN',
+  'COLIN',
+  'DAN',
+  'DON',
+  'Design and Technology Lecturer',
+  'FERGUS',
+  'Finn',
+  'GREG',
+  'HUGO',
+  'House Owner',
+  'JAKE',
+  'JANE',
+  'JENNY',
+  'JOHN',
+  'JULIE',
+  'KAEDEN',
+  'KIERAN',
+  'LEO',
+  'LEON',
+  'LIA',
+  'LUCY',
+  'Lecturer',
+  'MADDY',
+  'MAN',
+  'MIA',
+  'MICHELLE',
+  'Maya',
+  'NADIA',
+  'Narrator/Instructor',
+  'Narrator',
+  'Instructor',
+  'PAUL',
+  'PHIL',
+  'PRESENTER',
+  'RYAN',
+  'Rosie',
+  'SADIE',
+  'SALLY',
+  'SEB',
+  'SHANNON',
+  'Shelley Meyer',
+  'Steve Wayne Wright (Elmley Town Council)',
+  'TAMMY',
+  'TUTOR',
+  'WOMAN',
+  'YOUNG MAN',
+  'YOUNG WOMAN',
+  'Guide',
+]
+const escapedSpeakers = [...transcriptSpeakers]
+  .sort((a, b) => b.length - a.length)
+  .map(name => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+const transcriptSpeakerPattern = new RegExp(
+  `(?:^|\\s)((?:Speaker(?:\\s+\\d+)?(?:\\s*\\([^)]*\\))?|Student\\s+\\d+|${
+    escapedSpeakers.join('|')
+     })):\\s+`,
+  'gi',
+)
+/** Only known speaker labels are removed from speech; all other text and punctuation survive. */
 export function transcriptSentenceEntries(transcript: string) {
-  const label
-    = /(?:^|\s)((?:Speaker\s+\d+(?:\s*\([^)]*\))?|Student\s+\d+|Narrator(?:\/Instructor)?|Instructor|[A-Z][A-Z '\-]{1,30}|[A-Z][a-z]+)):\s+/g
   return transcript
     .split('\n')
     .filter(line => line.trim())
@@ -171,9 +236,7 @@ export function transcriptSentenceEntries(transcript: string) {
       const turns: Array<{ speaker: string; text: string }> = []
       let speaker = ''
       let cursor = 0
-      for (const match of line.matchAll(label)) {
-        if (/^(Note|Time|Example|Answer|Section|Question)$/i.test(match[1]))
-          continue
+      for (const match of line.matchAll(transcriptSpeakerPattern)) {
         const before = line.slice(cursor, match.index).trim()
         if (before)
           turns.push({ speaker, text: before })

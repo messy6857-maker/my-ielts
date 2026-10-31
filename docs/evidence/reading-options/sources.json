@@ -1,0 +1,151 @@
+{
+  "source": "https://www.frostyrhymes.com/cambridge-ielts-resources/",
+  "renderer": "pdftoppm 26.05.0",
+  "method": "Render original PDF option/answer regions; no text is recreated from the app data. These are visual evidence, while automated option tests are only regression snapshots.",
+  "excerpts": [
+    {
+      "file": "cam18-test2-options.png",
+      "book": "cam18",
+      "pdfPage": 49,
+      "printedPage": 47,
+      "fullRaster": [
+        1200,
+        1500
+      ],
+      "clipPixels": [
+        80,
+        610,
+        915,
+        155
+      ],
+      "pdfSha256": "7f2fdefa5af7b6b75640eec3b0e65c1d49ecb7bd311e1293d53b6377acacbe75",
+      "imageSha256": "c1dfb8c664426244f95d9ca95012841c8279ea0f2598e0583df7cdb4fd390a86"
+    },
+    {
+      "file": "cam18-test2-answers.png",
+      "book": "cam18",
+      "pdfPage": 124,
+      "printedPage": 122,
+      "fullRaster": [
+        1200,
+        1500
+      ],
+      "clipPixels": [
+        650,
+        480,
+        200,
+        160
+      ],
+      "pdfSha256": "7f2fdefa5af7b6b75640eec3b0e65c1d49ecb7bd311e1293d53b6377acacbe75",
+      "imageSha256": "72b1b8b040e16a43e708d997b44abbb875ec1b3991741186f685008a8af8b22a"
+    },
+    {
+      "file": "cam21-test2-options.png",
+      "book": "cam21",
+      "pdfPage": 50,
+      "printedPage": 49,
+      "fullRaster": [
+        1203,
+        1700
+      ],
+      "clipPixels": [
+        350,
+        1040,
+        650,
+        170
+      ],
+      "pdfSha256": "380b27bc658e606a72f1313e8b3375ab878865479e847d9b8598bbc8fa17d661",
+      "imageSha256": "1338203d96b49e5a02fce32783cc8111136e5d833d774dfc860aaa965fe11913"
+    },
+    {
+      "file": "cam21-test3-options.png",
+      "book": "cam21",
+      "pdfPage": 72,
+      "printedPage": 71,
+      "fullRaster": [
+        1203,
+        1700
+      ],
+      "clipPixels": [
+        300,
+        400,
+        745,
+        445
+      ],
+      "pdfSha256": "380b27bc658e606a72f1313e8b3375ab878865479e847d9b8598bbc8fa17d661",
+      "imageSha256": "ca463a78657e162c1a4d91cb466a1bfadb448e2c985adb1d4fcc2efe043d6a43"
+    },
+    {
+      "file": "cam21-test2-answers.png",
+      "book": "cam21",
+      "pdfPage": 121,
+      "printedPage": 120,
+      "fullRaster": [
+        1061,
+        1500
+      ],
+      "clipPixels": [
+        480,
+        780,
+        210,
+        260
+      ],
+      "pdfSha256": "380b27bc658e606a72f1313e8b3375ab878865479e847d9b8598bbc8fa17d661",
+      "imageSha256": "45fb45593531aac6f26304c7c6aa28c4cf051c9aa0cfab19d8f5bc24e576c096"
+    },
+    {
+      "file": "cam21-test3-answers.png",
+      "book": "cam21",
+      "pdfPage": 123,
+      "printedPage": 122,
+      "fullRaster": [
+        1061,
+        1500
+      ],
+      "clipPixels": [
+        475,
+        895,
+        230,
+        190
+      ],
+      "pdfSha256": "380b27bc658e606a72f1313e8b3375ab878865479e847d9b8598bbc8fa17d661",
+      "imageSha256": "cb14d540944a5f2e7ac097837977462d42a6b32995073fe6041feb9e32366c90"
+    },
+    {
+      "file": "cam20-test3-options.png",
+      "book": "cam20",
+      "pdfPage": 100,
+      "printedPage": 100,
+      "fullRaster": [
+        990,
+        1400
+      ],
+      "clipPixels": [
+        94,
+        565,
+        760,
+        164
+      ],
+      "pdfSha256": "1d9f817120206f380b06facfd95c59b71e7bccff2bd974f860a3e3e39dc492bb",
+      "imageSha256": "0ccb0dc6aaa9417b65cfa57b2ef5bf8fa3fc07a97aa7e2e89b2810db8e61799e"
+    },
+    {
+      "file": "cam20-test3-answers.png",
+      "book": "cam20",
+      "pdfPage": 102,
+      "printedPage": 102,
+      "fullRaster": [
+        990,
+        1400
+      ],
+      "clipPixels": [
+        95,
+        394,
+        430,
+        55
+      ],
+      "pdfSha256": "1d9f817120206f380b06facfd95c59b71e7bccff2bd974f860a3e3e39dc492bb",
+      "imageSha256": "a2cc65f7f49ec938d47b8cb3bba17ec1198eae90119bad8e8b3e7f449e524858"
+    }
+  ]
+}

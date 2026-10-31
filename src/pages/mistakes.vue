@@ -13,7 +13,13 @@ watch(
 )
 onUnmounted(() => clearTimeout(reviewTimer))
 
-const { grouped, totalCount, removeMistake, clearMistakes } = useMistakes()
+const {
+  grouped,
+  totalCount,
+  removeMistake,
+  clearMistakes,
+  assignLegacyActivity,
+} = useMistakes()
 
 const isReviewing = ref(false)
 const reviewItem = ref<MistakeItem | null>(null)
@@ -263,6 +269,21 @@ function confirmClearLegacyListening() {
                   </td>
                   <td class="px-6 py-4">
                     {{ item.detail }}
+                    <div v-if="item.legacySource" class="mt-1 text-xs">
+                      仅调整旧版计数归属：
+                      <button
+                        class="mr-2 underline"
+                        @click="assignLegacyActivity(item.key, 'flashcard')"
+                      >
+                        归入单词自测
+                      </button>
+                      <button
+                        class="underline"
+                        @click="assignLegacyActivity(item.key, 'vocabulary')"
+                      >
+                        归入词汇拼写
+                      </button>
+                    </div>
                   </td>
                   <td class="px-6 py-4">
                     <span

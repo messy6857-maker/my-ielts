@@ -230,7 +230,11 @@ function startTest() {
 // 放弃当前草稿并重新开始：清掉本会话草稿后立刻全新开考，
 // 避免清完仍留在开始屏、下次刷新又被其他页签快照顶回来。
 function discardDraftAndStart() {
-  if (!window.confirm('放弃当前草稿并重新开始？草稿删除后无法恢复。'))
+  if (
+    !window.confirm(
+      '放弃所选的这一次作答并重新开始？同一 attempt 的副本将退役，其他独立作答不受影响。',
+    )
+  )
     return
   if (recovery.clear())
     startTest()
@@ -491,6 +495,19 @@ async function submit() {
 
 <template>
   <p
+    v-if="recovery.retired.value"
+    role="alert"
+    class="mx-auto max-w-4xl rounded bg-amber-50 p-3 text-amber-900"
+  >
+    {{ recovery.error.value }}
+    <button class="ml-2 underline" @click="recovery.continueRecovered">
+      保留答案，继续为独立作答
+    </button>
+    <button class="ml-2 underline" @click="recovery.leaveRetired">
+      保留副本，回到开始页
+    </button>
+  </p>
+  <p
     v-if="submitted && transcriptError"
     role="alert"
     class="m-4 text-amber-700"
@@ -643,11 +660,18 @@ async function submit() {
               :value="snapshot.versionId"
             >
               {{
-                snapshot.updatedAt
-                  ? new Date(snapshot.updatedAt).toLocaleString()
+                snapshot.editedAt || snapshot.updatedAt
+                  ? new Date(
+                    snapshot.editedAt || snapshot.updatedAt,
+                  ).toLocaleString()
                   : "时间未知"
               }}
-              · {{ Object.keys(snapshot.answers).length }} 题
+              · {{ Object.values(snapshot.answers).filter(Boolean).length }} 题
+              {{
+                snapshot.activeElsewhere
+                  ? "（另一页签可能在使用）"
+                  : "（本机保留）"
+              }}
             </option>
           </select>
         </div>

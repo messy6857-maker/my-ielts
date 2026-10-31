@@ -14,11 +14,19 @@ initSingleAudio()
 const { currentUser, loggingOut } = useAuth()
 const router = useRouter()
 const guestPending = ref(false)
+const guestNoticeClosed = ref(false)
 function refreshGuestPending() {
   guestPending.value
     = !!currentUser.value && hasPendingGuestMigration(currentUser.value)
 }
-watch(currentUser, refreshGuestPending, { immediate: true })
+watch(
+  currentUser,
+  () => {
+    guestNoticeClosed.value = false
+    refreshGuestPending()
+  },
+  { immediate: true },
+)
 const offGuestPending = onSyncApplied(refreshGuestPending)
 onUnmounted(offGuestPending)
 async function continueGuest() {
@@ -53,7 +61,7 @@ watch(storageFailures, () => {
     aria-label="账号与保存通知"
   >
     <p
-      v-if="guestPending"
+      v-if="guestPending && !guestNoticeClosed"
       role="status"
       class="mx-4 mt-2 rounded bg-amber-50 p-3 text-sm text-amber-900"
     >
@@ -62,7 +70,9 @@ watch(storageFailures, () => {
         @click="continueGuest"
       >
         继续以游客身份学习
-      </button>。
+      </button>。<button class="ml-2 underline" @click="guestNoticeClosed = true">
+        暂时关闭
+      </button>
     </p>
     <div
       v-for="notice in accountNotices"

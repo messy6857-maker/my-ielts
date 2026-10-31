@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import { examSessionId } from '../src/utils/examDrafts'
 import {
   accountNotice,
   accountNotices,
@@ -23,7 +24,6 @@ import {
   saveEnvelope,
   saveRecord,
   storageFailures,
-  writerId,
 } from '../src/utils/storage'
 import {
   compactDeletionData,
@@ -179,7 +179,15 @@ it('legacy vocabulary mistakes merge into a single explicitly marked spelling gr
   )
   const m = useMistakes().mistakes.value.filter(m => m.key === 'spelling:1')
   expect(m).toHaveLength(1)
-  expect(m[0].count).toBe(2)
+  expect(m[0].count).toBe(1)
+  const old = useMistakes().mistakes.value.find(
+    m => m.key === 'legacy-vocabulary:1',
+  )!
+  expect(old.detail).toContain('活动来源未区分')
+  useMistakes().assignLegacyActivity(old.key, 'vocabulary')
+  expect(
+    useMistakes().mistakes.value.find(m => m.key === 'spelling:1')?.count,
+  ).toBe(2)
 })
 it('writing migration moves only the resumed bare snapshot after saving the new revision', () => {
   const key = accountKey('task1_draft_v1', 'alice')
@@ -517,6 +525,9 @@ it('all-chapter grading moves every duplicate word schedule and undo restores th
   s.grade(5)
   for (const word of duplicate)
     expect(schedule.get(word.id)?.dueAt).toBeGreaterThan(Date.now())
+  s.goBackOne()
+  for (const word of duplicate) expect(schedule.get(word.id)?.dueAt).toBe(1)
+  s.grade(5)
   s.restart()
   expect(
     s.queue.some(
@@ -643,7 +654,7 @@ it('compaction also removes non-canonical JSON originals after the replacement i
 
 it('discarding another selected attempt never deletes this tab unrelated draft', async () => {
   const prefix = accountKey('mock_draft_v1_reading_cam21-test1', 'alice')
-  const own = `${prefix}__session_${writerId()}`
+  const own = `${prefix}__session_${examSessionId()}`
   const other = `${prefix}__session_other`
   const draft = (attemptId: string, answer: string) => ({
     version: 1,
@@ -686,6 +697,7 @@ it('durable history retires a completed attempt even if the small completion mar
   )
   const Page = (await import('../src/pages/mock/reading-test.vue')).default
   const { s } = await page(Page)
+  s.recovery.selectDraft(`${prefix}__session_former`)
   s.startTest()
   const original = Storage.prototype.setItem
   vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (

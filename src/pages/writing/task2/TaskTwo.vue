@@ -217,7 +217,8 @@ function restoreDraft() {
   draftOwner = currentUser.value
   try {
     drafts.value = listDrafts('task2', draftOwner)
-    const d = emergencyDrafts.get(draftOwner) ?? readDraft('task2', draftOwner)
+    const stored = readDraft('task2', draftOwner)
+    const d = emergencyDrafts.get(draftOwner) ?? stored
     if (d) {
       const p
         = TASK2_QUESTIONS.find(x => x.id === d.promptId)
@@ -364,7 +365,7 @@ function checklist(s: EssayStats): { ok: boolean; text: string }[] {
     },
     {
       ok: s.complexRatio >= 0.25,
-      text: `长难句占比 ${(s.complexRatio * 100).toFixed(0)}%（含从句、完整并列分句、被动语态；规则估算）`,
+      text: `长难句占比 ${(s.complexRatio * 100).toFixed(0)}%（含完整宾语从句、关系从句等从句、完整并列分句及被动语态；规则估算）`,
     },
     {
       ok: s.avgSentenceLen >= 12 && s.avgSentenceLen <= 25,

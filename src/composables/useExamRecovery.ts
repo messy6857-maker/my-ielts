@@ -1,11 +1,11 @@
 import { computed, onUnmounted, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import {
-  accountKey,
-  readRecords,
-  storageFailures,
-  writerId,
-} from '../utils/storage'
+  examAttemptId,
+  examSessionId,
+  newestAttemptDrafts,
+} from '../utils/examDrafts'
+import { accountKey, readRecords, storageFailures } from '../utils/storage'
 import type { MockRecord } from './useMockHistory'
 import { saveMockRecord } from './useMockHistory'
 import {
@@ -16,6 +16,9 @@ import {
 } from './useAuth'
 
 export interface ExamDraft {
+  editedAt?: number
+  revision?: number
+  activeElsewhere?: boolean
   attemptId?: string
   versionId?: string
   version: 1
@@ -50,7 +53,11 @@ export function useExamRecovery(options: {
   let sourceKey: string | undefined
   let sourceRaw: string | null = null
   let wasBlocked = false
-  const writer = writerId()
+  const writer = examSessionId()
+  let previousSnapshot: ExamDraft | null = null
+  const retired = ref(false)
+  let recoveryId = ''
+  let recoverySaved = false
   const leaseKey = `myielts_local_exam_session:${writer}`
   function heartbeat() {
     try {
@@ -61,15 +68,18 @@ export function useExamRecovery(options: {
   heartbeat()
   const leaseTimer = setInterval(heartbeat, 10000)
   function activeSibling(storedKey: string) {
-    const session = storedKey.split('__session_')[1]
+    const session = storedKey
+      .split('__session_')[1]
+      ?.split('__attempt_')[0]
+      ?.split('__recovery_')[0]
+    const at = Number(
+      localStorage.getItem(`myielts_local_exam_session:${session}`) || 0,
+    )
     return (
-      session
+      !!session
       && session !== writer
-      && Date.now()
-        - Number(
-          localStorage.getItem(`myielts_local_exam_session:${session}`) || 0,
-        )
-        < 30000
+      && at > 0
+      && Math.abs(Date.now() - at) < 30000
     )
   }
   const baseKey = (id = options.testId.value) =>
@@ -118,8 +128,18 @@ export function useExamRecovery(options: {
                   value: {
                     ...d,
                     versionId: storedKey,
-                    attemptId:
-                      d.attemptId || `legacy:${storedKey}:${d.updatedAt}`,
+                    activeElsewhere: activeSibling(storedKey),
+                    editedAt:
+                      Number.isFinite(d.editedAt) && d.editedAt! >= 0
+                        ? d.editedAt
+                        : Number.isFinite(d.updatedAt)
+                          ? d.updatedAt
+                          : 0,
+                    revision:
+                      Number.isSafeInteger(d.revision) && d.revision! >= 0
+                        ? d.revision
+                        : 0,
+                    attemptId: examAttemptId(d, storedKey),
                     updatedAt:
                       Number.isFinite(d.updatedAt)
                       && d.updatedAt > 0
@@ -137,32 +157,47 @@ export function useExamRecovery(options: {
       })
       .filter(
         c =>
-          !completed.has(c.value.attemptId)
+          !c.value.submitted
+          && !completed.has(c.value.attemptId)
           && !localStorage.getItem(
             `${prefix}__completed_${encodeURIComponent(c.value.attemptId)}`,
           ),
       )
       .sort((a, b) => b.value.updatedAt - a.value.updatedAt)
-    availableDrafts.value = candidates.map(c => c.value)
-    const selected = candidates.find(
-      c => c.storedKey === (selectedVersion || key()),
-    )
+    const selectedAttempt = candidates.find(
+      c => c.storedKey === selectedVersion,
+    )?.value.attemptId
+    availableDrafts.value = newestAttemptDrafts(candidates.map(c => c.value))
+    // Foreign snapshots require an explicit choice even after a lease expires.
     draft.value
-      = selected?.value
-      ?? (candidates.length === 1 && !activeSibling(candidates[0].storedKey)
-        ? candidates[0].value
-        : null)
+      = availableDrafts.value.find(d =>
+        selectedAttempt
+          ? d.attemptId === selectedAttempt
+          : d.versionId === key(),
+      ) ?? null
   }
   function writeDraft() {
-    if (
-      attemptId
-      && localStorage.getItem(
-        `${baseKey(activeTestId)}__completed_${encodeURIComponent(attemptId)}`,
+    const completedKey = `${baseKey(activeTestId)}__completed_${encodeURIComponent(attemptId)}`
+    const isRetired = !!attemptId && !!localStorage.getItem(completedKey)
+    if (isRetired) {
+      recoverySaved = false
+      retired.value = true
+      options.pause()
+    }
+    const changedAnswers
+      = !previousSnapshot
+      || JSON.stringify(previousSnapshot.answers)
+        !== JSON.stringify(options.answers.value)
+    const editedAt = changedAnswers
+      ? Math.max(
+        Date.now(),
+        (previousSnapshot?.editedAt ?? previousSnapshot?.updatedAt ?? 0) + 1,
       )
-    )
-      return true
+      : (previousSnapshot!.editedAt ?? previousSnapshot!.updatedAt)
     const value: ExamDraft = {
       attemptId,
+      editedAt,
+      revision: (previousSnapshot?.revision || 0) + 1,
       version: 1,
       kind: options.kind,
       testId: activeTestId,
@@ -172,10 +207,27 @@ export function useExamRecovery(options: {
       updatedAt: Date.now(),
     }
     try {
+      if (isRetired) {
+        recoveryId ||= crypto.randomUUID()
+        localStorage.setItem(
+          `${baseKey(activeTestId)}__session_${writer}__recovery_${recoveryId}`,
+          JSON.stringify({
+            ...value,
+            attemptId: recoveryId,
+            retiredFrom: attemptId,
+          }),
+        )
+        previousSnapshot = value
+        recoverySaved = true
+        retired.value = true
+        options.pause()
+        error.value
+          = '本次作答已在另一页签提交或放弃，计时已暂停。当前答案已另存为恢复副本；请选择继续为独立作答或保留副本后离开。'
+        return false
+      }
       localStorage.setItem(key(activeTestId), JSON.stringify(value))
+      previousSnapshot = value
       draft.value = value
-      // 本次保存已越过保存时刻的墓碑：之后被动保存不再被它判定为过期。
-
       storageFailures.value = storageFailures.value.filter(
         k => k !== key(activeTestId),
       )
@@ -189,6 +241,47 @@ export function useExamRecovery(options: {
       return false
     }
   }
+  function leaveRetired() {
+    writeDraft()
+    if (!recoverySaved)
+      return
+    options.started.value = false
+    retired.value = false
+    error.value = '恢复副本已保留，可从草稿列表选择恢复，也可安全离开。'
+    selectedVersion = null
+    owner.value = useAuth().currentUser.value
+    wasBlocked = false
+    dismissAccountNotice(pauseNoticeId)
+    refresh()
+  }
+  function continueRecovered() {
+    if (
+      !retired.value
+      || !recoveryId
+      || useAuth().currentUser.value !== owner.value
+    )
+      return
+    const old = attemptId
+    attemptId = recoveryId
+    if (writeDraft()) {
+      try {
+        localStorage.removeItem(
+          `${baseKey(activeTestId)}__session_${writer}__recovery_${recoveryId}`,
+        )
+      }
+      catch {
+        /* The current attempt is durable; a duplicate recovery copy is safe. */
+      }
+      recoveryId = ''
+      retired.value = false
+      error.value = ''
+      options.onUnblocked?.()
+    }
+    else {
+      attemptId = old
+    }
+  }
+
   function save() {
     if (!options.started.value || options.submitted.value)
       return true
@@ -304,7 +397,8 @@ export function useExamRecovery(options: {
       // 考试以冻结时钟继续作答、自动交卷永不触发，所以必须重建计时。
       if (wasBlocked) {
         wasBlocked = false
-        options.onUnblocked?.()
+        if (!retired.value)
+          options.onUnblocked?.()
       }
       // 回到原身份、阻断解除：清掉暂停提示（保存失败的提示不是暂停消息，保留）。
       if (error.value === pauseMessage)
@@ -341,6 +435,16 @@ export function useExamRecovery(options: {
       options.pause()
     return saved
   })
+  const onRetirement = (event: StorageEvent) => {
+    if (
+      event.key
+        === `${baseKey(activeTestId)}__completed_${encodeURIComponent(attemptId)}`
+      && options.started.value
+      && !options.submitted.value
+    )
+      saveFlush()
+  }
+  window.addEventListener('storage', onRetirement)
   window.addEventListener('pagehide', saveFlush)
   const visibility = () => {
     if (document.visibilityState === 'hidden')
@@ -365,6 +469,7 @@ export function useExamRecovery(options: {
     stopAnswers()
     stopTest()
     offLogout()
+    window.removeEventListener('storage', onRetirement)
     window.removeEventListener('pagehide', saveFlush)
     document.removeEventListener('visibilitychange', visibility)
   })
@@ -383,9 +488,10 @@ export function useExamRecovery(options: {
         catch {}
         if (!old?.submitted) {
           try {
+            const id = old ? examAttemptId(old, ownKey) : crypto.randomUUID()
             localStorage.setItem(
-              `${ownKey}__attempt_${encodeURIComponent(old?.attemptId || crypto.randomUUID())}`,
-              oldRaw,
+              `${ownKey}__attempt_${encodeURIComponent(id)}`,
+              old ? JSON.stringify({ ...old, attemptId: id }) : oldRaw,
             )
           }
           catch {
@@ -396,6 +502,9 @@ export function useExamRecovery(options: {
         }
       }
       attemptId = saved?.attemptId || crypto.randomUUID()
+      previousSnapshot = saved || null
+      retired.value = false
+      recoveryId = ''
       sourceKey = saved?.versionId
       sourceRaw = sourceKey ? localStorage.getItem(sourceKey) : null
       owner.value = useAuth().currentUser.value
@@ -406,6 +515,9 @@ export function useExamRecovery(options: {
       return true
     },
     owner,
+    retired,
+    leaveRetired,
+    continueRecovered,
     availableDrafts,
     selectDraft(versionId: string) {
       selectedVersion = versionId

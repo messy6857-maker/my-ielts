@@ -17,6 +17,7 @@ import { useRecordMap } from './useRecordData'
 
 export type MistakeModule =
   | 'vocabulary'
+  | 'legacy_vocabulary'
   | 'flashcard'
   | 'typing'
   | 'listening'
@@ -52,6 +53,7 @@ export interface ModuleProgress {
 }
 export const MISTAKE_MODULE_LABEL: Record<MistakeModule, string> = {
   vocabulary: '词汇拼写',
+  legacy_vocabulary: '旧版词汇（待确认活动）',
   flashcard: '单词自测',
   typing: '打字练习',
   listening: '听力 179',
@@ -82,6 +84,7 @@ export function studyDay(date = new Date()) {
   return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
 }
 interface MistakePart extends MistakeItem {
+  legacyActivity?: 'vocabulary' | 'flashcard'
   epoch: string
   days: Record<string, number>
 }
@@ -117,8 +120,18 @@ export function migrateMistakes(user: string | null) {
     localStorage.setItem(marker, '1')
   })
 }
-function canonicalMistakeKey(key: string) {
-  return key.replace(/^vocabulary:/, 'spelling:')
+function canonicalMistakeKey(
+  key: string,
+  activity?: 'vocabulary' | 'flashcard',
+) {
+  return key.replace(
+    /^vocabulary:/,
+    activity === 'flashcard'
+      ? 'flashcard:'
+      : activity === 'vocabulary'
+        ? 'spelling:'
+        : 'legacy-vocabulary:',
+  )
 }
 export const useMistakes = createGlobalState(() => {
   const { currentUser } = useAuth()
@@ -145,11 +158,14 @@ export const useMistakes = createGlobalState(() => {
     for (const rawPart of Object.values(parts.state.value)) {
       const part = rawPart && {
         ...rawPart,
-        key: canonicalMistakeKey(rawPart.key),
+        key: canonicalMistakeKey(rawPart.key, rawPart.legacyActivity),
+        module: rawPart.key.startsWith('vocabulary:')
+          ? rawPart.legacyActivity || 'legacy_vocabulary'
+          : rawPart.module,
         legacySource:
           rawPart.key.startsWith('vocabulary:') || !!rawPart.legacySource,
         detail: rawPart.key.startsWith('vocabulary:')
-          ? `${rawPart.detail}（含旧版词汇记录，原活动未区分）`
+          ? `${rawPart.detail || ''}（旧版计数；${rawPart.legacyActivity ? '归属已确认' : '活动来源未区分'}）`
           : rawPart.detail,
       }
       if (
@@ -247,7 +263,7 @@ export const useMistakes = createGlobalState(() => {
       .filter(
         ([id, part]) =>
           !!part
-          && canonicalMistakeKey(part.key) === key
+          && canonicalMistakeKey(part.key, part.legacyActivity) === key
           && part.epoch === epoch
           && part.count > 0
           && (scope === 'all' || id.endsWith(`|${writerId()}`)),
@@ -321,6 +337,36 @@ export const useMistakes = createGlobalState(() => {
     }
     return { outstanding: true, failureDate }
   }
+  function assignLegacyActivity(
+    key: string,
+    activity: 'vocabulary' | 'flashcard',
+  ) {
+    batchStorage(() => {
+      for (const [id, part] of Object.entries(
+        readRecords<MistakePart>('mistake_parts_v2', currentUser.value),
+      )) {
+        if (
+          !part.key.startsWith('vocabulary:')
+          || canonicalMistakeKey(part.key, part.legacyActivity) !== key
+        )
+          continue
+        const fromEpoch
+          = resets.state.value[key]?.epoch
+          ?? resets.state.value[part.key]?.epoch
+          ?? ''
+        if (part.epoch !== fromEpoch || part.count <= 0)
+          continue
+        const target = canonicalMistakeKey(part.key, activity)
+        parts.set(id, {
+          ...part,
+          module: activity,
+          legacyActivity: activity,
+          legacySource: true,
+          epoch: resets.state.value[target]?.epoch ?? '',
+        })
+      }
+    })
+  }
   function patchMistakeHint(key: string, hint: string) {
     const id = `${key}|${writerId()}`
     const old = readRecord<MistakePart>(
@@ -370,6 +416,7 @@ export const useMistakes = createGlobalState(() => {
     mistakes,
     addMistake,
     patchMistakeHint,
+    assignLegacyActivity,
     decrementMistake,
     mistakeOutstanding,
     removeMistake,
@@ -387,7 +434,13 @@ export const useProgress = createGlobalState(() => {
     const out = { ...store.state.value }
     const grouped = new Map<string, Set<string>>()
     const add = (chapter: string, id: string, value: any) => {
-      if (typeof value === 'string' ? value.trim() : value?.text?.trim()) {
+      if (value?.requiresSelection && !grouped.has(chapter))
+        grouped.set(chapter, new Set())
+      if (
+        typeof value === 'string'
+          ? value.trim()
+          : !value?.requiresSelection && value?.text?.trim()
+      ) {
         if (!grouped.has(chapter))
           grouped.set(chapter, new Set())
         grouped.get(chapter)!.add(id)
@@ -415,15 +468,23 @@ export const useProgress = createGlobalState(() => {
       const split = key.lastIndexOf('|')
       add(key.slice(0, split), key.slice(split + 1), value)
     }
+    for (const key of Object.keys(out).filter(key =>
+      key.startsWith('spelling:'),
+    )) {
+      const chapter = key.slice(9)
+      if (
+        (vocabularyCounts as Record<string, number>)[chapter]
+        && !grouped.has(chapter)
+      )
+        grouped.set(chapter, new Set())
+    }
     for (const [chapter, ids] of grouped) {
       const key = `spelling:${chapter}`
-      if (!out[key]) {
-        out[key] = {
-          done: ids.size,
-          total:
-            (vocabularyCounts as Record<string, number>)[chapter] || ids.size,
-          updatedAt: 0,
-        }
+      out[key] = {
+        done: ids.size,
+        total:
+          (vocabularyCounts as Record<string, number>)[chapter] || ids.size,
+        updatedAt: out[key]?.updatedAt || 0,
       }
     }
     return out

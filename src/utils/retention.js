@@ -21,6 +21,11 @@ function historyIdentity(id) {
       : Number.NaN
   return Number.isFinite(ms) ? `${String(ms).padStart(16, '0')}:${id}` : null
 }
+function collectionIdentity(id, stamp) {
+  return (
+    historyIdentity(id) || `${String(stamp?.[0] || 0).padStart(16, '0')}:${id}`
+  )
+}
 function pruneCollectionData(input, user, now = Date.now()) {
   const out = { ...input }
   const prefix = user ? `myielts_u_${user}_` : 'myielts_'
@@ -48,9 +53,10 @@ function pruneCollectionData(input, user, now = Date.now()) {
       .filter(k => k.startsWith(`${prefix}${base}__entry_`))
       .map(key => ({
         key,
-        id:
-          historyIdentity(decodeId(key.split('__entry_')[1]))
-          || `${String(parse(out[key])?.stamp?.[0] || 0).padStart(16, '0')}:${decodeId(key.split('__entry_')[1])}`,
+        id: collectionIdentity(
+          decodeId(key.split('__entry_')[1]),
+          parse(out[key])?.stamp,
+        ),
         e: parse(out[key]),
       }))
       .filter(x => x.id && x.e)
@@ -177,7 +183,7 @@ function mergeDeletionEntries(a = {}, b = {}) {
   }
   return out
 }
-function expiredDeletionTarget(target, cuts, now) {
+function expiredDeletionTarget(target, cuts, now, stamp) {
   const split = target.indexOf('|')
   const base = target.slice(0, split)
   const id = target.slice(split + 1)
@@ -198,7 +204,7 @@ function expiredDeletionTarget(target, cuts, now) {
     )
       return true
   }
-  const identity = historyIdentity(id)
+  const identity = collectionIdentity(id, stamp)
   return !!identity && typeof cuts[base] === 'string' && identity <= cuts[base]
 }
 function compactDeletionData(input, user, fold = true, now = Date.now()) {
@@ -221,7 +227,8 @@ function compactDeletionData(input, user, fold = true, now = Date.now()) {
             e,
             entries: Object.fromEntries(
               Object.entries(mergeDeletionEntries({}, e.value?.entries)).filter(
-                ([target]) => !expiredDeletionTarget(target, cuts, now),
+                ([target, stamp]) =>
+                  !expiredDeletionTarget(target, cuts, now, stamp),
               ),
             ),
           })
@@ -234,14 +241,14 @@ function compactDeletionData(input, user, fold = true, now = Date.now()) {
     const target = deletedTarget(key, user)
     if (!target)
       continue
-    if (expiredDeletionTarget(target.target, cuts, now)) {
-      delete out[key]
-      continue
-    }
     try {
       const e = JSON.parse(raw)
       if (e?.__ielts !== 2)
         continue
+      if (expiredDeletionTarget(target.target, cuts, now, e.stamp)) {
+        delete out[key]
+        continue
+      }
       let bucket = buckets.get(target.key)
       const stamp = bucket?.entries[target.target]
       if (
@@ -252,6 +259,8 @@ function compactDeletionData(input, user, fold = true, now = Date.now()) {
         delete out[key]
         continue
       }
+      if (stamp && !e.deleted)
+        delete bucket.entries[target.target]
       if (!fold || !e.deleted)
         continue
       bucket ||= {

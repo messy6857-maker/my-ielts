@@ -24,6 +24,9 @@ export const syncEnabled = SYNC_API_BASE.trim() !== ''
 export const SYNC_PENDING_KEY = 'myielts_sync_pending_push'
 export const AUTH_PENDING_PUSH_KEY = 'myielts_pending_push_v1'
 const TOKEN_KEY = 'myielts_sync_token_v1'
+const capabilities = new Map<string, number>()
+const compactServers = new Set<string>()
+const deletionServers = new Set<string>()
 interface SessionToken {
   token: string
   username: string
@@ -62,6 +65,16 @@ export function getToken(username?: string | null) {
     : null
 }
 export function setToken(token: string | null, username?: string) {
+  const previous = storedToken()
+  if (previous?.token !== token || previous?.username !== username) {
+    for (const owner of [previous?.username, username]) {
+      if (owner) {
+        capabilities.delete(owner)
+        compactServers.delete(owner)
+        deletionServers.delete(owner)
+      }
+    }
+  }
   if (token && username)
     localStorage.setItem(TOKEN_KEY, JSON.stringify({ token, username }))
   else localStorage.removeItem(TOKEN_KEY)
@@ -339,9 +352,6 @@ export function syncTimeoutMs(bodyBytes: number) {
     30000 + Math.ceil(Math.max(0, bodyBytes) / 1048576) * 10000,
   )
 }
-const capabilities = new Map<string, number>()
-const compactServers = new Set<string>()
-const deletionServers = new Set<string>()
 async function api(
   path: string,
   method: string,
@@ -523,6 +533,28 @@ export function apiPush(
       // 426 门禁语义不变（旧服务端的数据不应用）。
       if (probe.data)
         applySyncData(probe.data, username)
+    }
+    if (
+      compactServers.has(username)
+      || deletionServers.has(username)
+      || Object.keys(data).some(key =>
+        /_(?:stats_archive_v3|deletion_archive_v3)__entry_/.test(key),
+      )
+    ) {
+      const capability = await api(
+        '/sync?capabilities=1',
+        'GET',
+        undefined,
+        username,
+      )
+      if (!capability.ok)
+        return capability
+      if (capability.compactStats)
+        compactServers.add(username)
+      else compactServers.delete(username)
+      if (capability.compactDeletes)
+        deletionServers.add(username)
+      else deletionServers.delete(username)
     }
     if (
       Object.keys(data).some(k => k.includes('_stats_archive_v3__entry_'))

@@ -446,7 +446,8 @@ function hasFiniteVerb(fragment: string): boolean {
 // that / when / where / as 引导的从句：须有主谓结构；宾语从句与关系从句均计入。
 // shows that sales rose / as incomes grew 算；as a result / when in 2020 不算。
 function hasTrueSubordinateClause(sentence: string): boolean {
-  const tokens = wordTokens(sentence)
+  const tokens
+    = sentence.toLowerCase().match(/[a-z]+(?:'[a-z]+)?|[,;:]/g) || []
   const PREPOSITIONS = new Set([
     'in',
     'on',
@@ -459,7 +460,11 @@ function hasTrueSubordinateClause(sentence: string): boolean {
     'by',
   ])
   // 在标记后 offset 1..12 处找谓语，允许带冠词的多词主语，排除介词短语。
-  const clauseAfter = (idx: number, allowSubjectRelative: boolean): boolean => {
+  const clauseAfter = (
+    idx: number,
+    allowSubjectRelative: boolean,
+    stopAtCoordinator = false,
+  ): boolean => {
     if (
       allowSubjectRelative
       && idx + 1 < tokens.length
@@ -468,7 +473,11 @@ function hasTrueSubordinateClause(sentence: string): boolean {
       return true
     for (let off = 1; off <= 12; off++) {
       const vi = idx + off
-      if (vi >= tokens.length)
+      if (
+        vi >= tokens.length
+        || [',', ';', ':'].includes(tokens[vi])
+        || (stopAtCoordinator && ['and', 'but', 'or'].includes(tokens[vi]))
+      )
         return false
       if (!isFiniteVerbToken(tokens[vi]))
         continue
@@ -504,7 +513,24 @@ function hasTrueSubordinateClause(sentence: string): boolean {
         continue
       if (i + 1 < tokens.length && PREPOSITIONS.has(tokens[i + 1]))
         continue
-      if (clauseAfter(i, false))
+      const head
+        = tokens[i + 1 + (['a', 'an', 'the'].includes(tokens[i + 1]) ? 1 : 0)]
+      const measure = [
+        'percentage',
+        'percentages',
+        'share',
+        'shares',
+        'proportion',
+        'proportions',
+        'rate',
+        'rates',
+        'ratio',
+        'ratios',
+        'fraction',
+        'fractions',
+        'whole',
+      ].includes(head)
+      if (clauseAfter(i, false, measure))
         return true
     }
   }

@@ -1,6 +1,7 @@
 <!-- eslint-disable eslint-comments/no-unlimited-disable -->
 <script setup>
 import {
+  deletionEnvelope,
   entryKey,
   readRecords,
   readValue,
@@ -69,7 +70,12 @@ function readSpellMap() {
   for (const [chapter, words] of Object.entries(old)) {
     for (const [id, value] of Object.entries(words || {})) {
       const key = entryKey(SPELL_KEY, `${chapter}|${id}`, owner)
-      if (typeof value === 'string' && localStorage.getItem(key) === null) {
+      if (
+        typeof value === 'string'
+        && value.trim()
+        && localStorage.getItem(key) === null
+        && !deletionEnvelope(key, owner)
+      ) {
         saveEnvelope(
           key,
           { __ielts: 2, stamp: [0, 'legacy'], value },
@@ -117,9 +123,18 @@ function restoreSpellValues() {
     for (const group of cur.words) {
       for (const item of group) {
         const stored = saved[item.id]
-        const value = typeof stored === 'string' ? stored : stored?.text
+        const value
+          = typeof stored === 'string'
+            ? stored
+            : stored?.requiresSelection
+              ? ''
+              : stored?.text
         item.spellAlternatives
-          = typeof stored === 'object' ? stored?.alternatives || [] : []
+          = typeof stored === 'object'
+            ? (stored?.alternatives || []).filter(
+                value => typeof value === 'string' && value.trim(),
+              )
+            : []
         if (typeof value === 'string' && value.length > 0) {
           item.spellValue = value
           item.spellError = !item.word
@@ -610,7 +625,7 @@ function copyAllError() {
                             v-if="item.spellAlternatives?.length > 1"
                             class="text-xs text-amber-700"
                           >
-                            旧设备答案存在分歧，请选择：
+                            旧答案缺少可比较的时间，请选择要保留的答案：
                             <button
                               v-for="alternative in item.spellAlternatives"
                               :key="alternative"

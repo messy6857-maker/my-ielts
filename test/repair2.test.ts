@@ -3,7 +3,12 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { emergencyWritingDrafts, listDrafts, readDraft, saveDraft } from '../src/utils/drafts'
+import {
+  emergencyWritingDrafts,
+  listDrafts,
+  readDraft,
+  saveDraft,
+} from '../src/utils/drafts'
 import {
   accountNotice,
   accountNotices,
@@ -173,9 +178,12 @@ it.each(['reading', 'listening'])(
         ? (await import('../src/pages/mock/reading-test.vue')).default
         : (await import('../src/pages/mock/listening-test.vue')).default
     const { s } = await page(Page)
+    s.recovery.selectDraft(key)
+    expect(s.recovery.draft.value?.answers.Q1).toBe('old attempt')
     s.startTest()
     await s.submit()
     s.recovery.refresh()
+    expect(s.recovery.availableDrafts.value).toHaveLength(0)
     expect(s.recovery.draft.value).toBeNull()
   },
 )
@@ -527,6 +535,7 @@ it.each(['reading', 'listening'])(
         ? (await import('../src/pages/mock/reading-test.vue')).default
         : (await import('../src/pages/mock/listening-test.vue')).default
     const { s } = await page(Page)
+    s.recovery.selectDraft(`${prefix}__session_former`)
     s.startTest()
     await s.submit()
     localStorage.setItem(
@@ -544,6 +553,8 @@ it.each(['reading', 'listening'])(
       JSON.stringify(independent),
     )
     s.recovery.refresh()
+    expect(s.recovery.availableDrafts.value).toHaveLength(1)
+    s.recovery.selectDraft(`${prefix}__session_independent`)
     expect(s.recovery.draft.value?.answers.Q1).toBe('independent')
   },
 )

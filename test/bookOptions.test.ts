@@ -61,7 +61,7 @@ const groups = [
 ]
 for (const group of groups) {
   for (const [offset, answer] of group.answers.entries()) {
-    it(`${group.test.id} Q${group.first + offset}: printed option wording, order and answer letter`, () => {
+    it(`${group.test.id} Q${group.first + offset}: stored options and answer-letter regression snapshot`, () => {
       const question = group.test.passages
         .flatMap(p => p.questions)
         .find(q => q.id === `Q${group.first + offset}`)!

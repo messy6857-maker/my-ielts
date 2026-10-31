@@ -10,14 +10,18 @@ export function mergeLegacy(base: string, a: any, b: any): any {
   if (base === 'vocabulary_spell_v2') {
     const values = (value: any): string[] =>
       typeof value === 'string'
-        ? [value]
+        ? value.trim()
+          ? [value.trim()]
+          : []
         : Array.isArray(value?.alternatives)
-          ? value.alternatives.filter((v: unknown) => typeof v === 'string')
+          ? value.alternatives
+            .filter((v: unknown) => typeof v === 'string' && v.trim())
+            .map((v: string) => v.trim())
           : []
     const alternatives = [...new Set([...values(a), ...values(b)])].sort()
     return alternatives.length <= 1
       ? (alternatives[0] ?? '')
-      : { text: alternatives[0], alternatives }
+      : { text: alternatives[0], alternatives, requiresSelection: true }
   }
   if (base === 'deletion_archive_v3')
     return { entries: mergeDeletionEntries(a.entries, b.entries) }

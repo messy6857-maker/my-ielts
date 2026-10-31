@@ -48,12 +48,11 @@ jobs:
       - uses: actions/setup-node@v7.1.0
         with:
           node-version: 24
-      - name: Smoke test deployed site (warning only; failure does not mean push failed)
-        continue-on-error: true
+      - name: Verify deployed site (failure does not mean source push failed)
         run: |
           for attempt in $(seq 1 10); do
             node scripts/smoke-site.mjs https://messy6857-maker.github.io/my-ielts && exit 0
-            sleep 30
+            if [ "$attempt" -lt 10 ]; then sleep 30; fi
           done
-          echo "::warning::站点冒烟重试未通过，源码推送已完成；请检查 Pages 更新状态。"
+          echo "::error::部署验证未通过，源码推送已完成；请检查 Pages 更新状态。"
           exit 1

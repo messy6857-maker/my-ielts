@@ -457,7 +457,8 @@ it.each(['reading', 'listening'])(
       }),
     )
     const session = await show(Page, `/mock/${kind}-test`)
-    expect(session.state.recovery.draft.value.submitted).toBe(true)
+    expect(session.state.recovery.draft.value).toBeNull()
+    expect(session.state.recovery.availableDrafts.value).toHaveLength(0)
     session.state.startTest()
     await nextTick()
     expect(session.state.recovery.draft.value.answers).toEqual({})

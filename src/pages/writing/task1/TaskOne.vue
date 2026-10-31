@@ -124,9 +124,12 @@ const timeText = computed(() => {
 // 不再按调用时刻的 currentUser 现算——否则退出后卸载 flush 会把旧账号的全文写进游客全局 key。
 // 仍走普通 localStorage（刻意不用 writeJson，草稿不同步）；旧全局草稿不迁移给登录账号
 const emergencyDrafts = {
-  get: (owner: string | null) => emergencyWritingDrafts.get(JSON.stringify(['task1', owner])),
-  set: (owner: string | null, value: WritingDraft) => emergencyWritingDrafts.set(JSON.stringify(['task1', owner]), value),
-  delete: (owner: string | null) => emergencyWritingDrafts.delete(JSON.stringify(['task1', owner])),
+  get: (owner: string | null) =>
+    emergencyWritingDrafts.get(JSON.stringify(['task1', owner])),
+  set: (owner: string | null, value: WritingDraft) =>
+    emergencyWritingDrafts.set(JSON.stringify(['task1', owner]), value),
+  delete: (owner: string | null) =>
+    emergencyWritingDrafts.delete(JSON.stringify(['task1', owner])),
 }
 let draftOwner: string | null = currentUser.value
 let draftTimer: ReturnType<typeof setTimeout> | null = null
@@ -172,14 +175,26 @@ onUnmounted(() => {
     clearInterval(timerId)
   if (draftTimer)
     clearTimeout(draftTimer)
-  if (!saveDraftNow() && prompt.value)
-    emergencyDrafts.set(draftOwner, { promptId: prompt.value.id, text: essayText.value, secondsLeft: secondsLeft.value, overtime: overtime.value })
+  if (!saveDraftNow() && prompt.value) {
+    emergencyDrafts.set(draftOwner, {
+      promptId: prompt.value.id,
+      text: essayText.value,
+      secondsLeft: secondsLeft.value,
+      overtime: overtime.value,
+    })
+  }
 })
 // 恢复草稿：挂载时调用一次；切换账号时也调用，先取消 pending 防抖、再按新身份重载。
 // 新身份有合法草稿则恢复；无草稿则回到选题页（清屏，不再留旧身份的全文）
 function restoreDraft() {
-  if (!saveDraftNow() && prompt.value)
-    emergencyDrafts.set(draftOwner, { promptId: prompt.value.id, text: essayText.value, secondsLeft: secondsLeft.value, overtime: overtime.value })
+  if (!saveDraftNow() && prompt.value) {
+    emergencyDrafts.set(draftOwner, {
+      promptId: prompt.value.id,
+      text: essayText.value,
+      secondsLeft: secondsLeft.value,
+      overtime: overtime.value,
+    })
+  }
   if (draftTimer)
     clearTimeout(draftTimer)
   draftTimer = null
@@ -190,7 +205,8 @@ function restoreDraft() {
   draftOwner = currentUser.value
   try {
     drafts.value = listDrafts('task1', draftOwner)
-    const d = emergencyDrafts.get(draftOwner) ?? readDraft('task1', draftOwner)
+    const stored = readDraft('task1', draftOwner)
+    const d = emergencyDrafts.get(draftOwner) ?? stored
     if (d) {
       const p = findPrompt(d.promptId)
       if (d.text && p) {
@@ -310,12 +326,26 @@ const secondsUsed = ref(0)
 const secondsTimed = ref(true)
 
 const archiveError = ref('')
-let pendingEssay: { owner: string | null; record: SavedEssay; draft: WritingDraft | null } | null = null
+let pendingEssay: {
+  owner: string | null
+  record: SavedEssay
+  draft: WritingDraft | null
+} | null = null
 function persistEssay(record: SavedEssay) {
-  pendingEssay ??= { owner: draftOwner, record, draft: readOwnDraft('task1', draftOwner, record.promptId) }
+  pendingEssay ??= {
+    owner: draftOwner,
+    record,
+    draft: readOwnDraft('task1', draftOwner, record.promptId),
+  }
   if (saveEssay(record)) {
-    if (pendingEssay.draft)
-      deleteDraft('task1', pendingEssay.owner, record.promptId, pendingEssay.draft)
+    if (pendingEssay.draft) {
+      deleteDraft(
+        'task1',
+        pendingEssay.owner,
+        record.promptId,
+        pendingEssay.draft,
+      )
+    }
     pendingEssay = null
     archiveError.value = ''
     drafts.value = listDrafts('task1', draftOwner)
@@ -816,7 +846,10 @@ function resumeDraft(promptId: string, versionId?: string) {
             <div class="text-xl font-bold dark:text-white">
               {{ Math.round(result.stats.complexRatio * 100) }}%
             </div>
-            <div class="text-xs text-gray-400">
+            <div
+              class="text-xs text-gray-400"
+              title="完整宾语从句、关系从句及状语从句均计入；规则估算"
+            >
               复合句占比
             </div>
           </div>

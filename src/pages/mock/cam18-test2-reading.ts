@@ -1,3 +1,4 @@
+// Source evidence: docs/evidence/reading-options/README.md (PDF-rendered excerpts and source hashes).
 import type { ReadingMockTest } from "./types";
 
 /** Cambridge IELTS 18 p.47 (PDF p.49) */
