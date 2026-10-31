@@ -122,8 +122,8 @@ async function onManualSync() {
       class="fixed z-30 w-full border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800"
     >
       <div class="mx-auto max-w-screen-2xl flex items-center justify-between">
-        <div class="flex items-center justify-start">
-          <router-link to="/" class="mr-14 flex">
+        <div class="min-w-0 flex flex-1 items-center justify-start">
+          <router-link to="/" class="mr-8 flex shrink-0">
             <span
               class="self-center whitespace-nowrap text-xl font-semibold sm:text-2xl dark:text-white"
             >我的
@@ -132,17 +132,17 @@ async function onManualSync() {
           </router-link>
           <!-- Desktop menu -->
           <div
-            class="hidden w-full items-center justify-between lg:order-1 lg:w-auto lg:flex"
+            class="hidden min-w-0 w-full items-center justify-between overflow-x-auto lg:order-1 lg:w-auto lg:flex"
           >
             <ul
-              class="mt-4 flex flex-col items-center justify-items-center text-center align-middle text-sm font-medium lg:mt-0 lg:flex-row space-x-6 xl:space-x-8"
+              class="mt-4 flex flex-col items-center justify-items-center text-center align-middle text-sm font-medium lg:mt-0 lg:flex-row lg:flex-nowrap space-x-4 xl:space-x-6"
             >
-              <li v-for="m in menus" :key="m.label">
+              <li v-for="m in menus" :key="m.label" class="shrink-0">
                 <router-link
                   :class="
                     $route.path === m.link
-                      ? 'block flex flex-row items-center rounded text-primary-700 dark:text-primary-500'
-                      : 'block flex flex-row items-center text-gray-700 dark:text-gray-400 hover:text-primary-700 dark:hover:text-white'
+                      ? 'block flex flex-row items-center whitespace-nowrap rounded text-primary-700 dark:text-primary-500'
+                      : 'block flex flex-row items-center whitespace-nowrap text-gray-700 dark:text-gray-400 hover:text-primary-700 dark:hover:text-white'
                   "
                   :to="m.link"
                 >
@@ -156,7 +156,7 @@ async function onManualSync() {
             </ul>
           </div>
         </div>
-        <div class="flex items-center justify-between lg:order-2">
+        <div class="flex shrink-0 items-center justify-between lg:order-2">
           <template v-if="currentUser">
             <button
               v-if="syncEnabled"
