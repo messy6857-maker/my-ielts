@@ -7,6 +7,16 @@ import type { ListeningMockTest } from './types'
  * 注意：Q17&18、Q19&20 为 "Choose TWO letters" 题（IN EITHER ORDER），
  * answer 存为下标数组；Q25-28 为配对题（写字母 A-F），用 map-label。
  */
+// Q25 题干里的选项全文（逐字照抄，不带字母前缀，渲染层自加字母）：
+// 挂到组内每题，答 Q26-28 时选项框亦可见。
+const RECYCLING_FOOTWEAR_REASONS = [
+  'one shoe was missing',
+  'the colour of one shoe had faded',
+  'one shoe had a hole in it',
+  'the shoes were brand new',
+  'the shoes were too dirty',
+  'the stitching on the shoes was broken',
+]
 export const cam19Test2Listening: ListeningMockTest = {
   id: 'cam19-test2-listening',
   title: '剑19 Test 2 听力',
@@ -50,10 +60,10 @@ export const cam19Test2Listening: ListeningMockTest = {
         { id: 'Q22', type: 'multiple-choice', question: 'When discussing trainers, Bella and Don disagree about', options: ['A how popular they are among young people.', 'B how suitable they are for school.', 'C how quickly they wear out.'], answer: 1 },
         { id: 'Q23', type: 'multiple-choice', question: 'Bella says that she sometimes recycles shoes because', options: ['A they no longer fit.', 'B she no longer likes them.', 'C they are no longer in fashion.'], answer: 1 },
         { id: 'Q24', type: 'multiple-choice', question: 'What did the article say that confused Don?', options: ['A Public consumption of footwear has risen.', 'B Less footwear is recycled now than in the past.', 'C People dispose of more footwear than they used to.'], answer: 1 },
-        { id: 'Q25', type: 'map-label', question: 'the high-heeled shoes — Reasons: A one shoe was missing; B the colour of one shoe had faded; C one shoe had a hole in it; D the shoes were brand new; E the shoes were too dirty; F the stitching on the shoes was broken', answer: 'E' },
-        { id: 'Q26', type: 'map-label', question: 'the ankle boots', answer: 'B' },
-        { id: 'Q27', type: 'map-label', question: 'the baby shoes', answer: 'A' },
-        { id: 'Q28', type: 'map-label', question: 'the trainers', answer: 'C' },
+        { id: 'Q25', type: 'map-label', question: 'the high-heeled shoes — Reasons: A one shoe was missing; B the colour of one shoe had faded; C one shoe had a hole in it; D the shoes were brand new; E the shoes were too dirty; F the stitching on the shoes was broken', answer: 'E', options: RECYCLING_FOOTWEAR_REASONS },
+        { id: 'Q26', type: 'map-label', question: 'the ankle boots', answer: 'B', options: RECYCLING_FOOTWEAR_REASONS },
+        { id: 'Q27', type: 'map-label', question: 'the baby shoes', answer: 'A', options: RECYCLING_FOOTWEAR_REASONS },
+        { id: 'Q28', type: 'map-label', question: 'the trainers', answer: 'C', options: RECYCLING_FOOTWEAR_REASONS },
         { id: 'Q29', type: 'multiple-choice', question: 'Why did the project to make ‘new’ shoes out of old shoes fail?', options: ['A People believed the ‘new’ pairs of shoes were unhygienic.', 'B There were not enough good parts to use in the old shoes.', 'C The shoes in the ‘new’ pairs were not completely alike.'], answer: 2 },
         { id: 'Q30', type: 'multiple-choice', question: 'Bella and Don agree that they can present their topic', options: ['A from a new angle.', 'B with relevant images.', 'C in a straightforward way.'], answer: 0 },
       ],

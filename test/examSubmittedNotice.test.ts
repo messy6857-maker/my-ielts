@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils'
 import { defineComponent, ref } from 'vue'
 import { useAuth } from '../src/composables/useAuth'
 import { useExamRecovery } from '../src/composables/useExamRecovery'
-import { saveMockRecord } from '../src/composables/useMockHistory'
+import { getMockHistory, saveMockRecord } from '../src/composables/useMockHistory'
 
 const wrappers: any[] = []
 let started: any
@@ -153,4 +153,92 @@ it('补写失败时 clear() 保留原草稿不删除', () => {
   recovery.refresh()
   expect(recovery.submittedDrafts.value).toEqual([])
   expect(recovery.availableDrafts.value).toEqual([])
+})
+
+it('同页签交卷→切题回切→开新考→弃考后，开始屏已交卷提示仍在（B1）', () => {
+  const recovery = answerOneAndSubmitEarly(mountRecovery())
+  expect(recovery.submittedDrafts.value.length).toBe(1)
+  // 开始屏点“开始测试”开新考：begin 迁移已交卷快照，save 写新草稿。
+  expect(recovery.begin()).toBe(true)
+  submitted.value = false
+  started.value = true
+  answers.value = { Q1: 'fresh' }
+  recovery.saveFlush()
+  // 新考未交卷就离开（弃考）：clear 删新草稿，迁移出的快照须保留。
+  expect(recovery.clear()).toBe(true)
+  started.value = false
+  submitted.value = false
+  recovery.refresh()
+  expect(recovery.submittedDrafts.value.length).toBe(1)
+  expect(recovery.submittedDrafts.value[0].answers).toEqual({ Q1: 'dust' })
+  expect(recovery.availableDrafts.value).toEqual([])
+})
+
+it('两次交卷的快照迁移后互不覆盖（B1）', () => {
+  const recovery = answerOneAndSubmitEarly(mountRecovery())
+  // 第二考：开新考、答题、交卷。
+  expect(recovery.begin()).toBe(true)
+  submitted.value = false
+  started.value = true
+  answers.value = { Q1: 'ink' }
+  recovery.saveFlush()
+  const second = recovery.submitResult({
+    id: 'cam21-test3',
+    label: '剑21 Test 3',
+    kind: 'reading',
+    score: 3,
+    total: 40,
+    band: 5,
+  })
+  expect(second?.saved).toBe(true)
+  started.value = false
+  submitted.value = false
+  recovery.refresh()
+  expect(recovery.submittedDrafts.value.length).toBe(2)
+  // 第三考：开新考后弃考，两条已交卷提示都须在。
+  expect(recovery.begin()).toBe(true)
+  submitted.value = false
+  started.value = true
+  answers.value = { Q1: 'third' }
+  recovery.saveFlush()
+  expect(recovery.clear()).toBe(true)
+  started.value = false
+  submitted.value = false
+  recovery.refresh()
+  expect(recovery.submittedDrafts.value.length).toBe(2)
+  expect(
+    recovery.submittedDrafts.value.map((d: any) => d.answers.Q1).sort(),
+  ).toEqual(['dust', 'ink'])
+})
+
+it('退役态点交卷不再静默：返回 null 且给出退役提示，不记成绩（B2）', () => {
+  const recovery = mountRecovery()
+  expect(recovery.begin()).toBe(true)
+  answers.value = { Q1: 'dust' }
+  recovery.saveFlush()
+  const attemptId = recovery.draft.value.attemptId
+  const draftKey = Object.keys(localStorage).find(
+    k => k.includes('mock_draft_v1_reading_cam21-test3__session_'),
+  )!
+  const base = draftKey.split('__session_')[0]
+  localStorage.setItem(
+    `${base}__completed_${encodeURIComponent(attemptId)}`,
+    JSON.stringify({ completedAt: Date.now() }),
+  )
+  const result = recovery.submitResult({
+    id: 'cam21-test3',
+    label: '剑21 Test 3',
+    kind: 'reading',
+    score: 2.5,
+    total: 40,
+    band: 5,
+  })
+  expect(result).toBeNull()
+  expect(recovery.retired.value).toBe(true)
+  expect(recovery.error.value).toContain('退役')
+  expect(getMockHistory()).toEqual([])
+  // 退役分支的恢复副本已落盘，答案没有丢。
+  expect(
+    Object.keys(localStorage).filter(k => k.includes('__recovery_')).length,
+  ).toBe(1)
 })

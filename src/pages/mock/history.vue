@@ -32,7 +32,7 @@ function formatDate(iso: string): string {
 }
 
 function handleClear() {
-  if (confirm('确定清空所有模考记录吗？')) {
+  if (confirm('确定清空所有模考记录吗？开始屏的“已有交卷记录”提示也会一并清除，进行中草稿不受影响。')) {
     clearMockHistory()
     records.value = []
   }

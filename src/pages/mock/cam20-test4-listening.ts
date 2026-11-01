@@ -7,6 +7,18 @@ import type { ListeningMockTest } from './types'
  * 注意：Q11/Q12、Q13/Q14、Q21/Q22、Q23/Q24 为 "Choose TWO letters" 题，
  * answer 存为下标数组。Q15-Q20 为配对题（write letter A-H），用 map-label 原生格式。
  */
+// Q15 题干里的选项全文（逐字照抄，含原文的 the Introduction 大写 I，
+// 不带字母前缀，渲染层自加字母）：挂到组内每题，答 Q16-20 时选项框亦可见。
+const FOOTBALL_HISTORY_OPTIONS = [
+  'The introduction of pay for the players',
+  'a change to the design of the goal',
+  'the first use of lights for matches',
+  'the Introduction of goalkeepers',
+  'the first International match',
+  'two changes to the rules of the game',
+  'the introduction of a fee for spectators',
+  'an agreement on the length of a game',
+]
 export const cam20Test4Listening: ListeningMockTest = {
   id: 'cam20-test4-listening',
   title: '剑20 Test 4 听力',
@@ -34,12 +46,12 @@ export const cam20Test4Listening: ListeningMockTest = {
       questions: [
         { id: 'Q11-12', type: 'multi-select', question: 'Which TWO things does the speaker say about visiting the football stadium with children? (Choose TWO letters, A–E)', options: ['A Children can get their photo taken with a football player.', 'B There is a competition for children today.', 'C Parents must stay with their children at all times.', 'D Children will need sunhats and drinks.', 'E The cafe has a special offer on meals for children.'], answer: [1, 2] },
         { id: 'Q13-14', type: 'multi-select', question: 'Which TWO features of the stadium tour are new this year? (Choose TWO letters, A–E)', options: ['A VIP tour', 'B 360 cinema experience', 'C audio guide', 'D dressing room tour', 'E tours in other languages'], answer: [0, 2] },
-        { id: 'Q15', type: 'map-label', question: '1870 – Which event in the history of football in the UK took place in this year? (Choose from the box: A. The introduction of pay for the players; B. a change to the design of the goal; C. the first use of lights for matches; D. the Introduction of goalkeepers; E. the first International match; F. two changes to the rules of the game; G. the introduction of a fee for spectators; H. an agreement on the length of a game)', answer: 'D' },
-        { id: 'Q16', type: 'map-label', question: '1874 – Which event in the history of football in the UK took place in this year? (See box in Q15)', answer: 'F' },
-        { id: 'Q17', type: 'map-label', question: '1875 – Which event in the history of football in the UK took place in this year? (See box in Q15)', answer: 'B' },
-        { id: 'Q18', type: 'map-label', question: '1877 – Which event in the history of football in the UK took place in this year? (See box in Q15)', answer: 'H' },
-        { id: 'Q19', type: 'map-label', question: '1878 – Which event in the history of football in the UK took place in this year? (See box in Q15)', answer: 'C' },
-        { id: 'Q20', type: 'map-label', question: '1880 – Which event in the history of football in the UK took place in this year? (See box in Q15)', answer: 'G' },
+        { id: 'Q15', type: 'map-label', question: '1870 – Which event in the history of football in the UK took place in this year? (Choose from the box: A. The introduction of pay for the players; B. a change to the design of the goal; C. the first use of lights for matches; D. the Introduction of goalkeepers; E. the first International match; F. two changes to the rules of the game; G. the introduction of a fee for spectators; H. an agreement on the length of a game)', answer: 'D', options: FOOTBALL_HISTORY_OPTIONS },
+        { id: 'Q16', type: 'map-label', question: '1874 – Which event in the history of football in the UK took place in this year? (See box in Q15)', answer: 'F', options: FOOTBALL_HISTORY_OPTIONS },
+        { id: 'Q17', type: 'map-label', question: '1875 – Which event in the history of football in the UK took place in this year? (See box in Q15)', answer: 'B', options: FOOTBALL_HISTORY_OPTIONS },
+        { id: 'Q18', type: 'map-label', question: '1877 – Which event in the history of football in the UK took place in this year? (See box in Q15)', answer: 'H', options: FOOTBALL_HISTORY_OPTIONS },
+        { id: 'Q19', type: 'map-label', question: '1878 – Which event in the history of football in the UK took place in this year? (See box in Q15)', answer: 'C', options: FOOTBALL_HISTORY_OPTIONS },
+        { id: 'Q20', type: 'map-label', question: '1880 – Which event in the history of football in the UK took place in this year? (See box in Q15)', answer: 'G', options: FOOTBALL_HISTORY_OPTIONS },
       ],
     },
     {

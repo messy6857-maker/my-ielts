@@ -732,7 +732,9 @@ async function submit() {
             </span>
             <button
               v-if="!submitted"
-              class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
+              :disabled="recovery.retired.value"
+              :title="recovery.retired.value ? '退役态下交卷不可用，请用上方横幅按钮处理' : undefined"
+              class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white disabled:cursor-not-allowed hover:bg-blue-700 disabled:opacity-50"
               @click="submit"
             >
               交卷

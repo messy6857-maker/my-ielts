@@ -399,8 +399,16 @@ export function useExamRecovery(options: {
     }
   }
   function submitResult(record: Omit<MockRecord, 'date'>) {
-    if (mismatch() || options.submitted.value || !saveFlush())
+    if (mismatch() || options.submitted.value)
       return null
+    if (!saveFlush()) {
+      // 退役路径不是保存失败：恢复副本已落盘，静默返回会让用户误以为
+      // 已交卷或页面卡死（B2）。此处只报退役提示，不置 recordSaveFailed
+      // 语义；非退役的保存失败仍走 writeDraft 自身的失败文案。
+      if (retired.value && recoverySaved)
+        error.value = '本次作答已退役，交卷未执行；请用上方横幅选择“继续为独立作答”或“保留副本后离开”。'
+      return null
+    }
     options.pause()
     options.submitted.value = true
     let saved = false
@@ -561,6 +569,25 @@ export function useExamRecovery(options: {
           catch {
             error.value
               = '原作答备份失败，未开始新作答。请先导出备份或释放空间。'
+            return false
+          }
+        }
+        else {
+          // 已交卷快照与进行中草稿分 key：先把快照迁移到独立 key，再让
+          // 随后 save() 的新草稿写本会话 key；否则新草稿会原地覆盖快照，
+          // 开始屏“已有交卷记录”提示在同页签开新考后永久丢失（B1）。
+          // 迁移键仍以本会话 key 为前缀，refresh() 的扫描与 submittedDrafts
+          // 口径无需改动；键后缀带 attemptId，多次交卷的快照互不覆盖。
+          try {
+            const id = examAttemptId(old, ownKey)
+            localStorage.setItem(
+              `${ownKey}__submitted_${encodeURIComponent(id)}`,
+              oldRaw,
+            )
+          }
+          catch {
+            error.value
+              = '已交卷快照迁移失败，未开始新作答。请先导出备份或释放空间。'
             return false
           }
         }
