@@ -119,6 +119,7 @@ async function onManualSync() {
 <template>
   <header>
     <nav
+      aria-label="主导航"
       class="fixed z-30 w-full border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800"
     >
       <div class="mx-auto max-w-screen-2xl flex items-center justify-between">
@@ -238,9 +239,11 @@ async function onManualSync() {
           <button
             type="button"
             class="items-center rounded-lg p-2 text-gray-500 md:ml-2 lg:hidden hover:bg-gray-100 dark:text-gray-400 hover:text-gray-900 focus:ring-4 focus:ring-gray-300 dark:hover:bg-gray-700 dark:hover:text-white dark:focus:ring-gray-600"
+            :aria-expanded="showMobileMenu"
+            aria-controls="mobile-menu"
             @click="showMobileMenu = !showMobileMenu"
           >
-            <span class="sr-only">打开菜单</span>
+            <span class="sr-only">{{ showMobileMenu ? '关闭菜单' : '打开菜单' }}</span>
             <svg
               class="h-6 w-6"
               aria-hidden="true"
@@ -258,10 +261,11 @@ async function onManualSync() {
         </div>
       </div>
     </nav>
-    <nav class="bg-white dark:bg-gray-900">
+    <nav aria-label="移动端菜单" class="bg-white dark:bg-gray-900">
       <!-- Mobile menu -->
       <ul
         v-show="showMobileMenu"
+        id="mobile-menu"
         class="mt-0 w-full flex-col pt-16 text-sm font-medium lg:hidden"
       >
         <li

@@ -4,7 +4,7 @@ const errorImage = `${import.meta.env.BASE_URL}404.svg`
 
 <template>
   <div
-    class="mx-auto h-screen flex flex-col items-center justify-center px-6 dark:bg-gray-900 xl:px-0"
+    class="mx-auto min-h-[calc(100vh-4rem)] flex flex-col items-center justify-center px-6 dark:bg-gray-900 xl:px-0"
   >
     <div class="block md:max-w-lg">
       <img :src="errorImage" alt="astronaut image">
