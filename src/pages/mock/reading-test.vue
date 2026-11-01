@@ -17,6 +17,7 @@ import {
   mockQuestionStatus,
   multiSelectScore,
   restoreTimeLeft,
+  showOptionsBox,
   toggleMultiSelectValue,
   totalScorePoints,
 } from './types'
@@ -596,6 +597,12 @@ function switchPassage(index: number) {
               }}
               · {{ Object.values(snapshot.answers).filter(Boolean).length }} 题
               {{
+                snapshot.timeLeft == null
+                  ? ""
+                  : `· 剩余 ${formatCountdown(snapshot.timeLeft)}`
+              }}
+              {{ snapshot.timeLeft === 0 ? "（剩余 0 秒）" : "" }}
+              {{
                 snapshot.activeElsewhere
                   ? "（另一页签可能在使用）"
                   : "（本机保留）"
@@ -772,7 +779,7 @@ function switchPassage(index: number) {
             <!-- 右：题目（独立滚动） -->
             <div class="lg:min-h-0 space-y-4 lg:overflow-y-auto lg:pr-2">
               <div
-                v-for="q in p.questions"
+                v-for="(q, qi) in p.questions"
                 :key="q.id"
                 class="border rounded-xl p-4 dark:border-gray-700"
                 :class="
@@ -874,11 +881,11 @@ function switchPassage(index: number) {
                 >
 
                 <!-- 配对/标注题的选项框：镜像听力页写法（M-Opt4）。阅读数据
-                     已有 map-label options 字段（如 cam18-test2 的 AI_HEALTH_OPTIONS），
-                     下分支实际生效；“按题组只渲染一次”
-                     需改 v-for 分组结构，非零风险，本次不动。 -->
+                     已有 map-label options 字段（如 cam18-test2 的 AI_HEALTH_OPTIONS）。
+                     同一 Part 内连续且选项内容相同的题组只在首题出框
+                     （showOptionsBox，见 types.ts），不改 v-for 分组结构。 -->
                 <div
-                  v-if="q.type === 'map-label' && q.options?.length"
+                  v-if="showOptionsBox(p.questions, qi)"
                   class="mb-2 border border-gray-200 rounded-lg bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-800"
                 >
                   <p class="mb-1 font-bold">

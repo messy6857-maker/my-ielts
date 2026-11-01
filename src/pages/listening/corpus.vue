@@ -141,6 +141,12 @@ const filteredRows = computed(() => {
           <span
             class="text-base font-normal text-gray-500 dark:text-gray-400"
           >{{ curChapter.desc }}</span>
+          <p
+            v-if="keyword.trim()"
+            class="mt-1 text-xs text-gray-400"
+          >
+            搜索结果序号为原章节序号，可能不连续，并非缺行。
+          </p>
         </div>
       </div>
       <div class="overflow-x-auto rounded-lg">
@@ -173,6 +179,9 @@ const filteredRows = computed(() => {
               class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"
             >
               <td class="px-6 py-4">
+                <!-- 搜索态仍显示原章节序号（非连续）：报告建议的两种做法中，
+                     原序号已有回归测试 pin 住，改连续序号会破测试；此处改
+                     以搜索态提示注明口径，消除“缺行”误读。 -->
                 {{ curChapter.rows.indexOf(row) + 1 }}
               </td>
               <td class="px-6 py-4">

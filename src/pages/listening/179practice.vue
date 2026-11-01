@@ -151,6 +151,7 @@ function next(index) {
             自动检查并切换到下一个词
           </li>
           <li>单词之间多个空格，逗号后是否有空格不影响结果判断</li>
+          <li>同义替换须填全部，漏一个即记错</li>
         </ul>
       </div>
       <div class="items-center sm:flex">

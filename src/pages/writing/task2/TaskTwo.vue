@@ -30,7 +30,7 @@ const TASK2_GUIDE = [
   {
     title: '任务回应 Task Response',
     points: [
-      '不少于 250 词（40 分钟），字数不够直接扣分',
+      '不少于 250 词（40 分钟），词数不够直接扣分',
       '完整回应题目所有部分：题干问什么就答什么',
       '立场清晰明确，全文保持一致',
       '每个主要观点都要展开 + 举例/论证支撑，不要只摆观点',
@@ -365,7 +365,7 @@ function checklist(s: EssayStats): { ok: boolean; text: string }[] {
     },
     {
       ok: s.complexRatio >= 0.25,
-      text: `长难句占比 ${(s.complexRatio * 100).toFixed(0)}%（含完整宾语从句、关系从句等从句、完整并列分句及被动语态；规则估算）`,
+      text: `长难句占比 ${(s.complexRatio * 100).toFixed(0)}%（含完整宾语从句、关系从句等从句、完整并列分句及被动语态；规则估算，短并列句不计）`,
     },
     {
       ok: s.avgSentenceLen >= 12 && s.avgSentenceLen <= 25,
@@ -782,7 +782,7 @@ function resumeDraft(promptId: string, versionId?: string) {
           </li>
         </ul>
         <p class="mt-4 text-xs text-gray-400">
-          这是可量化的写作习惯检查，不是雅思官方评分。大作文的论证逻辑和观点展开，还得对照范文自己复盘。
+          这是可量化的写作习惯检查，不是雅思官方评分。大作文的论证逻辑和观点展开，还得对照范文自己复盘。口径说明：平均句长与词汇多样性按纯字母切词统计，词数按空白切分；数字多的作文平均句长会被轻微低估。
         </p>
       </div>
 

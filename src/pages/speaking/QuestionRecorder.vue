@@ -14,6 +14,7 @@ const {
   elapsed,
   transcript,
   transcriptionSupported,
+  transcriptionStopped,
   start,
   stop,
   clear,
@@ -54,6 +55,24 @@ onUnmounted(() => {
         <span
           class="inline-block h-2 w-2 animate-pulse rounded-full bg-red-500"
         />录音中…
+      </span>
+      <span
+        v-if="isRecording && !transcriptionSupported"
+        class="text-xs text-gray-400"
+      >
+        转写不可用
+      </span>
+      <span
+        v-else-if="isRecording && transcriptionStopped"
+        class="text-xs text-amber-600"
+      >
+        转写已停止
+      </span>
+      <span
+        v-else-if="isRecording"
+        class="text-xs text-green-600"
+      >
+        转写进行中
       </span>
       <audio
         v-if="audioUrl && !isRecording && !processing"

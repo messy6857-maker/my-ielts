@@ -90,6 +90,23 @@ export function bandScore(correct: number, total = 40): number {
   return 2.5
 }
 
+/** 配对/标注题选项框是否在本题渲染：同一 Part 内连续且选项内容相同的
+ * 题组只在首题渲染一次（如剑 21 Test3 听力 P3 的 6 题共用一框），其余题
+ * 不再重复渲染整框。上一题非 map-label、无选项或选项内容不同时重新渲染。
+ * 注意：相邻两组选项内容恰好完全相同时，后一组不再重复出框（框仍在
+ * 本页上方可见）；组间以题型或选项变化分隔是常态，此边界可接受。 */
+export function showOptionsBox(questions: MockQuestion[], index: number): boolean {
+  const q = questions[index]
+  if (!q || q.type !== 'map-label' || !q.options?.length)
+    return false
+  if (index === 0)
+    return true
+  const prev = questions[index - 1]
+  if (!prev || prev.type !== 'map-label' || !prev.options?.length)
+    return true
+  return JSON.stringify(prev.options) !== JSON.stringify(q.options)
+}
+
 /** 判分：填空题忽略大小写和首尾空格；多选题用户答案为逗号分隔的下标 */
 export function isCorrect(q: MockQuestion, userAnswer: string): boolean {
   if (q.type === 'fill-blank') {

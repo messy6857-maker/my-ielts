@@ -1,5 +1,5 @@
 // 雅思口语 Part 1 题库（2025-2026 真题，48 话题 / 204 题）
-export interface Part1Topic { id: string; topic: string; topicCn: string; questions: string[] }
+export interface Part1Topic { id: string; topic: string; topicCn: string; questions: string[]; source?: string }
 
 export const PART1_TOPICS: Part1Topic[] = [
   {
@@ -500,7 +500,7 @@ export const PART1_TOPICS: Part1Topic[] = [
   },
   {
     "id": "p1-45",
-    "topic": "social media",
+    "topic": "Social media",
     "topicCn": "社交媒体",
     "questions": [
       "Do you think you spend too much time on social media?",
@@ -521,7 +521,7 @@ export const PART1_TOPICS: Part1Topic[] = [
   },
   {
     "id": "p1-47",
-    "topic": "Films&Cinemas",
+    "topic": "Films & Cinemas",
     "topicCn": "电影",
     "questions": [
       "How often do you watch films?",

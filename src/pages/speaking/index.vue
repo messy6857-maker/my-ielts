@@ -119,6 +119,9 @@ function tabBtn(t: Tab) {
         {{ p1Filtered.length }} 个话题 · 每题回答 20–30
         秒，点话题展开后可录音自测
       </p>
+      <p v-if="!p1Filtered.length" class="mb-3 text-xs text-gray-400">
+        无匹配话题，换个关键词试试
+      </p>
       <div class="space-y-2">
         <div
           v-for="t in p1Filtered"
@@ -204,11 +207,14 @@ function tabBtn(t: Tab) {
       <input
         v-model="p3Keyword"
         placeholder="搜索 Part 3 话题或问题…"
-        class="mb-4 w-full border rounded p-2 dark:bg-gray-800"
+        class="mb-4 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
       >
       <p class="mb-3 text-xs text-gray-400">
         {{ p3Filtered.length }} 个讨论话题 · 回答要有观点 + 解释 +
         例子，可录音自测
+      </p>
+      <p v-if="!p3Filtered.length" class="mb-3 text-xs text-gray-400">
+        无匹配话题，换个关键词试试
       </p>
       <div class="space-y-2">
         <div
@@ -246,5 +252,10 @@ function tabBtn(t: Tab) {
         </div>
       </div>
     </div>
+    <p class="mt-8 text-xs text-gray-400">
+      题库来源：Part 1 整理自 2025–2026 真题题库（趴趴雅思 2025.1–4 题库、厚朴优学、台湾真经）；Part
+      2 含 ielts.international 逐字稿与 ieltsrewind 2026.5–8 新题；Part 3
+      各话题的逐项出处尚未在题库中标注。题目仅供学习参考。
+    </p>
   </div>
 </template>

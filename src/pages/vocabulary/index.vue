@@ -26,12 +26,36 @@ const managedAudio = useAudioGroup()
 
 const CHAPTER_KEY = 'vocabulary_chapter'
 
-const isTrainingModel = ref(false)
-const isShowMeaning = ref(true)
-const isAutoPlayWordAudio = ref(true)
+// 四个开关持久化：练习模式、释义、原词、自动播放，刷新后保持上次选择。
+const SWITCHES_KEY = 'myielts_vocabulary_switches_v1'
+const storedSwitches = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(SWITCHES_KEY) ?? 'null')
+  }
+  catch {
+    return null
+  }
+})()
+const isTrainingModel = ref(storedSwitches?.training ?? false)
+const isShowMeaning = ref(storedSwitches?.meaning ?? true)
+const isAutoPlayWordAudio = ref(storedSwitches?.autoplay ?? true)
 const isOnlyShowErrors = ref(false)
 const isFinishTraining = ref(false)
-const isShowSource = ref(false)
+const isShowSource = ref(storedSwitches?.source ?? false)
+watch(
+  [isTrainingModel, isShowMeaning, isAutoPlayWordAudio, isShowSource],
+  () => {
+    try {
+      localStorage.setItem(SWITCHES_KEY, JSON.stringify({
+        training: isTrainingModel.value,
+        meaning: isShowMeaning.value,
+        autoplay: isAutoPlayWordAudio.value,
+        source: isShowSource.value,
+      }))
+    }
+    catch {}
+  },
+)
 
 const trainingStats = ref('')
 const chapters = Object.keys(vocabulary)
@@ -661,6 +685,12 @@ function copyAllError() {
                             @keydown="onInputKeydown"
                           >
                           <div
+                            v-if="isFinishTraining && item.spellError"
+                            class="text-xs text-gray-500"
+                          >
+                            正确答案：{{ item.word.join(" / ") }}
+                          </div>
+                          <div
                             v-if="item.spellAlternatives?.length > 1"
                             class="text-xs text-amber-700"
                           >
@@ -685,7 +715,7 @@ function copyAllError() {
                           v-if="!isTrainingModel && item.spellAlternatives?.length > 1"
                           class="text-xs text-amber-700"
                         >
-                          该词有两个旧答案未选，请到拼写练习选择保留哪一个。
+                          该词有多个旧答案未选，请到拼写练习选择保留哪一个。
                         </div>
                       </td>
                       <td class="group relative whitespace-nowrap p-4">

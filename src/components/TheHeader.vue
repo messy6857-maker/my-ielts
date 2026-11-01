@@ -120,7 +120,7 @@ async function onManualSync() {
   <header>
     <nav
       aria-label="主导航"
-      class="fixed z-30 w-full border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800"
+      class="fixed left-0 top-0 z-30 w-full border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800"
     >
       <div class="mx-auto max-w-screen-2xl flex items-center justify-between">
         <div class="min-w-0 flex flex-1 items-center justify-start">

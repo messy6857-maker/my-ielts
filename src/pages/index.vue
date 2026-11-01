@@ -72,7 +72,7 @@ const menus = reactive([
     >
       <div class="mx-auto max-w-screen-xl px-4 py-8 lg:px-6 sm:py-16">
         <h1
-          class="mb-16 text-center text-6xl text-gray-900 dark:text-white"
+          class="mb-16 text-center text-4xl text-gray-900 sm:text-6xl dark:text-white"
         >
           坚持练习，稳步提升 <span class="font-bold text-#f00">IELTS</span>
         </h1>

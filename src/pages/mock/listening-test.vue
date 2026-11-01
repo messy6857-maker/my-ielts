@@ -18,6 +18,7 @@ import {
   mockQuestionStatus,
   multiSelectScore,
   restoreTimeLeft,
+  showOptionsBox,
   toggleMultiSelectValue,
   totalScorePoints,
 } from './types'
@@ -445,6 +446,10 @@ watch([submitted, testPair], ([done, pair]) => {
     fetchTranscript()
 })
 async function fetchTranscript() {
+  // 交卷后录音脚本双路加载去重：watch 与 submit() 末尾可能并发各拉一次，
+  // 入口守卫让第二次调用直接返回，只留第一次的请求在飞。
+  if (transcriptLoading.value)
+    return
   const sequence = loadSeq
   const id = testId.value
   transcriptLoading.value = true
@@ -684,6 +689,12 @@ async function submit() {
               }}
               · {{ Object.values(snapshot.answers).filter(Boolean).length }} 题
               {{
+                snapshot.timeLeft == null
+                  ? ""
+                  : `· 剩余 ${formatCountdown(snapshot.timeLeft)}`
+              }}
+              {{ snapshot.timeLeft === 0 ? "（剩余 0 秒）" : "" }}
+              {{
                 snapshot.activeElsewhere
                   ? "（另一页签可能在使用）"
                   : "（本机保留）"
@@ -848,7 +859,7 @@ async function submit() {
             <div>
               <div class="space-y-4">
                 <div
-                  v-for="q in p.questions"
+                  v-for="(q, qi) in p.questions"
                   :key="q.id"
                   class="border rounded-xl p-4 dark:border-gray-700"
                   :class="
@@ -949,9 +960,10 @@ async function submit() {
                     "
                   >
 
-                  <!-- 配对/标注题的选项框（如 Q21-25 的 A-G，印在卷面上，作答时可见） -->
+                  <!-- 配对/标注题的选项框（如 Q21-25 的 A-G，印在卷面上，作答时可见）；
+                       同一 Part 内连续且选项内容相同的题组只在首题出框（showOptionsBox） -->
                   <div
-                    v-if="q.type === 'map-label' && q.options?.length"
+                    v-if="showOptionsBox(p.questions, qi)"
                     class="mb-2 border border-gray-200 rounded-lg bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-800"
                   >
                     <p class="mb-1 font-bold">

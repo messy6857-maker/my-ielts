@@ -1,5 +1,5 @@
 // 雅思口语 Part 3 题库（2025-2026 真题，30 话题 / 161 题）
-export interface Part3Topic { id: string; topic: string; topicCn: string; questions: string[] }
+export interface Part3Topic { id: string; topic: string; topicCn: string; questions: string[]; source?: string }
 
 export const PART3_TOPICS: Part3Topic[] = [
   {

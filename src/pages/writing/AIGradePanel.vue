@@ -6,7 +6,7 @@ import {
   repairSavedGrade,
 } from '~/composables/useAISettings'
 import type { AIGradeResult } from '~/composables/useAISettings'
-import { readJson, useAuth } from '~/composables/useAuth'
+import { readJson, removeJson, useAuth, writeJson } from '~/composables/useAuth'
 import { saveAiArchive } from '~/utils/archives'
 import { onSyncApplied } from '~/composables/syncClient'
 import { diffWords } from '~/composables/useWordDiff'
@@ -36,24 +36,51 @@ const aiResult = ref<AIGradeResult | null>(null)
 const aiError = ref('')
 const gradeStep = ref('')
 
-// AI 结果按账号 + 作文内容持久化，切走再回来仍保留
-function storageKey(): string {
+// AI 结果按账号 + 作文内容持久化，切走再回来仍保留。
+// 哈希由单 32 位换成双 32 位（FNV-1a + djb2）拼接，碰撞概率远低于原版。
+function hashKey(s: string): string {
+  let a = 0x811C9DC5
+  let b = 5381
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i)
+    a = Math.imul(a ^ c, 0x01000193)
+    b = ((b << 5) + b + c) | 0
+  }
+  return `${(a >>> 0).toString(36)}${(b >>> 0).toString(36)}`
+}
+function legacyStorageKey(): string {
   const user = currentUser.value ? `u_${currentUser.value}` : 'guest'
   const s = `${props.task}|${props.question}|${props.essay}`
   let h = 0
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
   return `myielts_${user}_aigrade_v1_${h.toString(36)}`
 }
+function storageKey(): string {
+  const user = currentUser.value ? `u_${currentUser.value}` : 'guest'
+  const s = `${props.task}|${props.question}|${props.essay}`
+  return `myielts_${user}_aigrade_v2_${hashKey(s)}`
+}
 
 function loadSaved(): boolean {
   try {
-    const raw = readJson<unknown>(storageKey(), null)
+    let raw = readJson<unknown>(storageKey(), null)
+    let migrated = false
+    if (!raw) {
+      // 旧 key 迁移：新 key 为空时读旧档，校验通过后写新 key 并清旧档，
+      // 避免同一作文两份存档；新 key 已有残缺档时不回退到旧档。
+      raw = readJson<unknown>(legacyStorageKey(), null)
+      migrated = raw != null
+    }
     if (raw) {
       const parsed = raw as AIGradeResult
       // 残缺存档先补齐再展示：分数无效才丢弃，不再整条丢弃
       const repaired = repairSavedGrade(parsed, props.task)
       if (repaired) {
         aiResult.value = repaired
+        if (migrated) {
+          writeJson(storageKey(), repaired)
+          removeJson(legacyStorageKey())
+        }
         return true
       }
     }

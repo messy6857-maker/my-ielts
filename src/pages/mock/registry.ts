@@ -188,6 +188,11 @@ export const mockTestList = [
 ]
 
 export function loadMockTest(id: string): Promise<MockTestPair> {
-  const loader = loaders[id] ?? loaders['cam21-test1']
+  // 未知 id 不再静默回落到 cam21-test1（会让用户做错套题还不自知）：
+  // 两页的 loadTest 已有 loadError 承接，非法 id 在此之前还会被
+  // mockTestList 守卫拦截并规范化为默认套题；这里抛错只防漏网。
+  const loader = loaders[id]
+  if (!loader)
+    return Promise.reject(new Error(`未知的模考套题：${id}`))
   return loader()
 }

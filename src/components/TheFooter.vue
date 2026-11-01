@@ -10,11 +10,5 @@ const year = new Date().getFullYear()
       &copy; {{ year }} ·
       <span class="text-xs">本站改自开源作品源码，仅用于雅思学习</span>
     </p>
-    <!-- <ul class="flex flex-wrap items-center justify-center">
-      <li><a href="#" class="mr-4 text-sm font-normal text-gray-500 md:mr-6 dark:text-gray-400 hover:underline">Terms</a></li>
-      <li><a href="#" class="mr-4 text-sm font-normal text-gray-500 md:mr-6 dark:text-gray-400 hover:underline">Licensing</a></li>
-      <li><a href="#" class="mr-4 text-sm font-normal text-gray-500 md:mr-6 dark:text-gray-400 hover:underline">Cookie Policy</a></li>
-      <li><a href="#" class="text-sm font-normal text-gray-500 dark:text-gray-400 hover:underline">Contact</a></li>
-    </ul> -->
   </footer>
 </template>

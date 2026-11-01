@@ -117,6 +117,9 @@ function extractKeywords(translation) {
   const seen = new Set()
   const result = []
   for (const w of words) {
+    // 所有格/缩略残片（如 one's、don't）不适合做关键词提示，直接过滤。
+    if (w.includes('\''))
+      continue
     if (w.length < 4 || STOPWORDS.has(w) || seen.has(w))
       continue
     seen.add(w)

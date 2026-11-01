@@ -52,6 +52,9 @@ watch(
   { flush: 'sync' },
 )
 const startTime = ref<number | null>(null)
+// 本章已完成词的累计字符数：WPM 按整章累计算，不再每词重置计时，
+// 避免首字敲击瞬间出现极大值抖动。
+const typedChars = ref(0)
 const wpm = ref(0)
 const accuracy = ref(100)
 const isFinished = ref(false)
@@ -82,6 +85,7 @@ function reset() {
   currentWordIndex.value = 0
   userInput.value = ''
   startTime.value = null
+  typedChars.value = 0
   wpm.value = 0
   accuracy.value = 100
   isFinished.value = false
@@ -160,11 +164,11 @@ function handleInput(e: Event) {
   accuracy.value
     = input.length > 0 ? Math.round((correctChars / input.length) * 100) : 100
 
-  // Calculate WPM (Words Per Minute)
+  // Calculate WPM (Words Per Minute), 整章累计：已完成词字符 + 当前输入
   // Standard: 1 word = 5 characters
   const timeElapsed = (Date.now() - startTime.value) / 1000 / 60 // in minutes
   if (timeElapsed > 0)
-    wpm.value = Math.round(input.length / 5 / timeElapsed)
+    wpm.value = Math.round((typedChars.value + input.length) / 5 / timeElapsed)
 
   // Check if finished
   if (
@@ -195,10 +199,11 @@ function nextWord() {
     })
   }
   wordHadError.value = false
+  // 本词计入累计字符后才进下一词；计时不再每词重置，整章连续计时。
+  typedChars.value += currentWord.value.length
   if (currentWordIndex.value < words.value.length - 1) {
     currentWordIndex.value++
     userInput.value = ''
-    startTime.value = null
     setProgress('typing', currentWordIndex.value, words.value.length)
     playAudio()
   }

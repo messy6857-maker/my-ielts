@@ -245,7 +245,7 @@ onUnmounted(() => {
           </p>
         </div>
         <AIGradeSpeaking
-          v-if="recorder.transcript.value.trim()"
+          v-if="recorder.transcript.value.trim() && !recorder.processing.value"
           part="part2"
           :question="card.title"
           :transcript="recorder.transcript.value"

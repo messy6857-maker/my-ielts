@@ -1,5 +1,5 @@
 // 雅思口语 Part 2 题库（2025-2026 真题 cue cards，50 张）
-export interface Part2Card { id: string; title: string; titleCn: string; category: string; bullets: string[] }
+export interface Part2Card { id: string; title: string; titleCn: string; category: string; bullets: string[]; source?: string }
 
 export const PART2_CARDS: Part2Card[] = [
   {

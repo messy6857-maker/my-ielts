@@ -52,7 +52,7 @@ const scoreTable = [
         <li>4 个小节，每个 10 题，难度递增</li>
         <li>答案是顺序的</li>
         <li>
-          3 种题型
+          主要题型
           <ul class="ml-6 list-disc">
             <li>gap-fill 填空</li>
             <li>multiple choice 选择题（不是多选题，是多个选项选一个）</li>

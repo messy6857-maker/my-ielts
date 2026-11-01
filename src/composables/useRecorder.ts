@@ -13,6 +13,9 @@ export function useRecorder() {
   const error = ref('')
   const elapsed = ref(0)
   const transcript = ref('')
+  // 转写存活指示：致命失败（不可恢复的识别错误、重启失败、启动失败）
+  // 时置 true，录音条据此显示“转写已停止”，避免录完才发现全程无转写。
+  const transcriptionStopped = ref(false)
   const transcriptionSupported = !!(
     (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
   )
@@ -76,6 +79,7 @@ export function useRecorder() {
     active = session
     const sequence = ++generation
     error.value = ''
+    transcriptionStopped.value = false
     starting.value = true
     let acquired: MediaStream | null = null
     try {
@@ -174,6 +178,7 @@ export function useRecorder() {
               // 否则 onend 不再重启，本轮后续说话再也不转写。
               if (event.error !== 'no-speech' && event.error !== 'aborted') {
                 healthy = false
+                transcriptionStopped.value = true
                 error.value = `语音转写失败（${event.error || '未知错误'}），录音仍可回放；停止后可重录`
               }
             }
@@ -197,6 +202,7 @@ export function useRecorder() {
                   }
                   catch {
                     healthy = false
+                    transcriptionStopped.value = true
                     error.value = '语音转写已停止（无法自动恢复），录音仍在继续；停止录音后可重录'
                   }
                 }, 300)
@@ -206,6 +212,7 @@ export function useRecorder() {
           recognizer.start()
         }
         catch {
+          transcriptionStopped.value = true
           error.value = '语音转写无法启动，录音仍可正常回放'
         }
       }
@@ -276,6 +283,7 @@ export function useRecorder() {
     elapsed,
     transcript,
     transcriptionSupported,
+    transcriptionStopped,
     start,
     stop,
     clear,

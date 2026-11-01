@@ -199,7 +199,7 @@ function buildPrompt(
     = taskLabel === 'Task 1'
       ? '任务完成情况(Task Achievement)'
       : '任务回应(Task Response)'
-  const system = `你是雅思写作${taskLabel}考官，必须严格依据以下官方评分标准（IELTS Writing Band Descriptors）打分：
+  const system = `你是雅思写作${taskLabel}考官，必须严格依据以下官方评分标准（IELTS Writing Band Descriptors，May 2023 版）打分：
 
 ${descriptors}
 

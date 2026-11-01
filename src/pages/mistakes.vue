@@ -275,13 +275,13 @@ function confirmClearLegacyListening() {
                         class="mr-2 underline"
                         @click="assignLegacyActivity(item.key, 'flashcard')"
                       >
-                        归入单词自测
+                        重新归入单词自测
                       </button>
                       <button
                         class="underline"
                         @click="assignLegacyActivity(item.key, 'vocabulary')"
                       >
-                        归入词汇拼写
+                        重新归入词汇拼写
                       </button>
                     </div>
                   </td>

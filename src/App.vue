@@ -111,6 +111,10 @@ watch(storageFailures, () => {
       class="relative mx-auto h-full w-full max-w-screen-2xl overflow-y-auto bg-gray-50 dark:bg-gray-900 dark:text-white"
     />
   </div> -->
+  <!-- 注意：外层 overflow-hidden + 内层 h-full overflow-y-auto 实际并不滚动，
+    页面走 body 滚动；且 overflow-hidden 会截断后代 position: sticky，需要
+    sticky 的页面须走 body class workaround（见模考听力页）。不要误以为
+    内层是滚动区，也不要轻易简化此结构。 -->
   <div
     class="flex flex-1 overflow-hidden bg-gray-50 pb-16 leading-8 dark:bg-gray-900"
   >

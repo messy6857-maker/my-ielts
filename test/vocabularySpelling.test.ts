@@ -158,3 +158,56 @@ it('B4: 忽略大小写关闭时，大小写敏感着色保持不变', async () 
   expect(spans[0].classes()).not.toContain('text-green-500')
   expect(spans[1].classes()).toContain('text-green-500')
 })
+
+it('O1: 完成练习后错词旁直接显示正确答案', async () => {
+  const w = mountSpelling()
+  await flushPromises()
+  await setTraining(w, true)
+  await spellInput(w, 1).setValue('atmospher')
+  const finish: any = w.findAll('button').find((b: any) => b.text() === '完成练习')
+  expect(finish).toBeTruthy()
+  await finish.trigger('click')
+  await nextTick()
+  expect(w.text()).toContain('正确答案：atmosphere')
+})
+
+it('O2: 四个开关持久化，重新挂载后保持上次选择', async () => {
+  const w = mountSpelling()
+  await flushPromises()
+  await setTraining(w, true)
+  await nextTick()
+  const stored = JSON.parse(
+    localStorage.getItem('myielts_vocabulary_switches_v1') ?? 'null',
+  )
+  expect(stored?.training).toBe(true)
+  w.unmount()
+  const w2 = mountSpelling()
+  await flushPromises()
+  const label: any = w2.findAll('label').find((l: any) => l.text().includes('练习模式'))
+  expect(label).toBeTruthy()
+  expect((label.find('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
+})
+
+it('O3: 打字 WPM 按整章累计，不再每词重置', async () => {
+  vi.useFakeTimers()
+  try {
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 0, 0))
+    const w = mountTyping()
+    await nextTick()
+    const input = w.find('input[type="text"]')
+    await input.setValue('atmosphere')
+    await vi.advanceTimersByTimeAsync(200)
+    await nextTick()
+    vi.setSystemTime(new Date(2026, 9, 27, 12, 1, 0))
+    await input.setValue('x')
+    await nextTick()
+    // WPM 值是唯一的 text-blue-500 大数字（准确率是红/绿），直接按它定位。
+    const wpmValue: any = w.find('.text-2xl.text-blue-500')
+    expect(wpmValue.exists()).toBe(true)
+    // 已完成词 10 字符 + 当前 1 字符，耗时 1 分钟：(10+1)/5/1 = 2.2 → 2
+    expect(wpmValue.text()).toBe('2')
+  }
+  finally {
+    vi.useRealTimers()
+  }
+})

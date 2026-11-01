@@ -1008,7 +1008,7 @@ export const CRITERION_GUIDE: {
     key: 'gra',
     title: '语法多样性与准确性 Grammatical Range & Accuracy',
     points: [
-      '长短句结合，多用复合句：定语从句、状语从句、被动语态',
+      '长短句结合，多用复合句：定语从句、状语从句、宾语从句、被动语态',
       '时态准确（多用过去时描述过去数据）',
       '标点规范，避免中式逗号一逗到底',
     ],

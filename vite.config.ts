@@ -70,8 +70,8 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes('pages/vocabulary/vocabulary.'))
             return 'vocabulary-data'
-          if (id.includes('pages/vocabulary/wordSentences.'))
-            return 'word-sentences-data'
+          // word-sentences-data 规则已删：wordSentences.ts 在应用内仅被
+          // import type 引用（构建时擦除），该规则从不产生 chunk。
           return undefined
         },
       },

@@ -70,8 +70,8 @@ const sentences = [
     no: 10,
     sentence: '有些公共服务很难做到收支平衡',
     translationFromBook: 'Some public services have problems in breaking even',
-    chatgpt: 'Some public services are challenging to achieve a balance between revenue and expenses/Some public services find it challenging to break even',
-    remark: 'break even 收支平衡',
+    chatgpt: 'Some public services find it challenging to break even',
+    remark: 'break even 收支平衡；另一译法：Some public services are challenging to achieve a balance between revenue and expenses',
   },
   {
     no: 11,

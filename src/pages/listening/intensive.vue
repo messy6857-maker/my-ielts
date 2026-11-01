@@ -6,6 +6,9 @@ import { transcriptSentenceEntries } from '../../utils/text'
 import { resolveMediaUrl } from '../../composables/useAudio'
 
 const mediaError = ref('')
+// 点读 TTS 失败提示：与上方 mediaError 同款式；取消朗读触发的 onerror
+// 因 sequence 已过期而跳过，不会误报。
+const ttsError = ref('')
 const mediaRoot = ref<HTMLElement | null>(null)
 function retryMedia() {
   mediaError.value = ''
@@ -77,6 +80,11 @@ function playSentence(idx: number) {
   const s = sentences.value[idx]
   if (!s)
     return
+  if (typeof speechSynthesis === 'undefined') {
+    ttsError.value = '当前浏览器不支持语音朗读，点读暂不可用，可改用上方原录音对照原文。'
+    return
+  }
+  ttsError.value = ''
   // 先暂停原录音，再朗读本句，避免两路叠加
   audioEl.value?.pause()
   playbackGeneration++
@@ -92,8 +100,10 @@ function playSentence(idx: number) {
       speakingIndex.value = -1
   }
   u.onerror = () => {
-    if (sequence === playbackGeneration)
+    if (sequence === playbackGeneration) {
       speakingIndex.value = -1
+      ttsError.value = '语音朗读失败（可能无可用语音包），点读暂不可用，可改用上方原录音对照原文。'
+    }
   }
   speechSynthesis.speak(u)
 }
@@ -184,6 +194,13 @@ function setRate(r: number) {
       <button class="underline" @click="retryMedia">
         重试
       </button>
+    </p>
+    <p
+      v-if="ttsError"
+      role="alert"
+      class="my-3 border border-amber-300 rounded p-3 text-sm text-amber-800 dark:text-amber-300"
+    >
+      {{ ttsError }}
     </p>
     <div class="mb-4">
       <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
@@ -316,7 +333,7 @@ function setRate(r: number) {
 
     <p class="mt-4 text-xs text-gray-400">
       建议用法：先盲听 1–2
-      遍做题，再开原文逐句精听，把没听出来的地方标出来跟读。
+      遍做题，再开原文逐句精听，把没听出来的地方标出来，跟读浏览器朗读。
     </p>
   </div>
 </template>

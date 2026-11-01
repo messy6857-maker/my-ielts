@@ -178,6 +178,10 @@ export const useSync = createGlobalState(() => {
     errorMsg.value = ''
     lastSyncAt.value = Date.now()
     status.value = pending(owner) ? 'idle' : 'ok'
+    // 拉取成功且本机有 pending 推送时调度一次补推：426/401 恢复后 pending
+    // 数据不再等下一次本地写或 pagehide 才补推；无 pending 时不额外推。
+    if (pending(owner))
+      schedulePush()
     return true
   }
   function schedulePush(key?: string) {
