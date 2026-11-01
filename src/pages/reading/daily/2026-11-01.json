@@ -1,0 +1,299 @@
+{
+  "date": "2026-11-01",
+  "newsReadings": [
+    {
+      "title": "A Deal in Yerevan, but the Bill for Nature Remains Unpaid",
+      "source": "Reuters, 'Countries reach COP17 deal to speed up biodiversity action, but money still short,' 31 October 2026",
+      "passage": "After two weeks of negotiations that ran through the night in Armenia's capital, governments at the United Nations biodiversity conference known as COP17 have agreed to accelerate action to protect the natural world, while conceding that the finance needed to deliver on their promises remains elusive. The decision, dubbed the Yerevan Pathway, emerged from the first global review of the Global Biodiversity Framework adopted in Montreal four years ago — a framework that set ambitious goals for 2030, including conserving 30 per cent of land, inland waters and coastal areas, restoring 30 per cent of degraded ecosystems, and mobilising $200 billion a year for nature. Delegates acknowledged that, although nearly 90 per cent of parties to the convention had set national targets, the world remains off track on almost all of them.\n\nThe significance of the Yerevan agreement lies less in any single new target than in its attempt to close the gap between pledges and implementation. Governments committed to faster action on reducing harmful subsidies — incentives, estimated in the hundreds of billions of dollars annually, that encourage deforestation, overfishing and the intensive use of fertilisers — with the existing goal of cutting such incentives by at least $500 billion a year by 2030 now given renewed urgency. They also agreed to align national spending more closely with biodiversity goals and to increase finance for developing countries, where much of the world's remaining species richness is concentrated but where conservation budgets are thinnest. Organisers reported that more than $1.8 billion in finance from governments, philanthropies and investors was announced during the conference, a sum welcomed by negotiators but dwarfed by the scale of the shortfall.\n\nThat shortfall frames the central tension of the talks. Biodiversity loss is often described as a quieter crisis than climate change, yet its consequences are no less profound: the collapse of pollinator populations threatens crop yields, the degradation of wetlands removes natural defences against floods, and the erosion of genetic diversity narrows humanity's options for breeding crops and developing medicines. Unlike a single, easily measured quantity such as atmospheric temperature, however, biodiversity resists simple accounting. A forest can appear intact from satellite imagery while its largest mammals have already vanished; a coral reef can retain its structure while the fish communities that sustain local livelihoods have collapsed. This complexity makes both target-setting and verification unusually difficult, and it gives reluctant governments room to claim progress that field evidence does not support.\n\nCritics of the outcome therefore argue that the Yerevan Pathway, for all its language of acceleration, still rests on voluntary national action without a binding enforcement mechanism. The real test, as one observer quoted in conference coverage put it, will be measured not by the declarations adopted in Yerevan but by what governments implement before COP18, which delegates agreed would be held in Quito, Ecuador, in 2028. Between now and then, national plans must be translated into budgets, land-use decisions and subsidy reforms — precisely the domestic choices that previous rounds of negotiation have repeatedly deferred. The conference also unfolded against a fractious political backdrop, with attention in many capitals consumed by economic pressures and the climate talks due to open in Turkey on 9 November, raising the risk that biodiversity will once again slip down the agenda.\n\nSupporters counter that the review process itself represents progress. Four years ago, the Montreal framework was criticised as aspirational; today, the fact that almost every country has at least articulated a national target, and that a formal stocktake has publicly identified the shortfalls, creates a baseline against which future claims can be judged. The $1.8 billion announced in Yerevan, while modest against the $200 billion annual goal, signals that private and philanthropic capital is beginning to treat nature as an investable asset rather than a charitable afterthought — through mechanisms such as biodiversity credits and debt arrangements linked to conservation outcomes. Whether such instruments can scale without displacing indigenous communities or reducing ecosystems to tradable units remains an open and fiercely debated question.\n\nUltimately, the Yerevan deal captures both the promise and the pathology of multilateral environmental diplomacy: an ability to forge consensus language at planetary scale, coupled with a chronic reluctance to attach money and legal force to that language. The species and ecosystems at stake do not negotiate, and they do not wait for the next conference cycle. If the pathway agreed in Armenia is to mean more than its predecessors, the decisive negotiations will not take place in conference halls at all, but in finance ministries, agricultural departments and planning offices, where the subsidies are set, the budgets are written, and the land is actually used.",
+      "notes": [
+        {
+          "word": "biodiversity",
+          "pos": "n.",
+          "meaning": "生物多样性"
+        },
+        {
+          "word": "framework",
+          "pos": "n.",
+          "meaning": "框架；体系"
+        },
+        {
+          "word": "subsidy",
+          "pos": "n.",
+          "meaning": "补贴；津贴"
+        },
+        {
+          "word": "ecosystem",
+          "pos": "n.",
+          "meaning": "生态系统"
+        },
+        {
+          "word": "degraded",
+          "pos": "adj.",
+          "meaning": "退化的；恶化的"
+        },
+        {
+          "word": "mobilise",
+          "pos": "v.",
+          "meaning": "调动；动员"
+        },
+        {
+          "word": "delegate",
+          "pos": "n.",
+          "meaning": "代表；代表团成员"
+        },
+        {
+          "word": "incentive",
+          "pos": "n.",
+          "meaning": "刺激；鼓励；奖励"
+        },
+        {
+          "word": "conservation",
+          "pos": "n.",
+          "meaning": "保护；保存"
+        },
+        {
+          "word": "pollinator",
+          "pos": "n.",
+          "meaning": "传粉者；授粉昆虫"
+        },
+        {
+          "word": "verification",
+          "pos": "n.",
+          "meaning": "核实；验证"
+        },
+        {
+          "word": "philanthropy",
+          "pos": "n.",
+          "meaning": "慈善事业"
+        },
+        {
+          "word": "indigenous",
+          "pos": "adj.",
+          "meaning": "土著的；本地的"
+        },
+        {
+          "word": "multilateral",
+          "pos": "adj.",
+          "meaning": "多边的；多国的"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What was the main purpose of the COP17 review in Yerevan?",
+          "options": [
+            "To set the first ever biodiversity targets.",
+            "To review progress under the Montreal framework and agree faster action.",
+            "To allocate $200 billion to a single conservation fund.",
+            "To postpone all biodiversity targets until 2028."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "According to the passage, why is biodiversity loss difficult to measure?",
+          "options": [
+            "Because no country collects any data on species.",
+            "Because ecosystems can look intact while key species have already disappeared.",
+            "Because satellites cannot observe forests at all.",
+            "Because biodiversity only affects remote wilderness areas."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The $1.8 billion announced at the conference is presented as:",
+          "options": [
+            "Sufficient to meet the annual $200 billion goal.",
+            "A welcome but small sum compared with the shortfall.",
+            "Money already spent on restoration projects.",
+            "Funding restricted to Armenia."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Critics argue the Yerevan Pathway is weakened by:",
+          "options": [
+            "The absence of any agreed targets.",
+            "The lack of a binding enforcement mechanism.",
+            "The refusal of developing countries to attend.",
+            "A ban on private investment in nature."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The next biodiversity conference, COP18, is scheduled to be held in:",
+          "options": [
+            "Montreal",
+            "Yerevan",
+            "Quito",
+            "Ankara"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "The passage states that nearly 90% of parties to the convention had set national targets.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The passage states that biodiversity credits have already solved the finance gap for nature.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        }
+      ]
+    },
+    {
+      "title": "When the AI Boom Meets the Balance Sheet",
+      "source": "TechCrunch, 'Cracks are emerging in the AI spending boom,' 30 October 2026; Nasdaq market reports, 30 October 2026",
+      "passage": "For much of the past three years, Wall Street treated spending on artificial intelligence as an unqualified virtue: the more a technology company invested in data centres, chips and power, the more its shares were rewarded. In the final week of October 2026, that logic abruptly reversed. The Nasdaq fell 2.9 per cent on 30 October and stood 7.8 per cent below its closing high of 6 October, after quarterly results revealed the sheer scale of the buildout — Alphabet, Amazon, Meta and Microsoft have outlined capital expenditure plans exceeding $740 billion for the year — and investors began to ask, with new urgency, when such spending would generate commensurate returns. The question is no longer whether artificial intelligence matters, but whether the current pace of investment is financially sustainable.\n\nThe numbers behind the unease are striking. Amazon alone spent more than $77 billion in a single quarter, while Microsoft borrowed $25 billion and reported total quarterly revenue of $92.3 billion against Alphabet's $127.6 billion. Cloud demand, on the surface, remains robust: Google Cloud revenue grew 103 per cent to $30.7 billion, and Microsoft's Azure revenue rose 48 per cent to $33.2 billion. Yet several of the largest spenders also reported negative free cash flow, meaning that after capital expenditure, less cash remained than the market had assumed. For investors who had justified towering valuations on the premise that AI investment would quickly pay for itself, the combination of record spending and thinning cash buffers was a jolt — not evidence that the technology had failed, but that its economics operate on a longer and less certain timetable than equity prices had implied.\n\nThe strain is not confined to the technology sector itself. An analysis by Apollo Global Management published on 31 October found that non-technology companies are struggling to convert AI spending into profit: while the seven largest technology firms enjoy rising profit margins and revenue per worker, margins across the remaining 493 companies in the S&P 500 have remained essentially flat, even as they too face mounting costs for computing infrastructure, electricity and water for data centres. CoreWeave, a prominent provider of AI computing capacity, has accumulated debts exceeding $50 billion. Elon Musk has warned that AI cloud companies face a future defined by consolidation and failure, a prediction that, whether or not it proves accurate, captures a mood in which abundance of capital no longer guarantees survival.\n\nThere are, however, reasons to resist a simple narrative of a bursting bubble. The semiconductor index, though down almost 15.5 per cent in October, remains up 50 per cent for the year; South Korea's equity market, heavily exposed to AI hardware exports, fell more than 16 per cent in October yet is still up roughly 36 per cent year to date, and Taiwan's Taiex is up about 56 per cent. These figures suggest a correction within a continuing expansion rather than a collapse — a repricing of risk, in which investors distinguish more carefully between companies with durable revenue and those whose growth depends on continuous fundraising. Analysts also note that infrastructure built today, from fibre networks to power generation, may support applications that do not yet exist, much as the overbuilding of telecom networks in the late 1990s eventually underpinned the mobile internet, albeit after painful losses for early investors.\n\nWhat has changed, arguably, is the burden of proof. In the early phase of the boom, announcements of larger data centres were sufficient to lift share prices; now, companies are expected to demonstrate a credible path from capacity to cash flow, to explain how energy constraints will be managed, and to show that customers beyond the technology industry itself are deriving measurable value. Some firms are already adapting: one major company cut its latest funding target by $10 billion to about $20 billion, with its desired valuation reduced from $1.4 trillion to $1.25 trillion, in what market commentators described as the clearest sign yet that the October rout had reached even the most highly valued private companies. Others are exploring more efficient models, smaller systems and shared infrastructure, trading raw scale for sustainability.\n\nThe broader lesson extends beyond finance. Technological revolutions rarely proceed at the pace their first enthusiasts project, and the gap between investment and return is where both fortunes and expectations are most often lost. If the AI buildout follows the pattern of earlier infrastructure waves, the ultimate winners may not be those who spent fastest in 2026, but those who matched spending to genuine demand, managed energy and debt prudently, and survived long enough for the applications — and the profits — to arrive. For now, the market's message is neither euphoria nor despair, but a demand for evidence: show, in numbers rather than narratives, that the machines being built are worth what they cost.",
+      "notes": [
+        {
+          "word": "capital expenditure",
+          "pos": "n.",
+          "meaning": "资本支出"
+        },
+        {
+          "word": "infrastructure",
+          "pos": "n.",
+          "meaning": "基础设施"
+        },
+        {
+          "word": "commensurate",
+          "pos": "adj.",
+          "meaning": "相称的；相当的"
+        },
+        {
+          "word": "sustainable",
+          "pos": "adj.",
+          "meaning": "可持续的"
+        },
+        {
+          "word": "revenue",
+          "pos": "n.",
+          "meaning": "收入；收益"
+        },
+        {
+          "word": "margin",
+          "pos": "n.",
+          "meaning": "利润率；差额"
+        },
+        {
+          "word": "consolidation",
+          "pos": "n.",
+          "meaning": "合并；整合"
+        },
+        {
+          "word": "valuation",
+          "pos": "n.",
+          "meaning": "估值；估价"
+        },
+        {
+          "word": "correction",
+          "pos": "n.",
+          "meaning": "（股市）回调；修正"
+        },
+        {
+          "word": "repricing",
+          "pos": "n.",
+          "meaning": "重新定价"
+        },
+        {
+          "word": "premise",
+          "pos": "n.",
+          "meaning": "前提；假设"
+        },
+        {
+          "word": "euphoria",
+          "pos": "n.",
+          "meaning": "欣快；过度兴奋"
+        },
+        {
+          "word": "prudent",
+          "pos": "adj.",
+          "meaning": "谨慎的；明智的"
+        },
+        {
+          "word": "infrastructure wave",
+          "pos": "n.",
+          "meaning": "基建浪潮"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What triggered the Nasdaq fall described in the passage?",
+          "options": [
+            "A decline in cloud revenue across all major firms.",
+            "Investor concern about the scale of AI spending relative to returns.",
+            "A ban on data centre construction.",
+            "Falling demand for semiconductors in Asia."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "According to the passage, Google Cloud and Azure revenues in the latest quarter:",
+          "options": [
+            "Both declined sharply.",
+            "Grew strongly despite the market sell-off.",
+            "Were not disclosed.",
+            "Fell below $10 billion each."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The Apollo Global Management analysis found that, outside the largest technology firms:",
+          "options": [
+            "Profit margins have risen faster than in tech.",
+            "Margins for the other S&P 500 companies remained essentially flat.",
+            "Non-tech firms have stopped spending on AI.",
+            "Revenue per worker doubled."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The passage compares the AI buildout to the telecom overbuilding of the late 1990s to suggest that:",
+          "options": [
+            "Infrastructure investment always fails.",
+            "Today's infrastructure may later support applications not yet imagined.",
+            "Telecom companies are the main AI investors.",
+            "Mobile internet profits arrived immediately."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What does the passage say has changed for AI companies seeking investment?",
+          "options": [
+            "They no longer need to disclose spending.",
+            "They must now demonstrate a credible path from capacity to cash flow.",
+            "Share prices rise on announcements alone.",
+            "Energy constraints have been eliminated."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The passage states that the Nasdaq on 30 October stood 7.8% below its 6 October closing high.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The passage states that the AI spending boom has definitively collapsed.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        }
+      ]
+    }
+  ]
+}
