@@ -311,6 +311,35 @@ const IRREGULAR_PAST = [
   'showed',
   'recorded',
 ]
+// 不规则过去分词（被动语态用）：taken/built/shown/given 等不以 -ed 结尾，
+// -ed 正则漏计；与 IRREGULAR_PAST 区分（took≠taken、gave≠given、saw≠seen）。
+const IRREGULAR_PARTICIPLES = [
+  'taken',
+  'built',
+  'shown',
+  'given',
+  'made',
+  'found',
+  'written',
+  'spoken',
+  'chosen',
+  'broken',
+  'brought',
+  'bought',
+  'caught',
+  'taught',
+  'sold',
+  'sent',
+  'kept',
+  'held',
+  'seen',
+  'done',
+  'read',
+]
+// 被动语态判定：be 动词 + 规则 -ed 分词或不规则过去分词（无 /g，避免 test 有状态）
+const PASSIVE_RE = new RegExp(
+  `\\b(is|are|was|were|be|been|being)\\s+(\\w+ed|${IRREGULAR_PARTICIPLES.join('|')})\\b`,
+)
 // 常见现在时实义动词。注意 rise / fall / increase 等兼作名词：
 // 只有当前置词不是冠词、形容词、介词时才算谓语（排除 the sharp rise、
 // a fall in sales 这类名词短语），否则逗号短语会被误判为完整分句。
@@ -575,6 +604,10 @@ function hasTrueSubordinateClause(sentence: string): boolean {
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i]
     if (t === 'that') {
+      // 句首 that 只能是指示代词主语（That rose in 2020. / That was the
+      // highest figure.），不可能是宾语/关系从句（后两者前面必有主句或先行词）
+      if (i === 0)
+        continue
       // Object clauses and relative clauses both contribute grammatical complexity.
       if (clauseAfter(i, true))
         return true
@@ -662,7 +695,7 @@ export function analyzeEssay(text: string): EssayStats {
     const sl = ` ${s.toLowerCase()} `
     const hasSub = COMPLEX_MARKERS.some(m => sl.includes(` ${m} `))
     const hasTrueClause = hasTrueSubordinateClause(s)
-    const hasPassive = /\b(is|are|was|were|be|been|being)\s+\w+ed\b/.test(sl)
+    const hasPassive = PASSIVE_RE.test(sl)
     const commaClause = hasCommaClause(s)
     if (hasSub || hasTrueClause || hasPassive || commaClause)
       complexCount++

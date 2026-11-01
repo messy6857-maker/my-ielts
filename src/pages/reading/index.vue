@@ -47,6 +47,8 @@ function speakFallback(word) {
   speechSynthesis.speak(u)
 }
 function play(word) {
+  // 星号词（that* 等）的 * 只作界面标记：发音接口与 TTS 都不认 *，先去掉
+  const clean = word.replace(/\*/g, '')
   if (audio) {
     audio.pause()
     audio.currentTime = 0
@@ -58,11 +60,11 @@ function play(word) {
     if (fellBack)
       return
     fellBack = true
-    speakFallback(word)
+    speakFallback(clean)
   }
   audio = managedAudio.create()
   // 含空格/特殊字符的短语需编码，否则有道接口取不到音
-  audio.src = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=1`
+  audio.src = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(clean)}&type=1`
   audio.onerror = fallback
   const p = audio.play()
   if (p)
@@ -183,7 +185,7 @@ function play(word) {
                     <a
                       class="hover:underline"
                       :title="`在剑桥词典中查询 ${w[1]}`"
-                      :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${w[1]}`"
+                      :href="`https://dictionary.cambridge.org/dictionary/english-chinese-simplified/${w[1].replace(/\*/g, '')}`"
                       target="_blank" rel="noopener noreferrer"
                     >{{ w[1] }}</a>
                   </th>
@@ -194,6 +196,7 @@ function play(word) {
                       <br v-if="i">
                       {{ pos }}
                     </template>
+                    <span v-if="!w[2].join(' ').trim()">短语</span>
                   </td>
                   <td class="px-6 py-4">
                     <template v-for="(meaning, i) in w[3]" :key="i">

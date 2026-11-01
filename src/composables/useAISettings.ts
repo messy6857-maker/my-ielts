@@ -279,6 +279,17 @@ export function normalizeTask2Grade(parsed: AIGradeResult): AIGradeResult {
   return parsed
 }
 const ESSAY_CRITERIA = ['ta', 'cc', 'lr', 'gra'] as const
+/** 0.5 分制取整：6.25 → 6.5、6.75 → 7.0（overall 与均值不一致时重算用）。 */
+export function roundHalf(v: number): number {
+  return Math.round(v * 2) / 2
+}
+/** 四项均值（Task 2 首项接受 tr 或 ta）。 */
+function essayMean(s: Record<string, unknown>, task: 'task1' | 'task2'): number {
+  const first = task === 'task2' ? (s.ta ?? s.tr) : s.ta
+  return (
+    (first as number) + (s.cc as number) + (s.lr as number) + (s.gra as number)
+  ) / 4
+}
 /** 雅思 band 量表分数：有限数字且在 [0, 9] 内。prompt 写 4.0-9.0，但不收紧到 4-9，
  *  模型可能给 4 分以下；12、0 以下、负数、NaN 之类的一律不算合法分数。 */
 export function isBandScore(v: unknown): v is number {
@@ -298,7 +309,7 @@ function isValidCorrection(c: unknown): c is AICorrection {
 }
 /** 写作新批改入口校验：四项分数与 overall 须为 [0, 9] 内有限数字、四项点评须为字符串、
  *  corrections 须为数组且每个元素结构合法、suggestion 须为字符串、rewritten 若存在须为字符串；
- *  Task 2 首项接受 tr 或 ta。 */
+ *  Task 2 首项接受 tr 或 ta；overall 与四项均值差 ≥ 1.0 时判格式异常（面板不展示自相矛盾的总分）。 */
 export function isValidEssayGrade(
   parsed: unknown,
   task: 'task1' | 'task2',
@@ -323,6 +334,8 @@ export function isValidEssayGrade(
     || !isBandScore(s.overall)
   )
     return false
+  if (Math.abs((s.overall as number) - essayMean(s, task)) >= 1.0)
+    return false
   if (
     typeof firstComment !== 'string'
     || typeof c.cc !== 'string'
@@ -342,6 +355,7 @@ export function isValidEssayGrade(
 }
 /** 老存档修复：分数本身无效（缺项/非数字/超 [0, 9] 范围）才丢弃；点评缺失的补空值、
  *  逐句修改过滤掉不合格元素、总建议缺失补空值后展示，不再像以前那样整条丢弃。
+ *  overall 与四项均值差 ≥ 1.0 时重算为均值（roundHalf），不展示自相矛盾的总分；
  *  rewritten 非字符串时置空（面板 v-if 为假即隐藏改写区）；advice/rewritten 本就是可选字段。 */
 export function repairSavedGrade(
   parsed: AIGradeResult,
@@ -355,6 +369,8 @@ export function repairSavedGrade(
     || !isBandScore(s.overall)
   )
     return null
+  if (Math.abs((s.overall as number) - essayMean(s, task)) >= 1.0)
+    s.overall = roundHalf(essayMean(s, task))
   const c = (
     p.comments && typeof p.comments === 'object' ? p.comments : {}
   ) as Record<string, string>
@@ -415,6 +431,7 @@ ${SPEAKING_DESCRIPTORS}
 重要说明：
 - 发音(Pronunciation)无法从文字评估，不要打分，overall 按三项综合估算。
 - 转写文本没有标点/大小写问题，不要因此扣分；关注内容、词汇、句式。
+- 注意：语音转写通常会丢弃 um/uh 等填充词，且不记录停顿时长；流利度只能按文字稿的连贯与展开程度估算，不要断言录音中实际的停顿、重复频率。
 - 每项按0.5分制（4.0-9.0）。
 
 严格按以下 JSON 格式返回（不要输出其他内容）：
@@ -424,6 +441,42 @@ ${SPEAKING_DESCRIPTORS}
 "suggestion": "整体提分建议（中文，2-3句，指出最该优先改的一项）"
 }
 其中 fluency=流利度与连贯性，lexical=词汇资源，grammar=语法多样性与准确性。全部用中文（引用考生原话时保留英文）。`
+/** 口语结果形状校验（新评分入口与存档恢复共用同一口径）：
+ *  四项齐全且为 [0, 9] 内有限数字、0.5 步进、overall 与三项均值差 < 1.0、
+ *  三项点评为字符串、提分建议为非空字符串；任一项不合格即视为格式异常。 */
+export function isValidSpeakingGrade(
+  parsed: unknown,
+): parsed is AISpeakingResult {
+  if (!parsed || typeof parsed !== 'object')
+    return false
+  const p = parsed as Partial<AISpeakingResult>
+  const s = p.scores
+  if (!s)
+    return false
+  if (
+    !isBandScore(s.overall)
+    || !isBandScore(s.fluency)
+    || !isBandScore(s.lexical)
+    || !isBandScore(s.grammar)
+  )
+    return false
+  const scores = [s.overall, s.fluency, s.lexical, s.grammar]
+  if (scores.some(v => Math.abs(v * 2 - Math.round(v * 2)) >= 1e-9))
+    return false
+  const mean = (s.fluency + s.lexical + s.grammar) / 3
+  if (Math.abs(s.overall - mean) >= 1.0)
+    return false
+  if (
+    !p.comments
+    || typeof p.comments.fluency !== 'string'
+    || typeof p.comments.lexical !== 'string'
+    || typeof p.comments.grammar !== 'string'
+  )
+    return false
+  if (typeof p.suggestion !== 'string' || !p.suggestion.trim())
+    return false
+  return true
+}
 export async function gradeSpeakingWithAI(
   question: string,
   transcript: string,
@@ -444,18 +497,9 @@ export async function gradeSpeakingWithAI(
   catch {
     throw new Error('AI 返回格式异常，请重试')
   }
-  // 入口校验四项齐全：缺项时面板 toFixed 会崩溃，必须在这里拦住；分数复用写作侧 isBandScore 口径（[0, 9] 内有限数字）
-  if (
-    !parsed?.scores
-    || !isBandScore(parsed.scores.overall)
-    || !isBandScore(parsed.scores.fluency)
-    || !isBandScore(parsed.scores.lexical)
-    || !isBandScore(parsed.scores.grammar)
-    || !parsed.comments
-    || typeof parsed.comments.fluency !== 'string'
-    || typeof parsed.comments.lexical !== 'string'
-    || typeof parsed.comments.grammar !== 'string'
-  )
+  // 入口校验四项齐全：缺项时面板 toFixed 会崩溃，必须在这里拦住；
+  // 形状口径与存档恢复共用 isValidSpeakingGrade（0.5 步进、总分一致性、建议非空）
+  if (!isValidSpeakingGrade(parsed))
     throw new Error('AI 返回格式异常，请重试')
   return parsed
 }

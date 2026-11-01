@@ -8,7 +8,7 @@ defineOptions({ name: 'ListeningFlashcardPage' })
 const cards: DeckCard[] = (words as any[]).map(w => ({
   id: w.index,
   word: w.word,
-  pos: w.type || '',
+  pos: w.type || '短语',
   meaning: w.meaning,
   synonyms: Array.isArray(w.replace) ? w.replace : [],
 }))

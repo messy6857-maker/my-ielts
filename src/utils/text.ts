@@ -193,6 +193,7 @@ const transcriptSpeakers = [
   'Lecturer',
   'MADDY',
   'MAN',
+  'MARIE',
   'MIA',
   'MICHELLE',
   'Maya',
@@ -254,4 +255,8 @@ export function transcriptSentenceEntries(transcript: string) {
         })),
       )
     })
+    // 剑 21 transcript 的题号标记（Q1、Q2 Q3、Q21/22）与 PART 标题（PART 1）
+    // 经分句后会成为只有标记的“句子”，不是正文：过滤掉，不给 🔊 按钮
+    .filter(entry =>
+      !/^\s*(Q\d+(?:[\s/]+Q?\d+)*|PART\s+\d+)\.?\s*$/i.test(entry.text))
 }

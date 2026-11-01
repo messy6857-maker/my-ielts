@@ -1,5 +1,5 @@
 // 剑桥雅思 21 写作真题：Test 1–4 的 Task 1 + Task 2，共 8 题
-// 题干英文照搬书中原文；Task 1 图表从 PDF 裁出（public/writing/c21-t{N}-task1.png）
+// 题干英文照搬书中原文；Task 1 图表存外部媒体站（见 useAudio.ts 的 MEDIA_BASE + resolveMediaUrl）
 import type { CambridgeWritingTask } from './cambridge'
 
 export const cam21Writing: CambridgeWritingTask[] = [

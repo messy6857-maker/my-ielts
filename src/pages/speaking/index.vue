@@ -7,9 +7,20 @@ import { PART1_TOPICS } from './part1'
 import { PART2_CARDS } from './part2'
 import type { Part2Card } from './part2'
 import { PART3_TOPICS } from './part3'
+import { confirmLeaveRecording } from '~/composables/useRecorder'
 
 type Tab = 'part1' | 'part2' | 'part3'
 const tab = usePersistentString('myielts_speaking_tab', 'part1') as Ref<Tab>
+// 旧残留/手动篡改可能写进非法值：三个 v-if 全不命中会致内容区空白，先纠回 part1
+if (!['part1', 'part2', 'part3'].includes(tab.value))
+  tab.value = 'part1'
+
+// 录音中收起话题/切 Tab/换卡会卸载录音组件丢弃本次录音：先确认一次；
+// 确认后仍按原流程卸载（卸载时组件 stop 关麦克风，不变）
+function switchTab(t: Tab) {
+  if (tab.value !== t && confirmLeaveRecording())
+    tab.value = t
+}
 
 // Part 1
 const p1Keyword = ref('')
@@ -26,6 +37,8 @@ const p1Filtered = computed(() => {
   )
 })
 function toggleP1(id: string) {
+  if (p1Expanded.value === id && !confirmLeaveRecording())
+    return
   p1Expanded.value = p1Expanded.value === id ? null : id
 }
 
@@ -42,6 +55,12 @@ const p2Filtered = computed(() =>
 )
 const activeCard = ref<Part2Card | null>(null)
 
+// 练习中换卡会卸载 PartTwoPractice 丢弃本次尝试：先确认一次
+function leavePractice() {
+  if (confirmLeaveRecording())
+    activeCard.value = null
+}
+
 // Part 3
 const p3Keyword = ref('')
 const p3Filtered = computed(() => {
@@ -53,6 +72,8 @@ const p3Filtered = computed(() => {
 })
 const p3Expanded = ref<string | null>(null)
 function toggleP3(id: string) {
+  if (p3Expanded.value === id && !confirmLeaveRecording())
+    return
   p3Expanded.value = p3Expanded.value === id ? null : id
 }
 
@@ -76,13 +97,13 @@ function tabBtn(t: Tab) {
     </p>
 
     <div class="mb-5 flex gap-2">
-      <button :class="tabBtn('part1')" @click="tab = 'part1'">
+      <button :class="tabBtn('part1')" @click="switchTab('part1')">
         Part 1
       </button>
-      <button :class="tabBtn('part2')" @click="tab = 'part2'">
+      <button :class="tabBtn('part2')" @click="switchTab('part2')">
         Part 2
       </button>
-      <button :class="tabBtn('part3')" @click="tab = 'part3'">
+      <button :class="tabBtn('part3')" @click="switchTab('part3')">
         Part 3
       </button>
     </div>
@@ -175,7 +196,7 @@ function tabBtn(t: Tab) {
           </button>
         </div>
       </div>
-      <PartTwoPractice v-else :card="activeCard" @back="activeCard = null" />
+      <PartTwoPractice v-else :card="activeCard" @back="leavePractice" />
     </div>
 
     <!-- Part 3 -->

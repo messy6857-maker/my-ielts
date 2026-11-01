@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
   gradeSpeakingWithAI,
   hasAISettings,
-  isBandScore,
+  isValidSpeakingGrade,
 } from '~/composables/useAISettings'
 import type { AISpeakingResult } from '~/composables/useAISettings'
 import { readJson, useAuth } from '~/composables/useAuth'
@@ -54,18 +54,8 @@ function loadSaved(): boolean {
       const parsed = raw as Partial<AISpeakingResult>
       // 旧存档走与评分入口同一口径校验：任一项不合格即视为无存档（面板置空、可重新评分），
       // 不删存储里的旧档（新评分会按同一 key 覆盖，自然消失），不弹错、不崩溃。
-      // 注意 JSON 存不了 NaN/Infinity（存时已变 null），同样会被 isBandScore 拦下。
-      if (
-        parsed?.scores
-        && isBandScore(parsed.scores.overall)
-        && isBandScore(parsed.scores.fluency)
-        && isBandScore(parsed.scores.lexical)
-        && isBandScore(parsed.scores.grammar)
-        && parsed.comments
-        && typeof parsed.comments.fluency === 'string'
-        && typeof parsed.comments.lexical === 'string'
-        && typeof parsed.comments.grammar === 'string'
-      ) {
+      // 注意 JSON 存不了 NaN/Infinity（存时已变 null），同样会被 isValidSpeakingGrade 拦下。
+      if (isValidSpeakingGrade(parsed)) {
         result.value = parsed as AISpeakingResult
         return true
       }
@@ -268,7 +258,7 @@ function scoreColor(s: number) {
         <span class="font-bold">📈 提分建议：</span>{{ result.suggestion }}
       </div>
       <p class="mt-2 text-xs text-gray-400">
-        发音项无法从文字转写评估，请回放录音自行检查语调、重音和连读。AI
+        发音项无法从文字转写评估，请回放录音自行检查语调、重音和连读。流利度也只按文字稿估算：转写不记录填充词与停顿时长，请以实际录音为准。AI
         评分仅供练习参考。
       </p>
     </div>

@@ -1,4 +1,4 @@
-// Source evidence: docs/evidence/reading-options/README.md (PDF-rendered excerpts and source hashes).
+// Source evidence（仅 Q24-26）: docs/evidence/reading-options/README.md (PDF-rendered excerpts and source hashes)；其余题仅转录自 PDF + 书后 key。
 import type { ReadingMockTest } from "./types";
 
 /** Cambridge IELTS 18 p.47 (PDF p.49) */
@@ -14,7 +14,7 @@ const AI_HEALTH_OPTIONS = [
 /**
  * 剑桥雅思 18 Test 2 阅读（40 题）
  * 转录自 Cambridge IELTS 18 PDF，答案来自书后 answer key (p.122)
- * 全部 40 题逐题核对，配对/选词题用 map-label 原生格式
+ * Q24-26 见证据集（docs/evidence/reading-options/README.md），其余仅转录自 PDF + 书后 key；配对/选词题用 map-label 原生格式
  */
 export const cam18Test2Reading: ReadingMockTest = {
   id: "cam18-test2-reading",

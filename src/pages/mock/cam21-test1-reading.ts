@@ -7,12 +7,10 @@ import type { ReadingMockTest } from './types'
  * 注意：
  * - Q1-7 / Q18-21 为 ONE WORD ONLY 填空
  * - Q8-13 为 TRUE/FALSE/NOT GIVEN
- * - Q14-17 为段落配对（A-G），答案存为下标
+ * - Q14-17 为段落配对（A-G），答案存为字母（C/B/A/G）
  * - Q22-26 为 statements 与人物配对，答案存为下标
- * - Q31-36 为 word bank (A-I) summary completion，答案存为下标；
- *   任务只提供了 31-35 的 key（33.A/34.G/35.A 与正文顺序疑似错位），
- *   缺失的 Q36 根据正文（"it was inevitably the poor countries which
- *   came off worse"）推断为 C less wealthy nations，待与书后 key 核对
+ * - Q31-36 为 word bank (A-I) summary completion，答案存为下标，
+ *   现数据对应字母依次为 H/E/I/A/G/C；Q31-36 的 key 仍待与书后 key 核对
  * - Q37-40 为 YES/NO/NOT GIVEN
  */
 export const cam21Test1Reading: ReadingMockTest = {

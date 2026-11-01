@@ -211,6 +211,14 @@ function exitPractice() {
   practicing.value = false
 }
 
+// AI 优化版标签按字段实际来源标：第 89 句字段实为 Gemini 译文（自带
+// —— from Gemini 后缀），不改写译文、不抹后缀，只把标签标对
+function aiSource(item) {
+  return item.chatgpt && item.chatgpt.includes('from Gemini')
+    ? 'Gemini'
+    : 'ChatGPT'
+}
+
 function gradePractice(ok) {
   const item = currentPractice.value
   if (!item || graded.value !== null)
@@ -225,6 +233,10 @@ function gradePractice(ok) {
   }
   else {
     practiceStats.value.wrong++
+    // 答错时若已标记掌握则同步取消：否则“只练未掌握”排除它、“只练错题本”
+    // 又包含它，掌握数与错题本状态打架（反向链路答对已处理掌握+清错题）
+    if (isMastered(item.no))
+      toggleMastered(item.no)
     addMistake('writing', {
       key: `writing:${item.no}`,
       title: item.sentence,
@@ -406,7 +418,7 @@ function nextPractice() {
                   class="rounded-xl bg-gray-50 p-4 text-sm dark:bg-gray-700/50"
                 >
                   <p class="mb-1 text-xs text-gray-400">
-                    🤖 ChatGPT 优化版
+                    🤖 {{ aiSource(currentPractice) }} 优化版
                   </p>
                   <p class="text-gray-800 dark:text-gray-200">
                     {{ currentPractice.chatgpt }}
@@ -527,7 +539,7 @@ function nextPractice() {
                     class="min-w-[620px] w-full divide-y divide-gray-200 dark:divide-gray-600"
                   >
                     <tbody class="border-b-1 bg-white dark:bg-gray-800">
-                      <template v-for="item of sentences" :key="item.no">
+                      <template v-for="item of sentences" :key="item.no ?? `sec-${item.title}`">
                         <template v-if="item.no == null">
                           <tr class="border-x-1 border-t-1">
                             <td colspan="5" class="p-4 text-xl font-bold">
@@ -579,7 +591,7 @@ function nextPractice() {
                           </tr>
                           <tr>
                             <td class="flex items-center p-4">
-                              <div class="mr-4" title="来自 ChatGPT">
+                              <div class="mr-4" :title="`来自 ${aiSource(item)}`">
                                 <i class="i-simple-icons-openai block" />
                               </div>
                               <div>{{ item.chatgpt }}</div>

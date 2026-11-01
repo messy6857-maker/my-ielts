@@ -3,7 +3,7 @@ import type { ListeningMockTest } from './types'
 /**
  * 剑桥雅思 18 Test 2 听力（40 题）
  * 转录自 Cambridge IELTS 18 PDF，答案来自书后 answer key (p.121)
- * 全部 80 题逐题核对，地图/配对题用 map-label 原生格式
+ * 地图/配对题用 map-label 原生格式
  */
 export const cam18Test2Listening: ListeningMockTest = {
   id: 'cam18-test2-listening',

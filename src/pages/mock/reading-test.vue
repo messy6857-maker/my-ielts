@@ -48,6 +48,8 @@ const activePassage = ref(0)
 
 const showPassageModal = ref(false)
 const enlargedImage = ref<string | null>(null)
+// 阅读配图加载失败状态（与听力页 partImageFailed 同款，按 passage 下标计）
+const passageImageFailed = ref<Record<number, boolean>>({})
 // 划词高亮：passageIndex -> 高亮词组列表
 const highlights = ref<Map<number, string[]>>(new Map())
 const selectionHint = ref('')
@@ -99,6 +101,7 @@ async function loadTest() {
   recovery.saveFlush()
   mapInputHint.value = ''
   enlargedImage.value = null
+  passageImageFailed.value = {}
   selectionHint.value = ''
   showPassageModal.value = false
   pauseExam()
@@ -736,12 +739,19 @@ function switchPassage(index: number) {
                 </p>
               </div>
               <img
-                v-if="p.image"
+                v-if="p.image && !passageImageFailed[pi]"
                 :src="resolveMediaUrl(p.image)"
                 :alt="`${p.title} 示意图`"
                 class="mt-4 max-w-full cursor-zoom-in border border-gray-200 rounded-lg dark:border-gray-700"
                 @click="enlargedImage = resolveMediaUrl(p.image)"
+                @error="passageImageFailed[pi] = true"
               >
+              <p
+                v-else-if="p.image && passageImageFailed[pi]"
+                class="mt-4 text-sm text-gray-500"
+              >
+                示意图加载失败，请检查网络后刷新页面
+              </p>
               <div
                 v-if="p.headings?.length"
                 class="mt-4 border border-gray-200 rounded-lg bg-white p-4 lg:sticky lg:top-0 lg:z-10 lg:order-first lg:mt-0 dark:border-gray-700 dark:bg-gray-800"
@@ -861,8 +871,9 @@ function switchPassage(index: number) {
                   "
                 >
 
-                <!-- 配对/标注题的选项框：镜像听力页写法（M-Opt4）。当前阅读数据
-                     尚无 options 字段，只补渲染分支不改数据；“按题组只渲染一次”
+                <!-- 配对/标注题的选项框：镜像听力页写法（M-Opt4）。阅读数据
+                     已有 map-label options 字段（如 cam18-test2 的 AI_HEALTH_OPTIONS），
+                     下分支实际生效；“按题组只渲染一次”
                      需改 v-for 分组结构，非零风险，本次不动。 -->
                 <div
                   v-if="q.type === 'map-label' && q.options?.length"
@@ -1012,7 +1023,7 @@ function switchPassage(index: number) {
               </p>
             </div>
             <img
-              v-if="test.passages[activePassage].image"
+              v-if="test.passages[activePassage].image && !passageImageFailed[activePassage]"
               :src="resolveMediaUrl(test.passages[activePassage].image ?? '')"
               :alt="`${test.passages[activePassage].title} 示意图`"
               class="mt-4 max-w-full cursor-zoom-in border border-gray-200 rounded-lg dark:border-gray-700"
@@ -1021,7 +1032,14 @@ function switchPassage(index: number) {
                   test.passages[activePassage].image ?? '',
                 )
               "
+              @error="passageImageFailed[activePassage] = true"
             >
+            <p
+              v-else-if="test.passages[activePassage].image && passageImageFailed[activePassage]"
+              class="mt-4 text-sm text-gray-500"
+            >
+              示意图加载失败，请检查网络后刷新页面
+            </p>
             <div
               v-if="test.passages[activePassage].headings?.length"
               class="mt-4 border border-gray-200 rounded-lg p-4 dark:border-gray-700"

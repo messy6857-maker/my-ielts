@@ -3,6 +3,7 @@ import { onBeforeLogout, useAuth } from './useAuth'
 
 let active: {
   stop: () => void
+  busy: boolean
 } | null = null
 export function useRecorder() {
   const isRecording = ref(false)
@@ -35,8 +36,14 @@ export function useRecorder() {
     }
   }
   const offLogout = onBeforeLogout(stop)
-  const offOwner = watch(useAuth().currentUser, stop, { flush: 'sync' })
-  const session = { stop: () => stop() }
+  // 账号实际变化时清空旧身份的录音与转写（防御纵深：主路径卸载时 dispose
+  // 已清；此处防未来出现页内切换账号入口导致旧录音被新身份评分）。
+  // 注意 onBeforeLogout 保持 stop：退出可被后续回调取消，取消时录音必须还在。
+  const offOwner = watch(useAuth().currentUser, clear, { flush: 'sync' })
+  const session = {
+    stop: () => stop(),
+    get busy() { return isRecording.value || processing.value },
+  }
   function stop() {
     generation++
     starting.value = false
@@ -56,7 +63,8 @@ export function useRecorder() {
     isRecording.value = false
     stream?.getTracks().forEach(t => t.stop())
     stream = null
-    if (active === session)
+    // blob 落盘窗口内 active 保留到 onstop：收起/切 Tab 的确认不漏判该窗口
+    if (active === session && !processing.value)
       active = null
   }
   async function start(): Promise<boolean> {
@@ -114,10 +122,16 @@ export function useRecorder() {
           audioUrl.value = next
         }
         else {
-          error.value = '没有收到录音数据，请重试；原录音已保留'
+          // 空数据时不虚构“原录音已保留”：只有此前已有录音
+          // （audioUrl 未被新 blob 覆盖）时该断言才成立
+          error.value = audioUrl.value
+            ? '没有收到录音数据，请重试；原录音已保留'
+            : '没有收到录音数据，请重试'
           transcript.value = previousTranscript
         }
         processing.value = false
+        if (active === session)
+          active = null
       }
       current.onerror = () => {
         error.value = '录音发生错误，请检查麦克风后重试'
@@ -200,10 +214,23 @@ export function useRecorder() {
     catch (e) {
       acquired?.getTracks().forEach(t => t.stop())
       if (sequence === generation && !disposed) {
-        error.value
-          = e instanceof Error && e.message.includes('不支持')
-            ? e.message
-            : '无法启动麦克风，请检查权限后重试；原录音已保留'
+        if (e instanceof Error && e.message.includes('不支持')) {
+          error.value = e.message
+        }
+        else {
+          // 按失败原因分流，不再把无设备/被占用都写成“权限”；
+          // “原录音已保留”只在确实有上一段录音时才追加
+          const kept = audioUrl.value ? '；原录音已保留' : ''
+          const name = (e as any)?.name
+          if (name === 'NotAllowedError')
+            error.value = `无法启动麦克风，请检查权限后重试${kept}`
+          else if (name === 'NotFoundError')
+            error.value = `未检测到麦克风设备${kept}`
+          else if (name === 'NotReadableError')
+            error.value = `麦克风正被其他应用占用，请关闭后重试${kept}`
+          else
+            error.value = `无法启动麦克风，请重试${kept}`
+        }
       }
       if (active === session)
         active = null
@@ -218,6 +245,8 @@ export function useRecorder() {
     stop()
     recorder = null
     processing.value = false
+    if (active === session)
+      active = null
     if (audioUrl.value)
       URL.revokeObjectURL(audioUrl.value)
     audioUrl.value = null
@@ -252,6 +281,17 @@ export function useRecorder() {
     clear,
     dispose,
   }
+}
+/** 任一录音会话正在录音或落盘中（收起话题/切 Tab 会丢弃它时需先确认）。 */
+export function isRecorderBusy(): boolean {
+  return !!active && active.busy
+}
+/** 录音忙时离开前确认一次；确认本身不阻止卸载时关麦克风（卸载方仍 stop）。 */
+export function confirmLeaveRecording(): boolean {
+  if (!isRecorderBusy())
+    return true
+  // eslint-disable-next-line no-alert
+  return window.confirm('正在录音，离开将丢失本次录音，确定吗？')
 }
 export function formatRecordingClock(totalSeconds: number) {
   const sec = Math.max(0, Math.floor(totalSeconds))

@@ -24,7 +24,7 @@ const ws = reactive(
 )
 
 const { addMistake, decrementMistake, mistakeOutstanding } = useMistakes()
-const { setProgress } = useProgress()
+const { setProgress, getProgress } = useProgress()
 
 function onKeydown(e, word) {
   if (e.key === '`') {
@@ -62,8 +62,9 @@ function next(index) {
   // 校验结果（最后一词同样先跑完校验、记错词、推进度，再结束）
   const cw = ws[index]
 
-  // 处理词
-  const practiceWord = cw.form.word.trim().toLowerCase()
+  // 处理词：主词比较与同义词侧一致折叠空白，否则“单词之间多个空格
+  // 不影响结果判断”的文案不成立（in  advance 双空格会被判错）
+  const practiceWord = cw.form.word.trim().toLowerCase().replace(/\s+/g, ' ')
   const practiceReplace = cw.form.replaceStr
     .split(/[,，]/)
     .map(v => v.trim().toLowerCase().replace(/\s+/g, ' '))
@@ -78,7 +79,7 @@ function next(index) {
     = (cw.result.checked && cw.result.errorWords.length > 0)
       || outstanding.outstanding
   const errorWords = []
-  if (practiceWord !== cw.word.trim().toLowerCase())
+  if (practiceWord !== cw.word.trim().toLowerCase().replace(/\s+/g, ' '))
     errorWords.push(cw.word)
 
   errorWords.push(
@@ -105,7 +106,10 @@ function next(index) {
     // 上次记错、本次改对：错题计数减一，扣回原失败日的桶（无原失败日时沿用当日默认）
     decrementMistake(mistakeKey, outstanding.failureDate ?? undefined, 'all')
   }
-  setProgress('listening', index + 1, words.length)
+  // 进度取“已到达的最远行”，不随检查顺序倒退（先查第 100 行再查第 1 行
+  // 不应把进度从 100/179 打回 1/179）；进度 store 本身只存 done/total，
+  // 无逐行集合，故此处取大值即最远到达语义
+  setProgress('listening', Math.max(getProgress('listening').done, index + 1), words.length)
 
   // window.console.log(cw)
 

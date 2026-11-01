@@ -98,6 +98,15 @@ function removeEssay(id: number | string) {
 
 // ---------- 写作 ----------
 const prompt = ref<AnyPrompt | null>(null)
+// 剑桥 Task 1 图表加载失败时给文案兜底（与听力页 partImageFailed 同款）；
+// 换题时复位，否则上一题的失败状态会藏起下一题的图
+const imageFailed = ref(false)
+watch(
+  () => prompt.value?.id,
+  () => {
+    imageFailed.value = false
+  },
+)
 const essayText = ref('')
 const secondsLeft = ref(TIME_LIMIT)
 const timerOn = ref(false)
@@ -623,11 +632,18 @@ function resumeDraft(promptId: string, versionId?: string) {
           </p>
           <TaskChart v-if="!isCam(prompt)" :prompt="prompt" />
           <img
-            v-else-if="prompt.image"
+            v-else-if="prompt.image && !imageFailed"
             :src="resolveMediaUrl(prompt.image)"
             :alt="titleCnOf(prompt)"
             class="mx-auto max-w-full border border-gray-100 rounded-lg dark:border-gray-700"
+            @error="imageFailed = true"
           >
+          <p
+            v-else-if="prompt.image && imageFailed"
+            class="mx-auto max-w-full p-3 text-center text-sm text-gray-500"
+          >
+            图表加载失败，请检查网络后刷新页面
+          </p>
           <details v-if="!isCam(prompt)" class="mt-3 text-sm">
             <summary class="cursor-pointer text-blue-600 dark:text-blue-400">
               💡 写作提示

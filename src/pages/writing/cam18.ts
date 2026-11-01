@@ -1,5 +1,5 @@
 // 剑18 写作真题（Test 1–4，每套 Task 1 + Task 2，共 8 题）
-// 题干照搬书中原文；Task 1 图表从 PDF 裁出存 public/writing/
+// 题干照搬书中原文；Task 1 图表存外部媒体站（见 useAudio.ts 的 MEDIA_BASE + resolveMediaUrl）
 import type { CambridgeWritingTask } from './cambridge'
 
 export const cam18Writing: CambridgeWritingTask[] = [

@@ -145,7 +145,7 @@ const sentences = [
   },
   {
     no: 21,
-    sentence: ' 我们需要采取措施去解决一些棘手的问题',
+    sentence: '我们需要采取措施去解决一些棘手的问题',
     translationFromBook: 'We need to take action to solve some thorny problems',
     chatgpt: 'We need to take measures to address some challenging issues',
     remark: 'thorny adj. 棘手的，麻烦的；多刺的，带刺的。thorn n. 刺，荆棘',
@@ -207,7 +207,7 @@ const sentences = [
     no: 29,
     sentence: '乡村地区给人们提供远离现代生活的压力和噪声的机会',
     translationFromBook: 'Rural areas provide people with opportunities to escape pressure and noises of modern life',
-    chatgpt: 'Rural areas provide people with opportunities to escape pressure and noise of modern life —— 和书的答案只是复数用的词是 pressure',
+    chatgpt: 'Rural areas provide people with opportunities to escape pressure and noise of modern life',
     remark: 'pressure 和 noise 都是可数又不可数，ChatGPT 表示都可以用',
   },
   {
@@ -223,7 +223,7 @@ const sentences = [
   },
   {
     no: 31,
-    sentence: ' 政府应该给一些城市提供资金去保护历史建筑（historic buildings）',
+    sentence: '政府应该给一些城市提供资金去保护历史建筑（historic buildings）',
     translationFromBook: 'Governments should offer some cities funds to preserve historic buildings',
     chatgpt: 'The government should provide funds to some cities to preserve historic buildings',
     remark: '',
@@ -236,7 +236,7 @@ const sentences = [
     no: 32,
     sentence: '学校应该允许老师强制捣蛋的小孩离开教室',
     translationFromBook: 'Teachers should be permitted to use force to remove the disruptive children from the classroom',
-    chatgpt: 'The troublesome children should be allowed to remove from the classroom by the teachers',
+    chatgpt: 'The troublesome children should be allowed to be removed from the classroom by the teachers',
     remark: '',
   },
   {
@@ -272,7 +272,7 @@ const sentences = [
     sentence: '学校活动的设置要让孩子体会到成就感，提升他们的幸福感',
     translationFromBook: 'Sports or other school activities can be designed to give children a sense of accomplishment and to promote their well-being',
     chatgpt: 'A sense of achievement and an enhanced sense of happiness should be experienced by children through the arrangement of school activities',
-    remark: 'school activities/design/give/a sense of accomplishment/promote/well-bing',
+    remark: 'school activities/design/give/a sense of accomplishment/promote/well-being',
   },
   {
     no: 38,
@@ -298,7 +298,7 @@ const sentences = [
   {
     no: 41,
     sentence: '大部分的环境破坏都可以归咎于人类的活动',
-    translationFromBook: 'Most of environmental degradation is attributed to human activities.',
+    translationFromBook: 'Most environmental degradation is attributed to human activities.',
     chatgpt: 'Most environmental damage can be attributed to human activities.',
     remark: 'degradation n. 玷污，损害，危害；落魄，降低身份，丢脸。environmental degradation 环境恶化。attribute sth. to sb./sth. 动词短语：把...归因于；认为...由...生产；认为...是...所为',
   },
@@ -306,7 +306,7 @@ const sentences = [
     no: 42,
     sentence: '许多孩子每天接触暴力内容',
     translationFromBook: 'Many children are exposed to violent content every day',
-    chatgpt: '第一次给的和书上的一模一样，强行换一句之后：Many children are exposed to violent content on a daily basis',
+    chatgpt: 'Many children are exposed to violent content on a daily basis',
     remark: 'expose sb. to sth. 使...遭受（有害或不愉快的遭受）；使...暴露于（险境）。另外要注意 everyday adj. 日常的，普通的和 every day 不一样',
   },
   {
@@ -327,7 +327,7 @@ const sentences = [
     no: 45,
     sentence: '移民有时候被认为是对社会团结的一个威胁',
     translationFromBook: 'Immigrants are sometimes recognized as a threat to social cohesion',
-    chatgpt: 'Immigration is sometimes considered as a thread to social cohesion',
+    chatgpt: 'Immigration is sometimes considered as a threat to social cohesion',
     remark: '社会团结：social cohesion',
   },
   {
@@ -345,7 +345,7 @@ const sentences = [
     no: 47,
     sentence: '一些人不支持转基因食品',
     translationFromBook: 'Some people disapprove of genetically modified food',
-    chatgpt: 'Some people do not support genetically modified (GM) foods -> 这个句子不是不及物动词结构',
+    chatgpt: 'Some people do not support genetically modified (GM) foods',
     remark: '转基因：GM=genetically modified。do not 和 don\'t 一般前者更适合书面更正式，意思是一样的',
   },
   {
@@ -372,7 +372,7 @@ const sentences = [
   {
     no: 51,
     sentence: '因为费用的下降，航空业最近几十年发展的很快',
-    translationFromBook: 'Because of low-cost carries, the aviation industry has developed at an astounding pace over the past decades',
+    translationFromBook: 'Because of low-cost carriers, the aviation industry has developed at an astounding pace over the past decades',
     chatgpt: 'Due to the decrease in costs, the aviation industry has developed rapidly in recent decades',
     remark: 'astounding adj. 令人震惊的；使人惊骇的。\npace n. （移动的）步速；（发生的）速度；节奏',
   },
@@ -380,7 +380,7 @@ const sentences = [
     no: 52,
     sentence: '动物实验有时候检验不出药物的副作用',
     translationFromBook: 'Animal experiments sometimes fail to detect the undesirable side effects of drugs',
-    chatgpt: '给出的句子和书上的一样，换了一种表达之后是：At times. The use of animal experiments does not reveal the adverse effects of medications',
+    chatgpt: 'At times. The use of animal experiments does not reveal the adverse effects of medications',
     remark: 'adverse adj. 不离的；负面的；有害的',
   },
   {
@@ -425,7 +425,7 @@ const sentences = [
   {
     no: 58,
     sentence: '因为经济前景（economic outlook）不够明朗，很多公司不太可能招聘新的职员',
-    translationFromBook: 'Because of the uncertainty about he economic outlook, many companies are unlikely to recruit new employees',
+    translationFromBook: 'Because of the uncertainty about the economic outlook, many companies are unlikely to recruit new employees',
     chatgpt: 'Due to the unclear economic outlook, many companies are less likely to hire new employees',
     remark: '',
   },
@@ -612,7 +612,7 @@ const sentences = [
   {
     no: 83,
     sentence: '使用多媒体可以提升学生的注意力，让他们对课程保持兴趣',
-    translationFromBook: 'Using multimedia tools can improve students\'s concentration and keep them interested',
+    translationFromBook: 'Using multimedia tools can improve students\' concentration and keep them interested',
     chatgpt: 'Using multimedia can enhance students\' attention and keep them interested in the course',
     remark: '',
   },
@@ -620,7 +620,7 @@ const sentences = [
     no: 84,
     sentence: '名人的成就鼓励年轻人努力学习，坚韧不拔',
     translationFromBook: 'The achievement of celebrities can motivate young people to study hard and show perseverance',
-    chatgpt: 'The achievements of celebrities inspire young people to study hard and persevere（这里 ChatGPT 翻译成了 2 个动词并列 inspire/preserve）',
+    chatgpt: 'The achievements of celebrities inspire young people to study hard and persevere',
     remark: 'perseverance n. 不屈不挠，坚持不懈',
   },
   {
@@ -676,14 +676,14 @@ const sentences = [
   {
     no: 91,
     sentence: '现在很多人选择变得环保并减少能源的使用，事实确实如此',
-    translationFromBook: 'It is true that many people today have chosen to go green and reduce cut down on the use of energy',
+    translationFromBook: 'It is true that many people today have chosen to go green and cut down on the use of energy',
     chatgpt: 'It is true that many people are now choosing to be environmentally friendly and reduce their energy consumption',
     remark: '',
   },
   {
     no: 92,
     sentence: '判刑会对年轻人产生伤害，因为犯罪记录会给他们的职业生涯留下阴影',
-    translationFromBook: ' A prison sentence can be damaging to young people due to the fact that the criminal record can cast a long shadow on their career',
+    translationFromBook: 'A prison sentence can be damaging to young people due to the fact that the criminal record can cast a long shadow on their career',
     chatgpt: 'A criminal conviction can have a harmful impact on a young person\'s life, as it can leave a criminal record that can follow then throughout their career',
     remark: 'cast v. 把（光或阴影）投向，投射\nconviction n. 定罪，判罪\nthroughout prep./adv. 在各处，自始至终',
   },

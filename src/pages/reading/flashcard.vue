@@ -13,14 +13,17 @@ const cards: DeckCard[] = (raw as unknown as RawCat[]).flatMap(cat =>
   cat.words.map(w => ({
     id: `${cat.title}-${w[0]}`,
     word: w[1],
-    pos: (w[2] || []).join(' '),
+    pos: (w[2] || []).join(' ') || '短语',
     meaning: (w[3] || []).join('；'),
     synonyms: w[4] || [],
+    remark: w[5] || '',
   })),
 )
 
 function audioFor(word: string) {
-  return `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(word)}&type=1`
+  // 星号词（that* 等）的 * 只作界面标记：发音接口不认 *，先去掉
+  const clean = word.replace(/\*/g, '')
+  return `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(clean)}&type=1`
 }
 </script>
 

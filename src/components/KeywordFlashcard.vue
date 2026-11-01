@@ -37,6 +37,7 @@ export interface DeckCard {
   pos: string
   meaning: string
   synonyms: string[]
+  remark?: string
 }
 
 interface Card extends DeckCard {
@@ -642,6 +643,19 @@ onUnmounted(() => {
             </div>
             <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
               {{ studying.synonyms.join(' · ') }}
+            </p>
+          </div>
+
+          <!-- 备注：阅读词汇页同列渲染 w[5]，闪卡答案面此前丢弃，补齐口径 -->
+          <div
+            v-if="studying.remark"
+            class="mb-6 border border-gray-200 rounded-xl bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
+          >
+            <div class="mb-2 text-sm font-bold text-gray-500 dark:text-gray-400">
+              📝 备注
+            </div>
+            <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+              {{ studying.remark }}
             </p>
           </div>
 

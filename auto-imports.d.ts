@@ -33,6 +33,7 @@ declare global {
   const computedEager: typeof import('@vueuse/core')['computedEager']
   const computedInject: typeof import('@vueuse/core')['computedInject']
   const computedWithControl: typeof import('@vueuse/core')['computedWithControl']
+  const confirmLeaveRecording: typeof import('./src/composables/useRecorder')['confirmLeaveRecording']
   const controlledComputed: typeof import('@vueuse/core')['controlledComputed']
   const controlledRef: typeof import('@vueuse/core')['controlledRef']
   const createApp: typeof import('vue')['createApp']
@@ -93,8 +94,10 @@ declare global {
   const isProxy: typeof import('vue')['isProxy']
   const isReactive: typeof import('vue')['isReactive']
   const isReadonly: typeof import('vue')['isReadonly']
+  const isRecorderBusy: typeof import('./src/composables/useRecorder')['isRecorderBusy']
   const isRef: typeof import('vue')['isRef']
   const isValidEssayGrade: typeof import('./src/composables/useAISettings')['isValidEssayGrade']
+  const isValidSpeakingGrade: typeof import('./src/composables/useAISettings')['isValidSpeakingGrade']
   const knownRate: typeof import('./src/composables/useStats')['knownRate']
   const legacyTimerSeconds: typeof import('./src/composables/useStudyTimer')['legacyTimerSeconds']
   const loadVocabularyDetails: typeof import('./src/composables/useVocabularyDetails')['loadVocabularyDetails']
@@ -159,6 +162,7 @@ declare global {
   const resolveMediaUrl: typeof import('./src/composables/useAudio')['resolveMediaUrl']
   const resolveRef: typeof import('@vueuse/core')['resolveRef']
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
+  const roundHalf: typeof import('./src/composables/useAISettings')['roundHalf']
   const saveAISettings: typeof import('./src/composables/useAISettings')['saveAISettings']
   const saveMockRecord: typeof import('./src/composables/useMockHistory')['saveMockRecord']
   const setAuthPendingPush: typeof import('./src/composables/syncClient')['setAuthPendingPush']
@@ -431,6 +435,7 @@ declare module 'vue' {
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
     readonly computedInject: UnwrapRef<typeof import('@vueuse/core')['computedInject']>
     readonly computedWithControl: UnwrapRef<typeof import('@vueuse/core')['computedWithControl']>
+    readonly confirmLeaveRecording: UnwrapRef<typeof import('./src/composables/useRecorder')['confirmLeaveRecording']>
     readonly controlledComputed: UnwrapRef<typeof import('@vueuse/core')['controlledComputed']>
     readonly controlledRef: UnwrapRef<typeof import('@vueuse/core')['controlledRef']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
@@ -491,8 +496,10 @@ declare module 'vue' {
     readonly isProxy: UnwrapRef<typeof import('vue')['isProxy']>
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
+    readonly isRecorderBusy: UnwrapRef<typeof import('./src/composables/useRecorder')['isRecorderBusy']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly isValidEssayGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['isValidEssayGrade']>
+    readonly isValidSpeakingGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['isValidSpeakingGrade']>
     readonly knownRate: UnwrapRef<typeof import('./src/composables/useStats')['knownRate']>
     readonly legacyTimerSeconds: UnwrapRef<typeof import('./src/composables/useStudyTimer')['legacyTimerSeconds']>
     readonly loadVocabularyDetails: UnwrapRef<typeof import('./src/composables/useVocabularyDetails')['loadVocabularyDetails']>
@@ -557,6 +564,7 @@ declare module 'vue' {
     readonly resolveMediaUrl: UnwrapRef<typeof import('./src/composables/useAudio')['resolveMediaUrl']>
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
+    readonly roundHalf: UnwrapRef<typeof import('./src/composables/useAISettings')['roundHalf']>
     readonly saveAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['saveAISettings']>
     readonly saveMockRecord: UnwrapRef<typeof import('./src/composables/useMockHistory')['saveMockRecord']>
     readonly setAuthPendingPush: UnwrapRef<typeof import('./src/composables/syncClient')['setAuthPendingPush']>
@@ -823,6 +831,7 @@ declare module '@vue/runtime-core' {
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
     readonly computedInject: UnwrapRef<typeof import('@vueuse/core')['computedInject']>
     readonly computedWithControl: UnwrapRef<typeof import('@vueuse/core')['computedWithControl']>
+    readonly confirmLeaveRecording: UnwrapRef<typeof import('./src/composables/useRecorder')['confirmLeaveRecording']>
     readonly controlledComputed: UnwrapRef<typeof import('@vueuse/core')['controlledComputed']>
     readonly controlledRef: UnwrapRef<typeof import('@vueuse/core')['controlledRef']>
     readonly createApp: UnwrapRef<typeof import('vue')['createApp']>
@@ -883,8 +892,10 @@ declare module '@vue/runtime-core' {
     readonly isProxy: UnwrapRef<typeof import('vue')['isProxy']>
     readonly isReactive: UnwrapRef<typeof import('vue')['isReactive']>
     readonly isReadonly: UnwrapRef<typeof import('vue')['isReadonly']>
+    readonly isRecorderBusy: UnwrapRef<typeof import('./src/composables/useRecorder')['isRecorderBusy']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly isValidEssayGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['isValidEssayGrade']>
+    readonly isValidSpeakingGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['isValidSpeakingGrade']>
     readonly knownRate: UnwrapRef<typeof import('./src/composables/useStats')['knownRate']>
     readonly legacyTimerSeconds: UnwrapRef<typeof import('./src/composables/useStudyTimer')['legacyTimerSeconds']>
     readonly loadVocabularyDetails: UnwrapRef<typeof import('./src/composables/useVocabularyDetails')['loadVocabularyDetails']>
@@ -949,6 +960,7 @@ declare module '@vue/runtime-core' {
     readonly resolveMediaUrl: UnwrapRef<typeof import('./src/composables/useAudio')['resolveMediaUrl']>
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
     readonly resolveUnref: UnwrapRef<typeof import('@vueuse/core')['resolveUnref']>
+    readonly roundHalf: UnwrapRef<typeof import('./src/composables/useAISettings')['roundHalf']>
     readonly saveAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['saveAISettings']>
     readonly saveMockRecord: UnwrapRef<typeof import('./src/composables/useMockHistory')['saveMockRecord']>
     readonly setAuthPendingPush: UnwrapRef<typeof import('./src/composables/syncClient')['setAuthPendingPush']>

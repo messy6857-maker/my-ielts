@@ -1,5 +1,5 @@
 // 剑桥雅思 20 真题作文题（Test 1–4，每套 Task 1 + Task 2，共 8 题）
-// 题干照搬书中原文；Task 1 图表从 PDF 裁出存 public/writing/
+// 题干照搬书中原文；Task 1 图表存外部媒体站（见 useAudio.ts 的 MEDIA_BASE + resolveMediaUrl）
 import type { CambridgeWritingTask } from './cambridge'
 
 export const cam20Writing: CambridgeWritingTask[] = [
@@ -22,9 +22,8 @@ export const cam20Writing: CambridgeWritingTask[] = [
     book: '剑20',
     testLabel: 'Test 1',
     task: 2,
-    promptEn: 'You should spend about 40 minutes on this task. Write at least 250 words.\n'
-      + 'You should spend about 40 minutes on this task. Write about the following topic:\n'
-      + 'Give reasons for your answer and include any relevant examples from your own knowledge or experience.\n'
+    promptEn: 'You should spend about 40 minutes on this task.\n'
+      + 'Write about the following topic:\n'
       + 'Access to clean water is a basic human right. Therefore, every home should have a water supply that is provided free of charge.\n'
       + 'Do you agree or disagree?\n'
       + 'Give reasons for your answer and include any relevant examples from your own knowledge or experience.\n'

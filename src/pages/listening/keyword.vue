@@ -156,7 +156,7 @@ const filteredWs = computed(() => {
               >{{ w.word }}</a>
             </th>
             <td class="px-6 py-4 italic">
-              {{ w.type }}
+              {{ w.type || '短语' }}
             </td>
             <td class="px-6 py-4">
               {{ w.meaning }}

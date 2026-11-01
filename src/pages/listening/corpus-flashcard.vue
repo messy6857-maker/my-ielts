@@ -42,11 +42,13 @@ if (ch3) {
 }
 
 // Chapter4: [Word, 词性, Meaning]
+// id 用词本身而不用行号：删重复行后行号移位，词 id 不变，
+// 旧 ch4-数字 存量进度自然 orphan，不会串到别的词上
 const ch4 = (corpusData as any)['Chapter4 形容词副词']
 if (ch4) {
-  ch4.rows.forEach((r: string[], i: number) => {
+  ch4.rows.forEach((r: string[]) => {
     cards.push({
-      id: `ch4-${i}`,
+      id: `ch4-${firstCell(r)}`,
       word: firstCell(r),
       pos: r[1] || '',
       meaning: r[2],

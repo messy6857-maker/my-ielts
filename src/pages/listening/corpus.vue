@@ -169,7 +169,7 @@ const filteredRows = computed(() => {
           <tbody>
             <tr
               v-for="row in filteredRows"
-              :key="row[0]"
+              :key="row[0].join(', ')"
               class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"
             >
               <td class="px-6 py-4">

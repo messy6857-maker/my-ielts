@@ -193,8 +193,17 @@ onUnmounted(() => {
       </div>
 
       <div v-if="phase === 'done'" class="space-y-3">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
+        <p
+          v-if="recorder.audioUrl.value"
+          class="text-sm text-gray-500 dark:text-gray-400"
+        >
           回放你的陈述，检查：有没有说满时间？四个要点都覆盖了吗？有没有长时间卡壳？
+        </p>
+        <p
+          v-else-if="!recorder.processing.value"
+          class="text-sm text-gray-500 dark:text-gray-400"
+        >
+          本次没有录音可回放，请检查麦克风后重试。
         </p>
         <p v-if="recorder.processing.value" class="text-sm text-gray-500">
           正在保存录音…
@@ -218,6 +227,21 @@ onUnmounted(() => {
           </div>
           <p class="text-gray-700 dark:text-gray-200">
             {{ recorder.transcript.value }}
+          </p>
+        </div>
+        <div
+          v-else-if="recorder.audioUrl.value && !recorder.processing.value"
+          class="rounded-lg bg-gray-50 p-3 text-xs leading-5 dark:bg-gray-700/50"
+        >
+          <div class="mb-1 font-bold text-gray-500 dark:text-gray-400">
+            📝 语音转写
+          </div>
+          <p v-if="!recorder.transcriptionSupported" class="text-gray-400">
+            当前浏览器不支持语音转写（请用 Chrome/Edge），AI
+            评分不可用，但录音回放正常。
+          </p>
+          <p v-else class="text-gray-400">
+            未识别出语音内容
           </p>
         </div>
         <AIGradeSpeaking

@@ -1,4 +1,4 @@
-// Source evidence: docs/evidence/reading-options/README.md (PDF-rendered excerpts and source hashes).
+// Source evidence（仅 Q34-36）: docs/evidence/reading-options/README.md (PDF-rendered excerpts and source hashes)；其余题仅转录自 PDF + 书后 key。
 import type { ReadingMockTest } from "./types";
 
 /** Cambridge IELTS 20 p.100; original wording and letter order verified against printed page */
