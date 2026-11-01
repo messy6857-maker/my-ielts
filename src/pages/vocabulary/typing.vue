@@ -113,6 +113,15 @@ function normalizeInput(s: string) {
   return s.replace(/[\u00A0\u2000-\u200B\u202F\u205F\u3000]/g, ' ')
 }
 
+// 反馈着色与判定同口径：忽略大小写开启时按忽略大小写比较（B4）。
+function charMatches(index: number, char: string) {
+  const inputChar = userInput.value.charAt(index)
+  return inputChar !== ''
+    && (ignoreCase.value
+      ? inputChar.toLowerCase() === char.toLowerCase()
+      : inputChar === char)
+}
+
 function handleInput(e: Event) {
   if (!startTime.value)
     startTime.value = Date.now()
@@ -305,10 +314,10 @@ onUnmounted(() => {
               :key="index"
               class="inline-block"
               :class="{
-                'text-green-500': userInput.charAt(Number(index)) === char,
+                'text-green-500': charMatches(Number(index), char),
                 'text-red-500':
                   userInput.charAt(Number(index)) !== ''
-                  && userInput.charAt(Number(index)) !== char,
+                  && !charMatches(Number(index), char),
                 'text-transparent': userInput.charAt(Number(index)) === '',
               }"
             >

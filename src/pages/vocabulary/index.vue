@@ -104,6 +104,18 @@ function saveSpellMap(item) {
   )
 }
 function onSpellInput(event, item) {
+  // 纯空白输入在输入时即按未完成处理：不计正确、不持久化空格串，
+  // 与失焦归一化口径统一（B3）；此前仅空格会先被计为正确并存盘。
+  if (event.target.value && !event.target.value.trim()) {
+    item.spellValue = ''
+    item.spellError = false
+    // :value 绑定值前后同为空，Vue 不会重写 DOM，手动清掉框内空格。
+    event.target.value = ''
+    saveSpellMap(item)
+    trainingStats.value = calcStats()
+    syncProgress()
+    return
+  }
   item.spellValue = event.target.value
   item.spellError
     = !!item.spellValue.trim()
@@ -183,6 +195,15 @@ watch(spellUser, () => {
 watch(category, (newVal) => {
   // console.log(newVal, oldVal)
   localStorage.setItem(CHAPTER_KEY, newVal)
+  // 完成态只属于当轮：切章后新章不得沿用旧章的红/绿完成着色（B2）。
+  isFinishTraining.value = false
+  trainingStats.value = calcStats()
+})
+
+// 开关练习模式时重算统计并清除完成态：刷新后以非练习模式算出的
+// 0,0,0 不得在重开练习模式时继续显示（B1）；完成着色只属于当轮（B2）。
+watch(isTrainingModel, () => {
+  isFinishTraining.value = false
   trainingStats.value = calcStats()
 })
 
