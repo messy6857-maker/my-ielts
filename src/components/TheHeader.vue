@@ -128,7 +128,8 @@ async function onManualSync() {
             <span
               class="self-center whitespace-nowrap text-xl font-semibold sm:text-2xl dark:text-white"
             >我的
-              <span class="ml-1 text-red-600"> IELTS™</span>
+              <!-- 320px 实测：logo 与右侧簇交叠约 38px，故 ≤400px 时隐藏后缀 -->
+              <span class="logo-suffix ml-1 text-red-600"> IELTS™</span>
             </span>
           </router-link>
           <!-- Desktop menu -->
@@ -331,3 +332,11 @@ async function onManualSync() {
     </nav>
   </header>
 </template>
+
+<style scoped>
+@media (max-width: 400px) {
+  .logo-suffix {
+    display: none;
+  }
+}
+</style>
