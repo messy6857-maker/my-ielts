@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1f2937" media="(prefers-color-scheme: dark)">
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <title>My IELTS</title>
   <meta name="description" content="Everything in my IELTS preparation">
-  <script type="module" crossorigin src="./assets/index-c6714f2f.js"></script>
-  <link rel="stylesheet" href="./assets/index-f985315b.css">
+  <script type="module" crossorigin src="./assets/index-a58638bf.js"></script>
+  <link rel="stylesheet" href="./assets/index-be8b053b.css">
 </head>
 <body>
   <div id="app"></div>
@@ -18,7 +20,12 @@
     (function () {
       const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
       let setting = 'auto'
-      try { setting = localStorage.getItem('vueuse-color-scheme') || 'auto' } catch {}
+      try {
+        setting = localStorage.getItem('vueuse-color-scheme') || 'auto'
+      }
+      catch {
+        /* ignore */
+      }
       if (setting === 'dark' || (prefersDark && setting !== 'light'))
         document.documentElement.classList.toggle('dark', true)
     })()
