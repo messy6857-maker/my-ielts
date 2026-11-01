@@ -205,7 +205,9 @@ export function subscribeStorage(
 }
 export function notifyStorage(key: string, source: 'local' | 'remote') {
   if (batchDepth) {
-    if (batchSource !== 'local')
+    // 批内 remote 优先：拉取批里的本地 marker 写（如 pruneArchives）
+    // 不得把来源翻回 local，否则整批 remote 通知丢失、界面不刷新。
+    if (source === 'remote' || batchSource === null)
       batchSource = source
     return
   }

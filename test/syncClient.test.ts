@@ -190,3 +190,20 @@ describe('时钟下限持久化', () => {
     expect(stamp).toBeGreaterThan(fast)
   })
 })
+
+describe('拼写 alternatives 上传不降级', () => {
+  it('首推送（能力探针未完成）即保留完整 alternatives，不降级为 text 字符串', () => {
+    const key = entryKey('vocabulary_spell_v2', 'criticise', 'alice')
+    saveEnvelope(key, {
+      __ielts: 2,
+      stamp: [100, 'writer-a'],
+      value: { text: 'criticise', alternatives: ['criticise', 'criticize'] },
+    }, 'local')
+    const payload = collectSyncData('alice')[key]
+    expect(payload).toBeDefined()
+    const sent = envelope(payload!).value as any
+    expect(typeof sent).toBe('object')
+    expect(sent.alternatives).toEqual(['criticise', 'criticize'])
+    expect(sent.text).toBe('criticise')
+  })
+})

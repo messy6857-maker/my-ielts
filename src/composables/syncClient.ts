@@ -704,14 +704,9 @@ export function collectSyncData(username: string): Record<string, string> {
     try {
       originals.set(key, raw)
       const record = envelope(raw)
-      // Old backends/clients still expect a spelling string; keep alternatives locally until capability negotiation succeeds.
-      if (
-        !deletionServers.has(username)
-        && base.startsWith('vocabulary_spell_v2__entry_')
-        && !record.deleted
-        && Array.isArray((record.value as any)?.alternatives)
-      )
-        record.value = (record.value as any).text
+      // 拼写 alternatives 不再在上传侧降级为 text：服务端 legacySyncView
+      // 已为旧客户端转换；上传侧降级会使完整版因戳相等被服务端 text-only
+      // 版永久挡住，跨设备丢失 requiresSelection。
       result[key] = JSON.stringify(record)
     }
     catch {

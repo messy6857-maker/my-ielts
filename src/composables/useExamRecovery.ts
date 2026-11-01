@@ -75,11 +75,13 @@ export function useExamRecovery(options: {
     const at = Number(
       localStorage.getItem(`myielts_local_exam_session:${session}`) || 0,
     )
+    // 75 秒：覆盖 Chrome 后台页签约 1 分钟的节流节拍，过期判定仍早于
+    // 既有测试定性的 90 秒过期线，不把已死副本误判为活跃。
     return (
       !!session
       && session !== writer
       && at > 0
-      && Math.abs(Date.now() - at) < 30000
+      && Math.abs(Date.now() - at) < 75000
     )
   }
   const baseKey = (id = options.testId.value) =>
@@ -336,7 +338,34 @@ export function useExamRecovery(options: {
             = JSON.parse(localStorage.getItem(key()) ?? 'null')?.submitted === true
         }
         catch {}
-        if (!keepSubmitted)
+        // markSubmitted 两写之间配额耗尽时：退役标记已落盘、快照未落盘，
+        // 此时 history 里已有该 attempt 的交卷记录，补写 submitted 快照
+        // 而非删除，否则开始屏“已有交卷记录”提示丢失。补写本身也失败时
+        // 仍保留原草稿不删除（数据安全优先于提示完整；退役标记在，
+        // 该草稿不会再进入可选列表，也不会被误恢复续做）。
+        let preserveSubmitted = false
+        if (!keepSubmitted && retiring) {
+          const submittedInHistory = Object.values(
+            readRecords<MockRecord>('mock_history_v1', owner.value),
+          ).some(record => record.attemptId === retiring)
+          if (submittedInHistory) {
+            preserveSubmitted = true
+            try {
+              const current = JSON.parse(
+                localStorage.getItem(key()) ?? 'null',
+              ) as ExamDraft | null
+              if (current && !current.submitted) {
+                localStorage.setItem(
+                  key(),
+                  JSON.stringify({ ...current, submitted: true }),
+                )
+                keepSubmitted = true
+              }
+            }
+            catch {}
+          }
+        }
+        if (!keepSubmitted && !preserveSubmitted)
           localStorage.removeItem(key())
       }
       if (sourceKey && localStorage.getItem(sourceKey) === sourceRaw)
@@ -483,6 +512,7 @@ export function useExamRecovery(options: {
   const visibility = () => {
     if (document.visibilityState === 'hidden')
       saveFlush()
+    else heartbeat()
   }
   document.addEventListener('visibilitychange', visibility)
   onUnmounted(() => {
