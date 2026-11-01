@@ -25,7 +25,7 @@ const scoreTable = [
     <div class="mb-4">
       <p>了解雅思听力，以及考试中的一些基本原则、技巧</p>
       <br>
-      <p>评分表</p>
+      <p>评分表（简化版，仅供参考）</p>
       <div class="overflow-x-auto rounded-lg">
         <table
           class="min-w-[480px] w-full text-center text-sm text-gray-500 dark:text-gray-400"

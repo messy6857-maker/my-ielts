@@ -152,6 +152,7 @@ function next(index) {
           </li>
           <li>单词之间多个空格，逗号后是否有空格不影响结果判断</li>
           <li>同义替换须填全部，漏一个即记错</li>
+          <li>“同义替换”列除严格同义词外，还含听力题干改写（如 because→why）</li>
         </ul>
       </div>
       <div class="items-center sm:flex">

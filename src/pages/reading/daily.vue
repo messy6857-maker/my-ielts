@@ -143,6 +143,10 @@ async function loadMyVocabReading() {
       )
     )
       myVocabReading.value = data.reading
+    // 校验失败不是“无阅读”：后端结构损坏时与 HTTP 失败同态，走加载失败分支；
+    // 只有 ok:true 且 reading:null 才是真正无阅读，仍落入“暂无”分支。
+    else if (seq === vocabReqSeq && !(data.ok && data.reading === null))
+      vocabError.value = true
   }
   catch {
     // 只有最新请求才置失败态，旧请求的失败不干扰新日期
