@@ -4,6 +4,7 @@ import { speechLanguage } from '../../composables/useAudioGroup'
 
 import { transcriptSentenceEntries } from '../../utils/text'
 import { resolveMediaUrl } from '../../composables/useAudio'
+import sentenceTimings from './sentence-timings.json'
 
 const mediaError = ref('')
 // 点读 TTS 失败提示：与上方 mediaError 同款式；取消朗读触发的 onerror
@@ -75,8 +76,76 @@ const sentenceEntries = computed(() =>
 const sentences = computed(() => sentenceEntries.value.map(x => x.display))
 let playbackGeneration = 0
 const audioEl = ref<HTMLAudioElement | null>(null)
+const playbackRate = ref(1)
+// 句级原音时间：[start, end, status]，status 为 ok/weak（播原音）、
+// tts（无时间，走浏览器朗读并标注）、skip（无可播内容，不配按钮）
+type SentenceTiming = [number | null, number | null, string]
+const timingMap = sentenceTimings as unknown as Record<string, SentenceTiming[]>
+function sentenceTiming(idx: number): SentenceTiming | undefined {
+  const arr = timingMap[`${selectedTest.value}-${selectedPart.value}`]
+  // 只有时间数组与当前显示的分句一一对应时才用原音；否则（如原文
+  // 未按预期加载）一律走 TTS，绝不按序号播错句的音频
+  if (!arr || arr.length !== sentenceEntries.value.length)
+    return undefined
+  return arr[idx]
+}
+function timingStatus(idx: number): string {
+  return sentenceTiming(idx)?.[2] ?? 'tts'
+}
+
+const sentenceAudioEl = ref<HTMLAudioElement | null>(null)
+let sentenceEndAt: number | null = null
+
+function stopSentenceAudio() {
+  sentenceAudioEl.value?.pause()
+  sentenceEndAt = null
+}
+
+function playOriginalSentence(idx: number, start: number, end: number) {
+  const el = sentenceAudioEl.value
+  if (!el) {
+    playTtsSentence(idx)
+    return
+  }
+  audioEl.value?.pause()
+  if (typeof speechSynthesis !== 'undefined')
+    speechSynthesis.cancel()
+  speakingIndex.value = idx
+  sentenceEndAt = end
+  el.playbackRate = playbackRate.value
+  el.currentTime = start
+  const p = el.play()
+  if (p) {
+    p.catch(() => {
+      sentenceEndAt = null
+      speakingIndex.value = -1
+      playTtsSentence(idx)
+    })
+  }
+}
+
+function onSentenceTimeUpdate() {
+  const el = sentenceAudioEl.value
+  if (el && sentenceEndAt != null && el.currentTime >= sentenceEndAt) {
+    el.pause()
+    sentenceEndAt = null
+    speakingIndex.value = -1
+  }
+}
 
 function playSentence(idx: number) {
+  const s = sentences.value[idx]
+  if (!s)
+    return
+  const timing = sentenceTiming(idx)
+  if (timing && (timing[2] === 'ok' || timing[2] === 'weak') && timing[0] != null && timing[1] != null) {
+    playOriginalSentence(idx, timing[0], timing[1])
+    return
+  }
+  playTtsSentence(idx)
+}
+
+function playTtsSentence(idx: number) {
   const s = sentences.value[idx]
   if (!s)
     return
@@ -87,6 +156,7 @@ function playSentence(idx: number) {
   ttsError.value = ''
   // 先暂停原录音，再朗读本句，避免两路叠加
   audioEl.value?.pause()
+  stopSentenceAudio()
   playbackGeneration++
   speechSynthesis.cancel()
   speakingIndex.value = idx
@@ -111,6 +181,7 @@ function playSentence(idx: number) {
 function stopSentence() {
   playbackGeneration++
   speechSynthesis.cancel()
+  stopSentenceAudio()
   speakingIndex.value = -1
 }
 
@@ -121,8 +192,6 @@ const audioSrc = computed(() => {
     `mock/${cam}-${test}-listening-${selectedPart.value}.mp3`,
   )
 })
-
-const playbackRate = ref(1)
 
 let transcriptSequence = 0
 async function loadTranscript() {
@@ -160,6 +229,7 @@ watch(
     playbackGeneration++
     // 切篇/切 Part 先停掉旧朗读并复位高亮，避免旧句读完、新篇高亮错位
     speechSynthesis.cancel()
+    stopSentenceAudio()
     speakingIndex.value = -1
     showTranscript.value = false
     loadTranscript()
@@ -173,6 +243,7 @@ onUnmounted(() => {
   playbackGeneration++
   speechSynthesis.cancel()
   audioEl.value?.pause()
+  stopSentenceAudio()
   speakingIndex.value = -1
 })
 
@@ -252,6 +323,13 @@ function setRate(r: number) {
         @loadedmetadata="setRate(playbackRate)"
         @play="stopSentence()"
       />
+      <!-- 点句原音用独立 audio，避免触发上方播放器的 @play 停句逻辑 -->
+      <audio
+        ref="sentenceAudioEl"
+        :src="audioSrc"
+        class="hidden"
+        @timeupdate="onSentenceTimeUpdate"
+      />
       <div class="mt-2 flex items-center gap-2">
         <span class="text-xs text-gray-500">语速：</span>
         <button
@@ -292,7 +370,7 @@ function setRate(r: number) {
         </div>
         <div v-else-if="sentences.length" class="space-y-1">
           <p class="px-2 pb-1 text-xs text-gray-400">
-            🔊 点读为浏览器语音朗读，非原录音分句，音色与上方录音不同。
+            🔊 点句播原录音对应片段；标 TTS 的句暂无原音时间，走浏览器朗读；无按钮的句暂无可播内容。
           </p>
           <div
             v-for="(entry, i) in sentenceEntries"
@@ -301,8 +379,9 @@ function setRate(r: number) {
             class="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50"
           >
             <button
+              v-if="timingStatus(i) !== 'skip'"
               class="mt-0.5 shrink-0 rounded-full p-1 text-gray-400 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900"
-              :title="speakingIndex === i ? '停止' : '朗读本句'"
+              :title="speakingIndex === i ? '停止' : (timingStatus(i) === 'tts' ? '浏览器朗读（暂无原音时间）' : '播放原音')"
               @click="speakingIndex === i ? stopSentence() : playSentence(i)"
             >
               <span
@@ -311,6 +390,10 @@ function setRate(r: number) {
               >⏹</span>
               <span v-else class="i-carbon-volume-up-filled block h-4 w-4" />
             </button>
+            <span
+              v-if="timingStatus(i) === 'tts'"
+              class="mt-1 shrink-0 text-[10px] text-gray-400"
+            >TTS</span>
             <p class="text-sm leading-7 text-gray-800 dark:text-gray-200">
               <span
                 v-if="entry.speaker"
