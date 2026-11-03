@@ -23,6 +23,10 @@ export type MistakeModule =
   | 'listening'
   | 'reading'
   | 'corpus'
+  | 'writing'
+  | 'mock_listening'
+  | 'mock_reading'
+  | 'dictation'
 export type ProgressModule =
   | `spelling:${string}`
   | 'vocabulary'
@@ -60,6 +64,10 @@ export const MISTAKE_MODULE_LABEL: Record<MistakeModule, string> = {
   listening: '听力 179',
   reading: '阅读 376',
   corpus: '听力语料库',
+  writing: '写作翻译',
+  mock_listening: '听力模考',
+  mock_reading: '阅读模考',
+  dictation: '精听听写',
 }
 export const PROGRESS_MODULE_LABEL: Record<
   Exclude<ProgressModule, `spelling:${string}`>,
