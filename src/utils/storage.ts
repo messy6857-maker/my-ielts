@@ -99,6 +99,7 @@ const scalarBases = [
   'listening179_daily_goal_v1',
   'reading538_daily_goal_v1',
   'corpus_daily_goal_v1',
+  'dictation_progress_v1',
   'stats_archive_v2',
   'checkin_archive_v2',
   'archive_retention_v2',
