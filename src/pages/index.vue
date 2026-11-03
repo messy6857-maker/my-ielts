@@ -82,6 +82,18 @@ const menus = reactive([
     desc: '100 句翻译练习、大小作文',
   },
   {
+    label: '听力模考',
+    icon: 'i-carbon-headset',
+    link: '/mock/listening-test',
+    desc: '剑桥 18–21 听力真题模考，限时作答与交卷评分',
+  },
+  {
+    label: '阅读模考',
+    icon: 'i-carbon-document',
+    link: '/mock/reading-test',
+    desc: '剑桥 18–21 阅读真题模考，限时作答与交卷评分',
+  },
+  {
     label: '单词练习',
     icon: 'i-carbon-keyboard',
     link: '/vocabulary/typing',
