@@ -14,7 +14,7 @@ import {
   summarizeDictationPart,
 } from '../../utils/dictationProgress'
 import type { SentenceTiming } from './timings/loadTimings'
-import { loadTestTimings } from './timings/loadTimings'
+import { loadTestTimings, prefersOriginalAudio } from './timings/loadTimings'
 
 const mediaError = ref('')
 // 点读 TTS 失败提示：与上方 mediaError 同款式；取消朗读触发的 onerror
@@ -245,8 +245,8 @@ function playSentence(idx: number) {
     return
   const timing = sentenceTiming(idx)
   // ok/weak：一律原音。仅 status=tts（对齐确认音频中无此句）才朗读兜底。
-  if (timing && (timing[2] === 'ok' || timing[2] === 'weak') && timing[0] != null && timing[1] != null) {
-    playOriginalSentence(idx, timing[0], timing[1])
+  if (prefersOriginalAudio(timing)) {
+    playOriginalSentence(idx, timing![0]!, timing![1]!)
     return
   }
   if (timing?.[2] === 'skip')
