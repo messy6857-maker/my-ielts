@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onUnmounted } from 'vue'
 import AIGradeSpeaking from './AIGradeSpeaking.vue'
+import SpeakingSelfRubric from './SpeakingSelfRubric.vue'
 import { formatRecordingClock, useRecorder } from '~/composables/useRecorder'
+import { hasAISettings } from '~/composables/useAISettings'
 
 defineProps<{ question: string }>()
 
@@ -116,11 +118,15 @@ onUnmounted(() => {
       </p>
     </div>
 
-    <!-- AI 评分 -->
+    <!-- AI 评分 / 本地自评 -->
     <AIGradeSpeaking
-      v-if="audioUrl && !isRecording && !processing && transcript.trim()"
+      v-if="audioUrl && !isRecording && !processing && transcript.trim() && hasAISettings()"
       :question="question"
       :transcript="transcript"
+    />
+    <SpeakingSelfRubric
+      v-if="audioUrl && !isRecording && !processing"
+      :question="question"
     />
   </div>
 </template>

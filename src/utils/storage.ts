@@ -100,6 +100,7 @@ const scalarBases = [
   'reading538_daily_goal_v1',
   'corpus_daily_goal_v1',
   'dictation_progress_v1',
+  'speaking_self_rubric_index_v1',
   'stats_archive_v2',
   'checkin_archive_v2',
   'archive_retention_v2',
