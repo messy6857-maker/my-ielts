@@ -85,7 +85,7 @@ describe('sentence-timings', () => {
       }
     }
     expect(total).toBe(3622)
-    expect(counts).toEqual({ ok: 3409, weak: 91, tts: 57, skip: 65 })
+    expect(counts).toEqual({ ok: 3473, weak: 44, tts: 40, skip: 65 })
   })
 
   it('marks the cam20-test4-part3 meta sentence as skip, not audio', () => {

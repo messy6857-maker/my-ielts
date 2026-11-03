@@ -96,9 +96,14 @@ function timingStatus(idx: number): string {
 const sentenceAudioEl = ref<HTMLAudioElement | null>(null)
 let sentenceEndAt: number | null = null
 let sentencePlayGeneration = 0
+let sentenceStopRaf = 0
 
 function stopSentenceAudio() {
   sentencePlayGeneration++
+  if (sentenceStopRaf) {
+    cancelAnimationFrame(sentenceStopRaf)
+    sentenceStopRaf = 0
+  }
   sentenceAudioEl.value?.pause()
   sentenceEndAt = null
 }
@@ -124,15 +129,46 @@ function whenAudioSeekable(el: HTMLAudioElement): Promise<boolean> {
   })
 }
 
+function armSentenceEndWatch(el: HTMLAudioElement, generation: number) {
+  if (sentenceStopRaf) {
+    cancelAnimationFrame(sentenceStopRaf)
+    sentenceStopRaf = 0
+  }
+  // timeupdate 间隔较粗，用 rAF 在句尾更准时停，避免吞掉下一句开头。
+  const tick = () => {
+    if (generation !== sentencePlayGeneration) {
+      sentenceStopRaf = 0
+      return
+    }
+    if (sentenceEndAt != null && el.currentTime >= sentenceEndAt - 0.02) {
+      el.pause()
+      try {
+        el.currentTime = sentenceEndAt
+      }
+      catch {
+        /* ignore seek clamp */
+      }
+      sentenceEndAt = null
+      speakingIndex.value = -1
+      sentenceStopRaf = 0
+      return
+    }
+    sentenceStopRaf = requestAnimationFrame(tick)
+  }
+  sentenceStopRaf = requestAnimationFrame(tick)
+}
+
 async function playOriginalSentence(idx: number, start: number, end: number) {
   const el = sentenceAudioEl.value
+  // 已有原音时间戳时绝不回退 TTS：播放失败只提示重试媒体。
   if (!el) {
-    playTtsSentence(idx)
+    mediaError.value = '原音播放器未就绪，请刷新后重试'
     return
   }
   audioEl.value?.pause()
   if (typeof speechSynthesis !== 'undefined')
     speechSynthesis.cancel()
+  ttsError.value = ''
   const generation = ++sentencePlayGeneration
   speakingIndex.value = idx
   sentenceEndAt = end
@@ -143,7 +179,7 @@ async function playOriginalSentence(idx: number, start: number, end: number) {
   if (!ready) {
     sentenceEndAt = null
     speakingIndex.value = -1
-    playTtsSentence(idx)
+    mediaError.value = '原音尚未加载完成，请稍候或点上方重试'
     return
   }
   try {
@@ -152,9 +188,10 @@ async function playOriginalSentence(idx: number, start: number, end: number) {
   catch {
     sentenceEndAt = null
     speakingIndex.value = -1
-    playTtsSentence(idx)
+    mediaError.value = '原音定位失败，请检查网络后重试'
     return
   }
+  armSentenceEndWatch(el, generation)
   const p = el.play()
   if (p) {
     p.catch(() => {
@@ -162,17 +199,21 @@ async function playOriginalSentence(idx: number, start: number, end: number) {
         return
       sentenceEndAt = null
       speakingIndex.value = -1
-      playTtsSentence(idx)
+      mediaError.value = '原音播放失败，请检查网络后重试'
     })
   }
 }
 
 function onSentenceTimeUpdate() {
   const el = sentenceAudioEl.value
-  if (el && sentenceEndAt != null && el.currentTime >= sentenceEndAt) {
+  if (el && sentenceEndAt != null && el.currentTime >= sentenceEndAt - 0.02) {
     el.pause()
     sentenceEndAt = null
     speakingIndex.value = -1
+    if (sentenceStopRaf) {
+      cancelAnimationFrame(sentenceStopRaf)
+      sentenceStopRaf = 0
+    }
   }
 }
 
@@ -181,10 +222,13 @@ function playSentence(idx: number) {
   if (!s)
     return
   const timing = sentenceTiming(idx)
+  // ok/weak：一律原音。仅 status=tts（对齐确认音频中无此句）才朗读兜底。
   if (timing && (timing[2] === 'ok' || timing[2] === 'weak') && timing[0] != null && timing[1] != null) {
     playOriginalSentence(idx, timing[0], timing[1])
     return
   }
+  if (timing?.[2] === 'skip')
+    return
   playTtsSentence(idx)
 }
 
@@ -413,7 +457,7 @@ function setRate(r: number) {
         </div>
         <div v-else-if="sentences.length" class="space-y-1">
           <p class="px-2 pb-1 text-xs text-gray-400">
-            🔊 点句播原录音对应片段；标 TTS 的句暂无原音时间，走浏览器朗读；无按钮的句暂无可播内容。
+            🔊 点句播原录音对应片段；仅个别原录音中找不到的句子会标 TTS 并用浏览器朗读；无按钮的句暂无可播内容。
           </p>
           <div
             v-for="(entry, i) in sentenceEntries"
