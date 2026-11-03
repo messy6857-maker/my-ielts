@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Rebuild src/pages/listening/sentence-timings.json via Whisper word timestamps.
+"""Rebuild src/pages/listening/timings/<test>.json via Whisper word timestamps.
 
 Workflow:
   1. Load /tmp/align/inventory.json (from scripts/export-sentence-inventory.mts)
   2. For each part, run faster-whisper with word_timestamps (cached under /tmp/align/words/)
   3. Force-align each reference sentence onto the word timeline
-  4. Write sentence-timings.json + a JSON report
+  4. Write per-test JSON under timings/ + a JSON report
 
 Usage:
   pnpm exec vite-node scripts/export-sentence-inventory.mts
@@ -24,12 +24,38 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT_JSON = ROOT / "src/pages/listening/sentence-timings.json"
+OUT_DIR = ROOT / "src/pages/listening/timings"
 ALIGN_DIR = Path("/tmp/align")
 AUDIO_DIR = ALIGN_DIR / "audio"
 WORDS_DIR = ALIGN_DIR / "words"
 INVENTORY = ALIGN_DIR / "inventory.json"
 REPORT = ALIGN_DIR / "rebuild-report.json"
+
+
+def load_existing_timings() -> dict:
+  """Load previously written per-test timing files into flat part-key map."""
+  result: dict = {}
+  if not OUT_DIR.exists():
+    return result
+  for path in sorted(OUT_DIR.glob("cam*.json")):
+    parts = json.loads(path.read_text())
+    test_id = path.stem
+    for part, arr in parts.items():
+      result[f"{test_id}-{part}"] = arr
+  return result
+
+
+def write_timings(result: dict) -> None:
+  """Write flat part-key map into per-test JSON files."""
+  OUT_DIR.mkdir(parents=True, exist_ok=True)
+  by_test: dict[str, dict] = {}
+  for key, arr in result.items():
+    test_id, part = key.rsplit("-", 1)
+    by_test.setdefault(test_id, {})[part] = arr
+  for test_id, parts in by_test.items():
+    (OUT_DIR / f"{test_id}.json").write_text(
+      json.dumps(parts, ensure_ascii=False, separators=(",", ":")),
+    )
 
 META_TEXT = (
   "Here is the transcript of the conversation between two education students, "
@@ -576,10 +602,7 @@ def main() -> int:
     keys = keys[: args.limit]
 
   # Keep previously finished parts when rerunning a subset (--only/--limit).
-  if OUT_JSON.exists():
-    result = json.loads(OUT_JSON.read_text())
-  else:
-    result = {}
+  result = load_existing_timings()
 
   report = {"parts": {}, "model": args.model, "pad": [PAD_START, PAD_END]}
   tts_fixed = []
@@ -610,7 +633,7 @@ def main() -> int:
       elif ch.get("from") in ("ok", "weak") and ch.get("to") == "tts":
         demoted.append({"key": key, **ch})
     # Checkpoint after each part
-    OUT_JSON.write_text(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
+    write_timings(result)
     REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2))
 
   # Global stats
@@ -646,8 +669,8 @@ def main() -> int:
   report["demoted_to_tts"] = demoted
   report["remaining_tts"] = remaining_tts
   REPORT.write_text(json.dumps(report, ensure_ascii=False, indent=2))
-  OUT_JSON.write_text(json.dumps(result, ensure_ascii=False, separators=(",", ":")))
-  print("Wrote", OUT_JSON)
+  write_timings(result)
+  print("Wrote", OUT_DIR)
   print("Totals", totals)
   print(
     "TTS fixed", len(tts_fixed),

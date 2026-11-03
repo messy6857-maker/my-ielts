@@ -1,9 +1,19 @@
-import timings from '../src/pages/listening/sentence-timings.json'
 import { transcriptSentenceEntries } from '../src/utils/text'
 import fs from 'node:fs'
+import path from 'node:path'
+
+const timingsDir = path.resolve('src/pages/listening/timings')
+const timings: Record<string, any[]> = {}
+for (const file of fs.readdirSync(timingsDir).filter(f => /^cam\d+-test\d+\.json$/.test(f))) {
+  const testId = file.replace(/\.json$/, '')
+  const parts = JSON.parse(fs.readFileSync(path.join(timingsDir, file), 'utf8'))
+  for (const [part, arr] of Object.entries(parts))
+    timings[`${testId}-${part}`] = arr as any[]
+}
+
 const mods: Record<string, any> = {}
-for (const cam of [18,19,20,21]) {
-  for (const t of [1,2,3,4]) {
+for (const cam of [18, 19, 20, 21]) {
+  for (const t of [1, 2, 3, 4]) {
     const id = `cam${cam}-test${t}`
     const m = await import(`../src/pages/mock/${id}-listening-transcript.ts`)
     const key = Object.keys(m).find(k => k.endsWith('ListeningTranscript'))!
@@ -16,7 +26,7 @@ const inventory: any = {}
 for (const [test, mod] of Object.entries(mods)) {
   for (const part of ['part1', 'part2', 'part3', 'part4']) {
     const entries = transcriptSentenceEntries(mod[part])
-    const arr = (timings as any)[`${test}-${part}`]
+    const arr = timings[`${test}-${part}`]
     inventory[`${test}-${part}`] = {
       audio: `mock/${test}-listening-${part}.mp3`,
       sentences: entries.map((e, i) => ({

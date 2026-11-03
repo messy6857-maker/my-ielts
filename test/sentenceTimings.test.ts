@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { transcriptSentenceEntries } from '../src/utils/text'
-import timings from '../src/pages/listening/sentence-timings.json'
 import { cam18Test1ListeningTranscript } from '../src/pages/mock/cam18-test1-listening-transcript'
 import { cam18Test2ListeningTranscript } from '../src/pages/mock/cam18-test2-listening-transcript'
 import { cam18Test3ListeningTranscript } from '../src/pages/mock/cam18-test3-listening-transcript'
@@ -40,7 +39,23 @@ const modules: Record<string, Record<string, string>> = {
 const META_TEXT = 'Here is the transcript of the conversation between two education students, presented in a conversation format, based on the provided sources:'
 
 type Timing = [number | null, number | null, string]
-const timingMap = timings as unknown as Record<string, Timing[]>
+
+const timingFiles = import.meta.glob('../src/pages/listening/timings/cam*.json', {
+  eager: true,
+  import: 'default',
+}) as Record<string, Record<string, Timing[]>>
+
+function buildTimingMap(): Record<string, Timing[]> {
+  const map: Record<string, Timing[]> = {}
+  for (const [path, parts] of Object.entries(timingFiles)) {
+    const testId = path.split('/').pop()!.replace(/\.json$/, '')
+    for (const [part, arr] of Object.entries(parts))
+      map[`${testId}-${part}`] = arr
+  }
+  return map
+}
+
+const timingMap = buildTimingMap()
 
 describe('sentence-timings', () => {
   it('covers all 64 parts with one timing per sentence entry', () => {
@@ -56,7 +71,6 @@ describe('sentence-timings', () => {
         const entries = transcriptSentenceEntries(mod[part])
         const arr = timingMap[`${test}-${part}`]
         expect(arr).toBeDefined()
-        // 顺序必须与精听页算出的分句顺序一致，否则点句播错句
         expect(arr.length).toBe(entries.length)
         let prevEnd = 0
         entries.forEach((entry, i) => {
@@ -74,7 +88,6 @@ describe('sentence-timings', () => {
             expect(start).toBeNull()
             expect(end).toBeNull()
             if (status === 'skip') {
-              // skip 只允许两类：标点碎片，或 cam20-test4-part3 的元文本
               expect(
                 /^[.…]+$/.test(entry.text.trim()) || entry.text === META_TEXT,
               ).toBe(true)
@@ -93,5 +106,9 @@ describe('sentence-timings', () => {
     const idx = entries.findIndex(e => e.text === META_TEXT)
     expect(idx).toBeGreaterThan(-1)
     expect(timingMap['cam20-test4-part3'][idx][2]).toBe('skip')
+  })
+
+  it('ships one JSON file per test suite under timings/', () => {
+    expect(Object.keys(timingFiles).length).toBe(16)
   })
 })

@@ -4,7 +4,8 @@ import { speechLanguage } from '../../composables/useAudioGroup'
 
 import { transcriptSentenceEntries } from '../../utils/text'
 import { resolveMediaUrl } from '../../composables/useAudio'
-import sentenceTimings from './sentence-timings.json'
+import type { SentenceTiming } from './timings/loadTimings'
+import { loadTestTimings } from './timings/loadTimings'
 
 const mediaError = ref('')
 // 点读 TTS 失败提示：与上方 mediaError 同款式；取消朗读触发的 onerror
@@ -69,6 +70,7 @@ const showTranscript = ref(false)
 const loading = ref(false)
 const loadError = ref(false)
 const speakingIndex = ref(-1)
+const partTimings = ref<SentenceTiming[] | null>(null)
 
 const sentenceEntries = computed(() =>
   transcriptSentenceEntries(transcript.value),
@@ -79,10 +81,8 @@ const audioEl = ref<HTMLAudioElement | null>(null)
 const playbackRate = ref(1)
 // 句级原音时间：[start, end, status]，status 为 ok/weak（播原音）、
 // tts（无时间，走浏览器朗读并标注）、skip（无可播内容，不配按钮）
-type SentenceTiming = [number | null, number | null, string]
-const timingMap = sentenceTimings as unknown as Record<string, SentenceTiming[]>
 function sentenceTiming(idx: number): SentenceTiming | undefined {
-  const arr = timingMap[`${selectedTest.value}-${selectedPart.value}`]
+  const arr = partTimings.value
   // 只有时间数组与当前显示的分句一一对应时才用原音；否则（如原文
   // 未按预期加载）一律走 TTS，绝不按序号播错句的音频
   if (!arr || arr.length !== sentenceEntries.value.length)
@@ -91,6 +91,12 @@ function sentenceTiming(idx: number): SentenceTiming | undefined {
 }
 function timingStatus(idx: number): string {
   return sentenceTiming(idx)?.[2] ?? 'tts'
+}
+
+async function loadTimingsForSelection() {
+  partTimings.value = null
+  const parts = await loadTestTimings(selectedTest.value)
+  partTimings.value = parts?.[selectedPart.value] ?? null
 }
 
 const sentenceAudioEl = ref<HTMLAudioElement | null>(null)
@@ -320,6 +326,7 @@ watch(
     speakingIndex.value = -1
     showTranscript.value = false
     loadTranscript()
+    loadTimingsForSelection()
   },
   { immediate: true },
 )
