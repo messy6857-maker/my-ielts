@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from 'vue'
 import AIGradeSpeaking from './AIGradeSpeaking.vue'
+import SpeakingSelfRubric from './SpeakingSelfRubric.vue'
 import type { Part2Card } from './part2'
 import { formatRecordingClock, useRecorder } from '~/composables/useRecorder'
+import { hasAISettings } from '~/composables/useAISettings'
 
 defineProps<{ card: Part2Card }>()
 const emit = defineEmits<{ back: [] }>()
@@ -245,10 +247,15 @@ onUnmounted(() => {
           </p>
         </div>
         <AIGradeSpeaking
-          v-if="recorder.transcript.value.trim() && !recorder.processing.value"
+          v-if="recorder.transcript.value.trim() && !recorder.processing.value && hasAISettings()"
           part="part2"
           :question="card.title"
           :transcript="recorder.transcript.value"
+        />
+        <SpeakingSelfRubric
+          v-if="!recorder.processing.value && recorder.audioUrl.value"
+          part="part2"
+          :question="card.title"
         />
         <div class="flex gap-2">
           <button

@@ -274,13 +274,13 @@ async function onTest() {
       class="border border-gray-200 rounded-xl bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
     >
       <h3 class="mb-1 font-bold dark:text-white">
-        🤖 AI 批改
+        🤖 AI 批改 / 口语评分
       </h3>
       <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">
-        填写后可在大小作文批改页使用 AI 批改。Key
-        只保存在你本机浏览器，请求经你的 VPS
-        中转（浏览器直连会被第三方接口拦截）。 注意：Key
-        按浏览器全局共享、不按账号隔离，同一浏览器的各账号共用此 Key。
+        填写 OpenAI 兼容接口后，可用于：① 大小作文 AI 批改；② 口语录音转写后的一键评分。
+        三项都要填齐（API 地址、密钥、模型）才会启用；未配置时口语页会提示并提供本地 4 项自评清单。
+        Key 只保存在本机浏览器，请求经 VPS 中转（浏览器直连第三方会被 CORS 拦截）。
+        注意：Key 按浏览器全局共享、不按账号隔离，同一浏览器的各账号共用此 Key；评分存档仍按账号隔离。
       </p>
 
       <label class="mb-4 block">

@@ -181,6 +181,7 @@ function startTest() {
       selPopup.value = null
       started.value = true
       submitted.value = false
+      studyTimer.start()
       submit()
       return
     }
@@ -380,6 +381,7 @@ function submit() {
   })
   if (!result)
     return
+  studyTimer.pause()
   recordSaveFailed.value = !result.saved
   if (!result.saved)
     resultsOwner = recovery.owner.value
