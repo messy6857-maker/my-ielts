@@ -1,0 +1,307 @@
+{
+  "date": "2026-11-04",
+  "newsReadings": [
+    {
+      "title": "When Ice Passes the Point of No Return",
+      "source": "United Nations Environment Programme / International Cryosphere Climate Initiative reports (Nov 2026), reported by AFP via Phys.org, 2 November 2026",
+      "passage": "Two landmark reports released by the United Nations in early November 2026 have delivered the starkest warning yet about the fate of the Earth's ice. Exceeding the 1.5°C global warming threshold, the reports conclude, will bring large-scale and in many cases irreversible impacts for the cryosphere, the frozen regions of the planet that encompass glaciers, ice sheets, sea ice and permafrost. The publications, entitled State of the Cryosphere 2026: The Cost of Overshoot and Overshoot and the Cryosphere: Averting Global Meltdown, were prepared by the United Nations Environment Programme together with the International Cryosphere Climate Initiative, drawing on the work of dozens of scientists. Their central message is unambiguous: the 1.5°C limit agreed in Paris in 2015 should be treated not as a negotiable milestone but as a hard physical boundary.\n\nThe evidence assembled in the reports is alarming. Polar ice sheets are now disintegrating six times faster than in the 1990s, and mountain glaciers, which supply fresh water to hundreds of millions of people, are retreating at an unprecedented rate. Approximately 15 per cent of the Northern Hemisphere is underlain by permafrost, ground that has remained frozen for centuries and stores at least 1,700 billion tonnes of organic carbon. As this ground thaws, it releases greenhouse gases that further accelerate warming, creating a feedback loop that is extremely difficult to reverse. Glaciologist James Kirkham, the coordinating lead author of one of the reports, warned that there are no good outcomes in exceeding 1.5°C, and that a truly safe temperature for the Earth's ice may now be closer to 1°C or even below.\n\nThe consequences of overshoot extend far beyond the polar regions. The reports project that if warming reaches 2.8°C into the next century, sea levels could rise by up to five centimetres per year by 2150, compared with the current rate of about 0.45 centimetres per year, threatening coastal cities and low-lying island nations. Mountain communities already face immediate hazards, exemplified by recent devastating glacial lake outburst floods in alpine regions, in which meltwater suddenly escapes from lakes dammed by ice and sweeps away everything in its path. Thawing permafrost could eventually release as much carbon dioxide each year as the United States, currently the world's second-largest polluter, compounding the very warming that caused the thaw.\n\nGlobal warming has already reached 1.37°C above pre-industrial levels, and according to the European Copernicus network, the 1.5°C threshold could be exceeded around 2030 if current trends continue. The reports therefore call for a fundamental shift in strategy ahead of the COP31 climate negotiations in Antalya, Türkiye, in November 2026. Rather than relying on speculative future technologies to remove carbon from the atmosphere, governments must commit to binding annual emissions reductions, with environmental organisations urging cuts of at least five per cent per year. Because cryosphere collapse operates on irreversible geological timescales, the authors argue, future carbon removal cannot remedy the immediate loss of freshwater reservoirs and coastal stability.\n\nThe choice facing policymakers is thus unusually clear, and unusually urgent. Every fraction of a degree of additional warming locks in further ice loss, and every year of delay narrows the options that remain. The reports do not suggest that catastrophe is inevitable; they insist, instead, that avoiding it requires treating the cryosphere not as a distant wilderness but as a foundation of the global climate system, upon which water supplies, coastlines and weather patterns all depend. Whether the warnings are heeded in Antalya will determine, in large measure, how much of the Earth's ice survives this century.\n\nIt is difficult to convey the scale of what is at stake without observing an ice sheet as it begins to disintegrate. What appears from a distance to be a uniform white expanse is, on closer inspection, a landscape of fractures, meltwater lakes and towering cliffs, all shifting under forces that operate over centuries yet are now accelerating within a single human lifetime. Scientists who study these regions describe a profound sense of urgency, not because the science is uncertain, but precisely because it is not. The remaining question is whether political action can match the speed of the physical changes already under way.",
+      "notes": [
+        {
+          "word": "cryosphere",
+          "pos": "n.",
+          "meaning": "冰冻圈（地球上所有冰冻区域）"
+        },
+        {
+          "word": "overshoot",
+          "pos": "n.",
+          "meaning": "超出（目标值）；超标"
+        },
+        {
+          "word": "irreversible",
+          "pos": "adj.",
+          "meaning": "不可逆转的"
+        },
+        {
+          "word": "threshold",
+          "pos": "n.",
+          "meaning": "阈值；临界点"
+        },
+        {
+          "word": "glacier",
+          "pos": "n.",
+          "meaning": "冰川"
+        },
+        {
+          "word": "permafrost",
+          "pos": "n.",
+          "meaning": "永久冻土"
+        },
+        {
+          "word": "disintegrate",
+          "pos": "v.",
+          "meaning": "解体；崩解"
+        },
+        {
+          "word": "unprecedented",
+          "pos": "adj.",
+          "meaning": "史无前例的"
+        },
+        {
+          "word": "feedback loop",
+          "pos": "n.",
+          "meaning": "反馈回路"
+        },
+        {
+          "word": "accelerate",
+          "pos": "v.",
+          "meaning": "加速"
+        },
+        {
+          "word": "devastating",
+          "pos": "adj.",
+          "meaning": "毁灭性的"
+        },
+        {
+          "word": "speculative",
+          "pos": "adj.",
+          "meaning": "推测性的；未经证实的"
+        },
+        {
+          "word": "binding",
+          "pos": "adj.",
+          "meaning": "有约束力的"
+        },
+        {
+          "word": "coastal",
+          "pos": "adj.",
+          "meaning": "沿海的"
+        },
+        {
+          "word": "reservoir",
+          "pos": "n.",
+          "meaning": "水库；蓄积"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What is the central message of the two UN reports?",
+          "options": [
+            "The 1.5°C limit is no longer relevant",
+            "The 1.5°C limit should be treated as a hard physical boundary, not a negotiable milestone",
+            "Ice loss can be fully reversed by future technology",
+            "Only polar regions will be affected by warming"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "How fast are polar ice sheets disintegrating compared with the 1990s?",
+          "options": [
+            "At the same rate",
+            "Twice as fast",
+            "Six times faster",
+            "Ten times faster"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "According to the reports, permafrost stores at least 1,700 billion tonnes of organic carbon.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The reports state that warming has already reached 2.8°C above pre-industrial levels.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What do the reports urge governments to do before relying on carbon removal technologies?",
+          "options": [
+            "Wait for better technology",
+            "Commit to binding annual emissions reductions",
+            "Move coastal cities inland immediately",
+            "Stop all scientific research"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "According to the passage, sea levels could rise by up to five centimetres per year by 2150 if warming reaches 2.8°C.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "Why do the authors say future carbon removal cannot remedy cryosphere loss?",
+          "options": [
+            "Because carbon removal is illegal",
+            "Because cryosphere collapse operates on irreversible geological timescales",
+            "Because no country supports it",
+            "Because the technology already exists but is too cheap"
+          ],
+          "answer": 1
+        }
+      ]
+    },
+    {
+      "title": "Robots on a Five-Year Voyage Around Antarctica",
+      "source": "COCO2 programme (NOAA / Columbia University / CSIRO), reported 3 November 2026",
+      "passage": "In one of the most ambitious ocean research programmes ever attempted, four robotic vessels are to spend five years circling Antarctica in order to resolve a major uncertainty about the planet's climate. Far beneath the violent waves of the Southern Ocean, enormous quantities of carbon dioxide are constantly moving between the atmosphere and the deep ocean, yet scientists remain unsure precisely how much carbon this remote region absorbs, and how that capacity may change as the climate warms. The new programme, known as Constraining Ocean Carbon with Optimized Observing (COCO2), is led by researchers from the United States National Oceanic and Atmospheric Administration (NOAA), Columbia University and Australia's national science agency, CSIRO, together with several international partners.\n\nThe vessels themselves are uncrewed Saildrones, wind-powered craft equipped with an array of sensors that measure carbon dioxide, temperature, salinity and wind speed. The first vessel departed Hobart, Tasmania, on 19 September 2026, and each craft will travel approximately 22,000 kilometres around Antarctica before returning to Hobart for maintenance, replacement sensors and preparation for another voyage. Three additional vessels are scheduled for deployment during 2027, eventually establishing a fleet operating at different locations throughout the Southern Ocean. Shortly after deployment, the craft designated SD-1092 encountered winds reaching 50 knots, equivalent to approximately 93 kilometres per hour, and waves exceeding eight metres, conditions that would challenge even a conventional research ship.\n\nThe Southern Ocean is a formidable environment, but it is also one of the most important components of the global carbon cycle. Although the region represents only a fraction of the world's oceans, researchers estimate that it accounts for approximately 40 per cent of global ocean carbon dioxide uptake. In other words, nearly half of all the carbon dioxide absorbed by the seas each year passes through these cold, stormy waters. If warming, changing winds or shifting currents were to weaken this uptake, a larger share of emissions would remain in the atmosphere, accelerating global temperature rise. Conversely, if the ocean's capacity proves more resilient than feared, climate projections may need substantial revision. The difference between these outcomes is enormous, which is why direct, sustained measurement matters so much.\n\nConventional research ships rarely visit the Southern Ocean in winter, when conditions are at their most dangerous, and satellite observations, while valuable, cannot capture the detailed chemical exchanges taking place at the sea surface. Autonomous vessels fill this gap: they can operate continuously for months, transmit data in near real time, and venture into regions that would be prohibitively expensive or hazardous for crewed expeditions. The data they gather will be used to refine climate models, improve estimates of the global carbon budget, and inform international negotiations on emissions reductions. Scientists emphasise that the programme is not merely a technological demonstration but a sustained scientific commitment, with repeated voyages building a record that no single expedition could provide.\n\nThe five-year mission also illustrates a broader transformation in oceanography. Where researchers once depended entirely on ships and buoys, they now deploy fleets of autonomous platforms that collaborate across vast distances, gathering evidence about a planet that is changing faster than our ability to observe it. If COCO2 succeeds, it will not only clarify the role of the Southern Ocean but also demonstrate how persistent, robotic observation can answer questions that have resisted decades of intermittent study. In the Southern Ocean, where the wind rarely relents and the waves rarely subside, four small vessels may help determine the future of the global climate.\n\nTo circumnavigate Antarctica is no small undertaking even for a crewed ship, and the fact that these modest vessels will attempt it repeatedly, year after year, marks a turning point in how science explores the most hostile corners of the Earth. Each completed circuit adds another ring of measurements to a growing archive, and each archive entry narrows the uncertainty that has clouded climate forecasts for a generation. The ocean, long treated as a silent backdrop to human affairs, is finally being listened to with the patience and precision that its importance deserves.",
+      "notes": [
+        {
+          "word": "uncrewed",
+          "pos": "adj.",
+          "meaning": "无人驾驶的；无人的"
+        },
+        {
+          "word": "circumnavigate",
+          "pos": "v.",
+          "meaning": "环航；绕行"
+        },
+        {
+          "word": "deployment",
+          "pos": "n.",
+          "meaning": "部署；派遣"
+        },
+        {
+          "word": "sensor",
+          "pos": "n.",
+          "meaning": "传感器"
+        },
+        {
+          "word": "uptake",
+          "pos": "n.",
+          "meaning": "吸收；摄取"
+        },
+        {
+          "word": "remote",
+          "pos": "adj.",
+          "meaning": "偏远的；遥远的"
+        },
+        {
+          "word": "formidable",
+          "pos": "adj.",
+          "meaning": "强大的；难以对付的"
+        },
+        {
+          "word": "salinity",
+          "pos": "n.",
+          "meaning": "盐度"
+        },
+        {
+          "word": "autonomous",
+          "pos": "adj.",
+          "meaning": "自主的；自动的"
+        },
+        {
+          "word": "expedition",
+          "pos": "n.",
+          "meaning": "探险；考察"
+        },
+        {
+          "word": "resilient",
+          "pos": "adj.",
+          "meaning": "有恢复力的；有弹性的"
+        },
+        {
+          "word": "refine",
+          "pos": "v.",
+          "meaning": "改进；提炼"
+        },
+        {
+          "word": "prohibitively",
+          "pos": "adv.",
+          "meaning": "高得令人望而却步地"
+        },
+        {
+          "word": "sustained",
+          "pos": "adj.",
+          "meaning": "持续的"
+        },
+        {
+          "word": "relent",
+          "pos": "v.",
+          "meaning": "减弱；缓和"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What is the main purpose of the COCO2 programme?",
+          "options": [
+            "To transport cargo around Antarctica",
+            "To resolve uncertainty about how much carbon dioxide the Southern Ocean absorbs",
+            "To replace all research ships worldwide",
+            "To measure the depth of the Southern Ocean"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Approximately what share of global ocean carbon dioxide uptake is attributed to the Southern Ocean?",
+          "options": [
+            "About 10 per cent",
+            "About 25 per cent",
+            "About 40 per cent",
+            "About 75 per cent"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "The first Saildrone departed Hobart, Tasmania, on 19 September 2026.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "According to the passage, conventional research ships regularly visit the Southern Ocean in winter.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What advantage do autonomous vessels have over conventional ships in this research?",
+          "options": [
+            "They are larger than research ships",
+            "They can operate continuously for months in dangerous conditions and transmit data in near real time",
+            "They do not need any sensors",
+            "They can stop ocean warming"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "How far will each vessel travel around Antarctica?",
+          "options": [
+            "About 2,200 kilometres",
+            "About 22,000 kilometres",
+            "About 220,000 kilometres",
+            "About 2,000 kilometres"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The passage states that three additional vessels are scheduled for deployment during 2027.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        }
+      ]
+    }
+  ]
+}
