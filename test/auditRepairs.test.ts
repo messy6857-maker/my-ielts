@@ -1,7 +1,6 @@
 // Regressions for independently reproduced data-loss and synchronization failures.
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { useAuth } from '../src/composables/useAuth'
 import { setToken } from '../src/composables/syncClient'
@@ -61,7 +60,12 @@ async function page(Page: any) {
   wrappers.push(w)
   await flushPromises()
   const s = (w.vm as any).$.setupState
-  for (let i = 0; s.loading && i < 60; i++) {
+  for (let i = 0; i < 60; i++) {
+    const vocabEmpty = s.refVocabulary
+      && !(s.refVocabulary[s.category]?.words?.length)
+    const flashEmpty = s.vocabReady === false
+    if (!s.loading && !vocabEmpty && !flashEmpty)
+      break
     await new Promise(resolve => setTimeout(resolve, 5))
     await flushPromises()
   }
@@ -197,10 +201,14 @@ it('spelling tabs preserve answers in different chapters', async () => {
   const ac = a.s.category
   const bc = Object.keys(b.s.refVocabulary).find(c => c !== ac)!
   const wa = a.s.refVocabulary[ac].words[0][0]
+  b.s.category = bc
+  await flushPromises()
+  for (let i = 0; i < 50 && !b.s.refVocabulary[bc]?.words?.length; i++) {
+    await new Promise(resolve => setTimeout(resolve, 5))
+    await flushPromises()
+  }
   const wb = b.s.refVocabulary[bc].words[0][0]
   a.s.onInputFocusOut({ target: { id: 'first', value: wa.word[0] } }, wa)
-  b.s.category = bc
-  await nextTick()
   b.s.onInputFocusOut({ target: { id: 'second', value: wb.word[0] } }, wb)
   const saved = readRecords<string>('vocabulary_spell_v2', 'alice')
   expect(saved[`${ac}|${wa.id}`]).toBe(wa.word[0].toLowerCase())
@@ -221,7 +229,11 @@ it('cross-chapter audio uses its original chapter', async () => {
   const Page = (await import('../src/pages/vocabulary/flashcard.vue')).default
   const { s } = await page(Page)
   s.crossChapter = true
-  await nextTick()
+  await flushPromises()
+  for (let i = 0; i < 80 && !s.vocabReady; i++) {
+    await new Promise(resolve => setTimeout(resolve, 5))
+    await flushPromises()
+  }
   expect(s.current.word).toBe(w.word[0])
   const play = vi.mocked(HTMLMediaElement.prototype.play)
   const el = play.mock.instances.at(-1) as unknown as HTMLAudioElement

@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { accountKey, readValue, saveValue } from '../../utils/storage'
 import { useAuth } from '../../composables/useAuth'
 
-const props = defineProps<{ question: string, part?: string }>()
+const props = defineProps<{ question: string; part?: string }>()
 
 const { currentUser } = useAuth()
 

@@ -121,7 +121,7 @@ const mnemonicFn = ref<
     example?: string,
   ) => MnemonicHint | null)
   | null
->(null)
+    >(null)
 let mnemonicPromise: Promise<typeof mnemonicFn.value> | null = null
 function ensureMnemonic() {
   if (!mnemonicPromise) {

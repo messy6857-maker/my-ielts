@@ -80,6 +80,7 @@ let chapterLoadSeq = 0
 async function loadChapterPayload(chapter = category.value) {
   const seq = ++chapterLoadSeq
   chapterLoadError.value = false
+  loaded.value = false
   try {
     const data = await loadVocabularyChapter(chapter)
     if (seq !== chapterLoadSeq)
@@ -87,10 +88,14 @@ async function loadChapterPayload(chapter = category.value) {
     refVocabulary[chapter] = structuredClone(data)
     restoreSpellValues()
     await loadDetails()
+    if (seq === chapterLoadSeq)
+      loaded.value = true
   }
   catch {
-    if (seq === chapterLoadSeq)
+    if (seq === chapterLoadSeq) {
       chapterLoadError.value = true
+      loaded.value = false
+    }
   }
 }
 async function loadDetails() {
@@ -109,10 +114,13 @@ async function loadDetails() {
       chapterDetailError.value = true
   }
 }
-watch(category, () => {
-  loadChapterPayload()
-})
-onMounted(() => loadChapterPayload())
+watch(
+  category,
+  () => {
+    loadChapterPayload()
+  },
+  { immediate: true },
+)
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
 

@@ -89,7 +89,7 @@ export function diffDictation(expectedText: string, actualText: string): {
         dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1])
     }
   }
-  const matched: Array<{ ei: number, aj: number }> = []
+  const matched: Array<{ ei: number; aj: number }> = []
   let i = n
   let j = m
   while (i > 0 && j > 0) {

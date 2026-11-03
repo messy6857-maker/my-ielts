@@ -2,14 +2,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
-import { useMistakes, useProgress } from '../composables/useStudyData'
+import { MISTAKE_MODULE_LABEL, useMistakes, useProgress } from '../composables/useStudyData'
 import { useWordSchedule } from '../composables/useSpacedRepetition'
 import {
   formatDuration,
   useStudyTimer,
 } from '../composables/useStudyTimer'
 import { buildTodayTasks } from '../utils/todayTasks'
-import { MISTAKE_MODULE_LABEL } from '../composables/useStudyData'
 
 defineOptions({
   name: 'IndexPage',
@@ -28,12 +27,13 @@ function refreshTasks() {
 }
 
 const today = computed(() => {
-  void tasksTick.value
+  const revision = tasksTick.value
   return buildTodayTasks({
     schedules: schedules.value,
     mistakes: mistakes.value,
     owner: currentUser.value,
     studySeconds: timer.dailySeconds.value,
+    now: Date.now() + revision * 0,
   })
 })
 
@@ -142,7 +142,7 @@ const menus = reactive([
               </span>
             </h3>
             <button
-              class="text-xs text-blue-600 hover:underline dark:text-blue-400"
+              class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
               @click="refreshTasks"
             >
               刷新
@@ -150,7 +150,7 @@ const menus = reactive([
           </div>
 
           <div
-            class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            class="grid mb-4 gap-3 lg:grid-cols-4 sm:grid-cols-2"
           >
             <RouterLink
               to="/vocabulary/flashcard"
@@ -206,11 +206,11 @@ const menus = reactive([
 
           <div
             v-if="today.isEmpty"
-            class="rounded-lg border border-dashed border-gray-300 bg-white/50 p-4 text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-900/30 dark:text-gray-400"
+            class="border border-gray-300 rounded-lg border-dashed bg-white/50 p-4 text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-900/30 dark:text-gray-400"
           >
             今天还没有复习任务或进行中的练习。可以从下方入口开始：词汇自测、听力/阅读模考，或精听听写。
           </div>
-          <div v-else class="space-y-3 text-sm">
+          <div v-else class="text-sm space-y-3">
             <div v-if="today.recentMistakes.length">
               <p class="mb-1 font-medium text-gray-800 dark:text-gray-200">
                 最近错题
@@ -252,7 +252,7 @@ const menus = reactive([
                   v-for="d in today.writingDrafts"
                   :key="`${d.task}:${d.promptId}:${d.versionId || ''}`"
                   :to="d.path"
-                  class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-800"
+                  class="border border-gray-300 rounded-lg bg-white px-3 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-800"
                 >
                   继续 {{ d.task === 'task1' ? '小作文' : '大作文' }} · {{ d.promptId }}
                 </RouterLink>

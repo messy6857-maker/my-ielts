@@ -226,30 +226,9 @@ describe('今日任务数据聚合', () => {
   })
 
   it('聚合未完成模考草稿与空状态', () => {
-    const store = {
-      data: {} as Record<string, string>,
-      getItem(k: string) {
-        return this.data[k] ?? null
-      },
-      setItem(k: string, v: string) {
-        this.data[k] = v
-      },
-      removeItem(k: string) {
-        delete this.data[k]
-      },
-      clear() {
-        this.data = {}
-      },
-      key() {
-        return null
-      },
-      get length() {
-        return Object.keys(this.data).length
-      },
-    } as Storage & { data: Record<string, string> }
-
+    localStorage.clear()
     // guest prefix: myielts_
-    store.setItem(
+    localStorage.setItem(
       'myielts_mock_draft_v1_listening_cam18-test1__session_x',
       JSON.stringify({
         version: 1,
@@ -261,7 +240,7 @@ describe('今日任务数据聚合', () => {
         timeLeft: 1000,
       }),
     )
-    store.setItem(
+    localStorage.setItem(
       'myielts_mock_draft_v1_listening_cam18-test1__session_y',
       JSON.stringify({
         version: 1,
@@ -274,7 +253,7 @@ describe('今日任务数据聚合', () => {
       }),
     )
 
-    const unfinished = listUnfinishedMocks(null, store)
+    const unfinished = listUnfinishedMocks(null)
     expect(unfinished).toHaveLength(1)
     expect(unfinished[0].testId).toBe('cam18-test1')
     expect(unfinished[0].path).toContain('listening-test')
@@ -284,7 +263,6 @@ describe('今日任务数据聚合', () => {
       mistakes: [],
       owner: null,
       studySeconds: 0,
-      storage: store,
     })
     // unfinished mock means not empty
     expect(empty.isEmpty).toBe(false)
@@ -295,8 +273,8 @@ describe('今日任务数据聚合', () => {
       mistakes: [],
       owner: 'nobody',
       studySeconds: 0,
-      storage: store,
     })
     expect(trulyEmpty.isEmpty).toBe(true)
+    localStorage.clear()
   })
 })

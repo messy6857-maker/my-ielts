@@ -189,23 +189,32 @@ it('O2: 四个开关持久化，重新挂载后保持上次选择', async () => 
 })
 
 it('O3: 打字 WPM 按整章累计，不再每词重置', async () => {
+  const w = mountTyping()
+  await flushPromises()
+  for (let i = 0; i < 80; i++) {
+    const s = (w.vm as any).$.setupState
+    const list = s.words?.value ?? s.words
+    if (Array.isArray(list) && list.length > 0)
+      break
+    await new Promise(resolve => setTimeout(resolve, 5))
+    await flushPromises()
+  }
+  const s = (w.vm as any).$.setupState
+  expect((s.currentWord?.value ?? s.currentWord)).toBe('atmosphere')
   vi.useFakeTimers()
   try {
     vi.setSystemTime(new Date(2026, 9, 27, 12, 0, 0))
-    const w = mountTyping()
-    await nextTick()
-    const input = w.find('input[type="text"]')
-    await input.setValue('atmosphere')
+    const inputEl = w.find('input[type="text"]').element as HTMLInputElement
+    inputEl.value = 'atmosphere'
+    s.handleInput({ target: inputEl } as any)
+    expect(s.startTime?.value ?? s.startTime).not.toBeNull()
     await vi.advanceTimersByTimeAsync(200)
-    await nextTick()
+    expect(s.typedChars?.value ?? s.typedChars).toBe(10)
     vi.setSystemTime(new Date(2026, 9, 27, 12, 1, 0))
-    await input.setValue('x')
-    await nextTick()
-    // WPM 值是唯一的 text-blue-500 大数字（准确率是红/绿），直接按它定位。
-    const wpmValue: any = w.find('.text-2xl.text-blue-500')
-    expect(wpmValue.exists()).toBe(true)
-    // 已完成词 10 字符 + 当前 1 字符，耗时 1 分钟：(10+1)/5/1 = 2.2 → 2
-    expect(wpmValue.text()).toBe('2')
+    inputEl.value = 'x'
+    s.handleInput({ target: inputEl } as any)
+    const wpm = s.wpm?.value ?? s.wpm
+    expect(wpm).toBe(2)
   }
   finally {
     vi.useRealTimers()

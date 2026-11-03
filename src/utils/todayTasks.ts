@@ -1,9 +1,9 @@
 import type { MistakeItem } from '../composables/useStudyData'
 import type { WordSchedule } from '../composables/useSpacedRepetition'
+import { mockTestList } from '../pages/mock/registry'
 import type { WritingDraft } from './drafts'
 import { listDrafts } from './drafts'
 import { accountPrefix } from './storage'
-import { mockTestList } from '../pages/mock/registry'
 
 export interface UnfinishedMock {
   kind: 'listening' | 'reading'
@@ -17,7 +17,7 @@ export interface TodayTasksSnapshot {
   dueWordCount: number
   recentMistakes: MistakeItem[]
   unfinishedMocks: UnfinishedMock[]
-  writingDrafts: Array<WritingDraft & { task: 'task1' | 'task2', path: string }>
+  writingDrafts: Array<WritingDraft & { task: 'task1' | 'task2'; path: string }>
   studySeconds: number
   isEmpty: boolean
 }
@@ -98,7 +98,7 @@ export function listUnfinishedMocks(
 }
 
 export function listWritingDraftSummaries(owner: string | null) {
-  const items: Array<WritingDraft & { task: 'task1' | 'task2', path: string }>
+  const items: Array<WritingDraft & { task: 'task1' | 'task2'; path: string }>
     = []
   for (const task of ['task1', 'task2'] as const) {
     for (const d of listDrafts(task, owner)) {

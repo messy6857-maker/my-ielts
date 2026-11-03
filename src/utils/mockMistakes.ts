@@ -100,12 +100,12 @@ export function buildMockMistakeEntry(input: {
   userAnswer: string
   audio?: string
 }): {
-  module: MistakeModule
-  key: string
-  title: string
-  detail: string
-  hint: string
-} {
+    module: MistakeModule
+    key: string
+    title: string
+    detail: string
+    hint: string
+  } {
   const q = input.question
   const correct = formatMockCorrectAnswer(q)
   const yours = formatMockUserAnswer(q, input.userAnswer)
@@ -138,7 +138,7 @@ export function collectMockMistakeEntries(input: {
   testId: string
   label: string
   /** part key + questions + optional audio */
-  parts: Array<{ part: string, questions: MockQuestion[], audio?: string }>
+  parts: Array<{ part: string; questions: MockQuestion[]; audio?: string }>
   answers: Record<string, string>
 }): ReturnType<typeof buildMockMistakeEntry>[] {
   const out: ReturnType<typeof buildMockMistakeEntry>[] = []
