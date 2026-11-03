@@ -25,12 +25,14 @@ import type { MockQuestion } from './types'
 import { resolveMediaUrl } from '~/composables/useAudio'
 import { useGoBack } from '~/composables/useGoBack'
 import { useMistakes } from '~/composables/useStudyData'
+import { useStudyTimer } from '~/composables/useStudyTimer'
 import { collectMockMistakeEntries } from '~/utils/mockMistakes'
 
 const router = useRouter()
 const route = useRoute()
 const { goBack } = useGoBack('/reading')
 const { addMistake } = useMistakes()
+const studyTimer = useStudyTimer()
 // 考试中点返回先确认未交卷；开始屏/已交卷直接返回
 
 function handleBack() {
@@ -200,6 +202,7 @@ function startTest() {
   started.value = true
   recovery.save()
   startTimer()
+  studyTimer.start()
 }
 
 // 放弃当前草稿并重新开始：清掉本会话草稿后立刻全新开考，
@@ -220,6 +223,7 @@ watch(testId, loadTest)
 
 onUnmounted(() => {
   pauseExam()
+  studyTimer.pause()
 })
 
 const allQuestions = computed<MockQuestion[]>(

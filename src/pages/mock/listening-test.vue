@@ -26,6 +26,7 @@ import type { MockQuestion } from './types'
 import { resolveMediaUrl } from '~/composables/useAudio'
 import { useGoBack } from '~/composables/useGoBack'
 import { useMistakes } from '~/composables/useStudyData'
+import { useStudyTimer } from '~/composables/useStudyTimer'
 import { collectMockMistakeEntries } from '~/utils/mockMistakes'
 import ListeningTabs from '~/components/ListeningTabs.vue'
 
@@ -34,6 +35,7 @@ const mediaRoot = ref<HTMLElement | null>(null)
 
 const { goBack } = useGoBack('/listening')
 const { addMistake } = useMistakes()
+const studyTimer = useStudyTimer()
 
 const router = useRouter()
 const route = useRoute()
@@ -210,6 +212,7 @@ function startTest() {
       activePart.value = saved.extra?.active ?? 0
       started.value = true
       submitted.value = false
+      studyTimer.start()
       submit()
       return
     }
@@ -229,6 +232,7 @@ function startTest() {
   started.value = true
   recovery.save()
   startTimer()
+  studyTimer.start()
 }
 
 // 放弃当前草稿并重新开始：清掉本会话草稿后立刻全新开考，
@@ -253,6 +257,7 @@ watch(activePart, () => pauseAllAudio())
 
 onUnmounted(() => {
   pauseExam()
+  studyTimer.pause()
   pauseAllAudio()
   document.body.classList.remove('listening-sticky-page')
 })
@@ -492,6 +497,7 @@ async function submit() {
   })
   if (!result)
     return
+  studyTimer.pause()
   recordSaveFailed.value = !result.saved
   if (!result.saved)
     resultsOwner = recovery.owner.value

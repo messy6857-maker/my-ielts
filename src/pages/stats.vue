@@ -32,7 +32,7 @@ const mockHistory = ref(getMockHistory())
 function load() {
   attempts.value = getAttempts()
   mockHistory.value = getMockHistory()
-  // 只读已持久化的当日累计（不启动计时），与自测页结算后写入的值一致
+  // 只读已持久化的当日累计（不启动计时），与各练习页结算后写入的值一致
   timer.refresh()
 }
 load()
@@ -183,7 +183,7 @@ const last14Checkin = computed(() => {
           class="border border-gray-200 rounded-xl bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
         >
           <p class="text-sm text-gray-500 dark:text-gray-400">
-            今日自测学习时长
+            今日学习时长
           </p>
           <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
             {{ formatDuration(timer.dailySeconds.value) }}
@@ -502,7 +502,7 @@ const last14Checkin = computed(() => {
             </div>
           </div>
           <p class="mt-4 text-xs text-gray-500 dark:text-gray-400">
-            数据说明：学习时长只统计自测卡片页（精听、阅读、写作等不计入计时）；模考正确率是真实得分；自测正确率按每次自评计。
+            数据说明：学习时长统计自测卡片、听力精听/听写与听力/阅读模考；模考正确率是真实得分；自测正确率按每次自评计。
           </p>
         </section>
       </div>
