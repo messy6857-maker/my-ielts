@@ -19,14 +19,19 @@ import {
   readChapterPreference,
   writeChapterPreference,
 } from '../../utils/chapterPreference'
-import { wordPhonetics } from './wordPhonetics'
 import { parseExtra } from './extraParser'
-import { getMnemonic } from './mnemonics'
-import { synonymMeanings } from './synonymMeanings'
-import vocabulary from './vocabulary'
+import type { MnemonicHint } from './mnemonics'
+import {
+  getCachedChapter,
+  listVocabularyChapters,
+  loadAllVocabulary,
+  loadVocabularyChapter,
+} from './loadVocabulary'
+import type { VocabularyChapter } from './loadVocabulary'
+import { WORD_CHAPTER_INDEX } from './vocabularyMeta'
 
-// 注：synonymPosData 不再静态 import（7781 条）：首次需要展示同义词词性时才由
-// ensureSynonymPos() 动态 import()，未加载完成前词性区为空（v-if 守卫），加载后响应式刷新。
+// 注：synonymPos / synonymMeanings / mnemonics / wordPhonetics 均二次懒加载，
+// 避免塞进 flashcard 首包；词表按章节 dynamic import。
 
 const managedAudio = useAudioGroup()
 
@@ -45,12 +50,11 @@ interface Card {
 }
 
 const CHAPTER_KEY = 'vocabulary_flashcard_chapter'
-const chapters = Object.keys(vocabulary)
-const chapterById = new Map<string, string>(
-  Object.entries(vocabulary).flatMap(([chapter, data]: [string, any]) =>
-    data.words.flat().map((w: any) => [String(w.id), chapter] as const),
-  ),
-)
+const chapters = listVocabularyChapters()
+const chapterById = new Map<string, string>(Object.entries(WORD_CHAPTER_INDEX))
+const vocabulary = shallowRef<Record<string, VocabularyChapter>>({})
+const vocabReady = ref(false)
+const vocabError = ref(false)
 const crossChapter = ref(false)
 const { currentUser: sessionUser } = useAuth()
 const category = ref(
@@ -110,9 +114,34 @@ const current = computed(() =>
   !studying.value ? (queue.value[0] ?? null) : null,
 )
 const remaining = computed(() => queue.value.length)
+const mnemonicFn = ref<
+  | ((
+    word: string,
+    meaning?: string,
+    example?: string,
+  ) => MnemonicHint | null)
+  | null
+>(null)
+let mnemonicPromise: Promise<typeof mnemonicFn.value> | null = null
+function ensureMnemonic() {
+  if (!mnemonicPromise) {
+    mnemonicPromise = import('./mnemonics')
+      .then((m) => {
+        mnemonicFn.value = m.getMnemonic
+        return mnemonicFn.value
+      })
+      .catch(() => {
+        mnemonicPromise = null
+        return null
+      })
+  }
+  return mnemonicPromise
+}
+ensureMnemonic()
+
 const studyMnemonic = computed(() =>
-  studying.value
-    ? getMnemonic(
+  studying.value && mnemonicFn.value
+    ? mnemonicFn.value(
       studying.value.word,
       studying.value.meaning,
       studying.value.example,
@@ -121,8 +150,8 @@ const studyMnemonic = computed(() =>
 )
 // 自评前的例句巧记提示
 const preMnemonic = computed(() =>
-  current.value
-    ? getMnemonic(
+  current.value && mnemonicFn.value
+    ? mnemonicFn.value(
       current.value.word,
       current.value.meaning,
       current.value.example,
@@ -150,11 +179,10 @@ const extraDots = [
   'bg-teal-500',
   'bg-indigo-500',
 ]
-// 同义词词性：从词库查（短语或生僻词查不到就不显示词性）
+// 同义词词性：从已加载词库查（短语或生僻词查不到就不显示词性）
 const wordPosMap = computed(() => {
   const map = new Map<string, string>()
-  for (const ch of Object.keys(vocabulary)) {
-    const chapter = (vocabulary as any)[ch]
+  for (const chapter of Object.values(vocabulary.value)) {
     if (!chapter)
       continue
     for (const w of chapter.words.flat()) {
@@ -185,6 +213,23 @@ function ensureSynonymPos() {
   }
   return synonymPosPromise
 }
+const synonymMeaningsLazy = ref<Record<string, string> | null>(null)
+let synonymMeaningsPromise: Promise<Record<string, string> | null> | null = null
+function ensureSynonymMeanings() {
+  if (!synonymMeaningsPromise) {
+    synonymMeaningsPromise = import('./synonymMeanings')
+      .then((m) => {
+        synonymMeaningsLazy.value = m.synonymMeanings
+        return m.synonymMeanings
+      })
+      .catch(() => {
+        synonymMeaningsPromise = null
+        return null
+      })
+  }
+  return synonymMeaningsPromise
+}
+ensureSynonymMeanings()
 function synonymPos(syn: string): string {
   // 先查本站词库（权威词性，原样显示），再查联网抓取的词性数据；都查不到就不显示（如实标注）
   const key = syn.trim().toLowerCase()
@@ -199,8 +244,25 @@ function synonymPos(syn: string): string {
   return `${fallback}（首选）`
 }
 function synonymMeaning(syn: string): string {
-  return synonymMeanings[syn.trim().toLowerCase()] || ''
+  return synonymMeaningsLazy.value?.[syn.trim().toLowerCase()] || ''
 }
+const wordPhoneticsLazy = ref<Record<string, string> | null>(null)
+let wordPhoneticsPromise: Promise<Record<string, string> | null> | null = null
+function ensureWordPhonetics() {
+  if (!wordPhoneticsPromise) {
+    wordPhoneticsPromise = import('./wordPhonetics')
+      .then((m) => {
+        wordPhoneticsLazy.value = m.wordPhonetics
+        return m.wordPhonetics
+      })
+      .catch(() => {
+        wordPhoneticsPromise = null
+        return null
+      })
+  }
+  return wordPhoneticsPromise
+}
+ensureWordPhonetics()
 // 点击同义词展开/收起中文释义（用数组保证响应式稳定触发）
 const expandedSyns = ref<string[]>([])
 // 点击拓展词展开/收起中文释义
@@ -226,9 +288,9 @@ const studyLapses = computed(() => {
 })
 const showMnemonic = ref(false)
 
-// 单词音标：内置数据 2662 词有音标，查不到的留空（不编造）
+// 单词音标：内置数据懒加载后查；查不到的留空（不编造）
 function phonetic(word: string): string {
-  return wordPhonetics[word.toLowerCase().trim()] || ''
+  return wordPhoneticsLazy.value?.[word.toLowerCase().trim()] || ''
 }
 
 let audio: HTMLAudioElement | null = null
@@ -282,20 +344,22 @@ function wordAliasIds(card: Card) {
   if (!crossChapter.value)
     return [card.id]
   const normalized = card.word.toLowerCase().trim()
-  return Object.values(vocabulary)
-    .flatMap((c: any) => c.words.flat())
-    .filter((w: any) => w.word[0].toLowerCase().trim() === normalized)
-    .map((w: any) => w.id) as number[]
+  return Object.values(vocabulary.value)
+    .flatMap(c => c.words.flat())
+    .filter(w => w.word[0].toLowerCase().trim() === normalized)
+    .map(w => w.id) as number[]
 }
 const gradeHistory = ref<GradeHistoryEntry[]>([])
 
 function buildQueue() {
-  const chapter = (vocabulary as any)[category.value]
+  if (!vocabReady.value)
+    return
+  const chapter = vocabulary.value[category.value]
   let all = crossChapter.value
-    ? Object.values(vocabulary)
-      .flatMap((c: any) => c.words.flat())
+    ? Object.values(vocabulary.value)
+      .flatMap(c => c.words.flat())
       .filter(
-        (w: any) =>
+        w =>
           (scheduleStore.get(w.id)?.dueAt ?? Number.POSITIVE_INFINITY)
             <= Date.now(),
       )
@@ -603,9 +667,51 @@ function resetMemory() {
   timer.resume()
 }
 
+let vocabLoadSeq = 0
+async function ensureVocabularyLoaded() {
+  const seq = ++vocabLoadSeq
+  vocabError.value = false
+  try {
+    if (crossChapter.value) {
+      const all = await loadAllVocabulary()
+      if (seq !== vocabLoadSeq)
+        return
+      vocabulary.value = all
+    }
+    else {
+      const chapter = await loadVocabularyChapter(category.value)
+      if (seq !== vocabLoadSeq)
+        return
+      vocabulary.value = {
+        ...Object.fromEntries(
+          listVocabularyChapters().map(id => [
+            id,
+            getCachedChapter(id) ?? {
+              label: id,
+              audio: '',
+              groupCount: 0,
+              wordCount: 0,
+              words: [],
+            },
+          ]),
+        ),
+        [category.value]: chapter,
+      }
+    }
+    vocabReady.value = true
+    buildQueue()
+  }
+  catch {
+    if (seq === vocabLoadSeq) {
+      vocabError.value = true
+      vocabReady.value = false
+    }
+  }
+}
+
 watch([category, crossChapter], () => {
   writeChapterPreference(CHAPTER_KEY, category.value, sessionUser.value)
-  buildQueue()
+  ensureVocabularyLoaded()
 })
 
 // 卡片切换时预加载联网例句/同义词
@@ -637,11 +743,12 @@ watch(
     newCount.value = 0
     sessionTotal.value = 0
     timer.pause()
+    ensureVocabularyLoaded()
   },
   { flush: 'sync' },
 )
 onMounted(() => {
-  buildQueue()
+  ensureVocabularyLoaded()
   timer.start()
 })
 
@@ -678,6 +785,14 @@ onUnmounted(() => {
     >
       重试加载
     </button>
+  </p>
+  <p v-if="vocabError" class="mx-4 text-sm text-amber-700" role="status">
+    词表加载失败。<button class="underline" @click="ensureVocabularyLoaded">
+      重试
+    </button>
+  </p>
+  <p v-else-if="!vocabReady" class="mx-4 text-sm text-gray-500" role="status">
+    词表加载中…
   </p>
   <p v-if="synonymPosError" class="mx-4 text-sm text-amber-700" role="status">
     同义词词性暂未加载。<button class="underline" @click="ensureSynonymPos">

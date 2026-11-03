@@ -59,6 +59,8 @@ src/pages/speaking/part3.ts
 src/pages/vocabulary/synonymMeanings.ts
 src/pages/vocabulary/synonymPos.ts
 src/pages/vocabulary/vocabulary.js
+src/pages/vocabulary/vocabularyMeta.ts
+src/pages/vocabulary/chapters/*.json
 src/pages/vocabulary/wordPhonetics.ts
 src/pages/vocabulary/wordSentences.ts
 src/pages/writing/100sentences.js

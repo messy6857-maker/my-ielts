@@ -12,12 +12,19 @@ import {
   readChapterPreference,
   writeChapterPreference,
 } from '../../utils/chapterPreference'
-import vocabulary from './vocabulary'
+import {
+  listVocabularyChapters,
+  loadVocabularyChapter,
+} from './loadVocabulary'
+import type { VocabularyChapter } from './loadVocabulary'
 
 const managedAudio = useAudioGroup()
 
 const CHAPTER_KEY = 'vocabulary_typing_chapter'
-const chapters = Object.keys(vocabulary)
+const chapters = listVocabularyChapters()
+const chapterData = shallowRef<VocabularyChapter | null>(null)
+const chapterLoading = ref(false)
+const chapterError = ref(false)
 const caseOwner = useAuth().currentUser
 const selectedChapter = ref(
   readChapterPreference(CHAPTER_KEY, chapters, caseOwner.value),
@@ -27,6 +34,30 @@ watch(caseOwner, (user) => {
   if (selectedChapter.value !== next)
     selectedChapter.value = next
 })
+
+let chapterSeq = 0
+async function loadSelectedChapter() {
+  const seq = ++chapterSeq
+  const id = selectedChapter.value
+  chapterLoading.value = true
+  chapterError.value = false
+  try {
+    const data = await loadVocabularyChapter(id)
+    if (seq !== chapterSeq || selectedChapter.value !== id)
+      return
+    chapterData.value = data
+  }
+  catch {
+    if (seq === chapterSeq) {
+      chapterError.value = true
+      chapterData.value = null
+    }
+  }
+  finally {
+    if (seq === chapterSeq)
+      chapterLoading.value = false
+  }
+}
 
 const currentWordIndex = ref(0)
 const userInput = ref('')
@@ -74,7 +105,7 @@ let advanceTimer: ReturnType<typeof setTimeout> | null = null
 let advancing = false
 
 const words = computed(() => {
-  const chapter = (vocabulary as any)[selectedChapter.value]
+  const chapter = chapterData.value
   if (!chapter)
     return []
   // Flatten groups into a single list of words
@@ -84,8 +115,9 @@ const words = computed(() => {
 const currentWordData = computed(() => words.value[currentWordIndex.value])
 const currentWord = computed(() => currentWordData.value?.word[0] || '')
 
-watch(selectedChapter, (newVal) => {
+watch(selectedChapter, async (newVal) => {
   writeChapterPreference(CHAPTER_KEY, newVal, caseOwner.value)
+  await loadSelectedChapter()
   reset()
 })
 
@@ -221,7 +253,8 @@ function nextWord() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  await loadSelectedChapter()
   reset()
 })
 
@@ -269,6 +302,14 @@ onUnmounted(() => {
           </option>
         </select>
       </div>
+      <p v-if="chapterError" class="mb-4 text-sm text-amber-700" role="status">
+        词表加载失败。<button class="underline" @click="loadSelectedChapter">
+          重试
+        </button>
+      </p>
+      <p v-else-if="chapterLoading" class="mb-4 text-sm text-gray-500">
+        词表加载中…
+      </p>
 
       <!-- Stats -->
       <div class="grid grid-cols-3 mb-8 gap-2 sm:gap-4">

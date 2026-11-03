@@ -17,7 +17,11 @@ import {
   readChapterPreference,
   writeChapterPreference,
 } from '../../utils/chapterPreference'
-import vocabulary from './vocabulary'
+import {
+  emptyVocabularyShell,
+  listVocabularyChapters,
+  loadVocabularyChapter,
+} from './loadVocabulary'
 
 const mediaError = ref('')
 const mediaRoot = ref(null)
@@ -62,21 +66,42 @@ watch(
 )
 
 const trainingStats = ref('')
-const chapters = Object.keys(vocabulary)
+const chapters = listVocabularyChapters()
 const { currentUser: sessionUser } = useAuth()
 const category = ref(
   readChapterPreference(CHAPTER_KEY, chapters, sessionUser.value),
 )
 
 const loaded = ref(false)
-const refVocabulary = reactive(structuredClone(vocabulary))
+const refVocabulary = reactive(emptyVocabularyShell())
 const chapterDetailError = ref(false)
+const chapterLoadError = ref(false)
+let chapterLoadSeq = 0
+async function loadChapterPayload(chapter = category.value) {
+  const seq = ++chapterLoadSeq
+  chapterLoadError.value = false
+  try {
+    const data = await loadVocabularyChapter(chapter)
+    if (seq !== chapterLoadSeq)
+      return
+    refVocabulary[chapter] = structuredClone(data)
+    restoreSpellValues()
+    await loadDetails()
+  }
+  catch {
+    if (seq === chapterLoadSeq)
+      chapterLoadError.value = true
+  }
+}
 async function loadDetails() {
   const chapter = category.value
   chapterDetailError.value = false
   try {
     const data = await loadVocabularyDetails(chapter)
-    for (const word of refVocabulary[chapter].words.flat())
+    const cur = refVocabulary[chapter]
+    if (!cur?.words?.length)
+      return
+    for (const word of cur.words.flat())
       Object.assign(word, data[String(word.id)] || {})
   }
   catch {
@@ -84,8 +109,10 @@ async function loadDetails() {
       chapterDetailError.value = true
   }
 }
-watch(category, loadDetails)
-onMounted(loadDetails)
+watch(category, () => {
+  loadChapterPayload()
+})
+onMounted(() => loadChapterPayload())
 const { addMistake } = useMistakes()
 const { setProgress } = useProgress()
 
@@ -208,7 +235,6 @@ function restoreSpellValues() {
   }
   trainingStats.value = calcStats()
 }
-onMounted(restoreSpellValues)
 const offSpell = subscribeStorage((key, source) => {
   if (source === 'remote' && (!key || key.startsWith(nsKey(SPELL_KEY))))
     restoreSpellValues()
@@ -243,7 +269,7 @@ function calcStats() {
   if (isTrainingModel.value) {
     const cur = refVocabulary[category.value]
     // 遍历所有单词的属性
-    for (const group of cur.words) {
+    for (const group of cur?.words || []) {
       for (const item of group) {
         if (item.spellValue) {
           if (item.spellError)
@@ -464,10 +490,19 @@ function copyAllError() {
               <!-- <option value="">
                 全部章节
               </option> -->
-              <option v-for="(_, k) in refVocabulary" :key="k" :value="k">
+              <option v-for="k in chapters" :key="k" :value="k">
                 {{ k }}
               </option>
             </select>
+            <p
+              v-if="chapterLoadError"
+              class="w-full text-sm text-amber-700"
+              role="status"
+            >
+              词表加载失败。<button class="underline" @click="loadChapterPayload()">
+                重试
+              </button>
+            </p>
             <!-- <input type="text" name="email" class="ml-3 block w-full border border-gray-300 rounded-lg bg-gray-50 p-2.5 text-gray-900 dark:border-gray-600 focus:border-primary-500 dark:bg-gray-700 sm:text-sm dark:text-white focus:ring-primary-500 dark:focus:border-primary-500 dark:focus:ring-primary-500 dark:placeholder-gray-400" placeholder="关键词"> -->
             <!-- <div class="relative ml-2 flex-1">
               <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
