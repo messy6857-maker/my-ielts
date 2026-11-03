@@ -25,12 +25,15 @@ import {
 import type { MockQuestion } from './types'
 import { resolveMediaUrl } from '~/composables/useAudio'
 import { useGoBack } from '~/composables/useGoBack'
+import { useMistakes } from '~/composables/useStudyData'
+import { collectMockMistakeEntries } from '~/utils/mockMistakes'
 import ListeningTabs from '~/components/ListeningTabs.vue'
 
 const partImageFailed = ref<Record<number, boolean>>({})
 const mediaRoot = ref<HTMLElement | null>(null)
 
 const { goBack } = useGoBack('/listening')
+const { addMistake } = useMistakes()
 
 const router = useRouter()
 const route = useRoute()
@@ -478,9 +481,10 @@ async function submit() {
   const qs = allQuestions.value
   const total = totalScorePoints(qs)
   const score = countCorrect(allQuestions.value, answers.value, true)
+  const label = testPair.value?.label ?? testId.value
   const result = recovery.submitResult({
     id: testId.value,
-    label: testPair.value?.label ?? testId.value,
+    label,
     kind: 'listening',
     score,
     total,
@@ -491,6 +495,26 @@ async function submit() {
   recordSaveFailed.value = !result.saved
   if (!result.saved)
     resultsOwner = recovery.owner.value
+  // 错题本：交卷后写入（按账号隔离，走现有 mistake_parts 同步）
+  const parts = test.value?.parts ?? []
+  for (const entry of collectMockMistakeEntries({
+    kind: 'listening',
+    testId: testId.value,
+    label,
+    answers: answers.value,
+    parts: parts.map((p, i) => ({
+      part: `part${i + 1}`,
+      questions: p.questions,
+      audio: p.audio,
+    })),
+  })) {
+    addMistake(entry.module, {
+      key: entry.key,
+      title: entry.title,
+      detail: entry.detail,
+      hint: entry.hint,
+    })
+  }
   // M-Opt1：交卷后才按需加载录音脚本，选加载不再顺带下载整套脚本；
   // 加载失败时脚本区保持隐藏（原有 v-if 分支），不阻塞交卷主流程。
   // M-Opt2 的音频保留见模板：交卷后 audio 不再 v-if 销毁，仍可边听边对脚本。
