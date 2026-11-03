@@ -1,4 +1,5 @@
 import { mergeEntry } from './entryMerge'
+import { triggerBlobDownload } from './download'
 import {
   accountKey,
   batchStorage,
@@ -51,14 +52,10 @@ export function studyBackup(user: string | null) {
 }
 export function downloadStudyBackup(user: string | null) {
   const data = studyBackup(user)
-  const url = URL.createObjectURL(
+  triggerBlobDownload(
     new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+    `my-ielts-${new Date().toISOString().slice(0, 10)}.json`,
   )
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `my-ielts-${new Date().toISOString().slice(0, 10)}.json`
-  link.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 export interface BackupPreview {

@@ -1,5 +1,8 @@
 # Static course datasets are validated by datasetIntegrity.test.ts.
+src/pages/listening/sentence-timings.json
+src/pages/listening/listening179.json
 src/pages/listening/spelling_convention.js
+src/pages/reading/daily/
 src/pages/mock/cam18-test1-listening-transcript.ts
 src/pages/mock/cam18-test1-listening.ts
 src/pages/mock/cam18-test1-reading.ts

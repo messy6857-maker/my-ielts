@@ -55,6 +55,7 @@ declare global {
   const deviceTimerKey: typeof import('./src/composables/useStudyTimer')['deviceTimerKey']
   const diffWords: typeof import('./src/composables/useWordDiff')['diffWords']
   const dismissAccountNotice: typeof import('./src/composables/useAuth')['dismissAccountNotice']
+  const downloadMediaFile: typeof import('./src/composables/useAudio')['downloadMediaFile']
   const eagerComputed: typeof import('@vueuse/core')['eagerComputed']
   const effectScope: typeof import('vue')['effectScope']
   const extendRef: typeof import('@vueuse/core')['extendRef']
@@ -457,6 +458,7 @@ declare module 'vue' {
     readonly deviceTimerKey: UnwrapRef<typeof import('./src/composables/useStudyTimer')['deviceTimerKey']>
     readonly diffWords: UnwrapRef<typeof import('./src/composables/useWordDiff')['diffWords']>
     readonly dismissAccountNotice: UnwrapRef<typeof import('./src/composables/useAuth')['dismissAccountNotice']>
+    readonly downloadMediaFile: UnwrapRef<typeof import('./src/composables/useAudio')['downloadMediaFile']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
@@ -853,6 +855,7 @@ declare module '@vue/runtime-core' {
     readonly deviceTimerKey: UnwrapRef<typeof import('./src/composables/useStudyTimer')['deviceTimerKey']>
     readonly diffWords: UnwrapRef<typeof import('./src/composables/useWordDiff')['diffWords']>
     readonly dismissAccountNotice: UnwrapRef<typeof import('./src/composables/useAuth')['dismissAccountNotice']>
+    readonly downloadMediaFile: UnwrapRef<typeof import('./src/composables/useAudio')['downloadMediaFile']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
     readonly extendRef: UnwrapRef<typeof import('@vueuse/core')['extendRef']>
