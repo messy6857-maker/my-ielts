@@ -90,7 +90,12 @@ async function page(Page: any) {
   wrappers.push(w)
   await flushPromises()
   const s = (w.vm as any).$.setupState
-  for (let i = 0; s.loading && i < 80; i++) {
+  for (let i = 0; i < 80; i++) {
+    const vocabEmpty = s.refVocabulary
+      && !(s.refVocabulary[s.category]?.words?.length)
+    const flashEmpty = s.vocabReady === false
+    if (!s.loading && !vocabEmpty && !flashEmpty)
+      break
     await new Promise(resolve => setTimeout(resolve, 5))
     await flushPromises()
   }
@@ -520,7 +525,11 @@ it('all-chapter grading moves every duplicate word schedule and undo restores th
   const Page = (await import('../src/pages/vocabulary/flashcard.vue')).default
   const { s } = await page(Page)
   s.crossChapter = true
-  await nextTick()
+  await flushPromises()
+  for (let i = 0; i < 80 && !s.vocabReady; i++) {
+    await new Promise(resolve => setTimeout(resolve, 5))
+    await flushPromises()
+  }
   expect(s.current.word.toLowerCase()).toBe(duplicate[0].word[0].toLowerCase())
   s.grade(5)
   for (const word of duplicate)

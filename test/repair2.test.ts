@@ -81,7 +81,12 @@ async function page(Page: any) {
   wrappers.push(w)
   await flushPromises()
   const s = (w.vm as any).$.setupState
-  for (let i = 0; s.loading && i < 80; i++) {
+  for (let i = 0; i < 80; i++) {
+    const vocabEmpty = s.refVocabulary
+      && !(s.refVocabulary[s.category]?.words?.length)
+    const flashEmpty = s.vocabReady === false
+    if (!s.loading && !vocabEmpty && !flashEmpty)
+      break
     await new Promise(resolve => setTimeout(resolve, 5))
     await flushPromises()
   }

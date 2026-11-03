@@ -8,6 +8,7 @@ import { PART2_CARDS } from './part2'
 import type { Part2Card } from './part2'
 import { PART3_TOPICS } from './part3'
 import { confirmLeaveRecording } from '~/composables/useRecorder'
+import { hasAISettings } from '~/composables/useAISettings'
 
 type Tab = 'part1' | 'part2' | 'part3'
 const tab = usePersistentString('myielts_speaking_tab', 'part1') as Ref<Tab>
@@ -95,6 +96,31 @@ function tabBtn(t: Tab) {
       Part 1 日常问答 · Part 2 个人陈述（1 分钟准备 + 2 分钟陈述）· Part 3
       深入讨论
     </p>
+
+    <div
+      v-if="!hasAISettings()"
+      class="mb-4 border border-amber-300 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+      role="status"
+    >
+      <p class="font-medium">
+        尚未配置 AI 口语评分
+      </p>
+      <p class="mt-1 text-xs opacity-90">
+        录音后无法一键 AI 评分。请先到设置填写 OpenAI 兼容的 API 地址、密钥与模型；未配置时仍可使用下方「本地自评清单」按雅思口语 4 项标准打分。
+      </p>
+      <router-link
+        to="/settings"
+        class="mt-2 inline-block text-sm font-medium text-blue-700 underline dark:text-blue-300"
+      >
+        去设置配置 AI →
+      </router-link>
+    </div>
+    <div
+      v-else
+      class="mb-4 border border-green-200 rounded-xl bg-green-50 p-3 text-xs text-green-800 dark:border-green-900 dark:bg-green-950/20 dark:text-green-300"
+    >
+      AI 已配置：录音并转写后可一键评分。也可随时使用本地自评清单。
+    </div>
 
     <div class="mb-5 flex gap-2">
       <button :class="tabBtn('part1')" @click="switchTab('part1')">

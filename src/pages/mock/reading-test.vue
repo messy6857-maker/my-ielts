@@ -24,10 +24,15 @@ import {
 import type { MockQuestion } from './types'
 import { resolveMediaUrl } from '~/composables/useAudio'
 import { useGoBack } from '~/composables/useGoBack'
+import { useMistakes } from '~/composables/useStudyData'
+import { useStudyTimer } from '~/composables/useStudyTimer'
+import { collectMockMistakeEntries } from '~/utils/mockMistakes'
 
 const router = useRouter()
 const route = useRoute()
 const { goBack } = useGoBack('/reading')
+const { addMistake } = useMistakes()
+const studyTimer = useStudyTimer()
 // 考试中点返回先确认未交卷；开始屏/已交卷直接返回
 
 function handleBack() {
@@ -176,6 +181,7 @@ function startTest() {
       selPopup.value = null
       started.value = true
       submitted.value = false
+      studyTimer.start()
       submit()
       return
     }
@@ -197,6 +203,7 @@ function startTest() {
   started.value = true
   recovery.save()
   startTimer()
+  studyTimer.start()
 }
 
 // 放弃当前草稿并重新开始：清掉本会话草稿后立刻全新开考，
@@ -217,6 +224,7 @@ watch(testId, loadTest)
 
 onUnmounted(() => {
   pauseExam()
+  studyTimer.pause()
 })
 
 const allQuestions = computed<MockQuestion[]>(
@@ -362,9 +370,10 @@ onBeforeRouteLeave(
 function submit() {
   const total = totalScorePoints(allQuestions.value)
   const score = countCorrect(allQuestions.value, answers.value, true)
+  const label = testPair.value?.label ?? testId.value
   const result = recovery.submitResult({
     id: testId.value,
-    label: testPair.value?.label ?? testId.value,
+    label,
     kind: 'reading',
     score,
     total,
@@ -372,9 +381,28 @@ function submit() {
   })
   if (!result)
     return
+  studyTimer.pause()
   recordSaveFailed.value = !result.saved
   if (!result.saved)
     resultsOwner = recovery.owner.value
+  const passages = test.value?.passages ?? []
+  for (const entry of collectMockMistakeEntries({
+    kind: 'reading',
+    testId: testId.value,
+    label,
+    answers: answers.value,
+    parts: passages.map((p, i) => ({
+      part: `passage${i + 1}`,
+      questions: p.questions,
+    })),
+  })) {
+    addMistake(entry.module, {
+      key: entry.key,
+      title: entry.title,
+      detail: entry.detail,
+      hint: entry.hint,
+    })
+  }
   selPopup.value = null
 }
 

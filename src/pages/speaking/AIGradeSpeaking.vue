@@ -171,14 +171,14 @@ function scoreColor(s: number) {
         <span class="text-xs font-normal text-gray-400">（口语三项标准）</span>
       </h4>
       <div class="flex items-center gap-2">
-        <span v-if="!canUseAI" class="text-gray-400" title="locked">🔒</span>
+        <span v-if="!canUseAI" class="text-gray-400" title="locked">🔒 需登录</span>
         <template v-else>
           <router-link
             v-if="!hasAISettings()"
             to="/settings"
             class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
           >
-            先去设置 API →
+            未配置 AI，去设置 →
           </router-link>
           <button
             v-else
@@ -186,7 +186,7 @@ function scoreColor(s: number) {
             :disabled="loading || wordCount < 10"
             @click="runGrade"
           >
-            {{ loading ? '评分中…' : result ? '重新评分' : 'AI 评分' }}
+            {{ loading ? '评分中…' : result ? '重新评分' : '一键 AI 评分' }}
           </button>
         </template>
       </div>

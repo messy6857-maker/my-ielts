@@ -1,13 +1,44 @@
 <script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useAuth } from '../composables/useAuth'
+import { MISTAKE_MODULE_LABEL, useMistakes, useProgress } from '../composables/useStudyData'
+import { useWordSchedule } from '../composables/useSpacedRepetition'
+import {
+  formatDuration,
+  useStudyTimer,
+} from '../composables/useStudyTimer'
+import { buildTodayTasks } from '../utils/todayTasks'
 
 defineOptions({
   name: 'IndexPage',
 })
 
 const { modules, hasAnyProgress } = useProgress()
-const { totalCount: mistakeCount } = useMistakes()
+const { mistakes, totalCount: mistakeCount } = useMistakes()
 const { currentUser } = useAuth()
+const { schedules } = useWordSchedule()
+const timer = useStudyTimer()
+
+const tasksTick = ref(0)
+function refreshTasks() {
+  tasksTick.value++
+  timer.refresh()
+}
+
+const today = computed(() => {
+  const revision = tasksTick.value
+  return buildTodayTasks({
+    schedules: schedules.value,
+    mistakes: mistakes.value,
+    owner: currentUser.value,
+    studySeconds: timer.dailySeconds.value,
+    now: Date.now() + revision * 0,
+  })
+})
+
+watch(currentUser, refreshTasks)
+onMounted(refreshTasks)
 
 function percent(done: number, total: number) {
   return total > 0 ? Math.round((done / total) * 100) : 0
@@ -51,6 +82,18 @@ const menus = reactive([
     desc: '100 句翻译练习、大小作文',
   },
   {
+    label: '听力模考',
+    icon: 'i-carbon-headset',
+    link: '/mock/listening-test',
+    desc: '剑桥 18–21 听力真题模考，限时作答与交卷评分',
+  },
+  {
+    label: '阅读模考',
+    icon: 'i-carbon-document',
+    link: '/mock/reading-test',
+    desc: '剑桥 18–21 阅读真题模考，限时作答与交卷评分',
+  },
+  {
     label: '单词练习',
     icon: 'i-carbon-keyboard',
     link: '/vocabulary/typing',
@@ -86,6 +129,138 @@ const menus = reactive([
             这里包含备考需要的一切，从词汇、语法开始...
           </p>
         </div>
+
+        <!-- 今日任务 -->
+        <div
+          class="mb-12 border border-blue-200 rounded-xl bg-blue-50/60 p-5 dark:border-blue-900/40 dark:bg-blue-950/20 sm:p-6"
+        >
+          <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+              今日任务
+              <span class="ml-2 align-middle text-sm font-normal text-gray-400">
+                {{ currentUser ? `账号：${currentUser}` : '游客模式' }}
+              </span>
+            </h3>
+            <button
+              class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+              @click="refreshTasks"
+            >
+              刷新
+            </button>
+          </div>
+
+          <div
+            class="grid mb-4 gap-3 lg:grid-cols-4 sm:grid-cols-2"
+          >
+            <RouterLink
+              to="/vocabulary/flashcard"
+              class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40"
+            >
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                今日到期复习
+              </p>
+              <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+                {{ today.dueWordCount }}
+              </p>
+              <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                进入自测 →
+              </p>
+            </RouterLink>
+            <div class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40">
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                今日学习时长
+              </p>
+              <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+                {{ formatDuration(today.studySeconds) }}
+              </p>
+              <p class="mt-1 text-xs text-gray-500">
+                含自测 / 精听 / 听写 / 模考
+              </p>
+            </div>
+            <RouterLink
+              to="/mistakes"
+              class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40"
+            >
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                错题本
+              </p>
+              <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+                {{ mistakeCount }}
+              </p>
+              <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
+                去复习 →
+              </p>
+            </RouterLink>
+            <div class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40">
+              <p class="text-xs text-gray-500 dark:text-gray-400">
+                待继续
+              </p>
+              <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+                {{ today.unfinishedMocks.length + today.writingDrafts.length }}
+              </p>
+              <p class="mt-1 text-xs text-gray-500">
+                模考草稿 + 写作草稿
+              </p>
+            </div>
+          </div>
+
+          <div
+            v-if="today.isEmpty"
+            class="border border-gray-300 rounded-lg border-dashed bg-white/50 p-4 text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-900/30 dark:text-gray-400"
+          >
+            今天还没有复习任务或进行中的练习。可以从下方入口开始：词汇自测、听力/阅读模考，或精听听写。
+          </div>
+          <div v-else class="text-sm space-y-3">
+            <div v-if="today.recentMistakes.length">
+              <p class="mb-1 font-medium text-gray-800 dark:text-gray-200">
+                最近错题
+              </p>
+              <ul class="space-y-1">
+                <li
+                  v-for="m in today.recentMistakes"
+                  :key="m.key"
+                  class="flex flex-wrap items-baseline gap-2 text-gray-600 dark:text-gray-300"
+                >
+                  <span class="rounded bg-gray-100 px-1.5 text-xs dark:bg-gray-700">{{
+                    MISTAKE_MODULE_LABEL[m.module] || m.module
+                  }}</span>
+                  <span class="truncate">{{ m.title }}</span>
+                </li>
+              </ul>
+            </div>
+            <div v-if="today.unfinishedMocks.length">
+              <p class="mb-1 font-medium text-gray-800 dark:text-gray-200">
+                未完成模考
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <RouterLink
+                  v-for="m in today.unfinishedMocks"
+                  :key="`${m.kind}:${m.testId}`"
+                  :to="m.path"
+                  class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                >
+                  继续 {{ m.label }}（{{ m.kind === 'listening' ? '听力' : '阅读' }}）
+                </RouterLink>
+              </div>
+            </div>
+            <div v-if="today.writingDrafts.length">
+              <p class="mb-1 font-medium text-gray-800 dark:text-gray-200">
+                写作草稿
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <RouterLink
+                  v-for="d in today.writingDrafts"
+                  :key="`${d.task}:${d.promptId}:${d.versionId || ''}`"
+                  :to="d.path"
+                  class="border border-gray-300 rounded-lg bg-white px-3 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-800"
+                >
+                  继续 {{ d.task === 'task1' ? '小作文' : '大作文' }} · {{ d.promptId }}
+                </RouterLink>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- 学习进度 -->
         <div
           v-if="hasAnyProgress || mistakeCount > 0"

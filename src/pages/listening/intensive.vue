@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { speechLanguage } from '../../composables/useAudioGroup'
-
+import { useAuth } from '../../composables/useAuth'
+import { useMistakes } from '../../composables/useStudyData'
+import { useStudyTimer } from '../../composables/useStudyTimer'
 import { transcriptSentenceEntries } from '../../utils/text'
 import { resolveMediaUrl } from '../../composables/useAudio'
-import sentenceTimings from './sentence-timings.json'
+import type { DiffToken } from '../../utils/dictationDiff'
+import { diffDictation } from '../../utils/dictationDiff'
+import {
+  getDictationPartProgress,
+  saveDictationPartProgress,
+  summarizeDictationPart,
+} from '../../utils/dictationProgress'
+import type { SentenceTiming } from './timings/loadTimings'
+import { loadTestTimings, prefersOriginalAudio } from './timings/loadTimings'
 
 const mediaError = ref('')
 // 点读 TTS 失败提示：与上方 mediaError 同款式；取消朗读触发的 onerror
@@ -69,6 +79,14 @@ const showTranscript = ref(false)
 const loading = ref(false)
 const loadError = ref(false)
 const speakingIndex = ref(-1)
+const partTimings = ref<SentenceTiming[] | null>(null)
+
+type StudyMode = 'intensive' | 'dictation'
+const mode = ref<StudyMode>('intensive')
+
+const { currentUser } = useAuth()
+const { addMistake } = useMistakes()
+const timer = useStudyTimer()
 
 const sentenceEntries = computed(() =>
   transcriptSentenceEntries(transcript.value),
@@ -79,10 +97,8 @@ const audioEl = ref<HTMLAudioElement | null>(null)
 const playbackRate = ref(1)
 // 句级原音时间：[start, end, status]，status 为 ok/weak（播原音）、
 // tts（无时间，走浏览器朗读并标注）、skip（无可播内容，不配按钮）
-type SentenceTiming = [number | null, number | null, string]
-const timingMap = sentenceTimings as unknown as Record<string, SentenceTiming[]>
 function sentenceTiming(idx: number): SentenceTiming | undefined {
-  const arr = timingMap[`${selectedTest.value}-${selectedPart.value}`]
+  const arr = partTimings.value
   // 只有时间数组与当前显示的分句一一对应时才用原音；否则（如原文
   // 未按预期加载）一律走 TTS，绝不按序号播错句的音频
   if (!arr || arr.length !== sentenceEntries.value.length)
@@ -91,6 +107,12 @@ function sentenceTiming(idx: number): SentenceTiming | undefined {
 }
 function timingStatus(idx: number): string {
   return sentenceTiming(idx)?.[2] ?? 'tts'
+}
+
+async function loadTimingsForSelection() {
+  partTimings.value = null
+  const parts = await loadTestTimings(selectedTest.value)
+  partTimings.value = parts?.[selectedPart.value] ?? null
 }
 
 const sentenceAudioEl = ref<HTMLAudioElement | null>(null)
@@ -223,8 +245,8 @@ function playSentence(idx: number) {
     return
   const timing = sentenceTiming(idx)
   // ok/weak：一律原音。仅 status=tts（对齐确认音频中无此句）才朗读兜底。
-  if (timing && (timing[2] === 'ok' || timing[2] === 'weak') && timing[0] != null && timing[1] != null) {
-    playOriginalSentence(idx, timing[0], timing[1])
+  if (prefersOriginalAudio(timing)) {
+    playOriginalSentence(idx, timing![0]!, timing![1]!)
     return
   }
   if (timing?.[2] === 'skip')
@@ -280,6 +302,11 @@ const audioSrc = computed(() => {
   )
 })
 
+const audioRelPath = computed(() => {
+  const [cam, test] = selectedTest.value.split('-')
+  return `mock/${cam}-${test}-listening-${selectedPart.value}.mp3`
+})
+
 let transcriptSequence = 0
 async function loadTranscript() {
   const sequence = ++transcriptSequence
@@ -310,6 +337,201 @@ async function loadTranscript() {
     loading.value = false
 }
 
+// —— 听写模式 ——
+const dictationIndex = ref(0)
+const dictationInput = ref('')
+const dictationTokens = ref<DiffToken[] | null>(null)
+const dictationChecked = ref(false)
+const dictationPerfect = ref(false)
+const dictationAccuracy = ref(0)
+const dictationAddedMistake = ref(false)
+const partSummary = ref({ attempted: 0, perfect: 0, accuracy: 0 })
+
+const dictatableIndexes = computed(() =>
+  sentenceEntries.value
+    .map((_, i) => i)
+    .filter((i) => {
+      const status = timingStatus(i)
+      // 听写优先原音句；无原音时间的句仍可听写（用 TTS 播）
+      return status !== 'skip'
+    }),
+)
+
+const currentDictationIdx = computed(() => {
+  const pool = dictatableIndexes.value
+  if (!pool.length)
+    return -1
+  const i = Math.min(Math.max(0, dictationIndex.value), pool.length - 1)
+  return pool[i]
+})
+
+const currentDictationEntry = computed(() => {
+  const i = currentDictationIdx.value
+  return i >= 0 ? sentenceEntries.value[i] : null
+})
+
+function refreshPartSummary() {
+  const progress = getDictationPartProgress(
+    currentUser.value,
+    selectedTest.value,
+    selectedPart.value,
+  )
+  partSummary.value = summarizeDictationPart(progress)
+}
+
+function resetDictationUi() {
+  dictationInput.value = ''
+  dictationTokens.value = null
+  dictationChecked.value = false
+  dictationPerfect.value = false
+  dictationAccuracy.value = 0
+  dictationAddedMistake.value = false
+}
+
+function loadDictationCursor() {
+  const progress = getDictationPartProgress(
+    currentUser.value,
+    selectedTest.value,
+    selectedPart.value,
+  )
+  const poolLen = dictatableIndexes.value.length
+  dictationIndex.value
+    = poolLen > 0 ? Math.min(progress.cursor, poolLen - 1) : 0
+  refreshPartSummary()
+  resetDictationUi()
+}
+
+function playCurrentDictation() {
+  const i = currentDictationIdx.value
+  if (i < 0)
+    return
+  playSentence(i)
+}
+
+function checkDictation() {
+  const entry = currentDictationEntry.value
+  if (!entry || dictationChecked.value)
+    return
+  const expected = entry.text
+  const result = diffDictation(expected, dictationInput.value)
+  dictationTokens.value = result.tokens
+  dictationChecked.value = true
+  dictationPerfect.value = result.perfect
+  dictationAccuracy.value = result.accuracy
+
+  const progress = getDictationPartProgress(
+    currentUser.value,
+    selectedTest.value,
+    selectedPart.value,
+  )
+  const sid = String(currentDictationIdx.value)
+  const prev = progress.sentences[sid]
+  progress.sentences[sid] = {
+    attempts: (prev?.attempts ?? 0) + 1,
+    perfect: (prev?.perfect ?? 0) + (result.perfect ? 1 : 0),
+    lastAccuracy: result.accuracy,
+    lastAt: Date.now(),
+  }
+  progress.cursor = dictationIndex.value
+  saveDictationPartProgress(
+    currentUser.value,
+    selectedTest.value,
+    selectedPart.value,
+    progress,
+  )
+  refreshPartSummary()
+}
+
+function addDictationMistake() {
+  const entry = currentDictationEntry.value
+  const i = currentDictationIdx.value
+  if (!entry || i < 0 || dictationAddedMistake.value)
+    return
+  const testLabel
+    = testOptions.find(t => t.id === selectedTest.value)?.label
+      ?? selectedTest.value
+  const partLabel
+    = partOptions.find(p => p.id === selectedPart.value)?.label
+      ?? selectedPart.value
+  const timing = sentenceTiming(i)
+  const hintParts = [
+    `dictationmeta:${JSON.stringify({
+      testId: selectedTest.value,
+      part: selectedPart.value,
+      sentence: i,
+      audio: audioRelPath.value,
+      start: timing?.[0] ?? null,
+      end: timing?.[1] ?? null,
+    })}`,
+  ]
+  addMistake('dictation', {
+    key: `dictation:${selectedTest.value}:${selectedPart.value}:${i}`,
+    title: entry.text,
+    detail: [
+      `${testLabel} · ${partLabel} · 第 ${i + 1} 句`,
+      `你的作答：${dictationInput.value.trim() || '（空）'}`,
+    ].join('\n'),
+    hint: hintParts[0],
+  })
+  dictationAddedMistake.value = true
+}
+
+function nextDictationSentence() {
+  const pool = dictatableIndexes.value
+  if (!pool.length)
+    return
+  if (dictationIndex.value < pool.length - 1)
+    dictationIndex.value += 1
+  else
+    dictationIndex.value = 0
+  const progress = getDictationPartProgress(
+    currentUser.value,
+    selectedTest.value,
+    selectedPart.value,
+  )
+  progress.cursor = dictationIndex.value
+  saveDictationPartProgress(
+    currentUser.value,
+    selectedTest.value,
+    selectedPart.value,
+    progress,
+  )
+  resetDictationUi()
+  stopSentence()
+}
+
+function prevDictationSentence() {
+  const pool = dictatableIndexes.value
+  if (!pool.length)
+    return
+  dictationIndex.value
+    = dictationIndex.value > 0 ? dictationIndex.value - 1 : pool.length - 1
+  const progress = getDictationPartProgress(
+    currentUser.value,
+    selectedTest.value,
+    selectedPart.value,
+  )
+  progress.cursor = dictationIndex.value
+  saveDictationPartProgress(
+    currentUser.value,
+    selectedTest.value,
+    selectedPart.value,
+    progress,
+  )
+  resetDictationUi()
+  stopSentence()
+}
+
+function tokenClass(mark: DiffToken['mark']) {
+  if (mark === 'ok')
+    return 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
+  if (mark === 'wrong')
+    return 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200 line-through'
+  if (mark === 'extra')
+    return 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200 line-through'
+  return 'bg-red-50 text-red-700 underline decoration-wavy dark:bg-red-900/30 dark:text-red-300'
+}
+
 watch(
   [selectedTest, selectedPart],
   () => {
@@ -320,9 +542,22 @@ watch(
     speakingIndex.value = -1
     showTranscript.value = false
     loadTranscript()
+    loadTimingsForSelection()
   },
   { immediate: true },
 )
+
+watch(
+  [mode, selectedTest, selectedPart, () => sentenceEntries.value.length, currentUser],
+  () => {
+    if (mode.value === 'dictation')
+      loadDictationCursor()
+  },
+)
+
+onMounted(() => {
+  timer.start()
+})
 
 // 离页时停掉 TTS 与原录音，避免后台继续出声
 onUnmounted(() => {
@@ -332,13 +567,20 @@ onUnmounted(() => {
   audioEl.value?.pause()
   stopSentenceAudio()
   speakingIndex.value = -1
+  timer.pause()
 })
 
 function setRate(r: number) {
   playbackRate.value = r
   if (audioEl.value)
     audioEl.value.playbackRate = r
+  if (sentenceAudioEl.value)
+    sentenceAudioEl.value.playbackRate = r
 }
+
+const testLabel = computed(
+  () => testOptions.find(t => t.id === selectedTest.value)?.label ?? selectedTest.value,
+)
 </script>
 
 <template>
@@ -365,8 +607,26 @@ function setRate(r: number) {
         听力精听
       </h3>
       <p class="text-sm text-gray-500 dark:text-gray-400">
-        剑 18–21 共 16 套真题原文，先盲听再对照原文精听
+        剑 18–21 共 16 套真题原文；精听对照原文逐句点读，或切换听写模式遮住原文跟写
       </p>
+    </div>
+
+    <!-- 模式切换 -->
+    <div class="mb-4 flex flex-wrap gap-2">
+      <button
+        :class="mode === 'intensive' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'"
+        class="rounded-lg px-4 py-2 text-sm font-medium"
+        @click="mode = 'intensive'"
+      >
+        精听对照
+      </button>
+      <button
+        :class="mode === 'dictation' ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'"
+        class="rounded-lg px-4 py-2 text-sm font-medium"
+        @click="mode = 'dictation'"
+      >
+        听写模式
+      </button>
     </div>
 
     <!-- 选择器 -->
@@ -396,8 +656,9 @@ function setRate(r: number) {
       </div>
     </div>
 
-    <!-- 音频播放器 -->
+    <!-- 音频播放器（精听模式显示整段；听写模式隐藏整段控件，改用句级原音） -->
     <div
+      v-if="mode === 'intensive'"
       class="mb-4 border border-gray-200 rounded-xl bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
     >
       <audio
@@ -434,9 +695,147 @@ function setRate(r: number) {
         </button>
       </div>
     </div>
+    <audio
+      v-else
+      ref="sentenceAudioEl"
+      :src="audioSrc"
+      class="hidden"
+      @timeupdate="onSentenceTimeUpdate"
+      @error="mediaError = '音频加载失败，请检查网络后重试'"
+    />
 
-    <!-- 原文对照 -->
+    <!-- 听写模式 -->
     <div
+      v-if="mode === 'dictation'"
+      class="mb-4 border border-gray-200 rounded-xl bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
+    >
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p class="text-sm text-gray-600 dark:text-gray-300">
+          {{ testLabel }} · {{ selectedPart.replace('part', 'Part ') }}
+          · 第 {{ dictationIndex + 1 }} / {{ dictatableIndexes.length || 0 }} 句
+        </p>
+        <p class="text-xs text-gray-500 dark:text-gray-400">
+          本 Part 正确率
+          {{ Math.round(partSummary.accuracy * 100) }}%
+          （{{ partSummary.perfect }}/{{ partSummary.attempted || 0 }} 次全对）
+        </p>
+      </div>
+
+      <div v-if="loading" class="text-sm text-gray-500">
+        加载中…
+      </div>
+      <div v-else-if="currentDictationEntry" class="space-y-3">
+        <p class="text-xs text-gray-400">
+          原文已遮住。先听原声（可重播、调慢），再输入整句；比对忽略大小写与标点，数字写法可互通。
+        </p>
+        <div
+          class="flex min-h-16 items-center justify-center rounded-lg bg-gray-100 px-3 py-6 text-sm text-gray-400 dark:bg-gray-900/50"
+          aria-hidden="true"
+        >
+          ░░░░░ 原文已隐藏 ░░░░░
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button
+            class="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            @click="speakingIndex === currentDictationIdx ? stopSentence() : playCurrentDictation()"
+          >
+            {{ speakingIndex === currentDictationIdx ? '停止' : '播放原声' }}
+          </button>
+          <button
+            class="rounded-lg bg-gray-200 px-3 py-2 text-sm dark:bg-gray-700 dark:text-gray-200"
+            @click="playCurrentDictation()"
+          >
+            重播
+          </button>
+          <span class="text-xs text-gray-500">语速：</span>
+          <button
+            v-for="r in [0.75, 1, 1.25]"
+            :key="r"
+            :class="playbackRate === r ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200'"
+            class="rounded px-2 py-1 text-xs"
+            @click="setRate(r)"
+          >
+            {{ r }}x
+          </button>
+        </div>
+        <textarea
+          v-model="dictationInput"
+          rows="3"
+          :disabled="dictationChecked"
+          placeholder="在此输入你听到的句子…"
+          class="w-full border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          @keydown.ctrl.enter.prevent="checkDictation"
+        />
+        <div class="flex flex-wrap gap-2">
+          <button
+            class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+            :disabled="dictationChecked || !dictationInput.trim()"
+            @click="checkDictation"
+          >
+            核对
+          </button>
+          <button
+            class="rounded-lg bg-gray-200 px-3 py-2 text-sm dark:bg-gray-700 dark:text-gray-200"
+            @click="prevDictationSentence"
+          >
+            上一句
+          </button>
+          <button
+            class="rounded-lg bg-gray-200 px-3 py-2 text-sm dark:bg-gray-700 dark:text-gray-200"
+            @click="nextDictationSentence"
+          >
+            下一句
+          </button>
+        </div>
+
+        <div v-if="dictationChecked" class="space-y-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+          <p class="text-sm font-medium dark:text-white">
+            {{ dictationPerfect ? '全对 ✓' : '有差异' }}
+            · 本句正确率 {{ Math.round(dictationAccuracy * 100) }}%
+          </p>
+          <p class="text-xs text-gray-500">
+            绿=正确 · 黄=替换 · 红删线=多写 · 红波浪=漏写
+          </p>
+          <p class="flex flex-wrap gap-1 text-sm leading-7">
+            <span
+              v-for="(tok, ti) in dictationTokens"
+              :key="ti"
+              class="rounded px-1"
+              :class="tokenClass(tok.mark)"
+            >
+              <template v-if="tok.mark === 'ok'">{{ tok.actual }}</template>
+              <template v-else-if="tok.mark === 'wrong'">{{ tok.actual }}→{{ tok.expected }}</template>
+              <template v-else-if="tok.mark === 'extra'">+{{ tok.actual }}</template>
+              <template v-else>⌫{{ tok.expected }}</template>
+            </span>
+          </p>
+          <p class="text-xs text-gray-500 dark:text-gray-400">
+            原文：{{ currentDictationEntry.text }}
+          </p>
+          <button
+            v-if="!dictationPerfect"
+            class="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 dark:border-red-800 dark:text-red-300 disabled:opacity-50"
+            :disabled="dictationAddedMistake"
+            @click="addDictationMistake"
+          >
+            {{ dictationAddedMistake ? '已加入错题本' : '加入错题本' }}
+          </button>
+        </div>
+      </div>
+      <div v-else-if="loadError" class="text-sm text-gray-500">
+        原文加载失败
+        <button class="ml-2 underline" @click="loadTranscript()">
+          重试
+        </button>
+      </div>
+      <div v-else class="text-sm text-gray-500">
+        本 Part 暂无可听写句子
+      </div>
+    </div>
+
+    <!-- 原文对照（精听模式） -->
+    <div
+      v-if="mode === 'intensive'"
       class="border border-gray-200 rounded-xl bg-white dark:border-gray-700 dark:bg-gray-800"
     >
       <button
@@ -457,7 +856,7 @@ function setRate(r: number) {
         </div>
         <div v-else-if="sentences.length" class="space-y-1">
           <p class="px-2 pb-1 text-xs text-gray-400">
-            🔊 点句播原录音对应片段；仅个别原录音中找不到的句子会标 TTS 并用浏览器朗读；无按钮的句暂无可播内容。
+            🔊 点句播放原录音对应片段；仅个别原录音中找不到的句子会标 TTS 并用系统朗读；无按钮的句暂无可播内容。
           </p>
           <div
             v-for="(entry, i) in sentenceEntries"
@@ -468,7 +867,7 @@ function setRate(r: number) {
             <button
               v-if="timingStatus(i) !== 'skip'"
               class="mt-0.5 shrink-0 rounded-full p-1 text-gray-400 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900"
-              :title="speakingIndex === i ? '停止' : (timingStatus(i) === 'tts' ? '浏览器朗读（暂无原音时间）' : '播放原音')"
+              :title="speakingIndex === i ? '停止' : (timingStatus(i) === 'tts' ? '系统朗读（暂无原音时间）' : '播放原音')"
               @click="speakingIndex === i ? stopSentence() : playSentence(i)"
             >
               <span
@@ -503,7 +902,7 @@ function setRate(r: number) {
 
     <p class="mt-4 text-xs text-gray-400">
       建议用法：先盲听 1–2
-      遍做题，再开原文逐句精听，把没听出来的地方标出来，跟读浏览器朗读。
+      遍做题，再开原文逐句精听或切换听写模式跟写；点句优先播原录音片段，个别无时间戳的句子才用系统朗读。
     </p>
   </div>
 </template>
