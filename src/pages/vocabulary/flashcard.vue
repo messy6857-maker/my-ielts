@@ -15,6 +15,10 @@ import {
 import { loadVocabularyDetails } from '../../composables/useVocabularyDetails'
 import { loadWordInfoWithFallback } from '../../composables/useWordInfo'
 import type { WordInfo } from '../../composables/useWordInfo'
+import {
+  readChapterPreference,
+  writeChapterPreference,
+} from '../../utils/chapterPreference'
 import { wordPhonetics } from './wordPhonetics'
 import { parseExtra } from './extraParser'
 import { getMnemonic } from './mnemonics'
@@ -48,9 +52,9 @@ const chapterById = new Map<string, string>(
   ),
 )
 const crossChapter = ref(false)
-const storedChapter = localStorage.getItem(CHAPTER_KEY)
+const { currentUser: sessionUser } = useAuth()
 const category = ref(
-  chapters.includes(storedChapter ?? '') ? storedChapter! : chapters[0],
+  readChapterPreference(CHAPTER_KEY, chapters, sessionUser.value),
 )
 const { addMistake, decrementMistake, patchMistakeHint } = useMistakes()
 const { setProgress, clearChapterProgress } = useProgress()
@@ -600,7 +604,7 @@ function resetMemory() {
 }
 
 watch([category, crossChapter], () => {
-  localStorage.setItem(CHAPTER_KEY, category.value)
+  writeChapterPreference(CHAPTER_KEY, category.value, sessionUser.value)
   buildQueue()
 })
 
@@ -614,10 +618,12 @@ watch(
   },
 )
 
-const { currentUser: sessionUser } = useAuth()
 watch(
   sessionUser,
-  () => {
+  (user) => {
+    const next = readChapterPreference(CHAPTER_KEY, chapters, user)
+    if (category.value !== next)
+      category.value = next
     queue.value = []
     gradeHistory.value = []
     studying.value = null

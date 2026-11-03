@@ -13,6 +13,10 @@ import { loadVocabularyDetails } from '../../composables/useVocabularyDetails'
 import { useAudioGroup } from '../../composables/useAudioGroup'
 
 import { resolveAudioUrl } from '../../composables/useAudio'
+import {
+  readChapterPreference,
+  writeChapterPreference,
+} from '../../utils/chapterPreference'
 import vocabulary from './vocabulary'
 
 const mediaError = ref('')
@@ -59,9 +63,9 @@ watch(
 
 const trainingStats = ref('')
 const chapters = Object.keys(vocabulary)
-const storedChapter = localStorage.getItem(CHAPTER_KEY)
+const { currentUser: sessionUser } = useAuth()
 const category = ref(
-  chapters.includes(storedChapter || '') ? storedChapter : chapters[0],
+  readChapterPreference(CHAPTER_KEY, chapters, sessionUser.value),
 )
 
 const loaded = ref(false)
@@ -210,15 +214,16 @@ const offSpell = subscribeStorage((key, source) => {
     restoreSpellValues()
 })
 onUnmounted(offSpell)
-// 切账号时按新账号恢复（先清旧账号残留，再套用新账号的拼写记录）
-const { currentUser: spellUser } = useAuth()
-watch(spellUser, () => {
+// 切账号：恢复该账号章节偏好与拼写记录
+watch(sessionUser, (user) => {
+  const next = readChapterPreference(CHAPTER_KEY, chapters, user)
+  if (category.value !== next)
+    category.value = next
   restoreSpellValues()
 })
 
 watch(category, (newVal) => {
-  // console.log(newVal, oldVal)
-  localStorage.setItem(CHAPTER_KEY, newVal)
+  writeChapterPreference(CHAPTER_KEY, newVal, sessionUser.value)
   // 完成态只属于当轮：切章后新章不得沿用旧章的红/绿完成着色（B2）。
   isFinishTraining.value = false
   trainingStats.value = calcStats()

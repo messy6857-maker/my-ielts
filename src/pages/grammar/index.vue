@@ -1,8 +1,19 @@
-<script setup>
+<script setup lang="ts">
 import { isDark } from '../../composables/dark'
-import { resolveMediaUrl } from '../../composables/useAudio'
+import { downloadMediaFile, resolveMediaUrl } from '../../composables/useAudio'
 
 const assetBase = import.meta.env.BASE_URL
+const handoutPath = 'grammar/雅思基础语法配套课程讲义.pdf'
+const handoutName = '雅思基础语法配套课程讲义.pdf'
+const handoutUrl = resolveMediaUrl(handoutPath)
+
+async function onHandoutClick(event: MouseEvent) {
+  // Keep Ctrl/Cmd/middle-click as normal navigation.
+  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0)
+    return
+  event.preventDefault()
+  await downloadMediaFile(handoutPath, handoutName)
+}
 </script>
 
 <template>
@@ -23,9 +34,10 @@ const assetBase = import.meta.env.BASE_URL
         视频配套讲义：
         <a
           class="truncate text-sm font-normal text-primary-700 dark:text-primary-500 hover:underline"
-          :href="resolveMediaUrl('grammar/雅思基础语法配套课程讲义.pdf')"
-          download="雅思基础语法配套课程讲义.pdf"
-        >雅思基础语法配套课程讲义.pdf</a>
+          :href="handoutUrl"
+          :download="handoutName"
+          @click="onHandoutClick"
+        >{{ handoutName }}</a>
       </div>
 
       <h3 class="mb-4 text-xl font-semibold dark:text-white">

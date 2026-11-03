@@ -95,13 +95,36 @@ function timingStatus(idx: number): string {
 
 const sentenceAudioEl = ref<HTMLAudioElement | null>(null)
 let sentenceEndAt: number | null = null
+let sentencePlayGeneration = 0
 
 function stopSentenceAudio() {
+  sentencePlayGeneration++
   sentenceAudioEl.value?.pause()
   sentenceEndAt = null
 }
 
-function playOriginalSentence(idx: number, start: number, end: number) {
+function whenAudioSeekable(el: HTMLAudioElement): Promise<boolean> {
+  if (el.readyState >= HTMLMediaElement.HAVE_METADATA)
+    return Promise.resolve(true)
+  return new Promise((resolve) => {
+    function cleanup() {
+      el.removeEventListener('loadedmetadata', onReady)
+      el.removeEventListener('error', onError)
+    }
+    function onReady() {
+      cleanup()
+      resolve(true)
+    }
+    function onError() {
+      cleanup()
+      resolve(false)
+    }
+    el.addEventListener('loadedmetadata', onReady)
+    el.addEventListener('error', onError)
+  })
+}
+
+async function playOriginalSentence(idx: number, start: number, end: number) {
   const el = sentenceAudioEl.value
   if (!el) {
     playTtsSentence(idx)
@@ -110,13 +133,33 @@ function playOriginalSentence(idx: number, start: number, end: number) {
   audioEl.value?.pause()
   if (typeof speechSynthesis !== 'undefined')
     speechSynthesis.cancel()
+  const generation = ++sentencePlayGeneration
   speakingIndex.value = idx
   sentenceEndAt = end
   el.playbackRate = playbackRate.value
-  el.currentTime = start
+  const ready = await whenAudioSeekable(el)
+  if (generation !== sentencePlayGeneration || sentenceAudioEl.value !== el)
+    return
+  if (!ready) {
+    sentenceEndAt = null
+    speakingIndex.value = -1
+    playTtsSentence(idx)
+    return
+  }
+  try {
+    el.currentTime = start
+  }
+  catch {
+    sentenceEndAt = null
+    speakingIndex.value = -1
+    playTtsSentence(idx)
+    return
+  }
   const p = el.play()
   if (p) {
     p.catch(() => {
+      if (generation !== sentencePlayGeneration)
+        return
       sentenceEndAt = null
       speakingIndex.value = -1
       playTtsSentence(idx)

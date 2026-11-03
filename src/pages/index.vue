@@ -22,7 +22,7 @@ const menus = reactive([
   },
   {
     label: '语法',
-    icon: 'i-carbon-load-balancer-vpc ',
+    icon: 'i-carbon-load-balancer-vpc',
     link: '/grammar',
     desc: '新东方雅思语法课程，针对雅思考试设计，思维导图',
   },

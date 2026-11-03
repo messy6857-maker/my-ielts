@@ -8,20 +8,28 @@ import {
 import { useAudioGroup } from '../../composables/useAudioGroup'
 
 import { resolveAudioUrl } from '../../composables/useAudio'
+import {
+  readChapterPreference,
+  writeChapterPreference,
+} from '../../utils/chapterPreference'
 import vocabulary from './vocabulary'
 
 const managedAudio = useAudioGroup()
 
 const CHAPTER_KEY = 'vocabulary_typing_chapter'
 const chapters = Object.keys(vocabulary)
-const storedChapter = localStorage.getItem(CHAPTER_KEY)
+const caseOwner = useAuth().currentUser
 const selectedChapter = ref(
-  chapters.includes(storedChapter ?? '') ? storedChapter! : chapters[0],
+  readChapterPreference(CHAPTER_KEY, chapters, caseOwner.value),
 )
+watch(caseOwner, (user) => {
+  const next = readChapterPreference(CHAPTER_KEY, chapters, user)
+  if (selectedChapter.value !== next)
+    selectedChapter.value = next
+})
 
 const currentWordIndex = ref(0)
 const userInput = ref('')
-const caseOwner = useAuth().currentUser
 const ignoreCase = ref(true)
 let loadingCase = false
 function loadCasePreference() {
@@ -77,7 +85,7 @@ const currentWordData = computed(() => words.value[currentWordIndex.value])
 const currentWord = computed(() => currentWordData.value?.word[0] || '')
 
 watch(selectedChapter, (newVal) => {
-  localStorage.setItem(CHAPTER_KEY, newVal)
+  writeChapterPreference(CHAPTER_KEY, newVal, caseOwner.value)
   reset()
 })
 
