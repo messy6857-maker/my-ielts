@@ -1,1 +1,0 @@
-import{_ as o}from"./TaskTwo.vue_vue_type_script_setup_true_lang-c639bcb8.js";import"./index-9d4f71af.js";import"./cambridge-91881baa.js";import"./text-48e2a596.js";import"./AIGradePanel.vue_vue_type_script_setup_true_lang-bbbe8c36.js";import"./useAISettings-3611dcd7.js";import"./ModelEssayView.vue_vue_type_script_setup_true_lang-59e46eef.js";export{o as default};
