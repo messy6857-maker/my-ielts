@@ -1,0 +1,1 @@
+import{p as t,L as o,N as r,D as n,O as a,o as c,C as s}from"./index-04010602.js";const m=t({__name:"practice",setup(p){return o().replace("/listening/179practice"),(u,_)=>{const e=r("RouterLink");return c(),n(e,{to:"/listening/179practice"},{default:a(()=>[s(" 打开听力179练习 ")]),_:1})}}});export{m as default};
