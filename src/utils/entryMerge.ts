@@ -79,6 +79,26 @@ export function mergeEntry(
       if (cuts.length)
         return { ...latest, value: { cutoff: cuts.at(-1) } }
     }
+    // C-02: dictation progress is one table keyed by part; a whole-table
+    // last-wins merge drops the other device's parts. Merge per part
+    // instead, keeping the newer updatedAt for each part key.
+    if (base === 'dictation_progress_v1') {
+      const prev = (previous.value ?? {}) as Record<
+        string,
+        { updatedAt?: number }
+      >
+      const next = (incoming.value ?? {}) as Record<
+        string,
+        { updatedAt?: number }
+      >
+      const merged: Record<string, unknown> = { ...prev }
+      for (const [k, v] of Object.entries(next)) {
+        const cur = merged[k] as { updatedAt?: number } | undefined
+        if (!cur || (v?.updatedAt ?? 0) >= (cur.updatedAt ?? 0))
+          merged[k] = v
+      }
+      return { ...latest, value: merged }
+    }
     if (previous.stamp[0] === 0 && incoming.stamp[0] === 0) {
       return {
         ...latest,

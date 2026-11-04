@@ -1,6 +1,8 @@
 /** Word-level dictation compare: ignore case/punct; tolerate number forms. */
 
-const WORD_RE = /[a-z0-9]+(?:'[a-z0-9]+)?/gi
+// A-5: keep thousands/decimal numbers whole ("1,800" / "3.50" must not split).
+// A-6: keep apostrophe words whole, curly or straight ("don’t" / "don't").
+const TOKEN_RE = /\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?(?:st|nd|rd|th)?|[a-z0-9]+(?:['’][a-z0-9]+)?/gi
 
 const NUMBER_WORDS: Record<string, string> = {
   zero: '0',
@@ -35,6 +37,62 @@ const NUMBER_WORDS: Record<string, string> = {
   thousand: '1000',
 }
 
+// A-9: ordinal words (first/second/third …) map to digits.
+const ORDINAL_WORDS: Record<string, string> = {
+  first: '1',
+  second: '2',
+  third: '3',
+  fourth: '4',
+  fifth: '5',
+  sixth: '6',
+  seventh: '7',
+  eighth: '8',
+  ninth: '9',
+  tenth: '10',
+  eleventh: '11',
+  twelfth: '12',
+}
+
+// A-9: common spoken abbreviations (only unambiguous ones; "St." is left out).
+const ABBREVIATIONS: Record<string, string> = {
+  dr: 'doctor',
+  mr: 'mister',
+  mrs: 'missus',
+}
+
+const TENS_VALUES: Record<string, number> = {
+  twenty: 20,
+  thirty: 30,
+  forty: 40,
+  fifty: 50,
+  sixty: 60,
+  seventy: 70,
+  eighty: 80,
+  ninety: 90,
+}
+const ONES_VALUES: Record<string, number> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+}
+
+// A-9: "fifty-one" → "51" before tokenizing (hyphen would otherwise split it
+// into "50" + "1"). Only tens-ones compounds; multi-word hundreds like
+// "one hundred" are NOT combined (documented partial, see fix report).
+function expandHyphenatedNumbers(text: string): string {
+  return text.replace(
+    /\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety)-(one|two|three|four|five|six|seven|eight|nine)\b/gi,
+    (_, tens: string, ones: string) =>
+      String(TENS_VALUES[tens.toLowerCase()] + ONES_VALUES[ones.toLowerCase()]),
+  )
+}
+
 export type DiffMark = 'ok' | 'missing' | 'extra' | 'wrong'
 
 export interface DiffToken {
@@ -44,21 +102,39 @@ export interface DiffToken {
 }
 
 export function tokenizeDictation(text: string): string[] {
-  return (text.match(WORD_RE) ?? []).map(w => normalizeDictationToken(w))
+  return (expandHyphenatedNumbers(text).match(TOKEN_RE) ?? [])
+    .map(w => normalizeDictationToken(w))
 }
 
 export function normalizeDictationToken(token: string): string {
-  const t = token.toLowerCase()
+  // A-6: curly apostrophes canonicalize to straight ones, then apostrophes
+  // are dropped entirely, so "don’t" / "don't" / "dont" all compare equal.
+  // (Same mechanism the audit flagged; "its" vs "it's" also compare equal,
+  // consistent with this feature's ignore-punctuation tolerance.)
+  const t = token.toLowerCase().replace(/[’‘]/g, '\'').replace(/'/g, '')
   if (NUMBER_WORDS[t])
     return NUMBER_WORDS[t]
+  if (ORDINAL_WORDS[t])
+    return ORDINAL_WORDS[t]
+  if (ABBREVIATIONS[t])
+    return ABBREVIATIONS[t]
+  // A-5: thousands separators ("1,800" → "1800") and decimal trailing
+  // zeros ("3.50" → "3.5", "3.0" → "3").
+  let s = t.replace(/,/g, '')
+  if (s.includes('.')) {
+    const [ip, fp = ''] = s.split('.')
+    const frac = fp.replace(/0+$/, '')
+    const intPart = String(Number(ip))
+    return frac ? `${intPart}.${frac}` : intPart
+  }
   // 1st / 2nd / 3rd → 1 / 2 / 3
-  const ord = t.match(/^(\d+)(st|nd|rd|th)$/)
+  const ord = s.match(/^(\d+)(st|nd|rd|th)$/)
   if (ord)
     return ord[1]
   // strip leading zeros on pure digits except single 0
-  if (/^\d+$/.test(t))
-    return String(Number(t))
-  return t
+  if (/^\d+$/.test(s))
+    return String(Number(s))
+  return s
 }
 
 export function tokensEqual(a: string, b: string): boolean {

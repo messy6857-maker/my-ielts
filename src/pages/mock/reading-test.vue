@@ -26,7 +26,7 @@ import { resolveMediaUrl } from '~/composables/useAudio'
 import { useGoBack } from '~/composables/useGoBack'
 import { useMistakes } from '~/composables/useStudyData'
 import { useStudyTimer } from '~/composables/useStudyTimer'
-import { collectMockMistakeEntries } from '~/utils/mockMistakes'
+import { collectMockMistakeEntries, hasWrittenMockMistakes, markMockMistakesWritten } from '~/utils/mockMistakes'
 
 const router = useRouter()
 const route = useRoute()
@@ -371,6 +371,9 @@ function submit() {
   const total = totalScorePoints(allQuestions.value)
   const score = countCorrect(allQuestions.value, answers.value, true)
   const label = testPair.value?.label ?? testId.value
+  // A-1: capture the attempt before submitResult (success clears the draft);
+  // one attempt records its mistakes once, a retry only tops up the record.
+  const attemptId = recovery.attemptId()
   const result = recovery.submitResult({
     id: testId.value,
     label,
@@ -386,22 +389,25 @@ function submit() {
   if (!result.saved)
     resultsOwner = recovery.owner.value
   const passages = test.value?.passages ?? []
-  for (const entry of collectMockMistakeEntries({
-    kind: 'reading',
-    testId: testId.value,
-    label,
-    answers: answers.value,
-    parts: passages.map((p, i) => ({
-      part: `passage${i + 1}`,
-      questions: p.questions,
-    })),
-  })) {
-    addMistake(entry.module, {
-      key: entry.key,
-      title: entry.title,
-      detail: entry.detail,
-      hint: entry.hint,
-    })
+  if (!hasWrittenMockMistakes(attemptId)) {
+    for (const entry of collectMockMistakeEntries({
+      kind: 'reading',
+      testId: testId.value,
+      label,
+      answers: answers.value,
+      parts: passages.map((p, i) => ({
+        part: `passage${i + 1}`,
+        questions: p.questions,
+      })),
+    })) {
+      addMistake(entry.module, {
+        key: entry.key,
+        title: entry.title,
+        detail: entry.detail,
+        hint: entry.hint,
+      })
+    }
+    markMockMistakesWritten(attemptId)
   }
   selPopup.value = null
 }

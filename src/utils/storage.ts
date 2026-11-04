@@ -100,7 +100,11 @@ const scalarBases = [
   'reading538_daily_goal_v1',
   'corpus_daily_goal_v1',
   'dictation_progress_v1',
-  'speaking_self_rubric_index_v1',
+  // NOTE (C-03): 'speaking_self_rubric_index_v1' is deliberately NOT here.
+  // Its entries are local-only non-study keys, and nothing reads the index;
+  // syncing the index alone leaves dangling references on other devices and
+  // after guest→login migration. Only re-add it when a real reader exists
+  // AND the entries themselves become syncable study keys.
   'stats_archive_v2',
   'checkin_archive_v2',
   'archive_retention_v2',

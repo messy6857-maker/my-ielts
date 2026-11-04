@@ -126,6 +126,12 @@ it('stale cancelled TTS errors cannot clear the next sentence highlight', async 
   const w = show(Page)
   await flushPromises()
   const state = (w.vm as any).$.setupState
+  // B-1: timings 加载间隙内点读是静默的（有意行为）；先等加载落定
+  // （成功或失败都会复位），再按原意测 TTS 错误处理。动态 import 的落定
+  // 需要真实 macrotask，microtask 冲刷不够，故用 setTimeout 轮询。
+  for (let i = 0; i < 20 && state.timingsLoading; i++)
+    await new Promise(r => setTimeout(r, 50))
+  expect(state.timingsLoading).toBe(false)
   state.transcript = 'Dr. Smith paid 2.50. Meet me at 2:30 tomorrow.'
   await nextTick()
   state.playSentence(0)

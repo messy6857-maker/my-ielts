@@ -14,7 +14,7 @@ import {
   summarizeDictationPart,
 } from '../../utils/dictationProgress'
 import type { SentenceTiming } from './timings/loadTimings'
-import { loadTestTimings, prefersOriginalAudio } from './timings/loadTimings'
+import { loadTestTimings, prefersOriginalAudio, shouldUseTtsFallback } from './timings/loadTimings'
 
 const mediaError = ref('')
 // 点读 TTS 失败提示：与上方 mediaError 同款式；取消朗读触发的 onerror
@@ -80,6 +80,13 @@ const loading = ref(false)
 const loadError = ref(false)
 const speakingIndex = ref(-1)
 const partTimings = ref<SentenceTiming[] | null>(null)
+// B-1: timings load in parallel with the transcript; while they load, the
+// per-sentence status is unknown — never render it as 'tts' (that would
+// mislabel original-audio sentences and actually play TTS).
+const timingsLoading = ref(false)
+// B-3: a failed dynamic import leaves partTimings null (TTS fallback for
+// every sentence) with no hint and no retry; surface it.
+const timingsError = ref(false)
 
 type StudyMode = 'intensive' | 'dictation'
 const mode = ref<StudyMode>('intensive')
@@ -106,13 +113,28 @@ function sentenceTiming(idx: number): SentenceTiming | undefined {
   return arr[idx]
 }
 function timingStatus(idx: number): string {
+  if (timingsLoading.value)
+    return 'loading'
   return sentenceTiming(idx)?.[2] ?? 'tts'
 }
 
 async function loadTimingsForSelection() {
   partTimings.value = null
-  const parts = await loadTestTimings(selectedTest.value)
-  partTimings.value = parts?.[selectedPart.value] ?? null
+  timingsLoading.value = true
+  timingsError.value = false
+  try {
+    const parts = await loadTestTimings(selectedTest.value)
+    partTimings.value = parts?.[selectedPart.value] ?? null
+  }
+  catch {
+    // Degrade to TTS (never play a wrong original-audio slice), but say so
+    // and offer a retry instead of failing silently.
+    timingsError.value = true
+    partTimings.value = null
+  }
+  finally {
+    timingsLoading.value = false
+  }
 }
 
 const sentenceAudioEl = ref<HTMLAudioElement | null>(null)
@@ -241,15 +263,19 @@ function onSentenceTimeUpdate() {
 
 function playSentence(idx: number) {
   const s = sentences.value[idx]
-  if (!s)
+  // B-1: while timings load, the sentence's true status is unknown; never
+  // fall through to TTS for a sentence that may have original audio.
+  if (!s || timingsLoading.value)
     return
   const timing = sentenceTiming(idx)
+  // B-4:分流走 loadTimings.ts 的共用 helper，不再内联重复（闭集 ok/weak/
+  // tts/skip 下与旧内联逻辑逐项一致；未知状态默认不播，fail-closed）。
   // ok/weak：一律原音。仅 status=tts（对齐确认音频中无此句）才朗读兜底。
   if (prefersOriginalAudio(timing)) {
     playOriginalSentence(idx, timing![0]!, timing![1]!)
     return
   }
-  if (timing?.[2] === 'skip')
+  if (!shouldUseTtsFallback(timing))
     return
   playTtsSentence(idx)
 }
@@ -346,6 +372,9 @@ const dictationPerfect = ref(false)
 const dictationAccuracy = ref(0)
 const dictationAddedMistake = ref(false)
 const partSummary = ref({ attempted: 0, perfect: 0, accuracy: 0 })
+// A-13: surfaced when a dictation progress save fails, so a lost write is
+// visible instead of silent.
+const dictationSaveFailed = ref(false)
 
 const dictatableIndexes = computed(() =>
   sentenceEntries.value
@@ -410,7 +439,9 @@ function playCurrentDictation() {
 
 function checkDictation() {
   const entry = currentDictationEntry.value
-  if (!entry || dictationChecked.value)
+  // A-11: empty input must not count as a failed attempt. The button is
+  // already disabled when empty; this guard closes the Ctrl+Enter path.
+  if (!entry || dictationChecked.value || !dictationInput.value.trim())
     return
   const expected = entry.text
   const result = diffDictation(expected, dictationInput.value)
@@ -433,7 +464,8 @@ function checkDictation() {
     lastAt: Date.now(),
   }
   progress.cursor = dictationIndex.value
-  saveDictationPartProgress(
+  // A-13: surface a save failure instead of silently dropping progress.
+  dictationSaveFailed.value = !saveDictationPartProgress(
     currentUser.value,
     selectedTest.value,
     selectedPart.value,
@@ -490,7 +522,7 @@ function nextDictationSentence() {
     selectedPart.value,
   )
   progress.cursor = dictationIndex.value
-  saveDictationPartProgress(
+  dictationSaveFailed.value = !saveDictationPartProgress(
     currentUser.value,
     selectedTest.value,
     selectedPart.value,
@@ -512,7 +544,7 @@ function prevDictationSentence() {
     selectedPart.value,
   )
   progress.cursor = dictationIndex.value
-  saveDictationPartProgress(
+  dictationSaveFailed.value = !saveDictationPartProgress(
     currentUser.value,
     selectedTest.value,
     selectedPart.value,
@@ -715,11 +747,15 @@ const testLabel = computed(
           · 第 {{ dictationIndex + 1 }} / {{ dictatableIndexes.length || 0 }} 句
         </p>
         <p class="text-xs text-gray-500 dark:text-gray-400">
-          本 Part 正确率
+          本 Part 最近正确率
           {{ Math.round(partSummary.accuracy * 100) }}%
           （{{ partSummary.perfect }}/{{ partSummary.attempted || 0 }} 次全对）
         </p>
       </div>
+
+      <p v-if="dictationSaveFailed" class="mb-2 text-xs text-red-600">
+        进度保存失败，本次练习记录未落盘，请稍后重试
+      </p>
 
       <div v-if="loading" class="text-sm text-gray-500">
         加载中…
@@ -858,6 +894,15 @@ const testLabel = computed(
           <p class="px-2 pb-1 text-xs text-gray-400">
             🔊 点句播放原录音对应片段；仅个别原录音中找不到的句子会标 TTS 并用系统朗读；无按钮的句暂无可播内容。
           </p>
+          <p v-if="timingsLoading" class="px-2 pb-1 text-xs text-gray-400">
+            音频定位加载中，点读按钮稍后出现…
+          </p>
+          <p v-if="timingsError" class="px-2 pb-1 text-xs text-amber-600">
+            音频定位加载失败，点读暂按系统朗读，可
+            <button class="ml-1 underline" @click="loadTimingsForSelection()">
+              重试
+            </button>
+          </p>
           <div
             v-for="(entry, i) in sentenceEntries"
             :key="i"
@@ -865,7 +910,7 @@ const testLabel = computed(
             class="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700/50"
           >
             <button
-              v-if="timingStatus(i) !== 'skip'"
+              v-if="(timingStatus(i) !== 'skip' && timingStatus(i) !== 'loading') || speakingIndex === i"
               class="mt-0.5 shrink-0 rounded-full p-1 text-gray-400 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-900"
               :title="speakingIndex === i ? '停止' : (timingStatus(i) === 'tts' ? '系统朗读（暂无原音时间）' : '播放原音')"
               @click="speakingIndex === i ? stopSentence() : playSentence(i)"

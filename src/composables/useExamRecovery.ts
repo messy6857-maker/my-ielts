@@ -621,6 +621,7 @@ export function useExamRecovery(options: {
       refresh()
     },
     activeTestId: () => activeTestId,
+    attemptId: () => attemptId,
     blocked,
     error,
     draft,

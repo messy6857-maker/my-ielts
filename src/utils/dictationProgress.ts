@@ -8,7 +8,8 @@ export interface DictationSentenceStat {
 }
 
 export interface DictationPartProgress {
-  /** Index of next sentence to practice (0-based). */
+  // A-12: this is the last practiced position (resume point), not the
+  // "next" sentence: the UI re-opens at the cursor sentence.
   cursor: number
   sentences: Record<string, DictationSentenceStat>
   updatedAt: number
@@ -37,8 +38,8 @@ export function readDictationProgress(
 export function writeDictationProgress(
   user: string | null,
   data: Record<string, DictationPartProgress>,
-) {
-  saveValue(storageKey(user), data)
+): boolean {
+  return saveValue(storageKey(user), data)
 }
 
 export function getDictationPartProgress(
@@ -61,13 +62,17 @@ export function saveDictationPartProgress(
   testId: string,
   part: string,
   progress: DictationPartProgress,
-) {
+): boolean {
+  // A-8: re-read immediately before writing and replace only this part, so
+  // another tab practicing a different part is not overwritten by a stale
+  // whole-table snapshot. (Same-part concurrent writes still last-win.)
+  // A-13: return the save result so callers can surface a failure.
   const all = readDictationProgress(user)
   all[dictationPartKey(testId, part)] = {
     ...progress,
     updatedAt: Date.now(),
   }
-  writeDictationProgress(user, all)
+  return writeDictationProgress(user, all)
 }
 
 export function summarizeDictationPart(progress: DictationPartProgress): {

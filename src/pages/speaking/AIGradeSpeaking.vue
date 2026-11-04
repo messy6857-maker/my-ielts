@@ -2,7 +2,6 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import {
   gradeSpeakingWithAI,
-  hasAISettings,
   isValidSpeakingGrade,
 } from '~/composables/useAISettings'
 import type { AISpeakingResult } from '~/composables/useAISettings'
@@ -173,15 +172,9 @@ function scoreColor(s: number) {
       <div class="flex items-center gap-2">
         <span v-if="!canUseAI" class="text-gray-400" title="locked">🔒 需登录</span>
         <template v-else>
-          <router-link
-            v-if="!hasAISettings()"
-            to="/settings"
-            class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            未配置 AI，去设置 →
-          </router-link>
+          <!-- C-06:两调用方均已用 hasAISettings() 门控本组件，原“未配置去
+          设置”分支永不可达，已删除；设置引导由口语页顶部横幅承接。 -->
           <button
-            v-else
             class="rounded-lg bg-purple-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-purple-800 disabled:opacity-50"
             :disabled="loading || wordCount < 10"
             @click="runGrade"

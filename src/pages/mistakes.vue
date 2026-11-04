@@ -32,6 +32,13 @@ const reviewItem = ref<MistakeItem | null>(null)
 const reviewInput = ref('')
 const reviewState = ref<'answering' | 'wrong' | 'correct'>('answering')
 const reviewAudioEl = ref<HTMLAudioElement | null>(null)
+// A-4: 复习范围快照。开始复习时固定本轮范围；筛选项清完即停止，
+// 绝不回落到全部错题。快照为 ref，剩余计数随其变化而更新。
+const reviewSnapshot = ref<MistakeItem[]>([])
+const reviewRemaining = computed(() => {
+  const liveKeys = new Set(allMistakes().map(m => m.key))
+  return reviewSnapshot.value.filter(m => liveKeys.has(m.key)).length
+})
 
 const filterModule = ref<'all' | MistakeModule>('all')
 const filterTestId = ref('all')
@@ -124,6 +131,7 @@ function startReview(onlyFiltered = true) {
   const pool = onlyFiltered ? filteredItems.value : allMistakes()
   if (pool.length === 0)
     return
+  reviewSnapshot.value = [...pool]
   isReviewing.value = true
   nextCard()
 }
@@ -131,21 +139,26 @@ function startReview(onlyFiltered = true) {
 function stopReview() {
   isReviewing.value = false
   reviewItem.value = null
+  reviewSnapshot.value = []
   reviewAudioEl.value?.pause()
 }
 
 function reviewPool(): MistakeItem[] {
-  return filteredItems.value.length > 0 ? filteredItems.value : allMistakes()
+  const liveKeys = new Set(allMistakes().map(m => m.key))
+  return reviewSnapshot.value.filter(m => liveKeys.has(m.key))
 }
 
 function nextCard() {
-  const all = reviewPool().filter(m => m.key !== reviewItem.value?.key)
-  const pool = all.length > 0 ? all : reviewPool()
-  if (pool.length === 0) {
+  const pool = reviewPool()
+  // 答错后点“下一个”应重看同一张（仅剩当前一张时也一样）；
+  // 范围内一张不剩才停止，绝不越出快照范围。
+  const others = pool.filter(m => m.key !== reviewItem.value?.key)
+  const candidates = others.length > 0 ? others : pool
+  if (candidates.length === 0) {
     stopReview()
     return
   }
-  reviewItem.value = pool[Math.floor(Math.random() * pool.length)]
+  reviewItem.value = candidates[Math.floor(Math.random() * candidates.length)]
   reviewInput.value = ''
   reviewState.value = 'answering'
   reviewAudioEl.value?.pause()
@@ -347,7 +360,7 @@ function detailLines(detail: string) {
         >
           <div class="mb-2 text-xs tracking-wider uppercase text-gray-500">
             {{ MISTAKE_MODULE_LABEL[reviewItem.module] || reviewItem.module }} · 剩余
-            {{ filteredItems.length || totalCount }}
+            {{ reviewRemaining }}
           </div>
           <div
             class="mb-3 whitespace-pre-line text-left text-sm leading-6 text-gray-700 dark:text-gray-300"

@@ -31,7 +31,10 @@ export function decodeMockMistakeMeta(hint?: string): MockMistakeMeta | null {
 }
 
 export function formatMockCorrectAnswer(q: MockQuestion): string {
-  if (q.type === 'fill-blank' || q.type === 'tfng' || q.type === 'map-label') {
+  // A-2: tfng must NOT be stringified as a number index; it falls through to
+  // the number+options branch below so it renders "A. True" like the mock
+  // result screen does.
+  if (q.type === 'fill-blank' || q.type === 'map-label') {
     const answers = Array.isArray(q.answer) ? q.answer : [q.answer]
     return answers.map(a => String(a)).join(' / ')
   }
@@ -176,14 +179,87 @@ export function mockReviewMatches(expectedTitle: string, userInput: string): boo
   const user = norm(userInput)
   if (!user)
     return false
-  const variants = expectedTitle.split(/\s*\/\s*|\s*；\s*|\s*;\s*/)
-  return variants.some((v) => {
-    const n = norm(v)
-    if (!n)
-      return false
-    // Allow matching "A. foo" by typing "foo" or "a"
-    const letter = n.match(/^([a-z])\s+/)
-    const withoutLetter = n.replace(/^[a-z]\.\s*/, '').trim()
-    return user === n || user === withoutLetter || (!!letter && user === letter[1])
-  })
+  const userTokens = new Set(user.split(' ').filter(Boolean))
+  // A-3: '；' joins REQUIRED options (multi-select, e.g. "A. xxx；C. yyy"):
+  // every group must be covered, not just one. Only apply when every group
+  // looks like an option ("A. ..."); otherwise fall back to the legacy
+  // any-variant rule so ordinary titles containing '；' are unaffected.
+  const required = expectedTitle.split(/\s*；\s*/)
+  if (required.length > 1 && required.every(g => /^[A-Za-z]\.\s/.test(g)))
+    return required.every(group => groupCovered(group))
+  return matchVariant(expectedTitle)
+
+  function matchVariant(title: string): boolean {
+    return title.split(/\s*\/\s*|\s*；\s*|\s*;\s*/).some((v) => {
+      const n = norm(v)
+      if (!n)
+        return false
+      // Allow matching "A. foo" by typing "foo" or "a". NOTE: n is already
+      // normalized, so the dot is gone and the letter is followed by a space
+      // (the old /^[a-z]\.\s*/ pattern could never fire here).
+      const letter = n.match(/^([a-z])\s+/)
+      const withoutLetter = n.replace(/^[a-z]\s+/, '').trim()
+      return user === n || user === withoutLetter || (!!letter && user === letter[1])
+    })
+  }
+  function groupCovered(group: string): boolean {
+    // A group may itself contain '/' variants; any covering variant suffices.
+    return group.split(/\s*\/\s*/).some((variant) => {
+      const n = norm(variant)
+      if (!n)
+        return false
+      if (user === n)
+        return true
+      const letter = n.match(/^([a-z])\s+/)
+      const withoutLetter = n.replace(/^[a-z]\s+/, '').trim()
+      if (letter && userTokens.has(letter[1]))
+        return true
+      return !!withoutLetter
+        && withoutLetter.split(' ').every(w => userTokens.has(w))
+    })
+  }
+}
+
+/**
+ * Idempotency for mock-mistake recording (A-1): one attempt records its
+ * mistakes once, even if the record save fails and the user retries.
+ * Single bounded local key; defensive so a storage failure never breaks submit.
+ * Note: the marker is local-only, so a same-attempt retry restored on another
+ * device could still double-count; that path needs cross-device draft restore
+ * and is out of scope for the retry-button bug.
+ */
+const MISTAKES_WRITTEN_KEY = 'mock_mistakes_written_v1'
+const MISTAKES_WRITTEN_CAP = 50
+function readWrittenMistakeAttempts(): string[] {
+  try {
+    const raw = localStorage.getItem(MISTAKES_WRITTEN_KEY)
+    if (!raw)
+      return []
+    const parsed: unknown = JSON.parse(raw)
+    return Array.isArray(parsed)
+      ? parsed.filter((v): v is string => typeof v === 'string')
+      : []
+  }
+  catch {
+    return []
+  }
+}
+export function hasWrittenMockMistakes(attemptId: string): boolean {
+  return !!attemptId && readWrittenMistakeAttempts().includes(attemptId)
+}
+export function markMockMistakesWritten(attemptId: string): void {
+  if (!attemptId)
+    return
+  try {
+    const list = readWrittenMistakeAttempts()
+    if (!list.includes(attemptId)) {
+      list.push(attemptId)
+      while (list.length > MISTAKES_WRITTEN_CAP)
+        list.shift()
+      localStorage.setItem(MISTAKES_WRITTEN_KEY, JSON.stringify(list))
+    }
+  }
+  catch {
+    /* best effort; worst case a retry may double-count, never crash submit */
+  }
 }

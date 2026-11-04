@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
-import { MISTAKE_MODULE_LABEL, useMistakes, useProgress } from '../composables/useStudyData'
+import {
+  formatDate,
+  MISTAKE_MODULE_LABEL,
+  useMistakes,
+  useProgress,
+} from '../composables/useStudyData'
 import { useWordSchedule } from '../composables/useSpacedRepetition'
 import {
   formatDuration,
@@ -38,7 +43,26 @@ const today = computed(() => {
 })
 
 watch(currentUser, refreshTasks)
-onMounted(refreshTasks)
+
+// A-15: a home page left open across midnight must roll to the new day.
+// Poll once a minute for a date change; on rollover re-run the same refresh
+// used at mount / account switch (tasks + timer daily seconds).
+const dayStamp = ref(new Date().toDateString())
+let midnightTimer: ReturnType<typeof setInterval> | undefined
+onMounted(() => {
+  refreshTasks()
+  midnightTimer = setInterval(() => {
+    const stamp = new Date().toDateString()
+    if (stamp !== dayStamp.value) {
+      dayStamp.value = stamp
+      refreshTasks()
+    }
+  }, 60_000)
+})
+onUnmounted(() => {
+  if (midnightTimer !== undefined)
+    clearInterval(midnightTimer)
+})
 
 function percent(done: number, total: number) {
   return total > 0 ? Math.round((done / total) * 100) : 0
@@ -240,6 +264,7 @@ const menus = reactive([
                   class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
                 >
                   继续 {{ m.label }}（{{ m.kind === 'listening' ? '听力' : '阅读' }}）
+                  <span v-if="m.updatedAt"> · {{ formatDate(m.updatedAt) }}</span>
                 </RouterLink>
               </div>
             </div>
@@ -255,6 +280,9 @@ const menus = reactive([
                   class="border border-gray-300 rounded-lg bg-white px-3 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-800"
                 >
                   继续 {{ d.task === 'task1' ? '小作文' : '大作文' }} · {{ d.promptId }}
+                  <span v-if="d.editedAt ?? d.updatedAt ?? d.stateAt">
+                    · {{ formatDate(d.editedAt ?? d.updatedAt ?? d.stateAt ?? 0) }}
+                  </span>
                 </RouterLink>
               </div>
             </div>

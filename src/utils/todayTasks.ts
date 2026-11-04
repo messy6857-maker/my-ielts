@@ -64,6 +64,7 @@ export function listUnfinishedMocks(
         version?: number
         kind?: string
         testId?: string
+        attemptId?: string
         submitted?: boolean
         updatedAt?: number
         editedAt?: number
@@ -74,6 +75,16 @@ export function listUnfinishedMocks(
         continue
       if (typeof draft.testId !== 'string' || !draft.testId)
         continue
+      // A-7: a retired retained copy keeps submitted=false (leaveRetired),
+      // but carries an independent __completed_<attemptId> marker key, the
+      // same marker the mock page itself uses to exclude it. Exclude it here
+      // too; drafts without attemptId (legacy) keep the old behaviour.
+      if (draft.attemptId) {
+        const marker
+          = `${prefix}${draft.kind}_${encodeURIComponent(draft.testId)}__completed_${encodeURIComponent(draft.attemptId)}`
+        if (storage.getItem(marker) != null)
+          continue
+      }
       const updatedAt = Number(draft.editedAt ?? draft.updatedAt ?? 0) || 0
       const id = `${draft.kind}:${draft.testId}`
       const next: UnfinishedMock = {

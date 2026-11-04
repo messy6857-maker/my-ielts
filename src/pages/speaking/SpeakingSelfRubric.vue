@@ -7,30 +7,66 @@ const props = defineProps<{ question: string; part?: string }>()
 
 const { currentUser } = useAuth()
 
-const CRITERIA = [
+type CriterionKey = 'fluency' | 'lexical' | 'grammar' | 'pronunciation'
+
+// C-04:每项补 5–9 分档一句话锚点（官方口语四项标准的简明意译，非原文
+// 照搬），滑杆下方随当前分值显示对应档描述；4 分档无锚点（滑杆 min 4
+// 时该行自动隐藏）。
+const CRITERIA: Array<{
+  key: CriterionKey
+  label: string
+  tips: string
+  anchors: Record<number, string>
+}> = [
   {
     key: 'fluency',
     label: '流利与连贯 (Fluency & Coherence)',
     tips: '语速是否自然、停顿是否合理、观点是否连贯有逻辑',
+    anchors: {
+      5: '能维持较长发言，但常有重复、自我纠正和停顿',
+      6: '能较连贯地谈论，偶有重复与停顿，衔接基本到位',
+      7: '表达流利少停顿，偶有语言相关犹豫，衔接多样',
+      8: '流利自然，偶有重复或自我纠正，话题展开充分',
+      9: '全程流利连贯，停顿自然得体，衔接精准丰富',
+    },
   },
   {
     key: 'lexical',
     label: '词汇资源 (Lexical Resource)',
     tips: '用词是否多样准确、有无改述、搭配是否自然',
+    anchors: {
+      5: '词汇量有限，改述常有困难，偶有错误',
+      6: '词汇足够谈论各类话题，偶有不准确，改述基本成功',
+      7: '词汇灵活多样，偶有不准确，搭配意识较强',
+      8: '词汇丰富精准，偶有小错，改述灵活',
+      9: '词汇精准地道，搭配自然，改述信手拈来',
+    },
   },
   {
     key: 'grammar',
     label: '语法广度与准确性 (GRA)',
     tips: '句式是否多样、时态/主谓是否正确、错误是否影响理解',
+    anchors: {
+      5: '句式有限，错误较多但基本可理解',
+      6: '简单与复杂句混用，错误不影响理解',
+      7: '句式多样，错误较少且多为口误',
+      8: '句式灵活，错误极少且不影响理解',
+      9: '句式丰富精准，错误极少且仅为口误',
+    },
   },
   {
     key: 'pronunciation',
     label: '发音 (Pronunciation)',
     tips: '音素是否清晰、重音/语调是否自然、是否易于听懂',
+    anchors: {
+      5: '发音基本可懂，重音语调常有问题，偶需听者费力',
+      6: '发音大体清晰，个别音素与重音有误，基本易懂',
+      7: '发音清晰，重音语调大体自然，偶有小问题',
+      8: '发音清晰自然，个别特征有母语影响但易懂',
+      9: '发音精准自然，重音语调运用自如',
+    },
   },
-] as const
-
-type CriterionKey = (typeof CRITERIA)[number]['key']
+]
 
 interface SelfRubricResult {
   scores: Record<CriterionKey, number>
@@ -80,18 +116,23 @@ const overall = computed(() => {
 })
 
 function save() {
-  saveValue(storageKey(), {
+  // C-01: check both writes; on any failure report failure, never claim success.
+  const okEntry = saveValue(storageKey(), {
     scores: { ...scores.value },
     notes: notes.value,
     savedAt: Date.now(),
   } satisfies SelfRubricResult)
-  // also keep a lightweight index for the account (optional sync-friendly scalar)
+  // also keep a lightweight index for the account (local-only; deliberately
+  // not synced, see storage.ts C-03)
   const indexKey = accountKey('speaking_self_rubric_index_v1', currentUser.value)
   const index = readValue<string[]>(indexKey, [])
   const key = storageKey()
+  let okIndex = true
   if (!index.includes(key))
-    saveValue(indexKey, [...index, key].slice(-50))
-  savedMsg.value = '已保存本机自评'
+    okIndex = saveValue(indexKey, [...index, key].slice(-50))
+  savedMsg.value = okEntry && okIndex
+    ? '已保存本机自评'
+    : '保存失败，自评未保存，请稍后重试'
 }
 
 watch(
@@ -132,6 +173,12 @@ watch(
         <p class="text-[11px] text-gray-400">
           {{ c.tips }}
         </p>
+        <p
+          v-if="c.anchors[Math.floor(scores[c.key])]"
+          class="text-[11px] text-gray-500 dark:text-gray-400"
+        >
+          {{ Math.floor(scores[c.key]) }} 分档：{{ c.anchors[Math.floor(scores[c.key])] }}
+        </p>
       </div>
     </div>
     <textarea
@@ -151,7 +198,11 @@ watch(
         保存自评
       </button>
     </div>
-    <p v-if="savedMsg" class="mt-1 text-xs text-green-600">
+    <p
+      v-if="savedMsg"
+      class="mt-1 text-xs"
+      :class="savedMsg.startsWith('保存失败') ? 'text-red-600' : 'text-green-600'"
+    >
       {{ savedMsg }}
     </p>
   </div>

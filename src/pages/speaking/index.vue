@@ -9,6 +9,9 @@ import type { Part2Card } from './part2'
 import { PART3_TOPICS } from './part3'
 import { confirmLeaveRecording } from '~/composables/useRecorder'
 import { hasAISettings } from '~/composables/useAISettings'
+import { useAuth } from '~/composables/useAuth'
+
+const { currentUser } = useAuth()
 
 type Tab = 'part1' | 'part2' | 'part3'
 const tab = usePersistentString('myielts_speaking_tab', 'part1') as Ref<Tab>
@@ -116,10 +119,17 @@ function tabBtn(t: Tab) {
       </router-link>
     </div>
     <div
-      v-else
+      v-else-if="currentUser"
       class="mb-4 border border-green-200 rounded-xl bg-green-50 p-3 text-xs text-green-800 dark:border-green-900 dark:bg-green-950/20 dark:text-green-300"
     >
       AI 已配置：录音并转写后可一键评分。也可随时使用本地自评清单。
+    </div>
+    <div
+      v-else
+      class="mb-4 border border-amber-300 rounded-xl bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+      role="status"
+    >
+      AI 已配置，但当前为游客模式：录音并转写后需登录账号才可一键评分；也可先使用下方「本地自评清单」按雅思口语 4 项标准打分。
     </div>
 
     <div class="mb-5 flex gap-2">

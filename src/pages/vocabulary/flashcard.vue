@@ -213,6 +213,24 @@ function ensureSynonymPos() {
   }
   return synonymPosPromise
 }
+// B-2:本站词库全量词性索引（懒加载，与 synonymPosData 同款式）；单章模式下
+// wordPosMap 只覆盖已加载章节，跨章同义词先查本表拿本地权威词性。
+const vocabularyPosLazy = ref<Record<string, string> | null>(null)
+let vocabularyPosPromise: Promise<Record<string, string> | null> | null = null
+function ensureVocabularyPos() {
+  if (!vocabularyPosPromise) {
+    vocabularyPosPromise = import('./vocabularyPos')
+      .then((m) => {
+        vocabularyPosLazy.value = m.vocabularyPosData
+        return m.vocabularyPosData
+      })
+      .catch(() => {
+        vocabularyPosPromise = null
+        return null
+      })
+  }
+  return vocabularyPosPromise
+}
 const synonymMeaningsLazy = ref<Record<string, string> | null>(null)
 let synonymMeaningsPromise: Promise<Record<string, string> | null> | null = null
 function ensureSynonymMeanings() {
@@ -231,11 +249,16 @@ function ensureSynonymMeanings() {
 }
 ensureSynonymMeanings()
 function synonymPos(syn: string): string {
-  // 先查本站词库（权威词性，原样显示），再查联网抓取的词性数据；都查不到就不显示（如实标注）
+  // 先查本站词库（权威词性，原样显示）：已加载章节的 wordPosMap，及全量
+  // 词性索引（覆盖单章模式下未加载章节）；再查联网抓取的词性数据；都查
+  // 不到就不显示（如实标注）
   const key = syn.trim().toLowerCase()
   const local = wordPosMap.value.get(key)
   if (local)
     return local
+  const vocabPos = vocabularyPosLazy.value?.[key]
+  if (vocabPos)
+    return vocabPos
   const fallback = synonymPosLazy.value?.[key]
   if (!fallback)
     return ''
@@ -623,8 +646,10 @@ async function loadWordInfo(card: Card) {
     if (isActive())
       wordInfoLoading.value = false
   }
-  if (isActive() && wordInfo.value?.synonyms.length)
+  if (isActive() && wordInfo.value?.synonyms.length) {
     ensureSynonymPos()
+    ensureVocabularyPos()
+  }
 }
 function retryWordInfo() {
   const card = current.value || studying.value
