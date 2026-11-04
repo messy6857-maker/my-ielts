@@ -120,7 +120,7 @@ export function normalizeDictationToken(token: string): string {
     return ABBREVIATIONS[t]
   // A-5: thousands separators ("1,800" → "1800") and decimal trailing
   // zeros ("3.50" → "3.5", "3.0" → "3").
-  let s = t.replace(/,/g, '')
+  const s = t.replace(/,/g, '')
   if (s.includes('.')) {
     const [ip, fp = ''] = s.split('.')
     const frac = fp.replace(/0+$/, '')

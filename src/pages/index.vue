@@ -3,8 +3,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 import {
-  formatDate,
   MISTAKE_MODULE_LABEL,
+  formatDate,
   useMistakes,
   useProgress,
 } from '../composables/useStudyData'

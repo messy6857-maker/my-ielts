@@ -124,9 +124,9 @@ describe('A-5 听写数字等价写法', () => {
 describe('A-6 听写弯引号缩写', () => {
   it('弯引号与直引号、无引号都判为同一词', () => {
     expect(tokenizeDictation('don’t')).toEqual(['dont'])
-    expect(tokenizeDictation("don't")).toEqual(['dont'])
+    expect(tokenizeDictation('don\'t')).toEqual(['dont'])
     expect(tokenizeDictation('dont')).toEqual(['dont'])
-    expect(diffDictation('I don’t know', "I don't know").perfect).toBe(true)
+    expect(diffDictation('I don’t know', 'I don\'t know').perfect).toBe(true)
   })
 })
 
@@ -154,9 +154,20 @@ describe('A-7 今日任务排除已退役副本', () => {
       get length() { return Object.keys(store).length },
       key: (i: number) => Object.keys(store)[i] ?? null,
       getItem: (k: string) => store[k] ?? null,
-      setItem: (k: string, v: string) => { store[k] = v; fake[k] = v },
-      removeItem: (k: string) => { delete store[k]; delete fake[k] },
-      clear: () => { for (const k of Object.keys(store)) { delete store[k]; delete fake[k] } },
+      setItem: (k: string, v: string) => {
+        store[k] = v
+        fake[k] = v
+      },
+      removeItem: (k: string) => {
+        delete store[k]
+        delete fake[k]
+      },
+      clear: () => {
+        for (const k of Object.keys(store)) {
+          delete store[k]
+          delete fake[k]
+        }
+      },
     }
     return fake as unknown as Storage
   }
