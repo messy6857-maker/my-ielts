@@ -136,7 +136,7 @@ async function loadTest() {
       return
     }
     recordSaveFailed.value = false
-    mistakeSave.clear()
+    // 切题不丢待重试的错题写入：失败记录已落本机存储，横幅留到重试成功。
     testPair.value = pair
     answers.value = {}
     submitted.value = false

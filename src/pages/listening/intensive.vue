@@ -428,8 +428,9 @@ function refreshPartSummary() {
   partSummary.value = summarizeDictationPart(progress)
 }
 
-function resetDictationUi() {
-  dictationInput.value = ''
+function resetDictationUi(keepInput = false) {
+  if (!keepInput)
+    dictationInput.value = ''
   dictationTokens.value = null
   dictationChecked.value = false
   dictationPerfect.value = false
@@ -622,6 +623,14 @@ watch(dictatableIndexes, (indexes, previous) => {
       dictationIndex.value = index
       return
     }
+    // 当前句掉出听写池（如定时重试后被标为 skip）：已输入的答案保留，
+    // 只清掉针对旧句的批改结果，光标移到最近的可听写句。
+    dictationIndex.value = indexes.length > 0
+      ? Math.min(dictationIndex.value, indexes.length - 1)
+      : 0
+    refreshPartSummary()
+    resetDictationUi(true)
+    return
   }
   loadDictationCursor()
 })

@@ -35,7 +35,8 @@ async function loadSelectedChapter() {
   const id = selectedChapter.value
   chapterLoading.value = true
   chapterError.value = false
-  chapterData.value = null
+  // 保留上一章内容直到新章节加载成功：加载失败或缓慢时页面不空白，
+  // 与闪卡页保持一致（加载中仍可看到旧词）。
   try {
     const data = await loadVocabularyChapter(id)
     if (seq !== chapterSeq || selectedChapter.value !== id)
@@ -44,10 +45,8 @@ async function loadSelectedChapter() {
     playAudio()
   }
   catch {
-    if (seq === chapterSeq) {
+    if (seq === chapterSeq)
       chapterError.value = true
-      chapterData.value = null
-    }
   }
   finally {
     if (seq === chapterSeq)

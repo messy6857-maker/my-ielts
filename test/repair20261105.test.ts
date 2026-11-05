@@ -514,3 +514,59 @@ it('restoring a different account’s backup does not import its global AI delet
   expect(collectSyncData('bob')[target]).toBeDefined()
   expect(localStorage.getItem(accountKey('archive_retention_writing_v3', 'bob'))).toBeNull()
 })
+
+it('a failed typing chapter switch keeps the previous chapter on screen', async () => {
+  const loader = await import('../src/pages/vocabulary/loadVocabulary')
+  const P = (await import('../src/pages/vocabulary/typing.vue')).default
+  const { s } = await page(P)
+  await until(() => !s.chapterLoading && s.words.length > 0)
+  const firstWord = s.currentWord
+  const next = loader.listVocabularyChapters().find(c => c !== s.selectedChapter)!
+  vi.spyOn(loader, 'loadVocabularyChapter').mockRejectedValueOnce(new Error('load failed'))
+  s.selectedChapter = next
+  await until(() => s.chapterError === true)
+  expect(s.words.length).toBeGreaterThan(0)
+  expect(s.currentWord).toBe(firstWord)
+})
+
+it('a failed mock mistake save survives a new save instance and retries', async () => {
+  const { useMockMistakeSave } = await import('../src/composables/useMockMistakeSave')
+  const { hasWrittenMockMistakes } = await import('../src/utils/mockMistakes')
+  const records = useMistakes()
+  const entries = ['q1', 'q2'].map(key => ({
+    module: 'mock_reading' as const, key, title: key, detail: '', hint: '',
+  }))
+  const setter = Storage.prototype.setItem
+  const quota = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, k, v) {
+    if (k.includes('_mistake_parts_v2__entry_') && JSON.parse(v).value.key === 'q2')
+      throw new DOMException('full', 'QuotaExceededError')
+    return setter.call(this, k, v)
+  })
+  const first = useMockMistakeSave()
+  first.save('pending-exam-remount', entries)
+  expect(first.failed.value).toBe(true)
+  // 模拟切题/卸载后重建：新实例应从本机存储读回待重试记录。
+  const second = useMockMistakeSave()
+  expect(second.failed.value).toBe(true)
+  quota.mockRestore()
+  second.retry()
+  expect(second.failed.value).toBe(false)
+  expect(hasWrittenMockMistakes('pending-exam-remount')).toBe(true)
+  expect(records.mistakes.value.find(x => x.key === 'q1')?.count).toBe(1)
+  expect(records.mistakes.value.find(x => x.key === 'q2')?.count).toBe(1)
+})
+
+it('a dictation answer survives the current sentence dropping out of the pool', async () => {
+  const P = (await import('../src/pages/listening/intensive.vue')).default
+  const { s } = await page(P)
+  s.mode = 'dictation'
+  await until(() => !s.loading && !s.timingsLoading && !!s.currentDictationEntry)
+  s.dictationInput = 'some typed answer'
+  s.checkDictation()
+  expect(s.dictationChecked).toBe(true)
+  // 模拟定时重试后当前句被标为 skip：把它从听写池里拿掉。
+  const idx = s.currentDictationIdx
+  s.partTimings = s.partTimings.map((t: any, i: number) => (i === idx ? [t[0], t[1], 'skip'] : t))
+  await until(() => s.dictationChecked === false)
+  expect(s.dictationInput).toBe('some typed answer')
+})
