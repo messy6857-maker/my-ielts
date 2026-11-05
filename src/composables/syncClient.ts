@@ -111,6 +111,7 @@ export interface ApiResult {
   compactStats?: boolean
   compactDeletes?: boolean
   protocolVersion?: number
+  studyExtensions?: boolean
 }
 /** 服务端 rejected 原因三类：未知/跨账号 base、非字符串原始值、decode 失败。 */
 export type RejectedReason =
@@ -288,6 +289,20 @@ export function getRejectedReason(
   }
   catch {
     return null
+  }
+}
+function reopenSupportedEntries(owner: string) {
+  const keys = getQuarantinedKeys(owner).filter((key) => {
+    const base = studyBaseOf(key, owner)
+    return !!base
+      && (base === 'dictation_progress_v1'
+        || base === 'archive_retention_writing_v3'
+        || base.startsWith('aigrade_v2_'))
+      && getRejectedReason(owner, key) === 'unknown-base'
+  })
+  if (keys.length) {
+    unquarantineKeys(owner, keys)
+    keys.forEach(key => notifyStorage(key, 'local'))
   }
 }
 function storeRejectedReasons(
@@ -488,6 +503,8 @@ export async function apiPull(username = getTokenOwner() ?? '') {
     }
     if (result.ok) {
       capabilities.set(username, result.protocolVersion ?? 1)
+      if (result.studyExtensions === true)
+        reopenSupportedEntries(username)
       if (result.compactDeletes)
         deletionServers.add(username)
       else deletionServers.delete(username)
@@ -549,6 +566,10 @@ export function apiPush(
       )
       if (!capability.ok)
         return capability
+      if (getToken(username) !== token)
+        return { ok: false, status: 401, message: '账号会话已变化，未继续上传' }
+      if (capability.studyExtensions === true)
+        reopenSupportedEntries(username)
       if (capability.compactStats)
         compactServers.add(username)
       else compactServers.delete(username)
@@ -607,7 +628,11 @@ export function apiPush(
         const left = await send(entries.slice(0, middle))
         return left.ok ? send(entries.slice(middle)) : left
       }
+      if (getToken(username) !== token)
+        return { ok: false, status: 401, message: '账号会话已变化，未应用旧账号响应' }
       if (reply.ok) {
+        if (reply.studyExtensions === true)
+          reopenSupportedEntries(username)
         if (reply.compactDeletes)
           deletionServers.add(username)
         else deletionServers.delete(username)

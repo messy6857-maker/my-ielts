@@ -1,5 +1,5 @@
 <script setup>
-import { speechLanguage, useAudioGroup } from '../../composables/useAudioGroup'
+import { useAudioGroup } from '../../composables/useAudioGroup'
 
 import words from './reading538words'
 
@@ -39,36 +39,9 @@ watch(
   { immediate: true },
 )
 
-let audio = null
-function speakFallback(word) {
-  speechSynthesis.cancel()
-  const u = new SpeechSynthesisUtterance(word)
-  u.lang = speechLanguage()
-  speechSynthesis.speak(u)
-}
 function play(word) {
-  // 星号词（that* 等）的 * 只作界面标记：发音接口与 TTS 都不认 *，先去掉
   const clean = word.replace(/\*/g, '')
-  if (audio) {
-    audio.pause()
-    audio.currentTime = 0
-  }
-  // 停掉上一词可能还在读的 TTS 兜底，避免叠加
-  speechSynthesis.cancel()
-  let fellBack = false
-  const fallback = () => {
-    if (fellBack)
-      return
-    fellBack = true
-    speakFallback(clean)
-  }
-  audio = managedAudio.create()
-  // 含空格/特殊字符的短语需编码，否则有道接口取不到音
-  audio.src = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(clean)}&type=1`
-  audio.onerror = fallback
-  const p = audio.play()
-  if (p)
-    p.catch(fallback)
+  managedAudio.play(`https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(clean)}&type=1`, clean)
 }
 </script>
 

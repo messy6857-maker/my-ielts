@@ -114,10 +114,10 @@ describe('A-5 听写数字等价写法', () => {
     expect(diffDictation('The price is 3.50', 'The price is 3.5').perfect).toBe(true)
   })
 
-  it('原有数字口径不变（二十、序数后缀、前导零）', () => {
+  it('保留序数后缀和编号前导零', () => {
     expect(tokenizeDictation('twenty pounds')).toEqual(['20', 'pounds'])
-    expect(tokenizeDictation('1st prize')).toEqual(['1', 'prize'])
-    expect(tokenizeDictation('007')).toEqual(['7'])
+    expect(tokenizeDictation('1st prize')).toEqual(['1st', 'prize'])
+    expect(tokenizeDictation('007')).toEqual(['007'])
   })
 })
 
@@ -137,8 +137,8 @@ describe('A-9 听写数字归一化补齐（部分）', () => {
   })
 
   it('序数词', () => {
-    expect(tokenizeDictation('first prize')).toEqual(['1', 'prize'])
-    expect(tokenizeDictation('second place')).toEqual(['2', 'place'])
+    expect(tokenizeDictation('first prize')).toEqual(['1st', 'prize'])
+    expect(tokenizeDictation('second place')).toEqual(['2nd', 'place'])
   })
 
   it('无歧义缩写', () => {

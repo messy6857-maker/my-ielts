@@ -177,7 +177,7 @@ const menus = reactive([
             class="grid mb-4 gap-3 lg:grid-cols-4 sm:grid-cols-2"
           >
             <RouterLink
-              to="/vocabulary/flashcard"
+              to="/vocabulary/flashcard?review=due"
               class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40"
             >
               <p class="text-xs text-gray-500 dark:text-gray-400">

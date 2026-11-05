@@ -115,11 +115,12 @@ export function listWritingDraftSummaries(owner: string | null) {
     for (const d of listDrafts(task, owner)) {
       if (!d.text?.trim())
         continue
-      items.push({
-        ...d,
-        task,
-        path: task === 'task1' ? '/writing/task1' : '/writing/task2',
-      })
+      const tab = task === 'task1' ? 'essay-small' : 'essay-big'
+      const version = d.versionId?.slice(accountPrefix(owner).length)
+      const query = new URLSearchParams({ tab, prompt: d.promptId })
+      if (version)
+        query.set('draft', version)
+      items.push({ ...d, task, path: `/writing?${query}` })
     }
   }
   return items.sort(

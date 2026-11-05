@@ -29,23 +29,19 @@ const caseOwner = useAuth().currentUser
 const selectedChapter = ref(
   readChapterPreference(CHAPTER_KEY, chapters, caseOwner.value),
 )
-watch(caseOwner, (user) => {
-  const next = readChapterPreference(CHAPTER_KEY, chapters, user)
-  if (selectedChapter.value !== next)
-    selectedChapter.value = next
-})
-
 let chapterSeq = 0
 async function loadSelectedChapter() {
   const seq = ++chapterSeq
   const id = selectedChapter.value
   chapterLoading.value = true
   chapterError.value = false
+  chapterData.value = null
   try {
     const data = await loadVocabularyChapter(id)
     if (seq !== chapterSeq || selectedChapter.value !== id)
       return
     chapterData.value = data
+    playAudio()
   }
   catch {
     if (seq === chapterSeq) {
@@ -115,13 +111,20 @@ const words = computed(() => {
 const currentWordData = computed(() => words.value[currentWordIndex.value])
 const currentWord = computed(() => currentWordData.value?.word[0] || '')
 
-watch(selectedChapter, async (newVal) => {
-  writeChapterPreference(CHAPTER_KEY, newVal, caseOwner.value)
-  await loadSelectedChapter()
-  reset()
-})
+watch(selectedChapter, (chapter) => {
+  writeChapterPreference(CHAPTER_KEY, chapter, caseOwner.value)
+  resetRound()
+  loadSelectedChapter()
+}, { flush: 'sync' })
 
-function reset() {
+watch(caseOwner, (user) => {
+  resetRound()
+  const chapter = readChapterPreference(CHAPTER_KEY, chapters, user)
+  if (selectedChapter.value !== chapter)
+    selectedChapter.value = chapter
+}, { flush: 'sync' })
+
+function resetRound() {
   currentWordIndex.value = 0
   userInput.value = ''
   startTime.value = null
@@ -135,21 +138,18 @@ function reset() {
     advanceTimer = null
   }
   advancing = false
-  setProgress('typing', 0, words.value.length)
+  managedAudio.dispose()
+}
+
+function reset() {
+  resetRound()
   playAudio()
 }
 
-let audio = null as HTMLAudioElement | null
 function playAudio() {
-  const category = selectedChapter.value
   const word = currentWord.value
-  const audioPath = resolveAudioUrl(`vocabulary/audio/${category}/${word}.mp3`)
-  speechSynthesis.cancel()
-  if (audio) {
-    audio.pause()
-    audio.currentTime = 0
-  }
-  audio = managedAudio.play(audioPath, word)
+  if (word)
+    managedAudio.play(resolveAudioUrl(`vocabulary/audio/${selectedChapter.value}/${word}.mp3`), word)
 }
 
 // Normalize whitespace: replace non-breaking spaces and other unicode spaces with regular space
@@ -167,6 +167,8 @@ function charMatches(index: number, char: string) {
 }
 
 function handleInput(e: Event) {
+  if (chapterLoading.value || !currentWord.value || isFinished.value)
+    return
   if (!startTime.value)
     startTime.value = Date.now()
 
@@ -218,7 +220,12 @@ function handleInput(e: Event) {
     && !advancing
   ) {
     advancing = true
-    advanceTimer = setTimeout(nextWord, 200)
+    const owner = caseOwner.value
+    const chapter = selectedChapter.value
+    advanceTimer = setTimeout(() => {
+      if (caseOwner.value === owner && selectedChapter.value === chapter)
+        nextWord()
+    }, 200)
   }
 }
 
@@ -253,24 +260,11 @@ function nextWord() {
   }
 }
 
-onMounted(async () => {
-  await loadSelectedChapter()
-  reset()
-})
-
-// 离页时停掉 TTS 与音频，避免后台继续出声（与 KeywordFlashcard 的 onUnmounted 对齐；
-// useAudioGroup 的 dispose 已有同类取消，此处显式兜底直接朗读的 TTS）
+onMounted(loadSelectedChapter)
 onUnmounted(() => {
-  if (advanceTimer) {
+  chapterSeq++
+  if (advanceTimer)
     clearTimeout(advanceTimer)
-    advanceTimer = null
-  }
-  advancing = false
-  speechSynthesis.cancel()
-  if (audio) {
-    audio.pause()
-    audio = null
-  }
 })
 </script>
 

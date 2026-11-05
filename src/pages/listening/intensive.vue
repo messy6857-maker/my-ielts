@@ -118,22 +118,30 @@ function timingStatus(idx: number): string {
   return sentenceTiming(idx)?.[2] ?? 'tts'
 }
 
+let timingsSequence = 0
 async function loadTimingsForSelection() {
+  const sequence = ++timingsSequence
+  const test = selectedTest.value
+  const part = selectedPart.value
+  const isCurrent = () =>
+    sequence === timingsSequence && test === selectedTest.value && part === selectedPart.value
   partTimings.value = null
   timingsLoading.value = true
   timingsError.value = false
   try {
-    const parts = await loadTestTimings(selectedTest.value)
-    partTimings.value = parts?.[selectedPart.value] ?? null
+    const parts = await loadTestTimings(test)
+    if (isCurrent()) {
+      partTimings.value = parts?.[part] ?? null
+      timingsError.value = partTimings.value === null
+    }
   }
   catch {
-    // Degrade to TTS (never play a wrong original-audio slice), but say so
-    // and offer a retry instead of failing silently.
-    timingsError.value = true
-    partTimings.value = null
+    if (isCurrent())
+      timingsError.value = true
   }
   finally {
-    timingsLoading.value = false
+    if (isCurrent())
+      timingsLoading.value = false
   }
 }
 
@@ -141,9 +149,12 @@ const sentenceAudioEl = ref<HTMLAudioElement | null>(null)
 let sentenceEndAt: number | null = null
 let sentencePlayGeneration = 0
 let sentenceStopRaf = 0
+let seekController: AbortController | undefined
 
 function stopSentenceAudio() {
   sentencePlayGeneration++
+  seekController?.abort()
+  seekController = undefined
   if (sentenceStopRaf) {
     cancelAnimationFrame(sentenceStopRaf)
     sentenceStopRaf = 0
@@ -152,24 +163,29 @@ function stopSentenceAudio() {
   sentenceEndAt = null
 }
 
-function whenAudioSeekable(el: HTMLAudioElement): Promise<boolean> {
+function whenAudioSeekable(el: HTMLAudioElement, signal: AbortSignal): Promise<boolean> {
+  if (el.error || signal.aborted)
+    return Promise.resolve(false)
   if (el.readyState >= HTMLMediaElement.HAVE_METADATA)
     return Promise.resolve(true)
   return new Promise((resolve) => {
-    function cleanup() {
+    const timeout = setTimeout(onError, 8000)
+    function finish(ready: boolean) {
+      clearTimeout(timeout)
       el.removeEventListener('loadedmetadata', onReady)
       el.removeEventListener('error', onError)
+      signal.removeEventListener('abort', onError)
+      resolve(ready)
     }
     function onReady() {
-      cleanup()
-      resolve(true)
+      finish(true)
     }
     function onError() {
-      cleanup()
-      resolve(false)
+      finish(false)
     }
     el.addEventListener('loadedmetadata', onReady)
     el.addEventListener('error', onError)
+    signal.addEventListener('abort', onError, { once: true })
   })
 }
 
@@ -211,13 +227,16 @@ async function playOriginalSentence(idx: number, start: number, end: number) {
   }
   audioEl.value?.pause()
   if (typeof speechSynthesis !== 'undefined')
-    speechSynthesis.cancel()
+    window.speechSynthesis?.cancel()
+  stopSentenceAudio()
+  const controller = new AbortController()
+  seekController = controller
   ttsError.value = ''
-  const generation = ++sentencePlayGeneration
+  const generation = sentencePlayGeneration
   speakingIndex.value = idx
   sentenceEndAt = end
   el.playbackRate = playbackRate.value
-  const ready = await whenAudioSeekable(el)
+  const ready = await whenAudioSeekable(el, controller.signal)
   if (generation !== sentencePlayGeneration || sentenceAudioEl.value !== el)
     return
   if (!ready) {
@@ -241,7 +260,7 @@ async function playOriginalSentence(idx: number, start: number, end: number) {
     p.catch(() => {
       if (generation !== sentencePlayGeneration)
         return
-      sentenceEndAt = null
+      stopSentenceAudio()
       speakingIndex.value = -1
       mediaError.value = '原音播放失败，请检查网络后重试'
     })
@@ -293,7 +312,7 @@ function playTtsSentence(idx: number) {
   audioEl.value?.pause()
   stopSentenceAudio()
   playbackGeneration++
-  speechSynthesis.cancel()
+  window.speechSynthesis?.cancel()
   speakingIndex.value = idx
   // 去掉说话人标识再朗读
   const text = sentenceEntries.value[idx].text
@@ -315,7 +334,7 @@ function playTtsSentence(idx: number) {
 
 function stopSentence() {
   playbackGeneration++
-  speechSynthesis.cancel()
+  window.speechSynthesis?.cancel()
   stopSentenceAudio()
   speakingIndex.value = -1
 }
@@ -371,6 +390,7 @@ const dictationChecked = ref(false)
 const dictationPerfect = ref(false)
 const dictationAccuracy = ref(0)
 const dictationAddedMistake = ref(false)
+const dictationMistakeError = ref(false)
 const partSummary = ref({ attempted: 0, perfect: 0, accuracy: 0 })
 // A-13: surfaced when a dictation progress save fails, so a lost write is
 // visible instead of silent.
@@ -415,6 +435,7 @@ function resetDictationUi() {
   dictationPerfect.value = false
   dictationAccuracy.value = 0
   dictationAddedMistake.value = false
+  dictationMistakeError.value = false
 }
 
 function loadDictationCursor() {
@@ -441,7 +462,7 @@ function checkDictation() {
   const entry = currentDictationEntry.value
   // A-11: empty input must not count as a failed attempt. The button is
   // already disabled when empty; this guard closes the Ctrl+Enter path.
-  if (!entry || dictationChecked.value || !dictationInput.value.trim())
+  if (!entry || timingsLoading.value || dictationChecked.value || !dictationInput.value.trim())
     return
   const expected = entry.text
   const result = diffDictation(expected, dictationInput.value)
@@ -496,7 +517,7 @@ function addDictationMistake() {
       end: timing?.[1] ?? null,
     })}`,
   ]
-  addMistake('dictation', {
+  const saved = addMistake('dictation', {
     key: `dictation:${selectedTest.value}:${selectedPart.value}:${i}`,
     title: entry.text,
     detail: [
@@ -505,10 +526,13 @@ function addDictationMistake() {
     ].join('\n'),
     hint: hintParts[0],
   })
-  dictationAddedMistake.value = true
+  dictationAddedMistake.value = saved
+  dictationMistakeError.value = !saved
 }
 
 function nextDictationSentence() {
+  if (timingsLoading.value)
+    return
   const pool = dictatableIndexes.value
   if (!pool.length)
     return
@@ -533,6 +557,8 @@ function nextDictationSentence() {
 }
 
 function prevDictationSentence() {
+  if (timingsLoading.value)
+    return
   const pool = dictatableIndexes.value
   if (!pool.length)
     return
@@ -569,7 +595,7 @@ watch(
   () => {
     playbackGeneration++
     // 切篇/切 Part 先停掉旧朗读并复位高亮，避免旧句读完、新篇高亮错位
-    speechSynthesis.cancel()
+    window.speechSynthesis?.cancel()
     stopSentenceAudio()
     speakingIndex.value = -1
     showTranscript.value = false
@@ -587,6 +613,20 @@ watch(
   },
 )
 
+watch(dictatableIndexes, (indexes, previous) => {
+  if (mode.value !== 'dictation' || timingsLoading.value || loading.value)
+    return
+  if (dictationInput.value || dictationChecked.value) {
+    const index = indexes.indexOf(previous[dictationIndex.value])
+    if (index >= 0) {
+      dictationIndex.value = index
+      return
+    }
+  }
+  loadDictationCursor()
+})
+watch(mode, stopSentence)
+
 onMounted(() => {
   timer.start()
 })
@@ -594,8 +634,9 @@ onMounted(() => {
 // 离页时停掉 TTS 与原录音，避免后台继续出声
 onUnmounted(() => {
   transcriptSequence++
+  timingsSequence++
   playbackGeneration++
-  speechSynthesis.cancel()
+  window.speechSynthesis?.cancel()
   audioEl.value?.pause()
   stopSentenceAudio()
   speakingIndex.value = -1
@@ -709,6 +750,7 @@ const testLabel = computed(
         :src="audioSrc"
         class="hidden"
         @timeupdate="onSentenceTimeUpdate"
+        @ended="stopSentence"
       />
       <div class="mt-2 flex items-center gap-2">
         <span class="text-xs text-gray-500">语速：</span>
@@ -733,6 +775,7 @@ const testLabel = computed(
       :src="audioSrc"
       class="hidden"
       @timeupdate="onSentenceTimeUpdate"
+      @ended="stopSentence"
       @error="mediaError = '音频加载失败，请检查网络后重试'"
     />
 
@@ -747,7 +790,7 @@ const testLabel = computed(
           · 第 {{ dictationIndex + 1 }} / {{ dictatableIndexes.length || 0 }} 句
         </p>
         <p class="text-xs text-gray-500 dark:text-gray-400">
-          本 Part 最近正确率
+          本 Part 各句最近正确率平均
           {{ Math.round(partSummary.accuracy * 100) }}%
           （{{ partSummary.perfect }}/{{ partSummary.attempted || 0 }} 次全对）
         </p>
@@ -765,7 +808,7 @@ const testLabel = computed(
           原文已遮住。先听原声（可重播、调慢），再输入整句；比对忽略大小写与标点，数字写法可互通。
         </p>
         <div
-          class="flex min-h-16 items-center justify-center rounded-lg bg-gray-100 px-3 py-6 text-sm text-gray-400 dark:bg-gray-900/50"
+          class="min-h-16 flex items-center justify-center rounded-lg bg-gray-100 px-3 py-6 text-sm text-gray-400 dark:bg-gray-900/50"
           aria-hidden="true"
         >
           ░░░░░ 原文已隐藏 ░░░░░
@@ -773,12 +816,14 @@ const testLabel = computed(
         <div class="flex flex-wrap items-center gap-2">
           <button
             class="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            :disabled="timingsLoading"
             @click="speakingIndex === currentDictationIdx ? stopSentence() : playCurrentDictation()"
           >
-            {{ speakingIndex === currentDictationIdx ? '停止' : '播放原声' }}
+            {{ timingsLoading ? '加载时间戳…' : speakingIndex === currentDictationIdx ? '停止' : prefersOriginalAudio(sentenceTiming(currentDictationIdx)) ? '播放原声' : '浏览器朗读' }}
           </button>
           <button
             class="rounded-lg bg-gray-200 px-3 py-2 text-sm dark:bg-gray-700 dark:text-gray-200"
+            :disabled="timingsLoading"
             @click="playCurrentDictation()"
           >
             重播
@@ -797,7 +842,7 @@ const testLabel = computed(
         <textarea
           v-model="dictationInput"
           rows="3"
-          :disabled="dictationChecked"
+          :disabled="dictationChecked || timingsLoading"
           placeholder="在此输入你听到的句子…"
           class="w-full border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
           @keydown.ctrl.enter.prevent="checkDictation"
@@ -805,26 +850,28 @@ const testLabel = computed(
         <div class="flex flex-wrap gap-2">
           <button
             class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
-            :disabled="dictationChecked || !dictationInput.trim()"
+            :disabled="dictationChecked || timingsLoading || !dictationInput.trim()"
             @click="checkDictation"
           >
             核对
           </button>
           <button
             class="rounded-lg bg-gray-200 px-3 py-2 text-sm dark:bg-gray-700 dark:text-gray-200"
+            :disabled="timingsLoading"
             @click="prevDictationSentence"
           >
             上一句
           </button>
           <button
             class="rounded-lg bg-gray-200 px-3 py-2 text-sm dark:bg-gray-700 dark:text-gray-200"
+            :disabled="timingsLoading"
             @click="nextDictationSentence"
           >
             下一句
           </button>
         </div>
 
-        <div v-if="dictationChecked" class="space-y-2 border-t border-gray-100 pt-3 dark:border-gray-700">
+        <div v-if="dictationChecked" class="border-t border-gray-100 pt-3 space-y-2 dark:border-gray-700">
           <p class="text-sm font-medium dark:text-white">
             {{ dictationPerfect ? '全对 ✓' : '有差异' }}
             · 本句正确率 {{ Math.round(dictationAccuracy * 100) }}%
@@ -850,12 +897,15 @@ const testLabel = computed(
           </p>
           <button
             v-if="!dictationPerfect"
-            class="rounded-lg border border-red-300 px-3 py-1.5 text-sm text-red-700 dark:border-red-800 dark:text-red-300 disabled:opacity-50"
+            class="border border-red-300 rounded-lg px-3 py-1.5 text-sm text-red-700 dark:border-red-800 dark:text-red-300 disabled:opacity-50"
             :disabled="dictationAddedMistake"
             @click="addDictationMistake"
           >
             {{ dictationAddedMistake ? '已加入错题本' : '加入错题本' }}
           </button>
+          <p v-if="dictationMistakeError" role="alert" class="text-xs text-red-600">
+            错题保存失败，请释放空间后重试
+          </p>
         </div>
       </div>
       <div v-else-if="loadError" class="text-sm text-gray-500">

@@ -55,7 +55,7 @@ const chapterById = new Map<string, string>(Object.entries(WORD_CHAPTER_INDEX))
 const vocabulary = shallowRef<Record<string, VocabularyChapter>>({})
 const vocabReady = ref(false)
 const vocabError = ref(false)
-const crossChapter = ref(false)
+const crossChapter = ref(useRoute()?.query?.review === 'due')
 const { currentUser: sessionUser } = useAuth()
 const category = ref(
   readChapterPreference(CHAPTER_KEY, chapters, sessionUser.value),
@@ -453,7 +453,7 @@ interface GradeHistoryEntry {
 // 先自评：认识 / 不认识 / 模糊
 function grade(g: 0 | 3 | 5) {
   const card = current.value
-  if (!card)
+  if (!vocabReady.value || !card)
     return
   const countedNew = card.isNew && !card.counted
   const nextSchedule = gradeSchedule(scheduleStore.get(card.id), g)
@@ -518,6 +518,8 @@ function grade(g: 0 | 3 | 5) {
 
 // 返回上一个单词，重新测试：还原自评前调度、本轮统计、统计页累计、复现次数与新词计数，错词本计数减一
 function goBackOne() {
+  if (!vocabReady.value)
+    return
   const entry = gradeHistory.value.pop()
   if (!entry)
     return
@@ -587,6 +589,8 @@ const finishStats = computed(() => {
   }
 })
 function next() {
+  if (!vocabReady.value)
+    return
   wordLoadSequence++
   studying.value = null
   lastGrade.value = null
@@ -695,6 +699,9 @@ function resetMemory() {
 let vocabLoadSeq = 0
 async function ensureVocabularyLoaded() {
   const seq = ++vocabLoadSeq
+  vocabReady.value = false
+  wordLoadSequence++
+  managedAudio.dispose()
   vocabError.value = false
   try {
     if (crossChapter.value) {
@@ -835,6 +842,7 @@ onUnmounted(() => {
     type="checkbox"
   >跨章复习：练习全词库已到期单词（每轮最多为每日目标的三倍）</label>
   <div
+    v-if="vocabReady"
     class="min-h-screen bg-gray-50 px-4 py-8 dark:bg-gray-900 lg:px-8 sm:px-6"
   >
     <div class="mx-auto max-w-2xl">

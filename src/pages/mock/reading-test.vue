@@ -24,14 +24,13 @@ import {
 import type { MockQuestion } from './types'
 import { resolveMediaUrl } from '~/composables/useAudio'
 import { useGoBack } from '~/composables/useGoBack'
-import { useMistakes } from '~/composables/useStudyData'
 import { useStudyTimer } from '~/composables/useStudyTimer'
-import { collectMockMistakeEntries, hasWrittenMockMistakes, markMockMistakesWritten } from '~/utils/mockMistakes'
+import { collectMockMistakeEntries } from '~/utils/mockMistakes'
+import { useMockMistakeSave } from '~/composables/useMockMistakeSave'
 
 const router = useRouter()
 const route = useRoute()
 const { goBack } = useGoBack('/reading')
-const { addMistake } = useMistakes()
 const studyTimer = useStudyTimer()
 // 考试中点返回先确认未交卷；开始屏/已交卷直接返回
 
@@ -84,6 +83,7 @@ const recovery = useExamRecovery({
 })
 
 const recordSaveFailed = ref(false)
+const mistakeSave = useMockMistakeSave()
 let resultsOwner: string | null = null
 function retrySaveResult() {
   if (useAuth().currentUser.value !== resultsOwner) {
@@ -96,15 +96,17 @@ function retrySaveResult() {
 // 异步加载选中的套题（按需加载）
 // loadSeq 防止快速切换时旧的加载覆盖新的；try/finally 保证 loading 一定复位
 async function loadTest() {
-  if (recovery.blocked.value) {
-    // 被阻断时不允许切题：把 URL 换回进行中的套题，保持内容与 URL 一致，
-    // 且不碰 started/答案（暂停中的考试保持原样）。
+  if (started.value && !submitted.value) {
     const active = recovery.activeTestId()
-    if (active && testId.value !== active)
-      router.replace({ query: { ...route.query, test: active } })
-    return
+    // Returning from a rejected route change must not reload the active paper.
+    if (testId.value === active)
+      return
+    if (recovery.blocked.value || !recovery.saveFlush()) {
+      await router.replace({ query: { ...route.query, test: active } })
+      return
+    }
   }
-  recovery.saveFlush()
+  studyTimer.pause()
   mapInputHint.value = ''
   enlargedImage.value = null
   passageImageFailed.value = {}
@@ -134,6 +136,7 @@ async function loadTest() {
       return
     }
     recordSaveFailed.value = false
+    mistakeSave.clear()
     testPair.value = pair
     answers.value = {}
     submitted.value = false
@@ -271,8 +274,10 @@ const hasAnswers = computed(() =>
 function onTestChange(e: Event) {
   const target = (e.target as HTMLSelectElement).value
   if (started.value && !submitted.value && hasAnswers.value) {
-    if (!window.confirm('切换套题将暂停并保留当前作答草稿，确定吗？'))
+    if (!window.confirm('切换套题将暂停并保留当前作答草稿，确定吗？')) {
+      (e.target as HTMLSelectElement).value = testId.value
       return
+    }
   }
 
   router.push({ path: '/mock/reading-test', query: { test: target } })
@@ -358,15 +363,14 @@ function handleMarkClick(e: MouseEvent, pi: number) {
     }
   }
 }
-onBeforeRouteLeave(
-  () =>
-    useAuth().currentUser.value !== recovery.owner.value
-    || !started.value
-    || submitted.value
-    || window.confirm(
-      '尚未交卷，离开将暂停本页作答并保留草稿，其他页签独立作答不受影响，确定吗？',
-    ),
-)
+onBeforeRouteLeave(() => {
+  if (!started.value || submitted.value)
+    return true
+  if (useAuth().currentUser.value === recovery.owner.value
+    && !window.confirm('尚未交卷，离开将暂停本页作答并保留草稿，其他页签独立作答不受影响，确定吗？'))
+    return false
+  return recovery.saveBeforeLeave()
+})
 function submit() {
   const total = totalScorePoints(allQuestions.value)
   const score = countCorrect(allQuestions.value, answers.value, true)
@@ -389,26 +393,16 @@ function submit() {
   if (!result.saved)
     resultsOwner = recovery.owner.value
   const passages = test.value?.passages ?? []
-  if (!hasWrittenMockMistakes(attemptId)) {
-    for (const entry of collectMockMistakeEntries({
-      kind: 'reading',
-      testId: testId.value,
-      label,
-      answers: answers.value,
-      parts: passages.map((p, i) => ({
-        part: `passage${i + 1}`,
-        questions: p.questions,
-      })),
-    })) {
-      addMistake(entry.module, {
-        key: entry.key,
-        title: entry.title,
-        detail: entry.detail,
-        hint: entry.hint,
-      })
-    }
-    markMockMistakesWritten(attemptId)
-  }
+  mistakeSave.save(attemptId, collectMockMistakeEntries({
+    kind: 'reading',
+    testId: testId.value,
+    label,
+    answers: answers.value,
+    parts: passages.map((p, i) => ({
+      part: `passage${i + 1}`,
+      questions: p.questions,
+    })),
+  }))
   selPopup.value = null
 }
 
@@ -466,6 +460,12 @@ function switchPassage(index: number) {
     :disabled="recovery.blocked.value"
     @close="enlargedImage = null"
   />
+  <p v-if="mistakeSave.failed.value" role="alert" class="m-4 text-sm text-amber-700">
+    部分错题保存失败。释放空间后可重试，已保存的题不会重复计数。
+    <button class="underline" @click="mistakeSave.retry">
+      重试写入错题
+    </button>
+  </p>
   <button
     v-if="recordSaveFailed"
     class="m-4 rounded bg-amber-100 p-2 text-amber-900"

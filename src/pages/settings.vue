@@ -277,7 +277,7 @@ async function onTest() {
         🤖 AI 批改 / 口语评分
       </h3>
       <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">
-        填写 OpenAI 兼容接口后，可用于：① 大小作文 AI 批改；② 口语录音转写后的一键评分。
+        填写 Hive 的 API 地址、密钥和模型后，可用于大小作文批改与口语转写评分。
         三项都要填齐（API 地址、密钥、模型）才会启用；未配置时口语页会提示并提供本地 4 项自评清单。
         Key 只保存在本机浏览器，请求经 VPS 中转（浏览器直连第三方会被 CORS 拦截）。
         注意：Key 按浏览器全局共享、不按账号隔离，同一浏览器的各账号共用此 Key；评分存档仍按账号隔离。
@@ -287,10 +287,10 @@ async function onTest() {
         <span class="mb-1 block text-sm font-medium dark:text-gray-200">API 地址</span>
         <input
           v-model="form.baseUrl"
-          placeholder="https://api.deepseek.com/v1"
+          placeholder="https://api-cdn.thehive.ai/api/v3"
           class="w-full border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
         >
-        <span class="mt-1 block text-xs text-gray-400">OpenAI 兼容接口地址，不带 /chat/completions</span>
+        <span class="mt-1 block text-xs text-gray-400">当前中转支持 api-cdn.thehive.ai，地址不带 /chat/completions</span>
       </label>
 
       <label class="mb-4 block">
@@ -316,7 +316,7 @@ async function onTest() {
         <span class="mb-1 block text-sm font-medium dark:text-gray-200">模型</span>
         <input
           v-model="form.model"
-          placeholder="deepseek-chat"
+          placeholder="deepseek-ai/deepseek-v4.1-flash-1017"
           class="w-full border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
         >
       </label>

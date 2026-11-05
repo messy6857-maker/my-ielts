@@ -7,11 +7,12 @@ import { PART1_TOPICS } from './part1'
 import { PART2_CARDS } from './part2'
 import type { Part2Card } from './part2'
 import { PART3_TOPICS } from './part3'
-import { confirmLeaveRecording } from '~/composables/useRecorder'
+import { confirmLeaveRecording, isRecorderBusy } from '~/composables/useRecorder'
 import { hasAISettings } from '~/composables/useAISettings'
 import { useAuth } from '~/composables/useAuth'
 
 const { currentUser } = useAuth()
+onBeforeRouteLeave(confirmLeaveRecording)
 
 type Tab = 'part1' | 'part2' | 'part3'
 const tab = usePersistentString('myielts_speaking_tab', 'part1') as Ref<Tab>
@@ -35,13 +36,14 @@ const p1Filtered = computed(() => {
     return PART1_TOPICS
   return PART1_TOPICS.filter(
     t =>
-      t.topic.toLowerCase().includes(kw)
+      (t.id === p1Expanded.value && isRecorderBusy())
+      || t.topic.toLowerCase().includes(kw)
       || t.topicCn.includes(kw)
       || t.questions.some(q => q.toLowerCase().includes(kw)),
   )
 })
 function toggleP1(id: string) {
-  if (p1Expanded.value === id && !confirmLeaveRecording())
+  if (p1Expanded.value !== null && !confirmLeaveRecording())
     return
   p1Expanded.value = p1Expanded.value === id ? null : id
 }
@@ -67,16 +69,17 @@ function leavePractice() {
 
 // Part 3
 const p3Keyword = ref('')
+const p3Expanded = ref<string | null>(null)
 const p3Filtered = computed(() => {
   const keyword = p3Keyword.value.trim().toLowerCase()
   return PART3_TOPICS.filter(
     topic =>
-      !keyword || JSON.stringify(topic).toLowerCase().includes(keyword),
+      !keyword || (topic.id === p3Expanded.value && isRecorderBusy())
+      || JSON.stringify(topic).toLowerCase().includes(keyword),
   )
 })
-const p3Expanded = ref<string | null>(null)
 function toggleP3(id: string) {
-  if (p3Expanded.value === id && !confirmLeaveRecording())
+  if (p3Expanded.value !== null && !confirmLeaveRecording())
     return
   p3Expanded.value = p3Expanded.value === id ? null : id
 }

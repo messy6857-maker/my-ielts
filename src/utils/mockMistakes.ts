@@ -168,56 +168,39 @@ export function collectMockMistakeEntries(input: {
 }
 
 /** Review compare: ignore case/punct; accept any slash-separated correct variant. */
-export function mockReviewMatches(expectedTitle: string, userInput: string): boolean {
+export function mockReviewMatches(expectedTitle: string, userInput: string, allowOptions = true): boolean {
   const norm = (s: string) =>
-    s
-      .trim()
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-  const user = norm(userInput)
-  if (!user)
+    s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim()
+  const input = norm(userInput)
+  if (!input)
     return false
-  const userTokens = new Set(user.split(' ').filter(Boolean))
-  // A-3: '；' joins REQUIRED options (multi-select, e.g. "A. xxx；C. yyy"):
-  // every group must be covered, not just one. Only apply when every group
-  // looks like an option ("A. ..."); otherwise fall back to the legacy
-  // any-variant rule so ordinary titles containing '；' are unaffected.
-  const required = expectedTitle.split(/\s*；\s*/)
-  if (required.length > 1 && required.every(g => /^[A-Za-z]\.\s/.test(g)))
-    return required.every(group => groupCovered(group))
-  return matchVariant(expectedTitle)
+  const optionPrefix = /^[a-z]\.\s+/i
+  function variants(title: string) {
+    const raw = title.trim()
+    const letter = allowOptions && optionPrefix.test(raw) ? raw[0].toLowerCase() : ''
+    const body = letter ? raw.replace(optionPrefix, '') : raw
+    return [
+      ...(letter ? [letter, norm(raw)] : []),
+      ...body.split(/\s*\/\s*/).map(norm),
+    ].filter(Boolean)
+  }
+  const groups = expectedTitle.split(/\s*[；;]\s*/)
+  if (!allowOptions || groups.length < 2 || !groups.every(g => optionPrefix.test(g.trim())))
+    return groups.some(group => variants(group).includes(input))
 
-  function matchVariant(title: string): boolean {
-    return title.split(/\s*\/\s*|\s*；\s*|\s*;\s*/).some((v) => {
-      const n = norm(v)
-      if (!n)
+  // Consume exactly one answer from every group, in any order. Checking a
+  // set of words alone accepts extra options and fragments of option text.
+  const options = groups.map(variants)
+  function matches(remaining: string, unused: number[]): boolean {
+    if (!unused.length)
+      return remaining === ''
+    return unused.some(i => options[i].some((option) => {
+      if (remaining !== option && !remaining.startsWith(`${option} `))
         return false
-      // Allow matching "A. foo" by typing "foo" or "a". NOTE: n is already
-      // normalized, so the dot is gone and the letter is followed by a space
-      // (the old /^[a-z]\.\s*/ pattern could never fire here).
-      const letter = n.match(/^([a-z])\s+/)
-      const withoutLetter = n.replace(/^[a-z]\s+/, '').trim()
-      return user === n || user === withoutLetter || (!!letter && user === letter[1])
-    })
+      return matches(remaining.slice(option.length).trimStart(), unused.filter(j => j !== i))
+    }))
   }
-  function groupCovered(group: string): boolean {
-    // A group may itself contain '/' variants; any covering variant suffices.
-    return group.split(/\s*\/\s*/).some((variant) => {
-      const n = norm(variant)
-      if (!n)
-        return false
-      if (user === n)
-        return true
-      const letter = n.match(/^([a-z])\s+/)
-      const withoutLetter = n.replace(/^[a-z]\s+/, '').trim()
-      if (letter && userTokens.has(letter[1]))
-        return true
-      return !!withoutLetter
-        && withoutLetter.split(' ').every(w => userTokens.has(w))
-    })
-  }
+  return matches(input, options.map((_, i) => i))
 }
 
 /**

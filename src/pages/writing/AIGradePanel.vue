@@ -6,7 +6,7 @@ import {
   repairSavedGrade,
 } from '~/composables/useAISettings'
 import type { AIGradeResult } from '~/composables/useAISettings'
-import { readJson, removeJson, useAuth, writeJson } from '~/composables/useAuth'
+import { readJson, useAuth } from '~/composables/useAuth'
 import { saveAiArchive } from '~/utils/archives'
 import { onSyncApplied } from '~/composables/syncClient'
 import { diffWords } from '~/composables/useWordDiff'
@@ -63,26 +63,18 @@ function storageKey(): string {
 
 function loadSaved(): boolean {
   try {
-    let raw = readJson<unknown>(storageKey(), null)
-    let migrated = false
-    if (!raw) {
-      // 旧 key 迁移：新 key 为空时读旧档，校验通过后写新 key 并清旧档，
-      // 避免同一作文两份存档；新 key 已有残缺档时不回退到旧档。
-      raw = readJson<unknown>(legacyStorageKey(), null)
-      migrated = raw != null
+    const key = storageKey()
+    const current = repairSavedGrade(readJson<AIGradeResult | null>(key, null), props.task)
+    if (current) {
+      aiResult.value = current
+      return true
     }
-    if (raw) {
-      const parsed = raw as AIGradeResult
-      // 残缺存档先补齐再展示：分数无效才丢弃，不再整条丢弃
-      const repaired = repairSavedGrade(parsed, props.task)
-      if (repaired) {
-        aiResult.value = repaired
-        if (migrated) {
-          writeJson(storageKey(), repaired)
-          removeJson(legacyStorageKey())
-        }
-        return true
-      }
+    const legacy = repairSavedGrade(readJson<AIGradeResult | null>(legacyStorageKey(), null), props.task)
+    if (legacy) {
+      aiResult.value = legacy
+      // Opening a legacy result is a read. Only a new grading result writes
+      // v2, so viewing a result never consumes another archive slot.
+      return true
     }
   }
   catch {

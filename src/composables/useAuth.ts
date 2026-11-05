@@ -1,3 +1,5 @@
+import { isArchiveWatermark } from '../utils/archives'
+
 // 账号体系：
 // - 未配置同步服务器时：纯前端本地账号（密码加盐哈希存 localStorage，单机使用）
 // - 配置了 SYNC_API_BASE 时：走服务器注册/登录，学习数据多设备同步
@@ -114,7 +116,7 @@ export function migrateGuestData(username: string) {
   batchStorage(() => {
     for (const key of Object.keys(localStorage)) {
       const base = studyBaseOf(key, null)
-      if (!base)
+      if (!base || isArchiveWatermark(base))
         continue
       const guestBarrier = deletionEnvelope(key, null)
       const guestRaw = localStorage.getItem(key)

@@ -295,6 +295,7 @@ declare global {
   const useMemoize: typeof import('@vueuse/core')['useMemoize']
   const useMemory: typeof import('@vueuse/core')['useMemory']
   const useMistakes: typeof import('./src/composables/useStudyData')['useMistakes']
+  const useMockMistakeSave: typeof import('./src/composables/useMockMistakeSave')['useMockMistakeSave']
   const useMounted: typeof import('@vueuse/core')['useMounted']
   const useMouse: typeof import('@vueuse/core')['useMouse']
   const useMouseInElement: typeof import('@vueuse/core')['useMouseInElement']
@@ -698,6 +699,7 @@ declare module 'vue' {
     readonly useMemoize: UnwrapRef<typeof import('@vueuse/core')['useMemoize']>
     readonly useMemory: UnwrapRef<typeof import('@vueuse/core')['useMemory']>
     readonly useMistakes: UnwrapRef<typeof import('./src/composables/useStudyData')['useMistakes']>
+    readonly useMockMistakeSave: UnwrapRef<typeof import('./src/composables/useMockMistakeSave')['useMockMistakeSave']>
     readonly useMounted: UnwrapRef<typeof import('@vueuse/core')['useMounted']>
     readonly useMouse: UnwrapRef<typeof import('@vueuse/core')['useMouse']>
     readonly useMouseInElement: UnwrapRef<typeof import('@vueuse/core')['useMouseInElement']>
@@ -1095,6 +1097,7 @@ declare module '@vue/runtime-core' {
     readonly useMemoize: UnwrapRef<typeof import('@vueuse/core')['useMemoize']>
     readonly useMemory: UnwrapRef<typeof import('@vueuse/core')['useMemory']>
     readonly useMistakes: UnwrapRef<typeof import('./src/composables/useStudyData')['useMistakes']>
+    readonly useMockMistakeSave: UnwrapRef<typeof import('./src/composables/useMockMistakeSave')['useMockMistakeSave']>
     readonly useMounted: UnwrapRef<typeof import('@vueuse/core')['useMounted']>
     readonly useMouse: UnwrapRef<typeof import('@vueuse/core')['useMouse']>
     readonly useMouseInElement: UnwrapRef<typeof import('@vueuse/core')['useMouseInElement']>

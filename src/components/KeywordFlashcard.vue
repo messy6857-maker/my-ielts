@@ -1,7 +1,7 @@
 <!-- 通用考点词自测卡片：听力 179 / 阅读 538 共用
      与词汇自测卡片（/vocabulary/flashcard）是独立入口、独立进度 -->
 <script setup lang="ts">
-import { speechLanguage, useAudioGroup } from '../composables/useAudioGroup'
+import { useAudioGroup } from '../composables/useAudioGroup'
 import { studyDay } from '../composables/useStudyData'
 
 import { gradeSchedule } from '../composables/useSpacedRepetition'
@@ -96,36 +96,10 @@ const current = computed(() =>
 )
 const remaining = computed(() => queue.value.length)
 
-let audio: HTMLAudioElement | null = null
 function playAudio(word?: string) {
-  const w = word || current.value?.word || studying.value?.word
-  if (!w)
-    return
-  try {
-    // 新播放先取消旧朗读，避免 TTS 与新音频叠加
-    speechSynthesis.cancel()
-    if (audio) {
-      audio.pause()
-      audio.currentTime = 0
-    }
-    audio = managedAudio.create()
-    audio.src = props.audioFor(w)
-    // MP3 不存在时用浏览器朗读兜底（onerror 与 play().catch 只触发一次）
-    let fellBack = false
-    const fallback = () => {
-      if (fellBack)
-        return
-      fellBack = true
-      const u = new SpeechSynthesisUtterance(w)
-      u.lang = speechLanguage()
-      speechSynthesis.speak(u)
-    }
-    audio.onerror = fallback
-    audio.play().catch(fallback)
-  }
-  catch {
-    // 忽略音频异常
-  }
+  const value = word || current.value?.word || studying.value?.word
+  if (value)
+    managedAudio.play(props.audioFor(value), value)
 }
 
 function toCard(c: DeckCard, isNew: boolean): Card {
@@ -341,11 +315,6 @@ onMounted(() => {
 
 // 离页时停掉 TTS 与音频，避免后台继续出声
 onUnmounted(() => {
-  speechSynthesis.cancel()
-  if (audio) {
-    audio.pause()
-    audio = null
-  }
 })
 </script>
 

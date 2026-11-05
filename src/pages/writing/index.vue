@@ -132,7 +132,18 @@ function extractKeywords(translation) {
 
 // 页签：修复旧版 href="/#/writing" 丢掉 /my-ielts/ 基址导致的 404
 // 页签选中状态持久化：去设置页填 API Key 再返回时，保持在原页签
+const route = useRoute()
 const activeTab = usePersistentString('myielts_writing_tab', 'sentences')
+watch(() => route.query.tab, (tab) => {
+  if (tab === 'essay-small' || tab === 'essay-big')
+    activeTab.value = tab
+}, { immediate: true })
+const resumeSelection = computed(() => {
+  const { prompt, draft, tab } = route.query
+  return tab === activeTab.value && typeof prompt === 'string' && typeof draft === 'string'
+    ? { prompt, draft }
+    : undefined
+})
 const TABS = [
   { key: 'sentences', label: '100 句翻译练习' },
   { key: 'essay-big', label: '雅思大作文' },
@@ -613,12 +624,12 @@ function nextPractice() {
 
       <!-- ============ 雅思大作文（Task 2） ============ -->
       <div v-else-if="activeTab === 'essay-big'">
-        <TaskTwo />
+        <TaskTwo :resume-selection="resumeSelection" />
       </div>
 
       <!-- ============ 雅思小作文（Task 1） ============ -->
       <div v-else-if="activeTab === 'essay-small'">
-        <TaskOne />
+        <TaskOne :resume-selection="resumeSelection" />
       </div>
     </div>
   </div>

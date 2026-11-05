@@ -499,6 +499,13 @@ const MEASURE_WORDS = new Set([
   'figure',
   'figures',
 ])
+// Work/serve/act followed by an indefinite role is an as-complement.
+const AS_ROLE_VERBS = new Set([
+  'act', 'acted', 'acting', 'acts',
+  'serve', 'served', 'serves', 'serving',
+  'volunteer', 'volunteered', 'volunteering', 'volunteers',
+  'work', 'worked', 'working', 'works',
+])
 const COORDINATOR_DETERMINERS = new Set([
   'a',
   'an',
@@ -533,7 +540,7 @@ function hasTrueSubordinateClause(sentence: string): boolean {
   const clauseAfter = (
     idx: number,
     allowSubjectRelative: boolean,
-    stopAtCoordinator = false,
+    asPhrase: 'measure' | 'role' | null = null,
   ): boolean => {
     if (
       allowSubjectRelative
@@ -548,7 +555,9 @@ function hasTrueSubordinateClause(sentence: string): boolean {
         || [',', ';', ':'].includes(tokens[vi])
       )
         return false
-      if (stopAtCoordinator && ['and', 'but', 'or'].includes(tokens[vi])) {
+      if (asPhrase && ['and', 'but', 'or'].includes(tokens[vi])) {
+        if (asPhrase === 'role')
+          return false
         // 度量分支见 and/but/or 即停会误杀并列主语（如 as the percentage and
         // the share increased）。先看 and 后：限定词 + 名词 … 谓语是并列主语，
         // 继续扫描；否则看 and 前的名词头并剥掉尾部 of 补语：度量名词短语已
@@ -626,7 +635,8 @@ function hasTrueSubordinateClause(sentence: string): boolean {
       const head
         = tokens[i + 1 + (['a', 'an', 'the'].includes(tokens[i + 1]) ? 1 : 0)]
       const measure = MEASURE_WORDS.has(head)
-      if (clauseAfter(i, false, measure))
+      const role = AS_ROLE_VERBS.has(tokens[i - 1]) && ['a', 'an'].includes(tokens[i + 1])
+      if (clauseAfter(i, false, role ? 'role' : measure ? 'measure' : null))
         return true
     }
   }

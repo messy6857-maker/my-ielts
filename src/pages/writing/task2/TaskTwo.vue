@@ -18,9 +18,11 @@ import { onBeforeLogout, useAuth } from '../../../composables/useAuth'
 import AIGradePanel from '../AIGradePanel.vue'
 import ModelEssayView from '../ModelEssayView.vue'
 
-import { readRecords, saveRecord } from '../../../utils/storage'
+import { accountPrefix, readRecords, saveRecord } from '../../../utils/storage'
 import { onSyncApplied } from '../../../composables/syncClient'
 
+// 同页退出/换号时立即切到当前账号的历史与草稿，不再把旧账号内容带进游客写入
+const props = defineProps<{ resumeSelection?: { prompt: string; draft: string } }>()
 const TASK2_QUESTIONS = CAMBRIDGE_WRITING.filter(q => q.task === 2)
 const TASK2_INSTRUCTION
   = 'You should spend about 40 minutes on this task. Write at least 250 words.'
@@ -89,7 +91,7 @@ function loadHistory() {
   ).sort((a, b) => b.createdAt - a.createdAt)
 }
 loadHistory()
-// 同页退出/换号时立即切到当前账号的历史与草稿，不再把旧账号内容带进游客写入
+const resumeError = ref(false)
 const { currentUser } = useAuth()
 watch(currentUser, () => {
   loadHistory()
@@ -198,7 +200,7 @@ onUnmounted(() => {
 })
 // 恢复草稿：挂载时调用一次；切换账号时也调用，先取消 pending 防抖、再按新身份重载。
 // 新身份有合法草稿则恢复；无草稿则回到选题页（清屏，不再留旧身份的全文）
-function restoreDraft() {
+function restoreDraft(useRequested = false) {
   if (!saveDraftNow() && prompt.value) {
     emergencyDrafts.set(draftOwner, {
       promptId: prompt.value.id,
@@ -217,8 +219,11 @@ function restoreDraft() {
   draftOwner = currentUser.value
   try {
     drafts.value = listDrafts('task2', draftOwner)
-    const stored = readDraft('task2', draftOwner)
-    const d = emergencyDrafts.get(draftOwner) ?? stored
+    const requested = useRequested ? props.resumeSelection : undefined
+    const version = requested && accountPrefix(draftOwner) + requested.draft
+    const stored = readDraft('task2', draftOwner, requested?.prompt, version)
+    resumeError.value = !!requested && !stored
+    const d = requested ? stored : emergencyDrafts.get(draftOwner) ?? stored
     if (d) {
       const p
         = TASK2_QUESTIONS.find(x => x.id === d.promptId)
@@ -251,7 +256,17 @@ function restoreDraft() {
   timeUp.value = false
   view.value = 'home'
 }
-restoreDraft()
+restoreDraft(true)
+watch(() => props.resumeSelection, (requested) => {
+  if (!requested)
+    return
+  const version = accountPrefix(draftOwner) + requested.draft
+  const saved = listDrafts('task2', draftOwner)
+    .find(d => d.promptId === requested.prompt && d.versionId === version)
+  resumeError.value = !saved
+  if (saved)
+    resumeDraft(saved.promptId, saved.versionId)
+})
 
 function promptTitleCn(p: CambridgeWritingTask) {
   return `${p.book} ${p.testLabel} · ${p.promptCn}`
@@ -478,6 +493,9 @@ function resumeDraft(promptId: string, versionId?: string) {
 </script>
 
 <template>
+  <p v-if="resumeError" role="status" class="m-4 text-sm text-amber-700">
+    所选草稿在当前身份下已不可用，请从草稿列表重新选择。
+  </p>
   <div
     v-if="archiveError"
     role="alert"

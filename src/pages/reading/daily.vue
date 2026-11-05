@@ -230,6 +230,16 @@ watch(selectedDate, () => {
   expandedNotes.value = new Set()
   answers.value = {}
 })
+watch(currentUser, () => {
+  // Public news answers remain valid. Private reading changes with owner.
+  const privatePrefix = `${selectedDate.value}-vocab-`
+  answers.value = Object.fromEntries(
+    Object.entries(answers.value).filter(([key]) => !key.startsWith(privatePrefix)),
+  )
+  expandedNotes.value = new Set(
+    [...expandedNotes.value].filter(key => !key.startsWith(privatePrefix)),
+  )
+}, { flush: 'sync' })
 
 // 右下角阅读索引：点击直接跳到对应文章（词汇阅读 + 热点阅读按顺序编号）
 const readingIndex = computed(() => {

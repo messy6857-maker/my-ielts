@@ -5,6 +5,7 @@ import {
   decodeMockMistakeMeta,
   mockReviewMatches,
 } from '../utils/mockMistakes'
+import { diffDictation } from '../utils/dictationDiff'
 import { resolveMediaUrl } from '~/composables/useAudio'
 
 const { currentUser } = useAuth()
@@ -165,8 +166,12 @@ function nextCard() {
 }
 
 function answerMatches(item: MistakeItem, input: string): boolean {
-  if (isMockItem(item) || item.module === 'writing' || item.module === 'dictation')
+  if (isMockItem(item))
     return mockReviewMatches(item.title, input)
+  if (item.module === 'writing')
+    return mockReviewMatches(item.title, input, false)
+  if (item.module === 'dictation')
+    return diffDictation(item.title, input).perfect
   const answer = input.trim().toLowerCase()
   const expected = item.title
     .toLowerCase()
@@ -356,7 +361,7 @@ function detailLines(detail: string) {
       <!-- 复习模式 -->
       <div v-if="isReviewing && reviewItem" class="mt-6">
         <div
-          class="mx-auto max-w-xl border border-gray-200 rounded-xl bg-gray-50 p-6 text-center sm:p-8 dark:border-gray-700 dark:bg-gray-900"
+          class="mx-auto max-w-xl border border-gray-200 rounded-xl bg-gray-50 p-6 text-center dark:border-gray-700 dark:bg-gray-900 sm:p-8"
         >
           <div class="mb-2 text-xs tracking-wider uppercase text-gray-500">
             {{ MISTAKE_MODULE_LABEL[reviewItem.module] || reviewItem.module }} · 剩余

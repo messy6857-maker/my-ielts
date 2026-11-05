@@ -1,3 +1,4 @@
+import { isArchiveWatermark } from './archives'
 import { mergeEntry } from './entryMerge'
 import { triggerBlobDownload } from './download'
 import {
@@ -114,6 +115,12 @@ export function restoreStudyBackup(
   batchStorage(() => {
     for (const [sourceKey, raw] of Object.entries(preview.entries)) {
       const base = sourceKey.slice(accountKey('', preview.source).length)
+      if (preview.source !== target && isArchiveWatermark(base)) {
+        // A source account's global pruning boundary must not purge the
+        // destination account's own history.
+        keptNewer++
+        continue
+      }
       const key = accountKey(base, target)
       if (/^mock_draft_v1_.*__completed_/.test(base)) {
         try {

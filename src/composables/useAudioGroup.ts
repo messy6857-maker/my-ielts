@@ -19,6 +19,7 @@ export function useAudioGroup() {
       off()
     }
     players.clear()
+    wordPlayer = null
     window.speechSynthesis?.cancel()
   }
   onUnmounted(dispose)
@@ -58,7 +59,12 @@ export function useAudioGroup() {
     }
     audio.onerror = fallback
     audio.src = src
-    audio.play().catch(fallback)
+    try {
+      audio.play()?.catch(fallback)
+    }
+    catch {
+      fallback()
+    }
     return audio
   }
   return { create, play, dispose }

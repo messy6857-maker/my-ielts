@@ -39,18 +39,18 @@ const NUMBER_WORDS: Record<string, string> = {
 
 // A-9: ordinal words (first/second/third …) map to digits.
 const ORDINAL_WORDS: Record<string, string> = {
-  first: '1',
-  second: '2',
-  third: '3',
-  fourth: '4',
-  fifth: '5',
-  sixth: '6',
-  seventh: '7',
-  eighth: '8',
-  ninth: '9',
-  tenth: '10',
-  eleventh: '11',
-  twelfth: '12',
+  first: '1st',
+  second: '2nd',
+  third: '3rd',
+  fourth: '4th',
+  fifth: '5th',
+  sixth: '6th',
+  seventh: '7th',
+  eighth: '8th',
+  ninth: '9th',
+  tenth: '10th',
+  eleventh: '11th',
+  twelfth: '12th',
 }
 
 // A-9: common spoken abbreviations (only unambiguous ones; "St." is left out).
@@ -127,13 +127,8 @@ export function normalizeDictationToken(token: string): string {
     const intPart = String(Number(ip))
     return frac ? `${intPart}.${frac}` : intPart
   }
-  // 1st / 2nd / 3rd → 1 / 2 / 3
-  const ord = s.match(/^(\d+)(st|nd|rd|th)$/)
-  if (ord)
-    return ord[1]
-  // strip leading zeros on pure digits except single 0
-  if (/^\d+$/.test(s))
-    return String(Number(s))
+  // Keep ordinal suffixes and leading zeros. They distinguish ordinals
+  // from cardinals and preserve codes such as postcodes and phone numbers.
   return s
 }
 

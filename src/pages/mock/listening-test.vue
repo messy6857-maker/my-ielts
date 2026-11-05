@@ -25,16 +25,15 @@ import {
 import type { MockQuestion } from './types'
 import { resolveMediaUrl } from '~/composables/useAudio'
 import { useGoBack } from '~/composables/useGoBack'
-import { useMistakes } from '~/composables/useStudyData'
 import { useStudyTimer } from '~/composables/useStudyTimer'
-import { collectMockMistakeEntries, hasWrittenMockMistakes, markMockMistakesWritten } from '~/utils/mockMistakes'
+import { collectMockMistakeEntries } from '~/utils/mockMistakes'
+import { useMockMistakeSave } from '~/composables/useMockMistakeSave'
 import ListeningTabs from '~/components/ListeningTabs.vue'
 
 const partImageFailed = ref<Record<number, boolean>>({})
 const mediaRoot = ref<HTMLElement | null>(null)
 
 const { goBack } = useGoBack('/listening')
-const { addMistake } = useMistakes()
 const studyTimer = useStudyTimer()
 
 const router = useRouter()
@@ -116,6 +115,7 @@ function pauseAllAudio() {
 }
 
 const recordSaveFailed = ref(false)
+const mistakeSave = useMockMistakeSave()
 let resultsOwner: string | null = null
 function retrySaveResult() {
   if (useAuth().currentUser.value !== resultsOwner) {
@@ -128,15 +128,17 @@ function retrySaveResult() {
 // 异步加载选中的套题（按需加载，不一次全载入）
 // loadSeq 防止快速切换时旧的加载覆盖新的；try/finally 保证 loading 一定复位
 async function loadTest() {
-  if (recovery.blocked.value) {
-    // 被阻断时不允许切题：把 URL 换回进行中的套题，保持内容与 URL 一致，
-    // 且不碰 started/答案（暂停中的考试保持原样）。
+  if (started.value && !submitted.value) {
     const active = recovery.activeTestId()
-    if (active && testId.value !== active)
-      router.replace({ query: { ...route.query, test: active } })
-    return
+    // Returning from a rejected route change must not reload the active paper.
+    if (testId.value === active)
+      return
+    if (recovery.blocked.value || !recovery.saveFlush()) {
+      await router.replace({ query: { ...route.query, test: active } })
+      return
+    }
   }
-  recovery.saveFlush()
+  studyTimer.pause()
   pauseExam()
   started.value = false
   // 非法 test id（如手写 URL / 过期书签）不再静默 fallback：把 URL 参数规范化为默认套题，
@@ -169,6 +171,7 @@ async function loadTest() {
     zoomImage.value = null
     transcriptError.value = false
     recordSaveFailed.value = false
+    mistakeSave.clear()
     testPair.value = pair
     answers.value = {}
     submitted.value = false
@@ -425,8 +428,10 @@ const hasAnswers = computed(() =>
 function onTestChange(e: Event) {
   const target = (e.target as HTMLSelectElement).value
   if (started.value && !submitted.value && hasAnswers.value) {
-    if (!window.confirm('切换套题将暂停并保留当前作答草稿，确定吗？'))
+    if (!window.confirm('切换套题将暂停并保留当前作答草稿，确定吗？')) {
+      (e.target as HTMLSelectElement).value = testId.value
       return
+    }
   }
 
   router.push({ path: '/mock/listening-test', query: { test: target } })
@@ -437,13 +442,14 @@ function questionStatus(
 ): 'correct' | 'wrong' | 'partial' | 'unanswered' {
   return mockQuestionStatus(q, answers.value[q.id] ?? '', submitted.value)
 }
-onBeforeRouteLeave(
-  () =>
-    useAuth().currentUser.value !== recovery.owner.value
-    || !started.value
-    || submitted.value
-    || window.confirm('尚未交卷，离开将暂停计时并保留本机草稿，确定吗？'),
-)
+onBeforeRouteLeave(() => {
+  if (!started.value || submitted.value)
+    return true
+  if (useAuth().currentUser.value === recovery.owner.value
+    && !window.confirm('尚未交卷，离开将暂停本页作答并保留草稿，其他页签独立作答不受影响，确定吗？'))
+    return false
+  return recovery.saveBeforeLeave()
+})
 watch([submitted, testPair], ([done, pair]) => {
   if (
     done
@@ -506,27 +512,17 @@ async function submit() {
     resultsOwner = recovery.owner.value
   // 错题本：交卷后写入（按账号隔离，走现有 mistake_parts 同步）
   const parts = test.value?.parts ?? []
-  if (!hasWrittenMockMistakes(attemptId)) {
-    for (const entry of collectMockMistakeEntries({
-      kind: 'listening',
-      testId: testId.value,
-      label,
-      answers: answers.value,
-      parts: parts.map((p, i) => ({
-        part: `part${i + 1}`,
-        questions: p.questions,
-        audio: p.audio,
-      })),
-    })) {
-      addMistake(entry.module, {
-        key: entry.key,
-        title: entry.title,
-        detail: entry.detail,
-        hint: entry.hint,
-      })
-    }
-    markMockMistakesWritten(attemptId)
-  }
+  mistakeSave.save(attemptId, collectMockMistakeEntries({
+    kind: 'listening',
+    testId: testId.value,
+    label,
+    answers: answers.value,
+    parts: parts.map((p, i) => ({
+      part: `part${i + 1}`,
+      questions: p.questions,
+      audio: p.audio,
+    })),
+  }))
   // M-Opt1：交卷后才按需加载录音脚本，选加载不再顺带下载整套脚本；
   // 加载失败时脚本区保持隐藏（原有 v-if 分支），不阻塞交卷主流程。
   // M-Opt2 的音频保留见模板：交卷后 audio 不再 v-if 销毁，仍可边听边对脚本。
@@ -559,6 +555,12 @@ async function submit() {
       @click="fetchTranscript"
     >
       重试加载
+    </button>
+  </p>
+  <p v-if="mistakeSave.failed.value" role="alert" class="m-4 text-sm text-amber-700">
+    部分错题保存失败。释放空间后可重试，已保存的题不会重复计数。
+    <button class="underline" @click="mistakeSave.retry">
+      重试写入错题
     </button>
   </p>
   <button

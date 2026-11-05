@@ -1,36 +1,15 @@
 <script setup>
 import { RouterLink } from 'vue-router'
-import { speechLanguage, useAudioGroup } from '../../composables/useAudioGroup'
+import { useAudioGroup } from '../../composables/useAudioGroup'
 
 import { resolveAudioUrl } from '../../composables/useAudio'
 import chapterData from './spelling_convention'
 
 const managedAudio = useAudioGroup()
 
-let audio = null
 function play(word) {
-  // word 可能是数组（多拼写），取第一个
-  const w = Array.isArray(word) ? word[0] : word
-  // 新播放先停旧音频、取消旧朗读，避免叠加
-  speechSynthesis.cancel()
-  if (audio) {
-    audio.pause()
-    audio.currentTime = 0
-  }
-  audio = managedAudio.create()
-  audio.src = resolveAudioUrl(`179_audios/${w}.mp3`)
-  // MP3 不存在时用浏览器朗读兜底（onerror 与 play().catch 只触发一次）
-  let fellBack = false
-  const fallback = () => {
-    if (fellBack)
-      return
-    fellBack = true
-    const u = new SpeechSynthesisUtterance(w)
-    u.lang = speechLanguage()
-    speechSynthesis.speak(u)
-  }
-  audio.onerror = fallback
-  audio.play().catch(fallback)
+  const value = Array.isArray(word) ? word[0] : word
+  managedAudio.play(resolveAudioUrl(`179_audios/${value}.mp3`), value)
 }
 
 const keyword = ref('')

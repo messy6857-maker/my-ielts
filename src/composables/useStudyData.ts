@@ -94,6 +94,7 @@ export function studyDay(date = new Date()) {
 }
 interface MistakePart extends MistakeItem {
   legacyActivity?: 'vocabulary' | 'flashcard'
+  recordedAttempts?: string[]
   epoch: string
   days: Record<string, number>
 }
@@ -222,6 +223,7 @@ export const useMistakes = createGlobalState(() => {
       title: string
       detail?: string
       hint?: string
+      attemptId?: string
     },
   ) {
     const now = Date.now()
@@ -239,6 +241,10 @@ export const useMistakes = createGlobalState(() => {
       currentUser.value,
     )
     const previous = old?.epoch === epoch ? old : undefined
+    const priorAttempts = previous?.recordedAttempts
+    const attempts = Array.isArray(priorAttempts) ? priorAttempts : []
+    if (input.attemptId && attempts.includes(input.attemptId))
+      return true
     const days = { ...previous?.days, [day]: (previous?.days[day] ?? 0) + 1 }
     const cutoff = now - 90 * 86400000
     for (const d of Object.keys(days)) {
@@ -246,7 +252,7 @@ export const useMistakes = createGlobalState(() => {
         delete days[d]
     }
 
-    parts.set(id, {
+    return parts.set(id, {
       key: input.key,
       title: input.title,
       detail: input.detail || previous?.detail || '',
@@ -257,6 +263,7 @@ export const useMistakes = createGlobalState(() => {
       lastAt: now,
       epoch,
       days,
+      recordedAttempts: input.attemptId ? [...attempts, input.attemptId].slice(-50) : previous?.recordedAttempts,
     })
   }
   // 撤销本机评分只扣当前作者；179 纠错显式使用 all，消除跨设备的未解决失败。

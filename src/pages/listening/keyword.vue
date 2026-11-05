@@ -1,5 +1,5 @@
 <script setup>
-import { speechLanguage, useAudioGroup } from '../../composables/useAudioGroup'
+import { useAudioGroup } from '../../composables/useAudioGroup'
 
 import { resolveAudioUrl } from '../../composables/useAudio'
 import words from './listening179.json'
@@ -7,27 +7,8 @@ import words from './listening179.json'
 const managedAudio = useAudioGroup()
 
 const ws = reactive(words)
-let audio = null
 function play(word) {
-  // 复用单个 audio，播放前先停旧的；MP3 缺失时用浏览器朗读兜底（只触发一次）
-  speechSynthesis.cancel()
-  if (audio) {
-    audio.pause()
-    audio.currentTime = 0
-  }
-  audio = managedAudio.create()
-  audio.src = resolveAudioUrl(`179_audios/${word}.mp3`)
-  let fellBack = false
-  const fallback = () => {
-    if (fellBack)
-      return
-    fellBack = true
-    const u = new SpeechSynthesisUtterance(word)
-    u.lang = speechLanguage()
-    speechSynthesis.speak(u)
-  }
-  audio.onerror = fallback
-  audio.play().catch(fallback)
+  managedAudio.play(resolveAudioUrl(`179_audios/${word}.mp3`), word)
 }
 
 const keyword = ref('')

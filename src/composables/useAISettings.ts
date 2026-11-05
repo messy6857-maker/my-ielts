@@ -358,9 +358,11 @@ export function isValidEssayGrade(
  *  overall 与四项均值差 ≥ 1.0 时重算为均值（roundHalf），不展示自相矛盾的总分；
  *  rewritten 非字符串时置空（面板 v-if 为假即隐藏改写区）；advice/rewritten 本就是可选字段。 */
 export function repairSavedGrade(
-  parsed: AIGradeResult,
+  parsed: AIGradeResult | null,
   task: 'task1' | 'task2',
 ): AIGradeResult | null {
+  if (!parsed || typeof parsed !== 'object')
+    return null
   const p = task === 'task2' ? normalizeTask2Grade(parsed) : parsed
   const s = p.scores as unknown as Record<string, unknown> | undefined
   if (

@@ -60,7 +60,7 @@ export function mergeEntry(
       }
       return { ...latest, value: cuts }
     }
-    if (base === 'archive_retention_v2') {
+    if (base === 'archive_retention_v2' || base === 'archive_retention_writing_v3') {
       const cuts = [
         (previous.value as any)?.cutoff,
         (incoming.value as any)?.cutoff,
@@ -79,23 +79,13 @@ export function mergeEntry(
       if (cuts.length)
         return { ...latest, value: { cutoff: cuts.at(-1) } }
     }
-    // C-02: dictation progress is one table keyed by part; a whole-table
-    // last-wins merge drops the other device's parts. Merge per part
-    // instead, keeping the newer updatedAt for each part key.
     if (base === 'dictation_progress_v1') {
-      const prev = (previous.value ?? {}) as Record<
-        string,
-        { updatedAt?: number }
-      >
-      const next = (incoming.value ?? {}) as Record<
-        string,
-        { updatedAt?: number }
-      >
-      const merged: Record<string, unknown> = { ...prev }
-      for (const [k, v] of Object.entries(next)) {
-        const cur = merged[k] as { updatedAt?: number } | undefined
-        if (!cur || (v?.updatedAt ?? 0) >= (cur.updatedAt ?? 0))
-          merged[k] = v
+      const older = latest === previous ? incoming : previous
+      const merged: Record<string, { updatedAt?: number }> = Object.assign(Object.create(null), older.value)
+      for (const [key, part] of Object.entries((latest.value as Record<string, { updatedAt?: number }>) || {})) {
+        const old = merged[key]
+        if (!old || (part?.updatedAt ?? 0) >= (old.updatedAt ?? 0))
+          merged[key] = part
       }
       return { ...latest, value: merged }
     }

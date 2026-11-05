@@ -108,6 +108,7 @@ const scalarBases = [
   'stats_archive_v2',
   'checkin_archive_v2',
   'archive_retention_v2',
+  'archive_retention_writing_v3',
   'collection_retention_v3',
   'migration_version_v2',
 ]
@@ -131,7 +132,8 @@ export function isStudyBase(base: string): boolean {
       || (suffix === undefined
         && [...collectionBases, ...scalarBases, ...legacyBases].includes(base))
       || /^study_time_v1_[a-z\d-]+$/i.test(base)
-      || /^aigrade_(?:speaking_)?v1_(?:[a-z\d]+_)?-?[a-z\d]+$/i.test(base))
+      || /^aigrade_(?:speaking_)?v1_(?:[a-z\d]+_)?-?[a-z\d]+$/i.test(base)
+      || /^aigrade_v2_[a-z\d]+$/i.test(base))
   )
 }
 export function accountPrefix(user: string | null) {

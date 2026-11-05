@@ -45,7 +45,7 @@ export function useRecorder() {
   const offOwner = watch(useAuth().currentUser, clear, { flush: 'sync' })
   const session = {
     stop: () => stop(),
-    get busy() { return isRecording.value || processing.value },
+    get busy() { return starting.value || isRecording.value || processing.value },
   }
   function stop() {
     generation++

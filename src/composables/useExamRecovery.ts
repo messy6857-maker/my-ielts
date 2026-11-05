@@ -98,6 +98,7 @@ export function useExamRecovery(options: {
       && useAuth().currentUser.value !== owner.value,
   )
   const error = ref('')
+  const saveFailureMessage = '作答草稿保存失败，请先复制答案或导出可用备份，不要关闭页面。'
   const draft = ref<ExamDraft | null>(null)
   const availableDrafts = ref<ExamDraft[]>([])
   // 退役横幅与通用 error 分离：退役文案只读 retiredMessage，“知道了”清 error
@@ -231,6 +232,8 @@ export function useExamRecovery(options: {
         )
         previousSnapshot = value
         recoverySaved = true
+        if (error.value === saveFailureMessage)
+          error.value = ''
         retired.value = true
         options.pause()
         retiredMessage.value
@@ -240,14 +243,15 @@ export function useExamRecovery(options: {
       localStorage.setItem(key(activeTestId), JSON.stringify(value))
       previousSnapshot = value
       draft.value = value
+      if (error.value === saveFailureMessage)
+        error.value = ''
       storageFailures.value = storageFailures.value.filter(
         k => k !== key(activeTestId),
       )
       return true
     }
     catch {
-      error.value
-        = '作答草稿保存失败，请先复制答案或导出可用备份，不要关闭页面。'
+      error.value = saveFailureMessage
       if (isRetired) {
         retiredMessage.value
           = '本次作答已在另一页签提交或放弃，计时已暂停；恢复副本保存失败，请先复制答案，不要关闭页面。'
@@ -307,6 +311,9 @@ export function useExamRecovery(options: {
   }
   function saveFlush() {
     return save()
+  }
+  function saveBeforeLeave() {
+    return saveFlush() || (retired.value && recoverySaved)
   }
   function clear() {
     if (!options.started.value && draft.value?.versionId) {
@@ -628,6 +635,7 @@ export function useExamRecovery(options: {
     refresh,
     save,
     saveFlush,
+    saveBeforeLeave,
     clear,
     markSubmitted,
     submitResult,

@@ -68,9 +68,11 @@ export function saveDictationPartProgress(
   // whole-table snapshot. (Same-part concurrent writes still last-win.)
   // A-13: return the save result so callers can surface a failure.
   const all = readDictationProgress(user)
-  all[dictationPartKey(testId, part)] = {
+  const key = dictationPartKey(testId, part)
+  const previous = all[key]?.updatedAt
+  all[key] = {
     ...progress,
-    updatedAt: Date.now(),
+    updatedAt: Math.max(Date.now(), Number.isFinite(previous) ? previous + 1 : 0),
   }
   return writeDictationProgress(user, all)
 }
@@ -83,13 +85,10 @@ export function summarizeDictationPart(progress: DictationPartProgress): {
   const stats = Object.values(progress.sentences)
   const attempted = stats.reduce((n, s) => n + s.attempts, 0)
   const perfect = stats.reduce((n, s) => n + s.perfect, 0)
-  const weighted = stats.reduce(
-    (n, s) => n + s.lastAccuracy * s.attempts,
-    0,
-  )
+  const latestAccuracy = stats.reduce((n, s) => n + s.lastAccuracy, 0)
   return {
     attempted,
     perfect,
-    accuracy: attempted > 0 ? weighted / attempted : 0,
+    accuracy: stats.length ? latestAccuracy / stats.length : 0,
   }
 }

@@ -89,8 +89,7 @@ function retry() {
 }
 
 function goBack() {
-  clearTimer()
-  recorder.stop()
+  // The parent confirms before unmounting. Cancel leaves the recording running.
   emit('back')
 }
 
