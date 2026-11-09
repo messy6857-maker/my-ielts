@@ -9,12 +9,97 @@ export interface AISettings {
   baseUrl: string // 如 https://api-cdn.thehive.ai/api/v3（不带 /chat/completions）
   apiKey: string
   model: string // 如 deepseek-ai/deepseek-v4.1-flash-1017
+  /** 推理强度（低/中/高）：仅 DeepSeek 与 OpenAI 推理模型有效，其余模型忽略 */
+  reasoningEffort?: 'low' | 'medium' | 'high'
 }
 const KEY = 'myielts_ai_settings_v1'
 const DEFAULTS: AISettings = {
   baseUrl: 'https://api-cdn.thehive.ai/api/v3',
   apiKey: '',
   model: 'deepseek-ai/deepseek-v4.1-flash-1017',
+  reasoningEffort: 'medium',
+}
+/** 模型强度档位：选模型时直接看得出它多强、适合干什么 */
+export type ModelStrength = 'flagship' | 'strong' | 'balanced' | 'light' | 'reasoning'
+export const MODEL_STRENGTH_LABELS: Record<ModelStrength, string> = {
+  flagship: '旗舰最强',
+  strong: '强',
+  balanced: '均衡',
+  light: '轻量快速',
+  reasoning: '推理最强',
+}
+export interface AIModelOption {
+  id: string
+  label: string
+  strength: ModelStrength
+  /** 强度说明 */
+  note: string
+  /** 推理模型（OpenAI o 系列）不接受 temperature，后端转发时不带该参数 */
+  reasoning?: boolean
+}
+export interface AIProvider {
+  id: string
+  label: string
+  baseUrl: string
+  /** 去哪里拿 Key */
+  keyHint: string
+  models: AIModelOption[]
+}
+/** 服务商预设：地址与模型都按官方文档取（DeepSeek 官方地址不带 /v1，后端统一拼 /chat/completions）。 */
+export const AI_PROVIDERS: AIProvider[] = [
+  {
+    id: 'hive',
+    label: 'Hive',
+    baseUrl: 'https://api-cdn.thehive.ai/api/v3',
+    keyHint: 'Hive 控制台',
+    models: [
+      { id: 'deepseek-ai/deepseek-v4.1-flash-1017', label: 'DeepSeek V4.1 Flash', strength: 'balanced', note: '当前默认：快速、便宜，批改和翻译都够用' },
+    ],
+  },
+  {
+    id: 'openai',
+    label: 'OpenAI',
+    baseUrl: 'https://api.openai.com/v1',
+    keyHint: 'platform.openai.com → API Keys',
+    models: [
+      { id: 'gpt-5', label: 'GPT-5', strength: 'flagship', note: '最新旗舰，批改和翻译最准，价格最高' },
+      { id: 'gpt-5-mini', label: 'GPT-5 mini', strength: 'balanced', note: '旗舰轻量版，性价比高' },
+      { id: 'gpt-4.1', label: 'GPT-4.1', strength: 'strong', note: '长上下文，稳定可靠' },
+      { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini', strength: 'balanced', note: '便宜快速，日常够用' },
+      { id: 'gpt-4o', label: 'GPT-4o', strength: 'strong', note: '多模态，稳定' },
+      { id: 'gpt-4o-mini', label: 'GPT-4o mini', strength: 'light', note: '最便宜，适合翻译等简单任务' },
+      { id: 'o3', label: 'o3', strength: 'reasoning', note: '推理模型，难题和深度批改用；不接受 temperature', reasoning: true },
+      { id: 'o4-mini', label: 'o4-mini', strength: 'reasoning', note: '推理模型，快速版；不接受 temperature', reasoning: true },
+    ],
+  },
+  {
+    id: 'deepseek',
+    label: 'DeepSeek 官方',
+    baseUrl: 'https://api.deepseek.com',
+    keyHint: 'platform.deepseek.com → API Keys',
+    models: [
+      { id: 'deepseek-flash', label: 'DeepSeek Flash', strength: 'balanced', note: '快速、便宜，批改和翻译都够用（V4.1 Flash）' },
+      { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', strength: 'flagship', note: '旗舰最强，精细批改和难题用' },
+    ],
+  },
+]
+/** 根据 API 地址推断服务商（地址被手动改过就归为自定义，返回 null）。 */
+export function getProviderForBaseUrl(baseUrl: string): AIProvider | null {
+  const normalized = baseUrl.trim().replace(/\/+$/, '').toLowerCase()
+  return AI_PROVIDERS.find(p => p.baseUrl.toLowerCase() === normalized) ?? null
+}
+/** 找到某个服务商下某个模型的档位信息（自定义模型返回 null）。 */
+export function getModelOption(providerId: string, modelId: string): AIModelOption | null {
+  const provider = AI_PROVIDERS.find(p => p.id === providerId)
+  return provider?.models.find(m => m.id === modelId) ?? null
+}
+/** 该模型是否支持推理强度（reasoning_effort）：DeepSeek 全系 + OpenAI o 系列。 */
+export function modelSupportsReasoningEffort(providerId: string, modelId: string): boolean {
+  if (providerId === 'deepseek')
+    return true
+  if (providerId === 'openai')
+    return /^o\d/.test(modelId)
+  return false
 }
 export function getAISettings(): AISettings {
   try {
@@ -101,6 +186,8 @@ async function callChatApi(
           { role: 'user', content: user },
         ],
         temperature: 0.3,
+        // 推理强度：后端只对支持 reasoning_effort 的模型转发（DeepSeek 全系、OpenAI o 系列）
+        reasoningEffort: settings.reasoningEffort ?? 'medium',
       }),
     })
     body = await res.json().catch(() => null)

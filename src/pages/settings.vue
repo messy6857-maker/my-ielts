@@ -18,8 +18,13 @@ import {
 import { pruneArchives } from '../utils/archives'
 import { useGoBack } from '../composables/useGoBack'
 import {
+  AI_PROVIDERS,
+  MODEL_STRENGTH_LABELS,
   aiSettingsState,
   getAISettings,
+  getModelOption,
+  getProviderForBaseUrl,
+  modelSupportsReasoningEffort,
   saveAISettings,
   testAIConnection,
 } from '../composables/useAISettings'
@@ -129,12 +134,46 @@ const testing = ref(false)
 const testMsg = ref('')
 const testOk = ref(false)
 const showKey = ref(false)
+/** 当前地址对应的服务商（手动改过地址则为 null，即自定义）。 */
+const selectedProvider = computed(() => getProviderForBaseUrl(form.value.baseUrl))
+/** 当前服务商的模型列表（自定义地址时为空，只剩自定义模型输入框）。 */
+const providerModels = computed(() => selectedProvider.value?.models ?? [])
+/** 模型下拉框的值：当前模型在列表里就选它，否则走“自定义模型”。 */
+const modelSelectValue = computed(() =>
+  providerModels.value.some(m => m.id === form.value.model.trim())
+    ? form.value.model.trim()
+    : '__custom__',
+)
+/** 当前模型的强度信息（自定义模型没有）。 */
+const modelOption = computed(() =>
+  selectedProvider.value
+    ? getModelOption(selectedProvider.value.id, form.value.model.trim())
+    : null,
+)
+/** 推理强度选择只对支持 reasoning_effort 的模型显示（DeepSeek 全系、OpenAI o 系列）。 */
+const showReasoningEffort = computed(() =>
+  selectedProvider.value
+    ? modelSupportsReasoningEffort(selectedProvider.value.id, form.value.model.trim())
+    : false,
+)
+/** 点服务商预设：填地址；当前模型不在该服务商列表里时换成它的第一个模型。 */
+function selectProvider(provider: (typeof AI_PROVIDERS)[number]) {
+  form.value.baseUrl = provider.baseUrl
+  if (!provider.models.some(m => m.id === form.value.model.trim()))
+    form.value.model = provider.models[0].id
+}
+function onModelSelect(value: string) {
+  if (value === '__custom__')
+    return
+  form.value.model = value
+}
 
 function onSave() {
   saveAISettings({
     baseUrl: form.value.baseUrl.trim(),
     apiKey: form.value.apiKey.trim(),
     model: form.value.model.trim(),
+    reasoningEffort: form.value.reasoningEffort ?? 'medium',
   })
   aiSettingsState.value = getAISettings()
   saved.value = true
@@ -277,11 +316,33 @@ async function onTest() {
         🤖 AI 批改 / 口语评分
       </h3>
       <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">
-        填写 Hive 的 API 地址、密钥和模型后，可用于大小作文批改与口语转写评分。
+        选服务商、填自己的 Key、挑模型后，可用于大小作文批改、口语转写评分和每日阅读翻译。
         三项都要填齐（API 地址、密钥、模型）才会启用；未配置时口语页会提示并提供本地 4 项自评清单。
         Key 只保存在本机浏览器，请求经 VPS 中转（浏览器直连第三方会被 CORS 拦截）。
         注意：Key 按浏览器全局共享、不按账号隔离，同一浏览器的各账号共用此 Key；评分存档仍按账号隔离。
       </p>
+
+      <div class="mb-4">
+        <span class="mb-1 block text-sm font-medium dark:text-gray-200">服务商</span>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="p in AI_PROVIDERS"
+            :key="p.id"
+            type="button"
+            class="border rounded-lg px-3 py-1.5 text-sm"
+            :class="selectedProvider?.id === p.id
+              ? 'border-blue-600 bg-blue-600 text-white'
+              : 'border-gray-300 dark:border-gray-600 dark:text-white'"
+            @click="selectProvider(p)"
+          >
+            {{ p.label }}
+          </button>
+          <span
+            v-if="!selectedProvider"
+            class="self-center text-xs text-gray-400"
+          >自定义地址</span>
+        </div>
+      </div>
 
       <label class="mb-4 block">
         <span class="mb-1 block text-sm font-medium dark:text-gray-200">API 地址</span>
@@ -290,7 +351,7 @@ async function onTest() {
           placeholder="https://api-cdn.thehive.ai/api/v3"
           class="w-full border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
         >
-        <span class="mt-1 block text-xs text-gray-400">当前中转支持 api-cdn.thehive.ai，地址不带 /chat/completions</span>
+        <span class="mt-1 block text-xs text-gray-400">地址不带 /chat/completions；中转只允许 Hive、OpenAI、DeepSeek 官方三个域名<span v-if="selectedProvider">；{{ selectedProvider.label }} 的 Key 去 {{ selectedProvider.keyHint }} 拿</span></span>
       </label>
 
       <label class="mb-4 block">
@@ -312,13 +373,50 @@ async function onTest() {
         </div>
       </label>
 
-      <label class="mb-6 block">
+      <div class="mb-4">
         <span class="mb-1 block text-sm font-medium dark:text-gray-200">模型</span>
+        <select
+          v-if="providerModels.length"
+          :value="modelSelectValue"
+          class="w-full border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          @change="onModelSelect(($event.target as HTMLSelectElement).value)"
+        >
+          <option
+            v-for="m in providerModels"
+            :key="m.id"
+            :value="m.id"
+          >
+            {{ m.label }}（{{ MODEL_STRENGTH_LABELS[m.strength] }}）
+          </option>
+          <option value="__custom__">
+            自定义模型…
+          </option>
+        </select>
         <input
+          v-if="modelSelectValue === '__custom__'"
           v-model="form.model"
-          placeholder="deepseek-ai/deepseek-v4.1-flash-1017"
+          placeholder="输入模型名，如 deepseek-v4-flash"
+          class="mt-2 w-full border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+        >
+        <p v-if="modelOption" class="mt-1 text-xs text-gray-400">
+          强度：{{ MODEL_STRENGTH_LABELS[modelOption.strength] }}——{{ modelOption.note }}
+        </p>
+        <p v-else class="mt-1 text-xs text-gray-400">
+          自定义模型：强度未知，保存后点“测试连接”验证能不能用。
+        </p>
+      </div>
+
+      <label v-if="showReasoningEffort" class="mb-6 block">
+        <span class="mb-1 block text-sm font-medium dark:text-gray-200">推理强度</span>
+        <select
+          v-model="form.reasoningEffort"
           class="w-full border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
         >
+          <option value="low">低——想得少，回答快</option>
+          <option value="medium">中——默认，均衡</option>
+          <option value="high">高——想得多，批改更细，慢一点</option>
+        </select>
+        <span class="mt-1 block text-xs text-gray-400">当前模型支持调推理强度；换到不支持的模型时这项会被忽略。</span>
       </label>
 
       <div class="flex flex-wrap items-center gap-3">
