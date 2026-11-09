@@ -10,9 +10,13 @@ import { wordPhonetics } from '../vocabulary/wordPhonetics'
 import { lookupVocabularyMeaning } from '../vocabulary/loadVocabulary'
 import { translateWithAI } from '../../composables/useAISettings'
 import { stopAllAudio } from '../../composables/useSingleAudio'
+import { getDeviceId } from '../../composables/useStudyTimer'
 import indexData from './daily/index.json'
 
 const { currentUser } = useAuth()
+// L11：游客没有账号，用设备 id 区分（同一设备先后两位游客仍共享，localStorage 本来就是设备级的；
+// 不同设备/浏览器互不干扰）。登录后 scope 变账号，游客书签按账号隔离不可见，属设计取舍。
+const guestId = getDeviceId()
 
 interface WordNote {
   word: string
@@ -464,12 +468,15 @@ function wordAtPoint(x: number, y: number): { word: string; rect: DOMRect } | nu
     caretRangeFromPoint?: (x: number, y: number) => Range | null
   }
   const caret = doc.caretPositionFromPoint?.(x, y)
-  const range = caret ? null : doc.caretRangeFromPoint?.(x, y)
-  const node = caret?.offsetNode ?? range?.startContainer
+  // L4：Firefox 点在元素边界时可能返回非文本 offsetNode，此时改用 caretRangeFromPoint，
+  // 而不是直接返回 null（旧代码 caret 非空就不再回退）。
+  const useCaret = !!caret && caret.offsetNode.nodeType === Node.TEXT_NODE
+  const range = useCaret ? null : doc.caretRangeFromPoint?.(x, y)
+  const node = useCaret ? caret!.offsetNode : range?.startContainer
   if (!node || node.nodeType !== Node.TEXT_NODE)
     return null
   const text = node.textContent ?? ''
-  const offset = caret?.offset ?? range!.startOffset
+  const offset = useCaret ? caret!.offset : range!.startOffset
   const isLetter = (i: number) => i >= 0 && i < text.length && /[A-Za-z]/.test(text[i])
   // 点在字母上才算点中单词（点在空格/标点上不触发）
   if (!isLetter(offset) && !isLetter(offset - 1))
@@ -968,7 +975,12 @@ function paragraphs(passage: string): string[] {
       class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2"
       aria-label="书签与阅读目录"
     >
-      <PageBookmark inline :scope="JSON.stringify([selectedDate, currentUser])" />
+      <PageBookmark
+        inline
+        :scope="JSON.stringify([selectedDate, currentUser ?? guestId])"
+        :content-key="daily ? selectedDate : ''"
+        :add-disabled="!daily"
+      />
       <template v-if="readingIndex.length > 1">
         <button
           v-for="item in readingIndex"

@@ -65,11 +65,91 @@ it('retries both failed mock submissions, including one saved in the old single 
   reentered.retry()
   expect(records.mistakes.value).toHaveLength(0)
   auth.currentUser.value = 'alice'
+  // M2：只调一次 retry 就断言——调两次会掩盖“一次只修好一个”的 bug
   reentered.retry()
-  saver.retry()
   expect(records.mistakes.value.map(({ key, count }) => [key, count]).sort()).toEqual([['first', 1], ['second', 1]])
   expect(reentered.failed.value).toBe(false)
   expect(localStorage.getItem(accountKey('mock_mistake_pending_v1', 'alice'))).toBeNull()
+  // M2：v2 新槽也要删干净，不只断言旧槽
+  expect(localStorage.getItem(entryKey('mock_mistake_pending_v2', 'newer', 'alice'))).toBeNull()
+  // 第二次重试应为 no-op，不重复计
+  reentered.retry()
+  expect(records.mistakes.value.map(({ key, count }) => [key, count]).sort()).toEqual([['first', 1], ['second', 1]])
+})
+
+it('keeps a pending task in memory when its own save fails, and retries it after storage recovers', () => {
+  const records = useMistakes()
+  const set = Storage.prototype.setItem
+  // M2：pending 自身的 setItem 也失败（不只是错题本写失败），任务应留在内存兜底
+  const blocked = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (key.includes('mock_mistake_pending_v2') || key.includes('_mistake_parts_v2__entry_'))
+      throw new DOMException('fixture', 'QuotaExceededError')
+    return set.call(this, key, value)
+  })
+  const saver = useMockMistakeSave()
+  saver.save('mem', entries('mem-first'))
+  expect(saver.failed.value).toBe(true)
+  // pending 根本没写进 localStorage，靠内存兜底才留下来
+  expect(localStorage.getItem(entryKey('mock_mistake_pending_v2', 'mem', 'alice'))).toBeNull()
+  blocked.mockRestore()
+  saver.retry()
+  expect(records.mistakes.value.map(({ key, count }) => [key, count])).toEqual([['mem-first', 1]])
+  expect(saver.failed.value).toBe(false)
+  expect(localStorage.getItem(entryKey('mock_mistake_pending_v2', 'mem', 'alice'))).toBeNull()
+})
+
+it('merges new entries when the same attempt is saved twice (L5)', () => {
+  const records = useMistakes()
+  const set = Storage.prototype.setItem
+  const blocked = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (key.includes('_mistake_parts_v2__entry_'))
+      throw new DOMException('fixture', 'QuotaExceededError')
+    return set.call(this, key, value)
+  })
+  const saver = useMockMistakeSave()
+  saver.save('dup', entries('first'))
+  // 第二次 save 同一 attempt，带一个新题；first 已在 remainder 里，不重复加
+  saver.save('dup', [...entries('first'), ...entries('second')])
+  expect(saver.failed.value).toBe(true)
+  blocked.mockRestore()
+  saver.retry()
+  expect(records.mistakes.value.map(({ key, count }) => [key, count]).sort()).toEqual([['first', 1], ['second', 1]])
+  expect(saver.failed.value).toBe(false)
+})
+
+it('drops a pending task older than 90 days instead of retrying it (L7)', () => {
+  const records = useMistakes()
+  const key = entryKey('mock_mistake_pending_v2', 'stale', 'alice')
+  localStorage.setItem(key, JSON.stringify({
+    owner: 'alice',
+    attemptId: 'stale',
+    entries: entries('stale-first'),
+    createdAt: Date.now() - 91 * 24 * 3600 * 1000,
+  }))
+  const saver = useMockMistakeSave()
+  // 过期任务不计入 failed，也不重试
+  expect(saver.failed.value).toBe(false)
+  saver.retry()
+  expect(records.mistakes.value).toHaveLength(0)
+  // 残留 key 被清掉
+  expect(localStorage.getItem(key)).toBeNull()
+})
+
+it('recovers a pending task whose storage key does not match its attemptId (L9)', () => {
+  const records = useMistakes()
+  // key 是 attempt-A，里面的 attemptId 却是 attempt-B（存储损坏/手工篡改）
+  const wrongKey = entryKey('mock_mistake_pending_v2', 'attempt-A', 'alice')
+  localStorage.setItem(wrongKey, JSON.stringify({
+    owner: 'alice', attemptId: 'attempt-B', entries: entries('recovered'), createdAt: Date.now(),
+  }))
+  const saver = useMockMistakeSave()
+  expect(saver.failed.value).toBe(true)
+  saver.retry()
+  expect(records.mistakes.value.map(({ key, count }) => [key, count])).toEqual([['recovered', 1]])
+  expect(saver.failed.value).toBe(false)
+  // 错 key 已删，对 key 也已清理
+  expect(localStorage.getItem(wrongKey)).toBeNull()
+  expect(localStorage.getItem(entryKey('mock_mistake_pending_v2', 'attempt-B', 'alice'))).toBeNull()
 })
 
 it('resumes new-table quarantines only when their own capability is advertised', async () => {
@@ -141,6 +221,33 @@ it('uses the standard caret method and closes the translation on a date change',
   }
   finally {
     Reflect.deleteProperty(document, 'caretPositionFromPoint')
+  }
+})
+
+it('wordAtPoint falls back to caretRangeFromPoint when the caret node is not text (L4)', async () => {
+  const { s } = await page((await import('../src/pages/reading/daily.vue')).default)
+  const textNode = document.createTextNode('sample word')
+  const caretRange = document.createRange()
+  caretRange.setStart(textNode, 2)
+  caretRange.setEnd(textNode, 2)
+  // Firefox 点在元素边界时 caretPositionFromPoint 可能返回非文本节点
+  Object.defineProperty(document, 'caretPositionFromPoint', {
+    configurable: true,
+    value: () => ({ offsetNode: document.createElement('div'), offset: 0 }),
+  })
+  Object.defineProperty(document, 'caretRangeFromPoint', {
+    configurable: true,
+    value: () => caretRange,
+  })
+  const wordRange = document.createRange()
+  Object.defineProperty(wordRange, 'getBoundingClientRect', { value: () => rect })
+  vi.spyOn(document, 'createRange').mockReturnValue(wordRange)
+  try {
+    expect(s.wordAtPoint(60, 70)?.word).toBe('sample')
+  }
+  finally {
+    Reflect.deleteProperty(document, 'caretPositionFromPoint')
+    Reflect.deleteProperty(document, 'caretRangeFromPoint')
   }
 })
 

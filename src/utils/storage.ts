@@ -279,7 +279,15 @@ export function saveValue(key: string, value: unknown, deleted = false) {
       return false
     }
   }
-  const old = localStorage.getItem(key)
+  // L6：getItem 也可能抛错（存储被禁/不可用），放进 try；读不到就当无旧值，
+  // 后续 saveEnvelope 会同样失败并返回 false，而不是把异常抛给调用方。
+  let old: string | null = null
+  try {
+    old = localStorage.getItem(key)
+  }
+  catch {
+    old = null
+  }
   let previous: Envelope | undefined
   try {
     if (old)

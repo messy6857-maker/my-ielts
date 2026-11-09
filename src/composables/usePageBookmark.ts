@@ -84,9 +84,22 @@ export function reloadPageBookmarks(): void {
   pageBookmarksState.value = loadBookmarks()
 }
 
-/** 该页的书签，按位置从上到下排 */
+/** 该页的书签，按位置从上到下排（锚点书签按当前布局下的位置排） */
 export function getPageBookmarks(path: string): PageBookmarkItem[] {
-  return [...(pageBookmarksState.value[path] ?? [])].sort((a, b) => a.y - b.y)
+  return [...(pageBookmarksState.value[path] ?? [])].sort((a, b) => resolveBookmarkY(a) - resolveBookmarkY(b))
+}
+/** 锚点书签在当前布局下的滚动位置（与 jumpToPageBookmark 同公式）；解析不到时用记录时的 y */
+export function resolveBookmarkY(item: PageBookmarkItem): number {
+  if (!item.anchor)
+    return item.y
+  const { article, paragraph, offset } = item.anchor
+  const passage = Array.from(document.querySelectorAll<HTMLElement>('.passage-text[data-article]'))
+    .find(el => el.dataset.article === article)
+  const target = passage?.querySelectorAll<HTMLElement>(':scope > p')[paragraph]
+  if (!target)
+    return item.y
+  const rect = target.getBoundingClientRect()
+  return Math.max(0, window.scrollY + rect.top + Math.min(offset, rect.height) - 90)
 }
 /** 在当前位置增加一个书签；50px 内已有书签时不重复加，返回 null */
 export function readingBookmarkAnchor(): BookmarkAnchor | undefined {
@@ -108,10 +121,16 @@ export function readingBookmarkAnchor(): BookmarkAnchor | undefined {
 export function addPageBookmark(path: string, y: number, anchor?: BookmarkAnchor): PageBookmarkItem | null {
   const rounded = Math.max(0, Math.round(y))
   const existing = pageBookmarksState.value[path] ?? []
-  if (existing.some(b => anchor && b.anchor
-    ? b.anchor.article === anchor.article && b.anchor.paragraph === anchor.paragraph
-      && Math.abs(b.anchor.offset - anchor.offset) <= DEDUP_PX
-    : !anchor && !b.anchor && Math.abs(b.y - rounded) <= DEDUP_PX))
+  // M1：去重不能只在锚点状态一致时比较——有锚点/无锚点混用时也按记录位置比较，
+  // 否则同一位置会同时存一个有锚点和一个无锚点书签。两边都有锚点才按锚点比较。
+  if (existing.some((b) => {
+    if (anchor && b.anchor) {
+      return b.anchor.article === anchor.article
+        && b.anchor.paragraph === anchor.paragraph
+        && Math.abs(b.anchor.offset - anchor.offset) <= DEDUP_PX
+    }
+    return Math.abs(b.y - rounded) <= DEDUP_PX
+  }))
     return null
   const item: PageBookmarkItem = {
     id: `bm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
@@ -148,10 +167,11 @@ export function jumpToPageBookmark(path: string, id: string): boolean {
     const passage = Array.from(document.querySelectorAll<HTMLElement>('.passage-text[data-article]'))
       .find(el => el.dataset.article === article)
     const target = passage?.querySelectorAll<HTMLElement>(':scope > p')[paragraph]
-    if (!target)
-      return false
-    const rect = target.getBoundingClientRect()
-    top = window.scrollY + rect.top + Math.min(offset, rect.height) - 90
+    if (target) {
+      const rect = target.getBoundingClientRect()
+      top = window.scrollY + rect.top + Math.min(offset, rect.height) - 90
+    }
+    // L2：段落找不到了（文章改版/篇数变化）回退到记录时的 y，不精确但比完全不跳好
   }
   window.scrollTo({ top: Math.max(0, top), behavior: 'instant' })
   return true
