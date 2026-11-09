@@ -30,8 +30,10 @@ describe('AI 服务商预设', () => {
     expect(getModelOption('hive', 'deepseek-ai/deepseek-v4.1-flash-1017')?.strength).toBe('balanced')
   })
   it('OpenAI 与 DeepSeek 官方的模型 ID 按官方文档取', () => {
-    expect(getModelOption('openai', 'gpt-5')?.strength).toBe('flagship')
-    expect(getModelOption('openai', 'gpt-4o-mini')?.strength).toBe('light')
+    expect(getModelOption('openai', 'gpt-6.1-sol')?.strength).toBe('strong')
+    expect(getModelOption('openai', 'gpt-6-astra')?.strength).toBe('flagship')
+    expect(getModelOption('openai', 'gpt-6.1-terra')?.strength).toBe('balanced')
+    expect(getModelOption('openai', 'gpt-6-luna')?.strength).toBe('light')
     expect(getModelOption('deepseek', 'deepseek-flash')?.strength).toBe('balanced')
     expect(getModelOption('deepseek', 'deepseek-v4-pro')?.strength).toBe('flagship')
   })
@@ -46,11 +48,15 @@ describe('推理强度（reasoning_effort）适用范围', () => {
     expect(modelSupportsReasoningEffort('deepseek', 'deepseek-flash')).toBe(true)
     expect(modelSupportsReasoningEffort('deepseek', 'deepseek-v4-pro')).toBe(true)
   })
-  it('OpenAI 只有 o 系列支持', () => {
+  it('OpenAI 推理模型支持（o 系列、GPT-5/6），老款不支持', () => {
+    expect(modelSupportsReasoningEffort('openai', 'gpt-6.1-sol')).toBe(true)
+    expect(modelSupportsReasoningEffort('openai', 'gpt-6-astra')).toBe(true)
+    expect(modelSupportsReasoningEffort('openai', 'gpt-6.1-terra')).toBe(true)
+    expect(modelSupportsReasoningEffort('openai', 'gpt-6-luna')).toBe(true)
     expect(modelSupportsReasoningEffort('openai', 'o3')).toBe(true)
-    expect(modelSupportsReasoningEffort('openai', 'o4-mini')).toBe(true)
-    expect(modelSupportsReasoningEffort('openai', 'gpt-5')).toBe(false)
+    expect(modelSupportsReasoningEffort('openai', 'gpt-5')).toBe(true)
     expect(modelSupportsReasoningEffort('openai', 'gpt-4o')).toBe(false)
+    expect(modelSupportsReasoningEffort('openai', 'gpt-4o-mini')).toBe(false)
   })
   it('Hive 不支持', () => {
     expect(modelSupportsReasoningEffort('hive', 'deepseek-ai/deepseek-v4.1-flash-1017')).toBe(false)

@@ -62,14 +62,11 @@ export const AI_PROVIDERS: AIProvider[] = [
     baseUrl: 'https://api.openai.com/v1',
     keyHint: 'platform.openai.com → API Keys',
     models: [
-      { id: 'gpt-5', label: 'GPT-5', strength: 'flagship', note: '最新旗舰，批改和翻译最准，价格最高' },
-      { id: 'gpt-5-mini', label: 'GPT-5 mini', strength: 'balanced', note: '旗舰轻量版，性价比高' },
-      { id: 'gpt-4.1', label: 'GPT-4.1', strength: 'strong', note: '长上下文，稳定可靠' },
-      { id: 'gpt-4.1-mini', label: 'GPT-4.1 mini', strength: 'balanced', note: '便宜快速，日常够用' },
-      { id: 'gpt-4o', label: 'GPT-4o', strength: 'strong', note: '多模态，稳定' },
-      { id: 'gpt-4o-mini', label: 'GPT-4o mini', strength: 'light', note: '最便宜，适合翻译等简单任务' },
-      { id: 'o3', label: 'o3', strength: 'reasoning', note: '推理模型，难题和深度批改用；不接受 temperature', reasoning: true },
-      { id: 'o4-mini', label: 'o4-mini', strength: 'reasoning', note: '推理模型，快速版；不接受 temperature', reasoning: true },
+      { id: 'gpt-6.1-sol', label: 'GPT-6.1 Sol', strength: 'strong', note: '最新主力，接近旗舰水平，性价比最高；不接受 temperature', reasoning: true },
+      { id: 'gpt-6-astra', label: 'GPT-6 Astra', strength: 'flagship', note: '旗舰最强，难题和深度批改用，价格最高；不接受 temperature', reasoning: true },
+      { id: 'gpt-6.1-terra', label: 'GPT-6.1 Terra', strength: 'balanced', note: '快速均衡，日常够用；不接受 temperature', reasoning: true },
+      { id: 'gpt-6-luna', label: 'GPT-6 Luna', strength: 'light', note: '最便宜，适合翻译等简单任务；不接受 temperature', reasoning: true },
+      { id: 'gpt-4o-mini', label: 'GPT-4o mini', strength: 'light', note: '便宜老款，兼容性最好（自动识别的探测模型）' },
     ],
   },
   {
@@ -93,12 +90,12 @@ export function getModelOption(providerId: string, modelId: string): AIModelOpti
   const provider = AI_PROVIDERS.find(p => p.id === providerId)
   return provider?.models.find(m => m.id === modelId) ?? null
 }
-/** 该模型是否支持推理强度（reasoning_effort）：DeepSeek 全系 + OpenAI o 系列。 */
+/** 该模型是否支持推理强度（reasoning_effort）：DeepSeek 全系 + OpenAI 推理模型（o 系列、GPT-5/6）。 */
 export function modelSupportsReasoningEffort(providerId: string, modelId: string): boolean {
   if (providerId === 'deepseek')
     return true
   if (providerId === 'openai')
-    return /^o\d/.test(modelId)
+    return /^(o\d|gpt-5|gpt-6)/.test(modelId)
   return false
 }
 export function getAISettings(): AISettings {
