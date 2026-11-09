@@ -278,7 +278,7 @@ function speak(word: string) {
   }
 }
 
-// 点词查义 / 选中翻译：底部翻译弹窗
+// 点词查义 / 选中翻译：单词旁边的浮动翻译卡片
 interface TranslatePopupState {
   source: string
   kind: 'word' | 'selection'
@@ -288,10 +288,48 @@ interface TranslatePopupState {
   loading: boolean
   error: string
   showTranslateButton: boolean
+  /** 锚点（单词/选区的视口包围盒），卡片贴着它显示 */
+  anchor: { left: number; top: number; bottom: number; right: number }
 }
 const translatePopup = ref<TranslatePopupState | null>(null)
+const translatePopupEl = ref<HTMLElement | null>(null)
+const popupStyle = ref({ left: '0px', top: '0px' })
 let translateSeq = 0
 let translateAbort: AbortController | null = null
+
+/** 卡片定位：默认贴在锚点下方，水平夹在视口内；下方放不下就翻到上方。 */
+function adjustPopupPosition() {
+  const popup = translatePopup.value
+  const el = translatePopupEl.value
+  if (!popup || !el)
+    return
+  const anchor = popup.anchor
+  const width = Math.min(320, window.innerWidth - 16)
+  let left = Math.min(Math.max(anchor.left, 8), Math.max(8, window.innerWidth - width - 8))
+  let top = anchor.bottom + 8
+  const h = el.offsetHeight
+  const w = el.offsetWidth
+  if (w > 0)
+    left = Math.min(Math.max(left, 8), Math.max(8, window.innerWidth - w - 8))
+  if (top + h > window.innerHeight - 8) {
+    top = anchor.top - h - 8
+    if (top < 8)
+      top = 8
+  }
+  popupStyle.value = { left: `${left}px`, top: `${top}px` }
+}
+// 内容变化（加载中 → 释义/翻译）会改变卡片高度，重新定位
+watch(
+  () => [
+    translatePopup.value?.meaning,
+    translatePopup.value?.loading,
+    translatePopup.value?.error,
+  ],
+  () => {
+    if (translatePopup.value)
+      nextTick(adjustPopupPosition)
+  },
+)
 
 function closeTranslatePopup() {
   translateSeq++
@@ -330,8 +368,12 @@ async function runAITranslate() {
   }
 }
 
+function rectToAnchor(rect: DOMRect): TranslatePopupState['anchor'] {
+  return { left: rect.left, top: rect.top, bottom: rect.bottom, right: rect.right }
+}
+
 /** 点词查义：文章注释 → 本站词库 → AI（自动走，不用再点）。 */
-async function openWordPopup(word: string, notes: WordNote[]) {
+async function openWordPopup(word: string, notes: WordNote[], rect: DOMRect) {
   const seq = ++translateSeq
   translateAbort?.abort()
   translateAbort = new AbortController()
@@ -345,8 +387,10 @@ async function openWordPopup(word: string, notes: WordNote[]) {
     loading: true,
     error: '',
     showTranslateButton: false,
+    anchor: rectToAnchor(rect),
   }
   translatePopup.value = popup
+  nextTick(adjustPopupPosition)
   // 1. 文章注释（最贴合本文）
   const note = notes.find(n => n.word.toLowerCase().trim() === lower)
   if (note) {
@@ -391,7 +435,7 @@ async function openWordPopup(word: string, notes: WordNote[]) {
   }
 }
 
-function openSelectionPopup(text: string) {
+function openSelectionPopup(text: string, rect: DOMRect) {
   const trimmed = text.trim().replace(/\s+/g, ' ')
   if (!trimmed)
     return
@@ -407,11 +451,13 @@ function openSelectionPopup(text: string) {
     loading: false,
     error: '',
     showTranslateButton: true,
+    anchor: rectToAnchor(rect),
   }
+  nextTick(adjustPopupPosition)
 }
 
-/** 点中单词：用点击坐标找所在单词（不改 TextHighlights，不影响模考阅读页）。 */
-function wordAtPoint(x: number, y: number): string | null {
+/** 点中单词：用点击坐标找所在单词，并返回单词的包围盒做卡片锚点。 */
+function wordAtPoint(x: number, y: number): { word: string; rect: DOMRect } | null {
   const doc = document as Document & {
     caretRangeFromPoint?: (x: number, y: number) => Range | null
   }
@@ -432,7 +478,15 @@ function wordAtPoint(x: number, y: number): string | null {
   let end = offset
   while (end < text.length && /[A-Za-z']/.test(text[end])) end++
   const word = text.slice(start, end).replace(/^'+|'+$/g, '')
-  return /^[A-Za-z]+(?:'[A-Za-z]+)?$/.test(word) ? word : null
+  if (!/^[A-Za-z]+(?:'[A-Za-z]+)?$/.test(word))
+    return null
+  const wordRange = document.createRange()
+  wordRange.setStart(node, start)
+  wordRange.setEnd(node, end)
+  const rect = wordRange.getBoundingClientRect()
+  if (!rect || (rect.width === 0 && rect.height === 0))
+    return null
+  return { word, rect }
 }
 
 function onPassageClick(e: MouseEvent, notes: WordNote[]) {
@@ -440,10 +494,10 @@ function onPassageClick(e: MouseEvent, notes: WordNote[]) {
   const sel = window.getSelection()
   if (sel && !sel.isCollapsed)
     return
-  const word = wordAtPoint(e.clientX, e.clientY)
-  if (!word)
+  const hit = wordAtPoint(e.clientX, e.clientY)
+  if (!hit)
     return
-  openWordPopup(word, notes)
+  openWordPopup(hit.word, notes, hit.rect)
 }
 
 /** 选区所在文章的注释（双击选词时也要先查文章注释）。 */
@@ -478,20 +532,47 @@ function onSelectionChange() {
     const el = anchor instanceof Element ? anchor : anchor.parentElement
     if (!el?.closest?.('.passage-text'))
       return
+    const range = sel.rangeCount > 0 ? sel.getRangeAt(0) : null
+    const rect = range?.getBoundingClientRect()
+    if (!rect || (rect.width === 0 && rect.height === 0))
+      return
     // 单词选区（双击）直接给释义，不用再点翻译
     if (/^[A-Za-z]+(?:'[A-Za-z]+)?$/.test(text)) {
-      openWordPopup(text, articleNotesForNode(anchor))
+      openWordPopup(text, articleNotesForNode(anchor), rect)
       return
     }
-    openSelectionPopup(text)
+    openSelectionPopup(text, rect)
   }, 400)
+}
+
+/** 点在卡片外就关掉（点在正文单词上时，onPassageClick 会紧接着打开新卡片）。 */
+function onDocumentClickCapture(e: MouseEvent) {
+  if (!translatePopup.value)
+    return
+  const el = translatePopupEl.value
+  if (el && el.contains(e.target as Node))
+    return
+  closeTranslatePopup()
+}
+/** 滚动后锚点单词移位，卡片跟着关掉（卡片内滚动不关）。 */
+function onWindowScroll(e: Event) {
+  if (!translatePopup.value)
+    return
+  const el = translatePopupEl.value
+  if (el && el.contains(e.target as Node))
+    return
+  closeTranslatePopup()
 }
 
 onMounted(() => {
   document.addEventListener('selectionchange', onSelectionChange)
+  document.addEventListener('click', onDocumentClickCapture, true)
+  window.addEventListener('scroll', onWindowScroll, { capture: true, passive: true })
 })
 onUnmounted(() => {
   document.removeEventListener('selectionchange', onSelectionChange)
+  document.removeEventListener('click', onDocumentClickCapture, true)
+  window.removeEventListener('scroll', onWindowScroll, true)
   if (selectionTimer)
     clearTimeout(selectionTimer)
   translateSeq++
@@ -890,71 +971,68 @@ function paragraphs(passage: string): string[] {
       </button>
     </nav>
 
-    <!-- 点词查义 / 选中翻译：底部弹窗 -->
+    <!-- 点词查义 / 选中翻译：单词旁边的浮动卡片 -->
     <div
       v-if="translatePopup"
-      class="fixed inset-0 z-50"
+      ref="translatePopupEl"
+      class="fixed z-50 max-h-[60vh] w-[min(320px,calc(100vw-16px))] overflow-y-auto border border-gray-200 rounded-xl bg-white p-4 shadow-xl dark:border-gray-600 dark:bg-gray-800"
+      :style="popupStyle"
       role="dialog"
       aria-label="翻译"
     >
-      <div class="absolute inset-0 bg-black/40" @click="closeTranslatePopup" />
-      <div
-        class="absolute inset-x-0 bottom-0 mx-auto max-h-[70vh] max-w-3xl w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl dark:bg-gray-800"
-      >
-        <div class="mb-3 flex items-start justify-between gap-3">
-          <div class="min-w-0">
-            <p class="break-words text-lg font-bold text-gray-900 dark:text-white">
-              {{ translatePopup.source }}
-            </p>
-            <p v-if="translatePopup.phonetic || translatePopup.pos" class="mt-0.5 text-sm text-gray-400">
-              {{ translatePopup.phonetic }}
-              <span v-if="translatePopup.pos" class="ml-1 italic" style="font-family: times">{{ translatePopup.pos }}</span>
-            </p>
-          </div>
-          <button
-            type="button"
-            class="shrink-0 rounded-full px-2 py-1 text-lg leading-none text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-            aria-label="关闭"
-            @click="closeTranslatePopup"
-          >
-            ×
-          </button>
+      <div class="mb-2 flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <p class="break-words text-base font-bold text-gray-900 dark:text-white">
+            {{ translatePopup.source }}
+          </p>
+          <p v-if="translatePopup.phonetic || translatePopup.pos" class="mt-0.5 text-xs text-gray-400">
+            {{ translatePopup.phonetic }}
+            <span v-if="translatePopup.pos" class="ml-1 italic" style="font-family: times">{{ translatePopup.pos }}</span>
+          </p>
         </div>
-        <div v-if="translatePopup.loading" class="text-sm text-gray-500 dark:text-gray-400" role="status">
-          翻译中…
-        </div>
-        <p v-else-if="translatePopup.meaning" class="text-base leading-relaxed text-gray-800 dark:text-gray-200">
-          {{ translatePopup.meaning }}
-        </p>
-        <div v-else-if="translatePopup.error" class="text-sm text-red-600 dark:text-red-400" role="alert">
-          {{ translatePopup.error }}
-          <router-link
-            v-if="translatePopup.error.includes('设置页')"
-            to="/settings"
-            class="ml-1 underline underline-offset-2"
-          >
-            去设置
-          </router-link>
-        </div>
-        <div class="mt-4 flex flex-wrap gap-2">
-          <button
-            v-if="translatePopup.kind === 'word'"
-            type="button"
-            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-            @click="speak(translatePopup.source)"
-          >
-            🔊 朗读
-          </button>
-          <button
-            v-if="translatePopup.showTranslateButton"
-            type="button"
-            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-            :disabled="translatePopup.loading"
-            @click="runAITranslate"
-          >
-            {{ translatePopup.kind === 'selection' ? '翻译成中文' : 'AI 翻译' }}
-          </button>
-        </div>
+        <button
+          type="button"
+          class="shrink-0 rounded-full px-1.5 py-0.5 text-base leading-none text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+          aria-label="关闭"
+          @click="closeTranslatePopup"
+        >
+          ×
+        </button>
+      </div>
+      <div v-if="translatePopup.loading" class="text-sm text-gray-500 dark:text-gray-400" role="status">
+        翻译中…
+      </div>
+      <p v-else-if="translatePopup.meaning" class="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
+        {{ translatePopup.meaning }}
+      </p>
+      <div v-else-if="translatePopup.error" class="text-sm text-red-600 dark:text-red-400" role="alert">
+        {{ translatePopup.error }}
+        <router-link
+          v-if="translatePopup.error.includes('设置页')"
+          to="/settings"
+          class="ml-1 underline underline-offset-2"
+        >
+          去设置
+        </router-link>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button
+          v-if="translatePopup.kind === 'word'"
+          type="button"
+          class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+          @click="speak(translatePopup.source)"
+        >
+          🔊 朗读
+        </button>
+        <button
+          v-if="translatePopup.showTranslateButton"
+          type="button"
+          class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          :disabled="translatePopup.loading"
+          @click="runAITranslate"
+        >
+          {{ translatePopup.kind === 'selection' ? '翻译成中文' : 'AI 翻译' }}
+        </button>
       </div>
     </div>
   </div>
