@@ -40,13 +40,13 @@ describe('页面位置书签（多个）', () => {
     removePageBookmark('/reading/daily', firstId)
     expect(getPageBookmarks('/reading/daily').map(b => b.id)).toEqual([secondId])
   })
-  it('回到某个书签：平滑滚到它的位置；没有该书签返回 false 且不滚动', () => {
+  it('回到某个书签：立刻跳到它的位置（跟阅读 1/2 一样不用动画）；没有该书签返回 false 且不滚动', () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
     addPageBookmark('/reading/daily', 800)
     addPageBookmark('/reading/daily', 2400)
     const firstId = getPageBookmarks('/reading/daily')[0].id
     expect(jumpToPageBookmark('/reading/daily', firstId)).toBe(true)
-    expect(scrollTo).toHaveBeenCalledWith({ top: 800, behavior: 'smooth' })
+    expect(scrollTo).toHaveBeenCalledWith({ top: 800, behavior: 'instant' })
     scrollTo.mockClear()
     expect(jumpToPageBookmark('/reading/daily', 'no-such-id')).toBe(false)
     expect(scrollTo).not.toHaveBeenCalled()

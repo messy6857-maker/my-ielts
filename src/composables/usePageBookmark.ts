@@ -110,6 +110,6 @@ export function jumpToPageBookmark(path: string, id: string): boolean {
   const item = (pageBookmarksState.value[path] ?? []).find(b => b.id === id)
   if (!item)
     return false
-  window.scrollTo({ top: item.y, behavior: 'smooth' })
+  window.scrollTo({ top: item.y, behavior: 'instant' })
   return true
 }
