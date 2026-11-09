@@ -612,6 +612,39 @@ export async function translateWithAI(
     throw new Error('AI 返回为空，请重试')
   return result
 }
+// 只给 Key 自动识别服务商：后端按顺序试 OpenAI / DeepSeek / Hive，返回命中的那家。
+// 前端拿到 provider 后按 AI_PROVIDERS 里的第一个模型设默认值，用户可再改。
+export interface AIDetectResult {
+  provider: string
+  label: string
+  baseUrl: string
+}
+export async function detectAIProvider(apiKey: string): Promise<AIDetectResult> {
+  const token = getToken(useAuth().currentUser.value)
+  if (!token)
+    throw new Error('请先登录（AI 中转需要登录态）')
+  if (!apiKey.trim())
+    throw new Error('请先填写 API Key')
+  let res: Response
+  let body: any
+  try {
+    res = await fetch(`${SYNC_API_BASE}/ai/detect`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ apiKey: apiKey.trim() }),
+    })
+    body = await res.json().catch(() => null)
+  }
+  catch {
+    throw new Error('识别请求失败，请检查网络连接')
+  }
+  if (!res.ok || !body?.ok)
+    throw new Error(body?.message || `识别失败（${res.status}）`)
+  return { provider: body.provider, label: body.label, baseUrl: body.baseUrl }
+}
 // 测试连接：发一个极短请求验证 Key/地址/模型可用
 export async function testAIConnection(
   settings: AISettings = getAISettings(),

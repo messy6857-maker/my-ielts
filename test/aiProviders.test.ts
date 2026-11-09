@@ -56,3 +56,17 @@ describe('推理强度（reasoning_effort）适用范围', () => {
     expect(modelSupportsReasoningEffort('hive', 'deepseek-ai/deepseek-v4.1-flash-1017')).toBe(false)
   })
 })
+
+describe('只填 Key 自动识别', () => {
+  // 后端 /api/ai/detect 用这三个模型去试 Key 属于哪家；
+  // 它们必须都在前端目录里，否则识别成功后模型下拉框会显示“自定义模型”。
+  it('后端试 Key 的三个探测模型都在前端目录里', () => {
+    expect(getModelOption('openai', 'gpt-4o-mini')).not.toBeNull()
+    expect(getModelOption('deepseek', 'deepseek-flash')).not.toBeNull()
+    expect(getModelOption('hive', 'deepseek-ai/deepseek-v4.1-flash-1017')).not.toBeNull()
+  })
+  it('每家都有默认模型可设（识别成功后直接用第一项）', () => {
+    for (const p of AI_PROVIDERS)
+      expect(p.models[0]?.id).toBeTruthy()
+  })
+})

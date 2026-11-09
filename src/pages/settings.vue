@@ -21,6 +21,7 @@ import {
   AI_PROVIDERS,
   MODEL_STRENGTH_LABELS,
   aiSettingsState,
+  detectAIProvider,
   getAISettings,
   getModelOption,
   getProviderForBaseUrl,
@@ -195,6 +196,32 @@ async function onTest() {
     testing.value = false
   }
 }
+const detecting = ref(false)
+const detectMsg = ref('')
+const detectOk = ref(false)
+/** 只填 Key 自动识别：后端真去试这个 Key 属于哪家，命中后自动填地址、设该家默认模型。 */
+async function onDetect() {
+  if (!form.value.apiKey.trim())
+    return
+  detecting.value = true
+  detectMsg.value = ''
+  try {
+    const result = await detectAIProvider(form.value.apiKey)
+    const provider = AI_PROVIDERS.find(p => p.id === result.provider)
+    form.value.baseUrl = result.baseUrl
+    if (provider)
+      form.value.model = provider.models[0].id
+    detectMsg.value = `已识别为 ${result.label}，模型已设为 ${provider?.models[0].label ?? form.value.model}，点“保存”即可用`
+    detectOk.value = true
+  }
+  catch (e) {
+    detectMsg.value = e instanceof Error ? e.message : '识别失败'
+    detectOk.value = false
+  }
+  finally {
+    detecting.value = false
+  }
+}
 </script>
 
 <template>
@@ -316,7 +343,8 @@ async function onTest() {
         🤖 AI 批改 / 口语评分
       </h3>
       <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">
-        选服务商、填自己的 Key、挑模型后，可用于大小作文批改、口语转写评分和每日阅读翻译。
+        只填自己的 Key、点“自动识别服务商”，地址和模型会自动填好；也可以手动选服务商、挑模型。
+        可用于大小作文批改、口语转写评分和每日阅读翻译。
         三项都要填齐（API 地址、密钥、模型）才会启用；未配置时口语页会提示并提供本地 4 项自评清单。
         Key 只保存在本机浏览器，请求经 VPS 中转（浏览器直连第三方会被 CORS 拦截）。
         注意：Key 按浏览器全局共享、不按账号隔离，同一浏览器的各账号共用此 Key；评分存档仍按账号隔离。
@@ -372,6 +400,22 @@ async function onTest() {
           </button>
         </div>
       </label>
+
+      <div class="mb-4 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          :disabled="detecting || !form.apiKey.trim()"
+          @click="onDetect"
+        >
+          {{ detecting ? "识别中…" : "🔍 自动识别服务商" }}
+        </button>
+        <span
+          v-if="detectMsg"
+          class="text-sm"
+          :class="detectOk ? 'text-green-600' : 'text-red-500'"
+        >{{ detectMsg }}</span>
+      </div>
 
       <div class="mb-4">
         <span class="mb-1 block text-sm font-medium dark:text-gray-200">模型</span>
