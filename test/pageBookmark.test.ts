@@ -1,56 +1,69 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  getPageBookmark,
+  addPageBookmark,
+  getPageBookmarks,
   jumpToPageBookmark,
   pageBookmarksState,
+  reloadPageBookmarks,
   removePageBookmark,
-  savePageBookmark,
 } from '../src/composables/usePageBookmark'
 
-describe('页面位置书签', () => {
+describe('页面位置书签（多个）', () => {
   beforeEach(() => {
     localStorage.clear()
     pageBookmarksState.value = {}
   })
 
-  it('存了就能取到（按路由分开记）', () => {
-    savePageBookmark('/reading/daily', 1200)
-    expect(getPageBookmark('/reading/daily')).toBe(1200)
-    expect(getPageBookmark('/vocabulary')).toBeNull()
+  it('一页可以记多个书签，按位置从上到下排', () => {
+    addPageBookmark('/reading/daily', 2400)
+    addPageBookmark('/reading/daily', 800)
+    expect(getPageBookmarks('/reading/daily').map(b => b.y)).toEqual([800, 2400])
   })
   it('不同页面互不干扰', () => {
-    savePageBookmark('/reading/daily', 1200)
-    savePageBookmark('/vocabulary', 300)
-    expect(getPageBookmark('/reading/daily')).toBe(1200)
-    expect(getPageBookmark('/vocabulary')).toBe(300)
+    addPageBookmark('/reading/daily', 1200)
+    addPageBookmark('/vocabulary', 300)
+    expect(getPageBookmarks('/reading/daily')).toHaveLength(1)
+    expect(getPageBookmarks('/vocabulary')).toHaveLength(1)
   })
-  it('同一页面重新记录会覆盖旧位置', () => {
-    savePageBookmark('/reading/daily', 1200)
-    savePageBookmark('/reading/daily', 2400)
-    expect(getPageBookmark('/reading/daily')).toBe(2400)
+  it('50px 内重复加不产生新书签', () => {
+    expect(addPageBookmark('/reading/daily', 1200)).not.toBeNull()
+    expect(addPageBookmark('/reading/daily', 1220)).toBeNull()
+    expect(getPageBookmarks('/reading/daily')).toHaveLength(1)
+    expect(addPageBookmark('/reading/daily', 1400)).not.toBeNull()
+    expect(getPageBookmarks('/reading/daily')).toHaveLength(2)
   })
-  it('删除后取不到，也不影响别的页面', () => {
-    savePageBookmark('/reading/daily', 1200)
-    savePageBookmark('/vocabulary', 300)
-    removePageBookmark('/reading/daily')
-    expect(getPageBookmark('/reading/daily')).toBeNull()
-    expect(getPageBookmark('/vocabulary')).toBe(300)
+  it('按 id 删除其中一个，不影响别的', () => {
+    addPageBookmark('/reading/daily', 800)
+    addPageBookmark('/reading/daily', 2400)
+    const firstId = getPageBookmarks('/reading/daily')[0].id
+    const secondId = getPageBookmarks('/reading/daily')[1].id
+    removePageBookmark('/reading/daily', firstId)
+    expect(getPageBookmarks('/reading/daily').map(b => b.id)).toEqual([secondId])
   })
-  it('回到书签：平滑滚到记录的位置；没有书签返回 false 且不滚动', () => {
+  it('回到某个书签：平滑滚到它的位置；没有该书签返回 false 且不滚动', () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
-    savePageBookmark('/reading/daily', 1200)
-    expect(jumpToPageBookmark('/reading/daily')).toBe(true)
-    expect(scrollTo).toHaveBeenCalledWith({ top: 1200, behavior: 'smooth' })
+    addPageBookmark('/reading/daily', 800)
+    addPageBookmark('/reading/daily', 2400)
+    const firstId = getPageBookmarks('/reading/daily')[0].id
+    expect(jumpToPageBookmark('/reading/daily', firstId)).toBe(true)
+    expect(scrollTo).toHaveBeenCalledWith({ top: 800, behavior: 'smooth' })
     scrollTo.mockClear()
-    expect(jumpToPageBookmark('/vocabulary')).toBe(false)
+    expect(jumpToPageBookmark('/reading/daily', 'no-such-id')).toBe(false)
     expect(scrollTo).not.toHaveBeenCalled()
     scrollTo.mockRestore()
   })
   it('存进 localStorage，刷新后还在', () => {
-    savePageBookmark('/reading/daily', 1200)
+    addPageBookmark('/reading/daily', 1200)
+    addPageBookmark('/reading/daily', 2400)
     const raw = localStorage.getItem('myielts_page_bookmarks_v1')
-    expect(raw).toBeTruthy()
-    const parsed = JSON.parse(raw ?? '{}') as Record<string, number>
-    expect(parsed['/reading/daily']).toBe(1200)
+    const parsed = JSON.parse(raw ?? '{}') as Record<string, { y: number }[]>
+    expect(parsed['/reading/daily'].map(b => b.y).sort((x, y) => x - y)).toEqual([1200, 2400])
+  })
+  it('兼容旧版：单个数值自动转成一个书签', () => {
+    localStorage.setItem('myielts_page_bookmarks_v1', JSON.stringify({ '/reading/daily': 1200 }))
+    reloadPageBookmarks()
+    const list = getPageBookmarks('/reading/daily')
+    expect(list).toHaveLength(1)
+    expect(list[0].y).toBe(1200)
   })
 })
