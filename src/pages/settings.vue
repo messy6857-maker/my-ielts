@@ -27,6 +27,7 @@ import {
   getProviderForBaseUrl,
   modelSupportsReasoningEffort,
   saveAISettings,
+  switchProviderSettings,
   testAIConnection,
 } from '../composables/useAISettings'
 
@@ -157,11 +158,10 @@ const showReasoningEffort = computed(() =>
     ? modelSupportsReasoningEffort(selectedProvider.value.id, form.value.model.trim())
     : false,
 )
-/** 点服务商预设：填地址；当前模型不在该服务商列表里时换成它的第一个模型。 */
+/** 点服务商预设：填地址；当前模型不在该服务商列表里时换成它的第一个模型；
+ *  Key 也跟着换到该服务商存过的（没填过就是空），当前 Key 先存回旧服务商名下。 */
 function selectProvider(provider: (typeof AI_PROVIDERS)[number]) {
-  form.value.baseUrl = provider.baseUrl
-  if (!provider.models.some(m => m.id === form.value.model.trim()))
-    form.value.model = provider.models[0].id
+  form.value = switchProviderSettings(form.value, provider)
 }
 function onModelSelect(value: string) {
   if (value === '__custom__')
@@ -175,6 +175,7 @@ function onSave() {
     apiKey: form.value.apiKey.trim(),
     model: form.value.model.trim(),
     reasoningEffort: form.value.reasoningEffort ?? 'medium',
+    apiKeys: form.value.apiKeys,
   })
   aiSettingsState.value = getAISettings()
   saved.value = true
@@ -209,8 +210,11 @@ async function onDetect() {
     const result = await detectAIProvider(form.value.apiKey)
     const provider = AI_PROVIDERS.find(p => p.id === result.provider)
     form.value.baseUrl = result.baseUrl
-    if (provider)
+    if (provider) {
       form.value.model = provider.models[0].id
+      // 刚识别出的 Key 就属于这家，记到它名下（切换回来还能看到）
+      form.value.apiKeys = { ...(form.value.apiKeys ?? {}), [provider.id]: form.value.apiKey.trim() }
+    }
     detectMsg.value = `已识别为 ${result.label}，模型已设为 ${provider?.models[0].label ?? form.value.model}，点“保存”即可用`
     detectOk.value = true
   }
@@ -347,7 +351,7 @@ async function onDetect() {
         可用于大小作文批改、口语转写评分和每日阅读翻译。
         三项都要填齐（API 地址、密钥、模型）才会启用；未配置时口语页会提示并提供本地 4 项自评清单。
         Key 只保存在本机浏览器，请求经 VPS 中转（浏览器直连第三方会被 CORS 拦截）。
-        注意：Key 按浏览器全局共享、不按账号隔离，同一浏览器的各账号共用此 Key；评分存档仍按账号隔离。
+        注意：每个服务商各记一个 Key，切换服务商时密钥框跟着换（没填过就是空）；Key 不按账号隔离，同一浏览器的各账号共用此 Key；评分存档仍按账号隔离。
       </p>
 
       <div class="mb-4">

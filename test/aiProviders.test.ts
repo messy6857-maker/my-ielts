@@ -1,11 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
   AI_PROVIDERS,
   MODEL_STRENGTH_LABELS,
+  getAISettings,
   getModelOption,
   getProviderForBaseUrl,
+  getProviderIdForBaseUrl,
   modelSupportsReasoningEffort,
+  saveAISettings,
+  switchProviderSettings,
 } from '../src/composables/useAISettings'
+import type { AISettings } from '../src/composables/useAISettings'
 
 describe('AI 服务商预设', () => {
   it('三个预设地址都能被识别（忽略尾斜杠与大小写）', () => {
@@ -60,6 +65,90 @@ describe('推理强度（reasoning_effort）适用范围', () => {
   })
   it('Hive 不支持', () => {
     expect(modelSupportsReasoningEffort('hive', 'deepseek-ai/deepseek-v4.1-flash-1017')).toBe(false)
+  })
+})
+
+describe('各服务商的 Key 分开记', () => {
+  const hive = AI_PROVIDERS.find(p => p.id === 'hive')!
+  const openai = AI_PROVIDERS.find(p => p.id === 'openai')!
+  const deepseek = AI_PROVIDERS.find(p => p.id === 'deepseek')!
+
+  it('切换服务商：旧 Key 存到旧家名下，新家存过的 Key 取出来', () => {
+    const current: AISettings = {
+      baseUrl: hive.baseUrl,
+      apiKey: 'sk-hive-1',
+      model: hive.models[0].id,
+      apiKeys: { openai: 'sk-openai-1' },
+    }
+    const next = switchProviderSettings(current, openai)
+    expect(next.baseUrl).toBe(openai.baseUrl)
+    expect(next.apiKey).toBe('sk-openai-1')
+    expect(next.apiKeys?.hive).toBe('sk-hive-1')
+    expect(next.apiKeys?.openai).toBe('sk-openai-1')
+  })
+  it('新服务商没填过 Key：密钥框为空，旧 Key 仍存着', () => {
+    const current: AISettings = {
+      baseUrl: hive.baseUrl,
+      apiKey: 'sk-hive-1',
+      model: hive.models[0].id,
+    }
+    const next = switchProviderSettings(current, deepseek)
+    expect(next.apiKey).toBe('')
+    expect(next.apiKeys?.hive).toBe('sk-hive-1')
+  })
+  it('切回来：之前存的 Key 还在', () => {
+    const start: AISettings = {
+      baseUrl: hive.baseUrl,
+      apiKey: 'sk-hive-1',
+      model: hive.models[0].id,
+      apiKeys: { openai: 'sk-openai-1' },
+    }
+    const toOpenai = switchProviderSettings(start, openai)
+    const back = switchProviderSettings(toOpenai, hive)
+    expect(back.apiKey).toBe('sk-hive-1')
+    expect(back.apiKeys?.openai).toBe('sk-openai-1')
+  })
+  it('当前模型在新服务商列表里就保留，否则换成它的第一个模型', () => {
+    const current: AISettings = {
+      baseUrl: hive.baseUrl,
+      apiKey: '',
+      model: hive.models[0].id,
+    }
+    expect(switchProviderSettings(current, openai).model).toBe('gpt-6.1-sol')
+    const custom: AISettings = { baseUrl: openai.baseUrl, apiKey: '', model: 'my-model' }
+    expect(switchProviderSettings(custom, hive).model).toBe('deepseek-ai/deepseek-v4.1-flash-1017')
+  })
+  it('地址取服务商 id：已知地址返回 id，手动改过的地址归 custom', () => {
+    expect(getProviderIdForBaseUrl('https://api.openai.com/v1')).toBe('openai')
+    expect(getProviderIdForBaseUrl('https://api-cdn.thehive.ai/api/v3')).toBe('hive')
+    expect(getProviderIdForBaseUrl('https://example.com/v1')).toBe('custom')
+    expect(getProviderIdForBaseUrl('')).toBe('custom')
+  })
+
+  describe('保存与读取（localStorage）', () => {
+    beforeEach(() => localStorage.clear())
+    it('保存时当前 Key 写回当前服务商名下，读出来各家都在', () => {
+      saveAISettings({
+        baseUrl: hive.baseUrl,
+        apiKey: 'sk-hive-1',
+        model: hive.models[0].id,
+        apiKeys: { openai: 'sk-openai-1' },
+      })
+      const loaded = getAISettings()
+      expect(loaded.apiKey).toBe('sk-hive-1')
+      expect(loaded.apiKeys?.hive).toBe('sk-hive-1')
+      expect(loaded.apiKeys?.openai).toBe('sk-openai-1')
+    })
+    it('兼容旧版：只有单个 Key、没有分服务商 map 时，Key 记到当前服务商名下', () => {
+      localStorage.setItem('myielts_ai_settings_v1', JSON.stringify({
+        baseUrl: openai.baseUrl,
+        apiKey: 'sk-openai-old',
+        model: 'gpt-6.1-sol',
+      }))
+      const loaded = getAISettings()
+      expect(loaded.apiKey).toBe('sk-openai-old')
+      expect(loaded.apiKeys?.openai).toBe('sk-openai-old')
+    })
   })
 })
 

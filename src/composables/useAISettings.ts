@@ -11,6 +11,8 @@ export interface AISettings {
   model: string // 如 deepseek-ai/deepseek-v4.1-flash-1017
   /** 推理强度（低/中/高）：仅 DeepSeek 与 OpenAI 推理模型有效，其余模型忽略 */
   reasoningEffort?: 'low' | 'medium' | 'high'
+  /** 各服务商的 Key（按服务商 id 存）：切换服务商时密钥框跟着换，没填过就是空 */
+  apiKeys?: Record<string, string>
 }
 const KEY = 'myielts_ai_settings_v1'
 const DEFAULTS: AISettings = {
@@ -85,6 +87,25 @@ export function getProviderForBaseUrl(baseUrl: string): AIProvider | null {
   const normalized = baseUrl.trim().replace(/\/+$/, '').toLowerCase()
   return AI_PROVIDERS.find(p => p.baseUrl.toLowerCase() === normalized) ?? null
 }
+/** 根据 API 地址取服务商 id（手动改过的地址归为 'custom'，与预设共用一个 Key 槽）。 */
+export function getProviderIdForBaseUrl(baseUrl: string): string {
+  return getProviderForBaseUrl(baseUrl)?.id ?? 'custom'
+}
+/** 切服务商：先把当前 Key 存到旧服务商名下，再把新服务商存过的 Key（没填过就是空）取出来；
+ *  当前模型在新服务商列表里就保留，否则换成它的第一个模型。 */
+export function switchProviderSettings(current: AISettings, provider: AIProvider): AISettings {
+  const apiKeys = { ...(current.apiKeys ?? {}) }
+  apiKeys[getProviderIdForBaseUrl(current.baseUrl)] = current.apiKey.trim()
+  return {
+    ...current,
+    apiKeys,
+    baseUrl: provider.baseUrl,
+    apiKey: apiKeys[provider.id] ?? '',
+    model: provider.models.some(m => m.id === current.model.trim())
+      ? current.model.trim()
+      : provider.models[0].id,
+  }
+}
 /** 找到某个服务商下某个模型的档位信息（自定义模型返回 null）。 */
 export function getModelOption(providerId: string, modelId: string): AIModelOption | null {
   const provider = AI_PROVIDERS.find(p => p.id === providerId)
@@ -101,8 +122,13 @@ export function modelSupportsReasoningEffort(providerId: string, modelId: string
 export function getAISettings(): AISettings {
   try {
     const raw = localStorage.getItem(KEY)
-    if (raw)
-      return { ...DEFAULTS, ...JSON.parse(raw) }
+    if (raw) {
+      const parsed: AISettings = { ...DEFAULTS, ...JSON.parse(raw) }
+      // 兼容旧版：只有单个 Key、没有分服务商的 map 时，把现有 Key 记到当前服务商名下
+      if (!parsed.apiKeys && parsed.apiKey.trim())
+        parsed.apiKeys = { [getProviderIdForBaseUrl(parsed.baseUrl)]: parsed.apiKey.trim() }
+      return parsed
+    }
   }
   catch {
     /* 忽略 */
@@ -110,7 +136,10 @@ export function getAISettings(): AISettings {
   return { ...DEFAULTS }
 }
 export function saveAISettings(s: AISettings) {
-  localStorage.setItem(KEY, JSON.stringify(s))
+  // 保存时把当前 Key 写回当前服务商名下（切换服务商时取的就是这里）
+  const apiKeys = { ...(s.apiKeys ?? {}) }
+  apiKeys[getProviderIdForBaseUrl(s.baseUrl)] = s.apiKey.trim()
+  localStorage.setItem(KEY, JSON.stringify({ ...s, apiKeys }))
 }
 export function hasAISettings(): boolean {
   const s = getAISettings()
