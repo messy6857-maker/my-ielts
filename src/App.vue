@@ -127,5 +127,6 @@ watch(storageFailures, () => {
     </div>
   </div>
 
+  <PageBookmark />
   <TheFooter />
 </template>

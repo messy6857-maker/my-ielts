@@ -10,6 +10,7 @@ declare module 'vue' {
     ImageViewer: typeof import('./src/components/ImageViewer.vue')['default']
     KeywordFlashcard: typeof import('./src/components/KeywordFlashcard.vue')['default']
     ListeningTabs: typeof import('./src/components/ListeningTabs.vue')['default']
+    PageBookmark: typeof import('./src/components/PageBookmark.vue')['default']
     ReadingTabs: typeof import('./src/components/ReadingTabs.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
