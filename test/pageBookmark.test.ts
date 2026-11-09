@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mount } from '@vue/test-utils'
+import { createMemoryHistory, createRouter } from 'vue-router'
+import PageBookmark from '../src/components/PageBookmark.vue'
 import {
   addPageBookmark,
   getPageBookmarks,
@@ -65,5 +68,58 @@ describe('页面位置书签（多个）', () => {
     const list = getPageBookmarks('/reading/daily')
     expect(list).toHaveLength(1)
     expect(list[0].y).toBe(1200)
+  })
+})
+
+describe('回到顶部按钮（与书签同一列右下角）', () => {
+  async function mountBookmark() {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', component: PageBookmark }],
+    })
+    await router.push('/')
+    await router.isReady()
+    const w = mount(PageBookmark, { global: { plugins: [router] } })
+    return w
+  }
+  function setScrollY(y: number) {
+    Object.defineProperty(window, 'scrollY', { value: y, configurable: true })
+    window.dispatchEvent(new Event('scroll'))
+  }
+
+  it('滚过 300px 才出现，没滚到不出现', async () => {
+    const w = mountBookmark()
+    const wrapper = await w
+    expect(wrapper.find('[aria-label="回到顶部"]').exists()).toBe(false)
+    setScrollY(500)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[aria-label="回到顶部"]').exists()).toBe(true)
+    setScrollY(100)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('[aria-label="回到顶部"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('点一下立刻回顶（不用动画），与书签跳转一致', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    const wrapper = await mountBookmark()
+    setScrollY(800)
+    await wrapper.vm.$nextTick()
+    await wrapper.find('[aria-label="回到顶部"]').trigger('click')
+    expect(scrollTo).toHaveBeenCalledWith({ top: 0, behavior: 'instant' })
+    scrollTo.mockRestore()
+    wrapper.unmount()
+  })
+
+  it('按钮在书签列的最下面（右下角），书签增减不影响它的位置', async () => {
+    const wrapper = await mountBookmark()
+    setScrollY(800)
+    await wrapper.vm.$nextTick()
+    addPageBookmark('/', 1200)
+    await wrapper.vm.$nextTick()
+    const buttons = wrapper.findAll('button')
+    const last = buttons[buttons.length - 1]
+    expect(last.attributes('aria-label')).toBe('回到顶部')
+    wrapper.unmount()
   })
 })

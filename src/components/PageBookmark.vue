@@ -31,6 +31,22 @@ function bookmarkPercent(y: number): number {
     return 0
   return Math.min(100, Math.max(0, Math.round((y / max) * 100)))
 }
+// 回到顶部：滚过 300px 才出现，点一下立刻回顶（跟书签跳转一样不用动画）
+// 按钮放在同一列的最下面（即右下角），书签增减时整列自适应上下移动。
+const showBackToTop = ref(false)
+function updateBackToTop() {
+  showBackToTop.value = window.scrollY > 300
+}
+function backToTop() {
+  window.scrollTo({ top: 0, behavior: 'instant' })
+}
+onMounted(() => {
+  updateBackToTop()
+  window.addEventListener('scroll', updateBackToTop, { passive: true })
+})
+onUnmounted(() => {
+  window.removeEventListener('scroll', updateBackToTop)
+})
 function onAdd() {
   addPageBookmark(path.value, window.scrollY)
 }
@@ -81,6 +97,16 @@ function onRemove(id: string) {
       @click="onAdd"
     >
       ＋ 书签
+    </button>
+    <button
+      v-if="showBackToTop"
+      type="button"
+      class="flex items-center gap-1 border border-gray-200 rounded-full bg-white/90 px-4 py-2.5 text-sm font-medium text-gray-600 shadow-lg backdrop-blur transition-colors dark:border-gray-600 hover:border-blue-400 dark:bg-gray-800/90 dark:text-gray-300 hover:text-blue-700 dark:hover:border-blue-500 dark:hover:text-blue-300"
+      title="回到页面顶部"
+      aria-label="回到顶部"
+      @click="backToTop"
+    >
+      ↑ 顶部
     </button>
   </div>
 </template>
