@@ -304,6 +304,8 @@ function toggleSynMeaning(syn: string) {
 const showAnswer = ref(false)
 // 自评前例句巧记：拆词答案的显示开关（每张卡重置）
 const showPreAnswer = ref(false)
+// 自评前例句巧记：默认隐藏，点一下才显示（每张卡重置）
+const showPreMnemonic = ref(false)
 const studyLapses = computed(() => {
   if (!studying.value)
     return 0
@@ -429,6 +431,7 @@ function buildQueue() {
   studying.value = null
   lastGrade.value = null
   wordInfo.value = null
+  showPreMnemonic.value = false
   if (queue.value.length > 0)
     playAudio(queue.value[0].word)
 }
@@ -576,6 +579,7 @@ function goBackOne() {
   lastGrade.value = null
   showAnswer.value = false
   showPreAnswer.value = false
+  showPreMnemonic.value = false
   showMnemonic.value = false
   playAudio(card.word, card.chapter)
 }
@@ -596,6 +600,7 @@ function next() {
   lastGrade.value = null
   showAnswer.value = false
   showPreAnswer.value = false
+  showPreMnemonic.value = false
   if (queue.value.length === 0)
     finishSession()
   else playAudio(queue.value[0].word)
@@ -1073,92 +1078,100 @@ onUnmounted(() => {
             "
             class="my-5 border border-sky-200 rounded-xl bg-sky-50 p-4 text-left dark:border-sky-800 dark:bg-sky-900/20"
           >
-            <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">
+            <button
+              class="mb-2 w-full flex items-center gap-1 text-sm font-bold text-sky-700 dark:text-sky-300"
+              @click="showPreMnemonic = !showPreMnemonic"
+            >
               💡 例句巧记
-            </div>
-            <!-- 拆词：先只给词块，答案（词义）点一下才显示 -->
-            <template v-if="preMnemonic && preMnemonic.kind === 'parts'">
+              <span class="font-normal">
+                {{ showPreMnemonic ? '（收起）' : '（点我查看）' }}
+              </span>
+            </button>
+            <template v-if="showPreMnemonic">
+              <!-- 拆词：先只给词块，答案（词义）点一下才显示 -->
+              <template v-if="preMnemonic && preMnemonic.kind === 'parts'">
+                <p
+                  class="mb-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+                >
+                  🧠 拆词：{{
+                    (preMnemonic.parts ?? [])
+                      .map((p) => `${p.text}（${p.gloss}）`)
+                      .join(" + ")
+                  }}
+                  <button
+                    v-if="!showPreAnswer"
+                    class="ml-1 text-xs text-sky-600 underline underline-offset-2 dark:text-sky-400"
+                    @click="showPreAnswer = true"
+                  >
+                    点击显示答案
+                  </button>
+                  <span v-else class="font-bold text-sky-700 dark:text-sky-300">
+                    → 也就是「{{ current.meaning }}」
+                  </span>
+                </p>
+              </template>
               <p
+                v-else-if="preMnemonic"
                 class="mb-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300"
               >
-                🧠 拆词：{{
-                  (preMnemonic.parts ?? [])
-                    .map((p) => `${p.text}（${p.gloss}）`)
-                    .join(" + ")
-                }}
-                <button
-                  v-if="!showPreAnswer"
-                  class="ml-1 text-xs text-sky-600 underline underline-offset-2 dark:text-sky-400"
-                  @click="showPreAnswer = true"
-                >
-                  点击显示答案
-                </button>
-                <span v-else class="font-bold text-sky-700 dark:text-sky-300">
-                  → 也就是「{{ current.meaning }}」
-                </span>
+                🧠 {{ preMnemonic.body }}
               </p>
-            </template>
-            <p
-              v-else-if="preMnemonic"
-              class="mb-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300"
-            >
-              🧠 {{ preMnemonic.body }}
-            </p>
-            <div v-if="wordInfo && wordInfo.examples.length > 0">
-              <p
-                v-for="(ex, i) in wordInfo.examples.slice(0, 2)"
-                :key="i"
-                class="mb-1 text-sm leading-relaxed italic text-gray-600 dark:text-gray-400"
-              >
-                🔗 “{{ ex }}”
-                <span
-                  v-if="wordInfo.word !== current.word.toLowerCase()"
-                  class="text-xs not-italic text-gray-400"
-                >（{{ wordInfo.word }} 的例句）</span>
-              </p>
-            </div>
-            <p
-              v-else-if="current.example"
-              class="text-sm leading-relaxed italic text-gray-600 dark:text-gray-400"
-            >
-              🔗 “{{ current.example }}”
-            </p>
-            <div v-if="wordInfo && wordInfo.synonyms.length > 0" class="mt-2">
-              <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">
-                同义词（点词看意思）：
-              </p>
-              <ul class="space-y-1.5">
-                <li
-                  v-for="(syn, i) in wordInfo.synonyms.slice(0, 8)"
+              <div v-if="wordInfo && wordInfo.examples.length > 0">
+                <p
+                  v-for="(ex, i) in wordInfo.examples.slice(0, 2)"
                   :key="i"
-                  class="text-sm"
+                  class="mb-1 text-sm leading-relaxed italic text-gray-600 dark:text-gray-400"
                 >
+                  🔗 “{{ ex }}”
                   <span
-                    class="mr-1.5 inline-block h-2 w-2 rounded-full"
-                    :class="extraDots[i % extraDots.length]"
-                  />
-                  <button
-                    class="font-bold underline underline-offset-2 decoration-dotted"
-                    :class="extraColors[i % extraColors.length]"
-                    @click="toggleSynMeaning(syn)"
+                    v-if="wordInfo.word !== current.word.toLowerCase()"
+                    class="text-xs not-italic text-gray-400"
+                  >（{{ wordInfo.word }} 的例句）</span>
+                </p>
+              </div>
+              <p
+                v-else-if="current.example"
+                class="text-sm leading-relaxed italic text-gray-600 dark:text-gray-400"
+              >
+                🔗 “{{ current.example }}”
+              </p>
+              <div v-if="wordInfo && wordInfo.synonyms.length > 0" class="mt-2">
+                <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">
+                  同义词（点词看意思）：
+                </p>
+                <ul class="space-y-1.5">
+                  <li
+                    v-for="(syn, i) in wordInfo.synonyms.slice(0, 8)"
+                    :key="i"
+                    class="text-sm"
                   >
-                    {{ syn }}
-                  </button>
-                  <span
-                    v-if="synonymPos(syn)"
-                    class="ml-1 italic text-gray-500 dark:text-gray-400"
-                    style="font-family: times"
-                  >{{ synonymPos(syn) }}</span>
-                  <span
-                    v-if="
-                      expandedSyns.includes(syn.trim().toLowerCase())
-                        && synonymMeaning(syn)
-                    "
-                    class="ml-2 text-gray-600 dark:text-gray-400"
-                  >{{ synonymMeaning(syn) }}</span>
-                </li>
-              </ul>
-            </div>
+                    <span
+                      class="mr-1.5 inline-block h-2 w-2 rounded-full"
+                      :class="extraDots[i % extraDots.length]"
+                    />
+                    <button
+                      class="font-bold underline underline-offset-2 decoration-dotted"
+                      :class="extraColors[i % extraColors.length]"
+                      @click="toggleSynMeaning(syn)"
+                    >
+                      {{ syn }}
+                    </button>
+                    <span
+                      v-if="synonymPos(syn)"
+                      class="ml-1 italic text-gray-500 dark:text-gray-400"
+                      style="font-family: times"
+                    >{{ synonymPos(syn) }}</span>
+                    <span
+                      v-if="
+                        expandedSyns.includes(syn.trim().toLowerCase())
+                          && synonymMeaning(syn)
+                      "
+                      class="ml-2 text-gray-600 dark:text-gray-400"
+                    >{{ synonymMeaning(syn) }}</span>
+                  </li>
+                </ul>
+              </div>
+            </template>
           </div>
 
           <p class="mb-6 mt-4 text-sm text-gray-400">
