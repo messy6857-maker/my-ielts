@@ -1,0 +1,1 @@
+import{W as o}from"./index-92fea970.js";function g(e,t,r,a=t[0]??""){const n=localStorage.getItem(o(e,r)),l=localStorage.getItem(e),c=n??l;return t.includes(c??"")?c:a}function u(e,t,r){try{localStorage.setItem(o(e,r),t)}catch{}}export{g as r,u as w};
