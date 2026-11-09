@@ -6,6 +6,8 @@ import { useAuth } from '../../composables/useAuth'
 import { getToken } from '../../composables/syncClient'
 import { SYNC_API_BASE } from '../../sync-config'
 import { wordPhonetics } from '../vocabulary/wordPhonetics'
+import { lookupVocabularyMeaning } from '../vocabulary/loadVocabulary'
+import { translateWithAI } from '../../composables/useAISettings'
 import { stopAllAudio } from '../../composables/useSingleAudio'
 import indexData from './daily/index.json'
 
@@ -276,6 +278,226 @@ function speak(word: string) {
   }
 }
 
+// 点词查义 / 选中翻译：底部翻译弹窗
+interface TranslatePopupState {
+  source: string
+  kind: 'word' | 'selection'
+  phonetic: string
+  pos: string
+  meaning: string
+  loading: boolean
+  error: string
+  showTranslateButton: boolean
+}
+const translatePopup = ref<TranslatePopupState | null>(null)
+let translateSeq = 0
+let translateAbort: AbortController | null = null
+
+function closeTranslatePopup() {
+  translateSeq++
+  translateAbort?.abort()
+  translateAbort = null
+  translatePopup.value = null
+  const sel = window.getSelection()
+  if (sel)
+    sel.removeAllRanges()
+}
+
+/** “翻译成中文”按钮：走 AI，失败时留按钮可重试（选中句子和单词 AI 重试共用）。 */
+async function runAITranslate() {
+  const popup = translatePopup.value
+  if (!popup)
+    return
+  const seq = ++translateSeq
+  translateAbort?.abort()
+  translateAbort = new AbortController()
+  popup.loading = true
+  popup.error = ''
+  popup.showTranslateButton = false
+  try {
+    const result = await translateWithAI(popup.source, translateAbort.signal)
+    if (seq !== translateSeq)
+      return
+    popup.meaning = result
+    popup.loading = false
+  }
+  catch (e) {
+    if (seq !== translateSeq)
+      return
+    popup.loading = false
+    popup.error = e instanceof Error ? e.message : '翻译失败，请重试'
+    popup.showTranslateButton = true
+  }
+}
+
+/** 点词查义：文章注释 → 本站词库 → AI（自动走，不用再点）。 */
+async function openWordPopup(word: string, notes: WordNote[]) {
+  const seq = ++translateSeq
+  translateAbort?.abort()
+  translateAbort = new AbortController()
+  const lower = word.toLowerCase()
+  const popup: TranslatePopupState = {
+    source: word,
+    kind: 'word',
+    phonetic: phoneticOf(word),
+    pos: '',
+    meaning: '',
+    loading: true,
+    error: '',
+    showTranslateButton: false,
+  }
+  translatePopup.value = popup
+  // 1. 文章注释（最贴合本文）
+  const note = notes.find(n => n.word.toLowerCase().trim() === lower)
+  if (note) {
+    if (seq !== translateSeq)
+      return
+    popup.pos = note.pos
+    popup.meaning = note.meaning
+    popup.loading = false
+    return
+  }
+  // 2. 本站词库（免费、即时；首次查词时懒加载全部章节建索引）
+  try {
+    const vocab = await lookupVocabularyMeaning(word)
+    if (seq !== translateSeq)
+      return
+    if (vocab) {
+      popup.pos = vocab.pos
+      popup.meaning = vocab.meaning
+      popup.loading = false
+      return
+    }
+  }
+  catch {
+    // 词库加载失败不阻塞，继续走 AI
+  }
+  // 3. AI 翻译（词库没有的词）
+  if (seq !== translateSeq)
+    return
+  try {
+    const result = await translateWithAI(word, translateAbort.signal)
+    if (seq !== translateSeq)
+      return
+    popup.meaning = result
+    popup.loading = false
+  }
+  catch (e) {
+    if (seq !== translateSeq)
+      return
+    popup.loading = false
+    popup.error = e instanceof Error ? e.message : '翻译失败，请重试'
+    popup.showTranslateButton = true
+  }
+}
+
+function openSelectionPopup(text: string) {
+  const trimmed = text.trim().replace(/\s+/g, ' ')
+  if (!trimmed)
+    return
+  translateSeq++
+  translateAbort?.abort()
+  translateAbort = null
+  translatePopup.value = {
+    source: trimmed.length > 2000 ? trimmed.slice(0, 2000) : trimmed,
+    kind: 'selection',
+    phonetic: '',
+    pos: '',
+    meaning: '',
+    loading: false,
+    error: '',
+    showTranslateButton: true,
+  }
+}
+
+/** 点中单词：用点击坐标找所在单词（不改 TextHighlights，不影响模考阅读页）。 */
+function wordAtPoint(x: number, y: number): string | null {
+  const doc = document as Document & {
+    caretRangeFromPoint?: (x: number, y: number) => Range | null
+  }
+  const range = doc.caretRangeFromPoint?.(x, y)
+  if (!range)
+    return null
+  const node = range.startContainer
+  if (node.nodeType !== Node.TEXT_NODE)
+    return null
+  const text = node.textContent ?? ''
+  const offset = range.startOffset
+  const isLetter = (i: number) => i >= 0 && i < text.length && /[A-Za-z]/.test(text[i])
+  // 点在字母上才算点中单词（点在空格/标点上不触发）
+  if (!isLetter(offset) && !isLetter(offset - 1))
+    return null
+  let start = offset
+  while (start > 0 && /[A-Za-z']/.test(text[start - 1])) start--
+  let end = offset
+  while (end < text.length && /[A-Za-z']/.test(text[end])) end++
+  const word = text.slice(start, end).replace(/^'+|'+$/g, '')
+  return /^[A-Za-z]+(?:'[A-Za-z]+)?$/.test(word) ? word : null
+}
+
+function onPassageClick(e: MouseEvent, notes: WordNote[]) {
+  // 有选区时不处理点词（选区走翻译分支）
+  const sel = window.getSelection()
+  if (sel && !sel.isCollapsed)
+    return
+  const word = wordAtPoint(e.clientX, e.clientY)
+  if (!word)
+    return
+  openWordPopup(word, notes)
+}
+
+/** 选区所在文章的注释（双击选词时也要先查文章注释）。 */
+function articleNotesForNode(node: Node | null): WordNote[] {
+  const el = node instanceof Element ? node : node?.parentElement
+  const container = el?.closest?.('[data-article]')
+  const key = container?.getAttribute('data-article') ?? ''
+  if (key === 'vocab')
+    return myVocabReading.value?.notes ?? []
+  if (key.startsWith('news-')) {
+    const idx = Number(key.slice(5))
+    return daily.value?.newsReadings[idx]?.notes ?? []
+  }
+  return []
+}
+
+let selectionTimer: ReturnType<typeof setTimeout> | null = null
+function onSelectionChange() {
+  if (selectionTimer)
+    clearTimeout(selectionTimer)
+  selectionTimer = setTimeout(() => {
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed)
+      return
+    const text = sel.toString().trim()
+    if (text.length < 2 || text.length > 2000)
+      return
+    // 只处理正文选区（不含注释列表/题目）
+    const anchor = sel.anchorNode
+    if (!anchor)
+      return
+    const el = anchor instanceof Element ? anchor : anchor.parentElement
+    if (!el?.closest?.('.passage-text'))
+      return
+    // 单词选区（双击）直接给释义，不用再点翻译
+    if (/^[A-Za-z]+(?:'[A-Za-z]+)?$/.test(text)) {
+      openWordPopup(text, articleNotesForNode(anchor))
+      return
+    }
+    openSelectionPopup(text)
+  }, 400)
+}
+
+onMounted(() => {
+  document.addEventListener('selectionchange', onSelectionChange)
+})
+onUnmounted(() => {
+  document.removeEventListener('selectionchange', onSelectionChange)
+  if (selectionTimer)
+    clearTimeout(selectionTimer)
+  translateSeq++
+  translateAbort?.abort()
+})
+
 function paragraphs(passage: string): string[] {
   return passage
     .split('\n\n')
@@ -353,6 +575,9 @@ function paragraphs(passage: string): string[] {
             <h4 class="mb-3 text-xl font-bold text-gray-900 dark:text-white">
               {{ myVocabReading.title }}
             </h4>
+            <p class="mb-3 text-xs text-gray-400 dark:text-gray-500">
+              💡 点单词查中文意思，选中一句话可以翻译
+            </p>
             <div
               v-if="myVocabReading.basedOn?.length"
               class="mb-4 flex flex-wrap gap-2"
@@ -366,7 +591,9 @@ function paragraphs(passage: string): string[] {
               </span>
             </div>
             <div
-              class="mb-4 leading-relaxed text-gray-700 space-y-4 dark:text-gray-300"
+              class="passage-text mb-4 leading-relaxed text-gray-700 space-y-4 dark:text-gray-300"
+              data-article="vocab"
+              @click="onPassageClick($event, myVocabReading.notes)"
             >
               <p v-for="(p, i) in paragraphs(myVocabReading.passage)" :key="i">
                 <TextHighlights
@@ -541,8 +768,13 @@ function paragraphs(passage: string): string[] {
             <p v-if="art.source" class="mb-3 text-xs text-gray-400">
               来源：{{ art.source }}
             </p>
+            <p class="mb-3 text-xs text-gray-400 dark:text-gray-500">
+              💡 点单词查中文意思，选中一句话可以翻译
+            </p>
             <div
-              class="mb-4 leading-relaxed text-gray-700 space-y-4 dark:text-gray-300"
+              class="passage-text mb-4 leading-relaxed text-gray-700 space-y-4 dark:text-gray-300"
+              :data-article="`news-${ai}`"
+              @click="onPassageClick($event, art.notes)"
             >
               <p v-for="(p, i) in paragraphs(art.passage)" :key="i">
                 <TextHighlights
@@ -657,5 +889,73 @@ function paragraphs(passage: string): string[] {
         {{ item.label }}
       </button>
     </nav>
+
+    <!-- 点词查义 / 选中翻译：底部弹窗 -->
+    <div
+      v-if="translatePopup"
+      class="fixed inset-0 z-50"
+      role="dialog"
+      aria-label="翻译"
+    >
+      <div class="absolute inset-0 bg-black/40" @click="closeTranslatePopup" />
+      <div
+        class="absolute inset-x-0 bottom-0 mx-auto max-h-[70vh] max-w-3xl w-full overflow-y-auto rounded-t-2xl bg-white p-5 shadow-xl dark:bg-gray-800"
+      >
+        <div class="mb-3 flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="break-words text-lg font-bold text-gray-900 dark:text-white">
+              {{ translatePopup.source }}
+            </p>
+            <p v-if="translatePopup.phonetic || translatePopup.pos" class="mt-0.5 text-sm text-gray-400">
+              {{ translatePopup.phonetic }}
+              <span v-if="translatePopup.pos" class="ml-1 italic" style="font-family: times">{{ translatePopup.pos }}</span>
+            </p>
+          </div>
+          <button
+            type="button"
+            class="shrink-0 rounded-full px-2 py-1 text-lg leading-none text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label="关闭"
+            @click="closeTranslatePopup"
+          >
+            ×
+          </button>
+        </div>
+        <div v-if="translatePopup.loading" class="text-sm text-gray-500 dark:text-gray-400" role="status">
+          翻译中…
+        </div>
+        <p v-else-if="translatePopup.meaning" class="text-base leading-relaxed text-gray-800 dark:text-gray-200">
+          {{ translatePopup.meaning }}
+        </p>
+        <div v-else-if="translatePopup.error" class="text-sm text-red-600 dark:text-red-400" role="alert">
+          {{ translatePopup.error }}
+          <router-link
+            v-if="translatePopup.error.includes('设置页')"
+            to="/settings"
+            class="ml-1 underline underline-offset-2"
+          >
+            去设置
+          </router-link>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button
+            v-if="translatePopup.kind === 'word'"
+            type="button"
+            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            @click="speak(translatePopup.source)"
+          >
+            🔊 朗读
+          </button>
+          <button
+            v-if="translatePopup.showTranslateButton"
+            type="button"
+            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            :disabled="translatePopup.loading"
+            @click="runAITranslate"
+          >
+            {{ translatePopup.kind === 'selection' ? '翻译成中文' : 'AI 翻译' }}
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

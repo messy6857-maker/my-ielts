@@ -505,6 +505,26 @@ export async function gradeSpeakingWithAI(
     throw new Error('AI 返回格式异常，请重试')
   return parsed
 }
+/** 英译中：单词给中文意思，词组/句子给整句翻译。只返回中文译文。 */
+export async function translateWithAI(
+  text: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  const settings = getAISettings()
+  if (!hasAISettings())
+    throw new Error('请先在设置页填写 API 地址、Key 和模型')
+  const trimmed = text.trim()
+  if (!trimmed)
+    throw new Error('没有可翻译的内容')
+  if (trimmed.length > 2000)
+    throw new Error('选中的内容太长，请选一句话以内')
+  const system = '你是一个英汉翻译助手。把用户给出的英文翻译成自然、地道的中文。只输出中文译文，不要加解释、不要输出英文原文、不要加拼音。如果输入是单个单词，给出最常用的中文意思（1-2 个，用分号隔开）；如果是词组或句子，给出整句的中文翻译。'
+  const raw = await callChatApi(settings, system, trimmed, signal)
+  const result = raw.trim()
+  if (!result)
+    throw new Error('AI 返回为空，请重试')
+  return result
+}
 // 测试连接：发一个极短请求验证 Key/地址/模型可用
 export async function testAIConnection(
   settings: AISettings = getAISettings(),
