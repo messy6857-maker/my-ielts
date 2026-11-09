@@ -379,7 +379,7 @@ async function openWordPopup(word: string, notes: WordNote[], rect: DOMRect) {
   translateAbort?.abort()
   translateAbort = new AbortController()
   const lower = word.toLowerCase()
-  const popup: TranslatePopupState = {
+  const popup = reactive<TranslatePopupState>({
     source: word,
     kind: 'word',
     phonetic: phoneticOf(word),
@@ -389,7 +389,7 @@ async function openWordPopup(word: string, notes: WordNote[], rect: DOMRect) {
     error: '',
     showTranslateButton: false,
     anchor: rectToAnchor(rect),
-  }
+  })
   translatePopup.value = popup
   nextTick(adjustPopupPosition)
   // 1. 文章注释（最贴合本文）
@@ -460,16 +460,16 @@ function openSelectionPopup(text: string, rect: DOMRect) {
 /** 点中单词：用点击坐标找所在单词，并返回单词的包围盒做卡片锚点。 */
 function wordAtPoint(x: number, y: number): { word: string; rect: DOMRect } | null {
   const doc = document as Document & {
+    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null
     caretRangeFromPoint?: (x: number, y: number) => Range | null
   }
-  const range = doc.caretRangeFromPoint?.(x, y)
-  if (!range)
-    return null
-  const node = range.startContainer
-  if (node.nodeType !== Node.TEXT_NODE)
+  const caret = doc.caretPositionFromPoint?.(x, y)
+  const range = caret ? null : doc.caretRangeFromPoint?.(x, y)
+  const node = caret?.offsetNode ?? range?.startContainer
+  if (!node || node.nodeType !== Node.TEXT_NODE)
     return null
   const text = node.textContent ?? ''
-  const offset = range.startOffset
+  const offset = caret?.offset ?? range!.startOffset
   const isLetter = (i: number) => i >= 0 && i < text.length && /[A-Za-z]/.test(text[i])
   // 点在字母上才算点中单词（点在空格/标点上不触发）
   if (!isLetter(offset) && !isLetter(offset - 1))
@@ -516,6 +516,13 @@ function articleNotesForNode(node: Node | null): WordNote[] {
 }
 
 let selectionTimer: ReturnType<typeof setTimeout> | null = null
+watch([selectedDate, currentUser], () => {
+  if (selectionTimer)
+    clearTimeout(selectionTimer)
+  selectionTimer = null
+  closeTranslatePopup()
+}, { flush: 'sync' })
+
 function onSelectionChange() {
   if (selectionTimer)
     clearTimeout(selectionTimer)
@@ -531,9 +538,10 @@ function onSelectionChange() {
     if (!anchor)
       return
     const el = anchor instanceof Element ? anchor : anchor.parentElement
-    if (!el?.closest?.('.passage-text'))
-      return
+    const passage = el?.closest('.passage-text')
     const range = sel.rangeCount > 0 ? sel.getRangeAt(0) : null
+    if (!passage || !range || !passage.contains(range.commonAncestorContainer))
+      return
     const rect = range?.getBoundingClientRect()
     if (!rect || (rect.width === 0 && rect.height === 0))
       return
@@ -960,7 +968,7 @@ function paragraphs(passage: string): string[] {
       class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2"
       aria-label="书签与阅读目录"
     >
-      <PageBookmark inline />
+      <PageBookmark inline :scope="JSON.stringify([selectedDate, currentUser])" />
       <template v-if="readingIndex.length > 1">
         <button
           v-for="item in readingIndex"

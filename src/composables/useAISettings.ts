@@ -10,7 +10,7 @@ export interface AISettings {
   apiKey: string
   model: string // 如 deepseek-ai/deepseek-v4.1-flash-1017
   /** 推理强度（低/中/高）：仅 DeepSeek 与 OpenAI 推理模型有效，其余模型忽略 */
-  reasoningEffort?: 'low' | 'medium' | 'high'
+  reasoningEffort?: 'low' | 'medium' | 'high' | 'max'
   /** 各服务商的 Key（按服务商 id 存）：切换服务商时密钥框跟着换，没填过就是空 */
   apiKeys?: Record<string, string>
 }
@@ -116,9 +116,15 @@ export function modelSupportsReasoningEffort(providerId: string, modelId: string
   if (providerId === 'deepseek')
     return true
   if (providerId === 'openai')
-    return /^(o\d|gpt-5|gpt-6)/.test(modelId)
+    return /^(?:o\d|gpt-[56](?:[.-]|$))/.test(modelId) && !modelId.includes('-chat-')
   return false
 }
+export function reasoningEffortForProvider(providerId: string, effort: AISettings['reasoningEffort']) {
+  if (providerId === 'deepseek')
+    return effort === 'low' || effort === 'max' ? effort : 'high'
+  return effort === 'low' || effort === 'high' ? effort : effort === 'max' ? 'high' : 'medium'
+}
+
 export function getAISettings(): AISettings {
   try {
     const raw = localStorage.getItem(KEY)
@@ -212,8 +218,7 @@ async function callChatApi(
           { role: 'user', content: user },
         ],
         temperature: 0.3,
-        // 推理强度：后端只对支持 reasoning_effort 的模型转发（DeepSeek 全系、OpenAI o 系列）
-        reasoningEffort: settings.reasoningEffort ?? 'medium',
+        reasoningEffort: reasoningEffortForProvider(getProviderIdForBaseUrl(settings.baseUrl), settings.reasoningEffort),
       }),
     })
     body = await res.json().catch(() => null)

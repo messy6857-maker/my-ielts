@@ -559,7 +559,7 @@ it('restoring a different account’s backup does not import its global AI delet
 it('a failed typing chapter switch keeps the previous chapter on screen', async () => {
   const loader = await import('../src/pages/vocabulary/loadVocabulary')
   const P = (await import('../src/pages/vocabulary/typing.vue')).default
-  const { s } = await page(P)
+  const { s, w } = await page(P)
   await until(() => !s.chapterLoading && s.words.length > 0)
   const firstWord = s.currentWord
   const next = loader.listVocabularyChapters().find(c => c !== s.selectedChapter)!
@@ -568,6 +568,11 @@ it('a failed typing chapter switch keeps the previous chapter on screen', async 
   await until(() => s.chapterError === true)
   expect(s.words.length).toBeGreaterThan(0)
   expect(s.currentWord).toBe(firstWord)
+  expect(w.get('input[autocapitalize=off]').attributes('disabled')).toBeDefined()
+  s.handleInput({ target: { value: firstWord } })
+  expect(s.startTime).toBeNull()
+  await s.loadSelectedChapter()
+  expect(w.get('input[autocapitalize=off]').attributes('disabled')).toBeUndefined()
 })
 
 it('a failed mock mistake save survives a new save instance and retries', async () => {
@@ -607,7 +612,17 @@ it('a dictation answer survives the current sentence dropping out of the pool', 
   expect(s.dictationChecked).toBe(true)
   // 模拟定时重试后当前句被标为 skip：把它从听写池里拿掉。
   const idx = s.currentDictationIdx
+  const originalTimings = s.partTimings
   s.partTimings = s.partTimings.map((t: any, i: number) => (i === idx ? [t[0], t[1], 'skip'] : t))
   await until(() => s.dictationChecked === false)
+  expect(s.currentDictationIdx).not.toBe(idx)
+  expect(s.displacedDrafts).toEqual([[idx, 'some typed answer']])
+  expect(s.dictationInput).toBe('')
+  s.checkDictation()
+  expect(s.dictationChecked).toBe(false)
+  s.partTimings = originalTimings
+  await nextTick()
+  s.prevDictationSentence()
+  expect(s.currentDictationIdx).toBe(idx)
   expect(s.dictationInput).toBe('some typed answer')
 })

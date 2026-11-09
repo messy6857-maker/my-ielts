@@ -3,12 +3,13 @@ import {
   addPageBookmark,
   getPageBookmarks,
   jumpToPageBookmark,
+  readingBookmarkAnchor,
   removePageBookmark,
 } from '../composables/usePageBookmark'
 
 // inline：嵌进每日阅读页的阅读索引里（直接当它的 flex 孩子，贴着阅读 1/2/3，
 // 有几个 pill 就自适应顶上去）；不 inline 时是全站右下角的固定按钮。
-const props = withDefaults(defineProps<{ inline?: boolean }>(), { inline: false })
+const props = withDefaults(defineProps<{ inline?: boolean; scope?: string }>(), { inline: false })
 const route = useRoute()
 const path = computed(() => route.path)
 // 模考页不显示：考试页右下角已有“原文”按钮，且考试时不需要书签
@@ -22,7 +23,16 @@ const visible = computed(() => {
   return path.value !== '/reading/daily'
 })
 // 按位置从上到下排，书签 1 在最上面
-const bookmarks = computed(() => getPageBookmarks(path.value))
+const scopedPath = computed(() => props.scope ? `${path.value}:${props.scope}` : path.value)
+const showLegacy = ref(false)
+const hasLegacy = computed(() => !!props.scope && getPageBookmarks(path.value).length > 0)
+const bookmarkPath = computed(() => showLegacy.value && hasLegacy.value ? path.value : scopedPath.value)
+const bookmarks = computed(() => getPageBookmarks(bookmarkPath.value))
+const jumpFailed = ref(false)
+watch(scopedPath, () => {
+  showLegacy.value = false
+  jumpFailed.value = false
+})
 
 /** 该书签在页面里的进度（方便区分几个书签都在哪） */
 function bookmarkPercent(y: number): number {
@@ -48,13 +58,16 @@ onUnmounted(() => {
   window.removeEventListener('scroll', updateBackToTop)
 })
 function onAdd() {
-  addPageBookmark(path.value, window.scrollY)
+  showLegacy.value = false
+  jumpFailed.value = false
+  addPageBookmark(scopedPath.value, window.scrollY, props.scope ? readingBookmarkAnchor() : undefined)
 }
 function onJump(id: string) {
-  jumpToPageBookmark(path.value, id)
+  jumpFailed.value = !jumpToPageBookmark(bookmarkPath.value, id)
 }
 function onRemove(id: string) {
-  removePageBookmark(path.value, id)
+  jumpFailed.value = false
+  removePageBookmark(bookmarkPath.value, id)
 }
 </script>
 
@@ -65,6 +78,18 @@ function onRemove(id: string) {
       ? 'flex flex-col items-end gap-2'
       : 'fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2'"
   >
+    <p v-if="jumpFailed" role="status" class="rounded bg-white px-2 py-1 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+      当前文章未加载或原段落已变更
+    </p>
+    <button
+      v-if="hasLegacy"
+      type="button"
+      class="rounded bg-white px-2 py-1 text-xs text-gray-600 shadow dark:bg-gray-800 dark:text-gray-300"
+      :aria-expanded="showLegacy"
+      @click="showLegacy = !showLegacy; jumpFailed = false"
+    >
+      {{ showLegacy ? '返回当前日期书签' : '查看旧书签（日期未知）' }}
+    </button>
     <div
       v-for="(bm, i) in bookmarks"
       :key="bm.id"

@@ -386,7 +386,8 @@ async function loadTranscript() {
 
 // —— 听写模式 ——
 const dictationIndex = ref(0)
-const dictationInput = ref('')
+const dictationDrafts = reactive(new Map<number, string>())
+let stableDictationPool: number[] = []
 const dictationTokens = ref<DiffToken[] | null>(null)
 const dictationChecked = ref(false)
 const dictationPerfect = ref(false)
@@ -421,6 +422,29 @@ const currentDictationEntry = computed(() => {
   return i >= 0 ? sentenceEntries.value[i] : null
 })
 
+const dictationInput = computed({
+  get: () => dictationDrafts.get(currentDictationIdx.value) ?? '',
+  set: (value: string) => {
+    const id = currentDictationIdx.value
+    if (id < 0)
+      return
+    if (value)
+      dictationDrafts.set(id, value)
+    else
+      dictationDrafts.delete(id)
+  },
+})
+const displacedDrafts = computed(() =>
+  [...dictationDrafts].filter(([id]) => !dictatableIndexes.value.includes(id)),
+)
+
+watch([selectedTest, selectedPart, currentUser], () => {
+  dictationDrafts.clear()
+  stableDictationPool = []
+  dictationSaveFailed.value = false
+  resetDictationUi()
+}, { flush: 'sync' })
+
 function refreshPartSummary() {
   const progress = getDictationPartProgress(
     currentUser.value,
@@ -430,9 +454,7 @@ function refreshPartSummary() {
   partSummary.value = summarizeDictationPart(progress)
 }
 
-function resetDictationUi(keepInput = false) {
-  if (!keepInput)
-    dictationInput.value = ''
+function resetDictationUi() {
   dictationTokens.value = null
   dictationChecked.value = false
   dictationPerfect.value = false
@@ -465,7 +487,7 @@ function checkDictation() {
   const entry = currentDictationEntry.value
   // A-11: empty input must not count as a failed attempt. The button is
   // already disabled when empty; this guard closes the Ctrl+Enter path.
-  if (!entry || timingsLoading.value || dictationChecked.value || !dictationInput.value.trim())
+  if (!entry || loading.value || timingsLoading.value || dictationChecked.value || !dictationInput.value.trim())
     return
   const expected = entry.text
   const result = diffDictation(expected, dictationInput.value)
@@ -539,6 +561,8 @@ function nextDictationSentence() {
   const pool = dictatableIndexes.value
   if (!pool.length)
     return
+  if (dictationChecked.value)
+    dictationDrafts.delete(currentDictationIdx.value)
   if (dictationIndex.value < pool.length - 1)
     dictationIndex.value += 1
   else
@@ -565,6 +589,8 @@ function prevDictationSentence() {
   const pool = dictatableIndexes.value
   if (!pool.length)
     return
+  if (dictationChecked.value)
+    dictationDrafts.delete(currentDictationIdx.value)
   dictationIndex.value
     = dictationIndex.value > 0 ? dictationIndex.value - 1 : pool.length - 1
   const progress = getDictationPartProgress(
@@ -616,22 +642,22 @@ watch(
   },
 )
 
-watch(dictatableIndexes, (indexes, previous) => {
-  if (mode.value !== 'dictation' || timingsLoading.value || loading.value)
+watch([dictatableIndexes, timingsLoading, loading, mode, currentUser], ([indexes, loadingTimes, loadingText, activeMode]) => {
+  if (activeMode !== 'dictation' || loadingTimes || loadingText)
     return
-  if (dictationInput.value || dictationChecked.value) {
-    const index = indexes.indexOf(previous[dictationIndex.value])
+  const previous = stableDictationPool
+  stableDictationPool = indexes
+  const position = dictationIndex.value
+  const former = previous[Math.min(position, previous.length - 1)]
+  if (former !== undefined) {
+    const index = indexes.indexOf(former)
     if (index >= 0) {
       dictationIndex.value = index
       return
     }
-    // 当前句掉出听写池（如定时重试后被标为 skip）：已输入的答案保留，
-    // 只清掉针对旧句的批改结果，光标移到最近的可听写句。
-    dictationIndex.value = indexes.length > 0
-      ? Math.min(dictationIndex.value, indexes.length - 1)
-      : 0
-    refreshPartSummary()
-    resetDictationUi(true)
+    dictationIndex.value = Math.max(0, Math.min(position, indexes.length - 1))
+    resetDictationUi()
+    stopSentence()
     return
   }
   loadDictationCursor()
@@ -810,6 +836,13 @@ const testLabel = computed(
       <p v-if="dictationSaveFailed" class="mb-2 text-xs text-red-600">
         进度保存失败，本次练习记录未落盘，请稍后重试
       </p>
+
+      <details v-if="displacedDrafts.length" class="mb-3 text-sm text-amber-700 dark:text-amber-300">
+        <summary>原句已退出听写范围，原作答已保留</summary>
+        <p v-for="[id, text] in displacedDrafts" :key="id" class="mt-1 whitespace-pre-wrap break-words">
+          第 {{ id + 1 }} 句：{{ text }}
+        </p>
+      </details>
 
       <div v-if="loading" class="text-sm text-gray-500">
         加载中…

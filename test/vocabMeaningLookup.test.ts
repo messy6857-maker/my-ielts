@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   deinflect,
   lookupVocabularyMeaning,
@@ -53,4 +53,19 @@ describe('lookupVocabularyMeaning', () => {
     await expect(lookupVocabularyMeaning('')).resolves.toBeNull()
     await expect(lookupVocabularyMeaning('  ')).resolves.toBeNull()
   })
+})
+
+it('retries after a chapter loader fails instead of caching an empty dictionary', async () => {
+  vi.resetModules()
+  vi.doMock('../src/pages/vocabulary/chapters/01_自然地理.json', () => {
+    throw new Error('chapter load failed')
+  })
+  const { lookupVocabularyMeaning: lookup } = await import('../src/pages/vocabulary/loadVocabulary')
+  try {
+    await expect(lookup('atmosphere')).rejects.toThrow()
+  }
+  finally {
+    vi.doUnmock('../src/pages/vocabulary/chapters/01_自然地理.json')
+  }
+  await expect(lookup('atmosphere')).resolves.toMatchObject({ pos: 'n.' })
 })

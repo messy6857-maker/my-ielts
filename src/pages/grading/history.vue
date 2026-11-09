@@ -100,7 +100,7 @@ function rewrittenParagraphs(text: string): string[] {
       </h2>
     </div>
     <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">
-      本账号的 AI 作文批改与口语评分历史（按时间倒序）。旧版批改永久保留，仅新版写作保留最近 30 份。
+      本账号的 AI 作文批改与口语评分历史（按时间倒序）。旧版写作和口语评分保留现有记录。新版写作保留最近 30 份，最多占用 1 MiB。
     </p>
 
     <div

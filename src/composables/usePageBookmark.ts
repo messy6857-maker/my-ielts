@@ -6,11 +6,18 @@ const KEY = 'myielts_page_bookmarks_v1'
 /** 同一位置重复点“＋ 书签”时，50px 内视为同一个，不重复加 */
 const DEDUP_PX = 50
 
+interface BookmarkAnchor {
+  article: string
+  paragraph: number
+  offset: number
+}
+
 export interface PageBookmarkItem {
   id: string
   /** 记录时的滚动位置（window.scrollY） */
   y: number
   createdAt: number
+  anchor?: BookmarkAnchor
 }
 export type PageBookmarks = Record<string, PageBookmarkItem[]>
 
@@ -20,7 +27,12 @@ function normalizeItem(raw: unknown): PageBookmarkItem | null {
   const o = raw as Partial<PageBookmarkItem>
   if (typeof o.y !== 'number' || !Number.isFinite(o.y) || o.y < 0)
     return null
+  const anchor = o.anchor
+  const validAnchor = anchor && /^(?:vocab|news-\d+)$/.test(anchor.article)
+    && Number.isInteger(anchor.paragraph) && anchor.paragraph >= 0
+    && Number.isFinite(anchor.offset)
   return {
+    ...(validAnchor ? { anchor } : {}),
     id: typeof o.id === 'string' && o.id ? o.id : `bm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     y: Math.round(o.y),
     createdAt: typeof o.createdAt === 'number' ? o.createdAt : 0,
@@ -77,15 +89,35 @@ export function getPageBookmarks(path: string): PageBookmarkItem[] {
   return [...(pageBookmarksState.value[path] ?? [])].sort((a, b) => a.y - b.y)
 }
 /** 在当前位置增加一个书签；50px 内已有书签时不重复加，返回 null */
-export function addPageBookmark(path: string, y: number): PageBookmarkItem | null {
+export function readingBookmarkAnchor(): BookmarkAnchor | undefined {
+  const top = 90
+  for (const passage of Array.from(document.querySelectorAll<HTMLElement>('.passage-text[data-article]'))) {
+    const paragraphs = Array.from(passage.querySelectorAll<HTMLElement>(':scope > p'))
+    const paragraph = paragraphs.findIndex((p) => {
+      const rect = p.getBoundingClientRect()
+      return rect.bottom > top && rect.top < window.innerHeight
+    })
+    const article = passage.dataset.article
+    if (article && paragraph >= 0) {
+      const offset = top - paragraphs[paragraph].getBoundingClientRect().top
+      return { article, paragraph, offset }
+    }
+  }
+}
+
+export function addPageBookmark(path: string, y: number, anchor?: BookmarkAnchor): PageBookmarkItem | null {
   const rounded = Math.max(0, Math.round(y))
   const existing = pageBookmarksState.value[path] ?? []
-  if (existing.some(b => Math.abs(b.y - rounded) <= DEDUP_PX))
+  if (existing.some(b => anchor && b.anchor
+    ? b.anchor.article === anchor.article && b.anchor.paragraph === anchor.paragraph
+      && Math.abs(b.anchor.offset - anchor.offset) <= DEDUP_PX
+    : !anchor && !b.anchor && Math.abs(b.y - rounded) <= DEDUP_PX))
     return null
   const item: PageBookmarkItem = {
     id: `bm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     y: rounded,
     createdAt: Date.now(),
+    ...(anchor ? { anchor } : {}),
   }
   const next = { ...pageBookmarksState.value, [path]: [...existing, item] }
   pageBookmarksState.value = next
@@ -110,6 +142,17 @@ export function jumpToPageBookmark(path: string, id: string): boolean {
   const item = (pageBookmarksState.value[path] ?? []).find(b => b.id === id)
   if (!item)
     return false
-  window.scrollTo({ top: item.y, behavior: 'instant' })
+  let top = item.y
+  if (item.anchor) {
+    const { article, paragraph, offset } = item.anchor
+    const passage = Array.from(document.querySelectorAll<HTMLElement>('.passage-text[data-article]'))
+      .find(el => el.dataset.article === article)
+    const target = passage?.querySelectorAll<HTMLElement>(':scope > p')[paragraph]
+    if (!target)
+      return false
+    const rect = target.getBoundingClientRect()
+    top = window.scrollY + rect.top + Math.min(offset, rect.height) - 90
+  }
+  window.scrollTo({ top: Math.max(0, top), behavior: 'instant' })
   return true
 }

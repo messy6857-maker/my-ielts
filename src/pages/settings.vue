@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useSync } from '../composables/useSync'
 import {
@@ -27,6 +27,7 @@ import {
   getModelOption,
   getProviderForBaseUrl,
   modelSupportsReasoningEffort,
+  reasoningEffortForProvider,
   saveAISettings,
   switchProviderSettings,
   testAIConnection,
@@ -138,6 +139,7 @@ async function clearQuarantine() {
 const { goBack } = useGoBack('/')
 
 const form = ref({ ...getAISettings() })
+let detectRevision = 0
 const saved = ref(false)
 const testing = ref(false)
 const testMsg = ref('')
@@ -165,6 +167,10 @@ const showReasoningEffort = computed(() =>
     ? modelSupportsReasoningEffort(selectedProvider.value.id, form.value.model.trim())
     : false,
 )
+const reasoningEffortInput = computed({
+  get: () => reasoningEffortForProvider(selectedProvider.value?.id ?? '', form.value.reasoningEffort),
+  set: (value) => { form.value.reasoningEffort = value },
+})
 /** 点服务商预设：填地址；当前模型不在该服务商列表里时换成它的第一个模型；
  *  Key 也跟着换到该服务商存过的（没填过就是空），当前 Key 先存回旧服务商名下。 */
 function selectProvider(provider: (typeof AI_PROVIDERS)[number]) {
@@ -177,6 +183,7 @@ function onModelSelect(value: string) {
 }
 
 function onSave() {
+  detectRevision++
   saveAISettings({
     baseUrl: form.value.baseUrl.trim(),
     apiKey: form.value.apiKey.trim(),
@@ -207,25 +214,39 @@ async function onTest() {
 const detecting = ref(false)
 const detectMsg = ref('')
 const detectOk = ref(false)
+watch([() => form.value.apiKey, () => form.value.baseUrl, () => form.value.model, currentUser], () => {
+  detectRevision++
+  detectMsg.value = ''
+}, { flush: 'sync' })
+onUnmounted(() => {
+  detectRevision++
+})
+
 /** 只填 Key 自动识别：后端真去试这个 Key 属于哪家，命中后自动填地址、设该家默认模型。 */
 async function onDetect() {
-  if (!form.value.apiKey.trim())
+  const key = form.value.apiKey.trim()
+  if (detecting.value || !key)
     return
+  const revision = detectRevision
   detecting.value = true
   detectMsg.value = ''
   try {
-    const result = await detectAIProvider(form.value.apiKey)
+    const result = await detectAIProvider(key)
+    if (revision !== detectRevision)
+      return
     const provider = AI_PROVIDERS.find(p => p.id === result.provider)
     form.value.baseUrl = result.baseUrl
     if (provider) {
       form.value.model = provider.models[0].id
       // 刚识别出的 Key 就属于这家，记到它名下（切换回来还能看到）
-      form.value.apiKeys = { ...(form.value.apiKeys ?? {}), [provider.id]: form.value.apiKey.trim() }
+      form.value.apiKeys = { ...(form.value.apiKeys ?? {}), [provider.id]: key }
     }
     detectMsg.value = `已识别为 ${result.label}，模型已设为 ${provider?.models[0].label ?? form.value.model}，点“保存”即可用`
     detectOk.value = true
   }
   catch (e) {
+    if (revision !== detectRevision)
+      return
     detectMsg.value = e instanceof Error ? e.message : '识别失败'
     detectOk.value = false
   }
@@ -478,12 +499,18 @@ async function onDetect() {
       <label v-if="showReasoningEffort" class="mb-6 block">
         <span class="mb-1 block text-sm font-medium dark:text-gray-200">推理强度</span>
         <select
-          v-model="form.reasoningEffort"
+          v-model="reasoningEffortInput"
           class="w-full border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
         >
           <option value="low">低——想得少，回答快</option>
-          <option value="medium">中——默认，均衡</option>
-          <option value="high">高——想得多，批改更细，慢一点</option>
+          <template v-if="selectedProvider?.id === 'deepseek'">
+            <option value="high">高——默认</option>
+            <option value="max">最高——耗时更长</option>
+          </template>
+          <template v-else>
+            <option value="medium">中——默认，均衡</option>
+            <option value="high">高——想得多，批改更细，慢一点</option>
+          </template>
         </select>
         <span class="mt-1 block text-xs text-gray-400">当前模型支持调推理强度；换到不支持的模型时这项会被忽略。</span>
       </label>

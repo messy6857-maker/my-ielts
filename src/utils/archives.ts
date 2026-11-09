@@ -12,17 +12,8 @@ import type { Envelope } from './storage'
 export type ArchiveCutoff = [number, string, string]
 const legacyMarker = 'archive_retention_v2'
 const writingMarker = 'archive_retention_writing_v3'
-const archiveMarkers = [legacyMarker, writingMarker] as const
-type ArchiveMarker = typeof archiveMarkers[number]
-
 export function isArchiveWatermark(base: string) {
   return base === legacyMarker || base === writingMarker
-}
-
-function markerFor(base: string): ArchiveMarker | null {
-  if (/^aigrade_v2_/i.test(base))
-    return writingMarker
-  return /^aigrade_(?:speaking_)?v1_/i.test(base) ? legacyMarker : null
 }
 
 export function pastCutoff(key: string, e: Envelope, cutoff?: ArchiveCutoff) {
@@ -54,9 +45,8 @@ export function pruneArchives(
   const entries = Object.keys(localStorage)
     .flatMap((key) => {
       const base = studyBaseOf(key, user)
-      const marker = base && markerFor(base)
       const raw = localStorage.getItem(key)
-      if (marker !== writingMarker || !raw)
+      if (!base || !/^aigrade_v2_/i.test(base) || !raw)
         return []
       try {
         return [{ key, raw, value: envelope(raw) }]

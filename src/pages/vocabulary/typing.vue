@@ -23,12 +23,14 @@ const managedAudio = useAudioGroup()
 const CHAPTER_KEY = 'vocabulary_typing_chapter'
 const chapters = listVocabularyChapters()
 const chapterData = shallowRef<VocabularyChapter | null>(null)
+const loadedChapter = ref<string | null>(null)
 const chapterLoading = ref(false)
 const chapterError = ref(false)
 const caseOwner = useAuth().currentUser
 const selectedChapter = ref(
   readChapterPreference(CHAPTER_KEY, chapters, caseOwner.value),
 )
+const chapterReady = computed(() => !chapterLoading.value && loadedChapter.value === selectedChapter.value)
 let chapterSeq = 0
 async function loadSelectedChapter() {
   const seq = ++chapterSeq
@@ -42,6 +44,7 @@ async function loadSelectedChapter() {
     if (seq !== chapterSeq || selectedChapter.value !== id)
       return
     chapterData.value = data
+    loadedChapter.value = id
     playAudio()
   }
   catch {
@@ -147,8 +150,8 @@ function reset() {
 
 function playAudio() {
   const word = currentWord.value
-  if (word)
-    managedAudio.play(resolveAudioUrl(`vocabulary/audio/${selectedChapter.value}/${word}.mp3`), word)
+  if (word && loadedChapter.value === selectedChapter.value)
+    managedAudio.play(resolveAudioUrl(`vocabulary/audio/${loadedChapter.value}/${word}.mp3`), word)
 }
 
 // Normalize whitespace: replace non-breaking spaces and other unicode spaces with regular space
@@ -166,7 +169,7 @@ function charMatches(index: number, char: string) {
 }
 
 function handleInput(e: Event) {
-  if (chapterLoading.value || !currentWord.value || isFinished.value)
+  if (!chapterReady.value || !currentWord.value || isFinished.value)
     return
   if (!startTime.value)
     startTime.value = Date.now()
@@ -296,7 +299,7 @@ onUnmounted(() => {
         </select>
       </div>
       <p v-if="chapterError" class="mb-4 text-sm text-amber-700" role="status">
-        词表加载失败。<button class="underline" @click="loadSelectedChapter">
+        所选章节加载失败，练习已暂停。<button class="underline" @click="loadSelectedChapter">
           重试
         </button>
       </p>
@@ -383,7 +386,7 @@ onUnmounted(() => {
           autocorrect="off"
           autocomplete="off"
           spellcheck="false"
-          :disabled="isFinished"
+          :disabled="isFinished || !chapterReady"
           @input="handleInput"
         >
 

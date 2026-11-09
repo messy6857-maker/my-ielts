@@ -146,7 +146,10 @@ export async function lookupVocabularyMeaning(
   if (!meaningIndexPromise) {
     meaningIndexPromise = loadAllVocabulary()
       .then(buildMeaningIndex)
-      .catch(() => new Map<string, VocabularyMeaning>())
+      .catch((error: unknown) => {
+        meaningIndexPromise = null
+        throw error
+      })
   }
   const index = await meaningIndexPromise
   const exact = index.get(key)

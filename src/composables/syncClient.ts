@@ -121,6 +121,7 @@ export interface ApiResult {
   compactDeletes?: boolean
   protocolVersion?: number
   studyExtensions?: boolean
+  studyProgressEntries?: boolean
 }
 /** 服务端 rejected 原因三类：未知/跨账号 base、非字符串原始值、decode 失败。 */
 export type RejectedReason =
@@ -300,14 +301,18 @@ export function getRejectedReason(
     return null
   }
 }
-function reopenSupportedEntries(owner: string) {
+function reopenSupportedEntries(owner: string, reply: ApiResult) {
+  if (!reply.studyExtensions && !reply.studyProgressEntries)
+    return
   const keys = getQuarantinedKeys(owner).filter((key) => {
     const base = studyBaseOf(key, owner)
-    return !!base
-      && (base === 'dictation_progress_v1'
-        || base === 'archive_retention_writing_v3'
-        || base.startsWith('aigrade_v2_'))
-      && getRejectedReason(owner, key) === 'unknown-base'
+    if (!base || getRejectedReason(owner, key) !== 'unknown-base')
+      return false
+    if (reply.studyExtensions && (base === 'dictation_progress_v1'
+      || base === 'archive_retention_writing_v3' || /^aigrade_v2_/i.test(base)))
+      return true
+    return reply.studyProgressEntries === true
+      && /^(?:listening179_done_v1|study_daily_goal_v1)__entry_/.test(base)
   })
   if (keys.length) {
     unquarantineKeys(owner, keys)
@@ -511,8 +516,7 @@ export async function apiPull(username = getTokenOwner() ?? '') {
     }
     if (result.ok) {
       capabilities.set(username, result.protocolVersion ?? 1)
-      if (result.studyExtensions === true)
-        reopenSupportedEntries(username)
+      reopenSupportedEntries(username, result)
       if (result.compactDeletes)
         deletionServers.add(username)
       else deletionServers.delete(username)
@@ -576,8 +580,7 @@ export function apiPush(
         return capability
       if (sessionOwnerChanged(username))
         return { ok: false, status: 401, message: '账号会话已变化，未继续上传' }
-      if (capability.studyExtensions === true)
-        reopenSupportedEntries(username)
+      reopenSupportedEntries(username, capability)
       if (capability.compactStats)
         compactServers.add(username)
       else compactServers.delete(username)
@@ -639,8 +642,7 @@ export function apiPush(
       if (sessionOwnerChanged(username))
         return { ok: false, status: 401, message: '账号会话已变化，未应用旧账号响应' }
       if (reply.ok) {
-        if (reply.studyExtensions === true)
-          reopenSupportedEntries(username)
+        reopenSupportedEntries(username, reply)
         if (reply.compactDeletes)
           deletionServers.add(username)
         else deletionServers.delete(username)

@@ -10,6 +10,7 @@ import {
   readRecords,
   readValue,
   saveEnvelope,
+  subscribeStorage,
   writerId,
 } from '../utils/storage'
 import { useAuth } from './useAuth'
@@ -472,42 +473,50 @@ export const useMistakes = createGlobalState(() => {
 export const useProgress = createGlobalState(() => {
   const store = useRecordMap<ModuleProgress>('progress_v1')
   const spelling = useRecordMap<any>('vocabulary_spell_v2')
-  // D-2：听力 179 进度改逐行记录（每行一条，id = 行号 1–179）。
-  // 按行同步，两个设备各学不同行不会互相覆盖。
   const listening179Done = useRecordMap<{ doneAt: number }>('listening179_done_v1')
   const { currentUser } = useAuth()
-  // 旧记录 { done: N } 迁移为第 1–N 行已学（与旧"最远到达"语义一致的
-  // 唯一合理映射）。幂等：只有旧记录存在、且尚无任何行记录时才执行一次。
+  // 老进度表示最远到达行；只补缺行，保留逐行记录和删除标记。
   function migrateListening179() {
     const old = store.state.value.listening
-    if (!old || typeof old.done !== 'number' || old.done <= 0)
+    if (!old || !Number.isFinite(old.done) || old.done <= 0)
       return
-    if (Object.keys(listening179Done.state.value).length > 0)
-      return
-    const now = Date.now()
-    const total = old.total || 179
-    const n = Math.min(Math.floor(old.done), total)
+    const user = currentUser.value
+    const n = Math.min(Math.floor(old.done), 179)
     batchStorage(() => {
-      for (let i = 1; i <= n; i++)
-        listening179Done.set(String(i), { doneAt: now })
+      for (let i = 1; i <= n; i++) {
+        const key = entryKey('listening179_done_v1', String(i), user)
+        if (localStorage.getItem(key) === null && !deletionEnvelope(key, user)) {
+          saveEnvelope(key, {
+            __ielts: 2,
+            stamp: [0, 'legacy'],
+            value: { doneAt: Number.isFinite(old.updatedAt) ? old.updatedAt : 0 },
+          })
+        }
+      }
     })
   }
   migrateListening179()
-  // 切换账号时重新迁移（各账号的旧记录互不干扰）
   watch(currentUser, migrateListening179, { flush: 'sync' })
+  // Record maps subscribe first, so both maps already contain the pulled snapshot.
+  subscribeStorage((key, source) => {
+    if (source === 'remote' && (!key || key === entryKey('progress_v1', 'listening', currentUser.value)))
+      migrateListening179()
+  })
   function markListening179RowStudied(index: number) {
-    listening179Done.set(String(index), { doneAt: Date.now() })
+    if (Number.isInteger(index) && index >= 1 && index <= 179
+      && !listening179Done.state.value[index])
+      listening179Done.set(String(index), { doneAt: Date.now() })
   }
   const progress = computed(() => {
     const out = { ...store.state.value }
     // D-2：听力 179 进度按逐行记录派生（done = 已学行数），覆盖旧的"最远到达"值。
     const rows = listening179Done.state.value
-    const rowIds = Object.keys(rows)
+    const rowIds = Object.keys(rows).filter(id => /^[1-9]\d*$/.test(id) && Number(id) <= 179)
     if (rowIds.length > 0 || store.state.value.listening) {
       const doneAt = rowIds.reduce((max, id) => Math.max(max, rows[id]?.doneAt || 0), 0)
       out.listening = {
         done: rowIds.length,
-        total: store.state.value.listening?.total || 179,
+        total: 179,
         updatedAt: Math.max(doneAt, store.state.value.listening?.updatedAt || 0),
       }
     }
