@@ -254,8 +254,8 @@ describe('daily counters, totals and migration', () => {
 describe('bounded archives and independent drafts', () => {
   it('keeps at most 30 AI archives and rejects stale restoration', () => {
     for (let i = 0; i < 35; i++)
-      saveValue(accountKey(`aigrade_v1_${i}`, 'alice'), { text: String(i) })
-    const key = accountKey('aigrade_v1_0', 'alice')
+      saveValue(accountKey(`aigrade_v2_${i}`, 'alice'), { text: String(i) })
+    const key = accountKey('aigrade_v2_0', 'alice')
     const old = localStorage.getItem(key)!
     pruneArchives('alice')
     applySyncData({ [key]: old }, 'alice')
@@ -265,6 +265,30 @@ describe('bounded archives and independent drafts', () => {
       ),
     ).toHaveLength(30)
     expect(localStorage.getItem(key)).toBeNull()
+  })
+  it('legacy AI archives are never pruned by the retired cutoff (M7)', () => {
+    for (let i = 0; i < 35; i++)
+      saveValue(accountKey(`aigrade_v1_${i}`, 'alice'), { text: String(i) })
+    pruneArchives('alice')
+    expect(
+      Object.keys(collectSyncData('alice')).filter(k =>
+        k.includes('_aigrade_v1_'),
+      ),
+    ).toHaveLength(35)
+    expect(localStorage.getItem(accountKey('aigrade_v1_0', 'alice'))).not.toBeNull()
+    expect(localStorage.getItem(accountKey('archive_retention_v2', 'alice'))).toBeNull()
+  })
+  it('v2 writing budget is independent of legacy archives (M6)', () => {
+    for (let i = 0; i < 25; i++) {
+      saveValue(accountKey(`aigrade_v2_${i}`, 'alice'), { text: String(i) })
+      saveValue(accountKey(`aigrade_v1_${i}`, 'alice'), { text: String(i) })
+    }
+    pruneArchives('alice')
+    expect(
+      Object.keys(collectSyncData('alice')).filter(k =>
+        k.includes('_aigrade_'),
+      ),
+    ).toHaveLength(50)
   })
   it('switching prompts retains both drafts and deleting one retains the other', () => {
     saveDraft('task1', 'alice', {

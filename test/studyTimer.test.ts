@@ -1,16 +1,43 @@
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
   DAILY_STUDY_GOAL,
+  DEFAULT_DAILY_STUDY_GOAL_MINUTES,
   deviceTimerKey,
   formatClock,
   formatDuration,
   getDeviceId,
   sumDeviceTimerRecords,
+  useDailyStudyGoal,
 } from '../src/composables/useStudyTimer'
+import { useAuth } from '../src/composables/useAuth'
+
+const auth = useAuth()
+
+beforeEach(() => {
+  localStorage.clear()
+  sessionStorage.clear()
+  // 切账号触发 record map 重载，把全局单例的状态复位到空
+  auth.currentUser.value = null
+  auth.currentUser.value = 'alice'
+})
 
 describe('学习计时', () => {
-  it('每日目标为 2 小时', () => {
+  it('每日目标默认 2 小时（C-07：可在设置页自定义）', () => {
     expect(DAILY_STUDY_GOAL).toBe(7200)
+    expect(DEFAULT_DAILY_STUDY_GOAL_MINUTES).toBe(120)
+    expect(useDailyStudyGoal().minutes.value).toBe(120)
+  })
+
+  it('useDailyStudyGoal 可改目标并钳制到 15–480 分钟', () => {
+    const goal = useDailyStudyGoal()
+    goal.setMinutes(180)
+    expect(goal.minutes.value).toBe(180)
+    goal.setMinutes(5)
+    expect(goal.minutes.value).toBe(15)
+    goal.setMinutes(1000)
+    expect(goal.minutes.value).toBe(480)
+    goal.setMinutes(Number.NaN)
+    expect(goal.minutes.value).toBe(120)
   })
 
   it('formatDuration', () => {

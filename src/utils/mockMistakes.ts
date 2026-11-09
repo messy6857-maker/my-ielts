@@ -190,17 +190,34 @@ export function mockReviewMatches(expectedTitle: string, userInput: string, allo
 
   // Consume exactly one answer from every group, in any order. Checking a
   // set of words alone accepts extra options and fragments of option text.
+  // M9：回溯带记忆化（键 = 剩余文本 + 未用组位掩码），否则组数一多
+  // 是 O(G! × V^G) 的指数级回溯、跑在 UI 线程上会卡死页面。
   const options = groups.map(variants)
-  function matches(remaining: string, unused: number[]): boolean {
-    if (!unused.length)
+  const memo = new Map<string, boolean>()
+  function matches(remaining: string, mask: number): boolean {
+    if (mask === 0)
       return remaining === ''
-    return unused.some(i => options[i].some((option) => {
-      if (remaining !== option && !remaining.startsWith(`${option} `))
-        return false
-      return matches(remaining.slice(option.length).trimStart(), unused.filter(j => j !== i))
-    }))
+    const key = `${mask}|${remaining}`
+    const cached = memo.get(key)
+    if (cached !== undefined)
+      return cached
+    let ok = false
+    for (let i = 0; i < options.length && !ok; i++) {
+      if (!(mask & (1 << i)))
+        continue
+      for (const option of options[i]) {
+        if (remaining !== option && !remaining.startsWith(`${option} `))
+          continue
+        if (matches(remaining.slice(option.length).trimStart(), mask & ~(1 << i))) {
+          ok = true
+          break
+        }
+      }
+    }
+    memo.set(key, ok)
+    return ok
   }
-  return matches(input, options.map((_, i) => i))
+  return matches(input, (1 << options.length) - 1)
 }
 
 /**
@@ -212,33 +229,46 @@ export function mockReviewMatches(expectedTitle: string, userInput: string, allo
  * and is out of scope for the retry-button bug.
  */
 const MISTAKES_WRITTEN_KEY = 'mock_mistakes_written_v1'
-const MISTAKES_WRITTEN_CAP = 50
-function readWrittenMistakeAttempts(): string[] {
+// M5：写过标记按时间淘汰（90 天，与错题本 days 窗口对齐），不再按 50 条
+// 截断——满 50 后最早的 attemptId 会失效、重试时重复记错。
+const WRITTEN_ATTEMPT_TTL_MS = 90 * 24 * 3600 * 1000
+interface WrittenAttempt { id: string; at: number }
+function readWrittenMistakeAttempts(): WrittenAttempt[] {
   try {
     const raw = localStorage.getItem(MISTAKES_WRITTEN_KEY)
     if (!raw)
       return []
     const parsed: unknown = JSON.parse(raw)
-    return Array.isArray(parsed)
-      ? parsed.filter((v): v is string => typeof v === 'string')
-      : []
+    if (!Array.isArray(parsed))
+      return []
+    const now = Date.now()
+    const out: WrittenAttempt[] = []
+    for (const v of parsed) {
+      if (typeof v === 'string') {
+        // 旧格式纯字符串：按读取时间计，保留 90 天
+        if (v)
+          out.push({ id: v, at: now })
+      }
+      else if (v && typeof v === 'object' && typeof (v as any).id === 'string' && typeof (v as any).at === 'number') {
+        out.push({ id: (v as any).id, at: (v as any).at })
+      }
+    }
+    return out.filter(e => now - e.at < WRITTEN_ATTEMPT_TTL_MS)
   }
   catch {
     return []
   }
 }
 export function hasWrittenMockMistakes(attemptId: string): boolean {
-  return !!attemptId && readWrittenMistakeAttempts().includes(attemptId)
+  return !!attemptId && readWrittenMistakeAttempts().some(e => e.id === attemptId)
 }
 export function markMockMistakesWritten(attemptId: string): void {
   if (!attemptId)
     return
   try {
     const list = readWrittenMistakeAttempts()
-    if (!list.includes(attemptId)) {
-      list.push(attemptId)
-      while (list.length > MISTAKES_WRITTEN_CAP)
-        list.shift()
+    if (!list.some(e => e.id === attemptId)) {
+      list.push({ id: attemptId, at: Date.now() })
       localStorage.setItem(MISTAKES_WRITTEN_KEY, JSON.stringify(list))
     }
   }

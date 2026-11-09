@@ -38,24 +38,28 @@ export function pruneArchives(
   maxEntries = 30,
   maxBytes = 1024 * 1024,
 ) {
-  // Old cutoffs can have advanced on a single migration tombstone. They
-  // apply only to the original format and must never sweep v2 writing.
-  const previous = new Map(archiveMarkers.map((marker) => {
-    const cutoff = readValue<{ cutoff: ArchiveCutoff } | null>(accountKey(marker, user), null)?.cutoff
-    const valid = Array.isArray(cutoff) && cutoff.length === 3
-      && Number.isFinite(cutoff[0]) && typeof cutoff[1] === 'string' && typeof cutoff[2] === 'string'
-    return [marker, valid ? cutoff : undefined] as const
-  }))
-  const cutoffs = new Map(previous)
+  // M7：旧版（legacy，含 v1 作文与口语）评分不再自动清理——旧 cutoff
+  // 已退役，旧版结果只由用户手动清理。仅 v2 写作参与预算与清理。
+  // M6：预算按格式独立——v2 写作独享 30 份/1 MiB，不再与旧版共用。
+  // 顺带清掉已存的旧版 cutoff（一次性；之后不再写入）。
+  const legacyKey = accountKey(legacyMarker, user)
+  if (localStorage.getItem(legacyKey) !== null)
+    localStorage.removeItem(legacyKey)
+  const stored = readValue<{ cutoff: ArchiveCutoff } | null>(accountKey(writingMarker, user), null)?.cutoff
+  const validPrevious = Array.isArray(stored) && stored.length === 3
+    && Number.isFinite(stored[0]) && typeof stored[1] === 'string' && typeof stored[2] === 'string'
+    ? stored as ArchiveCutoff
+    : undefined
+  let cutoff = validPrevious
   const entries = Object.keys(localStorage)
     .flatMap((key) => {
       const base = studyBaseOf(key, user)
       const marker = base && markerFor(base)
       const raw = localStorage.getItem(key)
-      if (!marker || !raw)
+      if (marker !== writingMarker || !raw)
         return []
       try {
-        return [{ key, raw, value: envelope(raw), marker }]
+        return [{ key, raw, value: envelope(raw) }]
       }
       catch {
         return []
@@ -66,24 +70,20 @@ export function pruneArchives(
   let kept = 0
   const encoder = new TextEncoder()
   for (const item of entries) {
-    if (item.value.deleted || pastCutoff(item.key, item.value, previous.get(item.marker)))
+    if (item.value.deleted || pastCutoff(item.key, item.value, validPrevious))
       continue
     bytes += encoder.encode(item.raw).length
     kept++
-    if ((kept > maxEntries || bytes > maxBytes) && cutoffs.get(item.marker) === previous.get(item.marker))
-      cutoffs.set(item.marker, [...item.value.stamp, item.key])
+    if ((kept > maxEntries || bytes > maxBytes) && cutoff === validPrevious)
+      cutoff = [...item.value.stamp, item.key]
   }
   batchStorage(() => {
-    for (const marker of archiveMarkers) {
-      const cutoff = cutoffs.get(marker)
-      const prior = previous.get(marker)
-      const durable = cutoff && cutoff !== prior
-        ? (saveValue(accountKey(marker, user), { cutoff }) ? cutoff : prior)
-        : prior
-      for (const item of entries) {
-        if (item.marker === marker && pastCutoff(item.key, item.value, durable))
-          localStorage.removeItem(item.key)
-      }
+    const durable = cutoff && cutoff !== validPrevious
+      ? (saveValue(accountKey(writingMarker, user), { cutoff }) ? cutoff : validPrevious)
+      : validPrevious
+    for (const item of entries) {
+      if (pastCutoff(item.key, item.value, durable))
+        localStorage.removeItem(item.key)
     }
   })
 }

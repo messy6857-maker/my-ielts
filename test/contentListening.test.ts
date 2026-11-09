@@ -93,9 +93,10 @@ it('L5: 179 main-word comparison folds whitespace on both sides', () => {
   expect(src).toContain('cw.word.trim().toLowerCase().replace(/\\s+/g, \' \')')
 })
 
-it('L6: 179 progress keeps the furthest row reached', () => {
+it('L6: 179 progress records each row studied (D-2, not furthest reached)', () => {
   const src = readFileSync('src/pages/listening/179practice.vue', 'utf8')
-  expect(src).toContain('Math.max(getProgress(\'listening\').done, index + 1)')
+  expect(src).toContain('markListening179RowStudied(cw.index)')
+  expect(src).not.toContain('Math.max(getProgress(\'listening\').done, index + 1)')
 })
 
 it('L7: no 179 word lists itself as its own synonym', () => {

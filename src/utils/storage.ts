@@ -70,6 +70,7 @@ export const mapBases = [
   'vocabulary_spell_v2',
   'sr_vocabulary_v1',
   'listening179_sr_v1',
+  'listening179_done_v1',
   'reading538_sr_v1',
   'corpus_sr_v1',
   'mistake_parts_v2',
@@ -81,6 +82,8 @@ export const mapBases = [
   'deletion_archive_v3',
   'timer_sessions_v2',
   'checkin_years_v2',
+  // 每日学习目标（分钟），C-07：单条记录，id 固定为 'goal'，按账号存、可跨设备同步
+  'study_daily_goal_v1',
 ]
 export const setBases = [
   'reading_mastered_v1',

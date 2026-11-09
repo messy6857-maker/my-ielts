@@ -10,9 +10,45 @@ import {
   subscribeStorage,
 } from '../utils/storage'
 import { onBeforeLogout, useAuth } from './useAuth'
+import { useRecordMap } from './useRecordData'
 import { nsKey, studyDay } from './useStudyData'
 
+/** 每日学习目标默认值（秒）：2 小时。C-07 后可在设置页自定义，见 useDailyStudyGoal。 */
 export const DAILY_STUDY_GOAL = 2 * 3600
+/** 每日学习目标默认值（分钟） */
+export const DEFAULT_DAILY_STUDY_GOAL_MINUTES = 120
+/** 每日学习目标可调范围（分钟）：15 分钟 – 8 小时 */
+export const DAILY_STUDY_GOAL_MINUTES_MIN = 15
+export const DAILY_STUDY_GOAL_MINUTES_MAX = 480
+
+function clampGoalMinutes(min: number): number {
+  if (!Number.isFinite(min))
+    return DEFAULT_DAILY_STUDY_GOAL_MINUTES
+  return Math.min(
+    DAILY_STUDY_GOAL_MINUTES_MAX,
+    Math.max(DAILY_STUDY_GOAL_MINUTES_MIN, Math.round(min)),
+  )
+}
+
+/**
+ * 每日学习目标（分钟），按账号存、跨设备同步（C-07）。
+ * 单条记录，id 固定为 'goal'；未设过时默认 120 分钟。
+ * useStudyTimer 的 dailyGoal 用 getter 读它，改完设置页即实时更新，
+ * 各页模板仍按普通数字用 dailyGoal，无需改 .value。
+ */
+export const useDailyStudyGoal = createGlobalState(() => {
+  const store = useRecordMap<{ minutes: number }>('study_daily_goal_v1')
+  const minutes = computed(() => {
+    const v = store.state.value.goal?.minutes
+    return typeof v === 'number' && Number.isFinite(v)
+      ? clampGoalMinutes(v)
+      : DEFAULT_DAILY_STUDY_GOAL_MINUTES
+  })
+  function setMinutes(min: number) {
+    store.set('goal', { minutes: clampGoalMinutes(min) })
+  }
+  return { minutes, setMinutes }
+})
 const DEVICE_ID_KEY = 'myielts_device_id'
 type IdStorage = Pick<Storage, 'getItem' | 'setItem'>
 export function getDeviceId(storage?: IdStorage) {
@@ -87,6 +123,7 @@ export function legacyTimerSeconds(
 }
 export function useStudyTimer() {
   const { currentUser } = useAuth()
+  const goal = useDailyStudyGoal()
   const dailySeconds = ref(0)
   const elapsed = ref(0)
   const running = ref(false)
@@ -271,7 +308,9 @@ export function useStudyTimer() {
     dailySeconds: computed(() => dailySeconds.value),
     elapsed,
     running,
-    dailyGoal: DAILY_STUDY_GOAL,
+    // C-07：每日目标（秒）读共享目标状态，改完设置页即实时更新；
+    // getter 让模板仍按普通数字用 dailyGoal（算术与 .value 写法都不用改）。
+    get dailyGoal() { return goal.minutes.value * 60 },
     start,
     pause,
     resume: start,

@@ -132,7 +132,9 @@ async function loadTimingsForSelection() {
     const parts = await loadTestTimings(test)
     if (isCurrent()) {
       partTimings.value = parts?.[part] ?? null
-      timingsError.value = partTimings.value === null
+      // M10：该 part 没有时间数据是正常状态（尚未对齐），静默走 TTS；
+      // 只有动态 import 失败（catch）才算加载错误。
+      timingsError.value = false
     }
   }
   catch {

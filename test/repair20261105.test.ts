@@ -152,10 +152,51 @@ it('a stale timing fetch cannot replace a different real 33-sentence part', asyn
   expect(s.selectedTest).toBe('cam21-test2')
   expect(s.sentenceTiming(i)).toEqual(newTimings.part2[i])
 })
+it('a part without timing data falls back to TTS silently, no load error (M10)', async () => {
+  vi.spyOn(timings, 'loadTestTimings').mockResolvedValue({})
+  const P = (await import('../src/pages/listening/intensive.vue')).default
+  const { s } = await page(P)
+  await until(() => !s.timingsLoading)
+  expect(s.timingsError).toBe(false)
+  expect(s.timingStatus(0)).toBe('tts')
+})
+it('a failed timing import still surfaces a load error (M10)', async () => {
+  vi.spyOn(timings, 'loadTestTimings').mockRejectedValue(new Error('import failed'))
+  const P = (await import('../src/pages/listening/intensive.vue')).default
+  const { s } = await page(P)
+  await until(() => !s.timingsLoading)
+  expect(s.timingsError).toBe(true)
+})
 it('multi-choice review requires exactly the correct options', () => {
   expect(mockReviewMatches('A. Go by train；C. Book ahead', 'A B C D E')).toBe(false)
   expect(mockReviewMatches('A. Go by train；C. Book ahead', 'C, A')).toBe(true)
   expect(mockReviewMatches('A. Go by train；C. Book ahead', 'Book ahead / go by train')).toBe(true)
+})
+it('multi-choice review with many option groups stays fast (M9)', () => {
+  const title = ['A. Alpha', 'B. Bravo', 'C. Charlie', 'D. Delta', 'E. Echo', 'F. Foxtrot', 'G. Golf'].join('；')
+  const start = Date.now()
+  expect(mockReviewMatches(title, 'Golf, Alpha, Bravo, Charlie, Delta, Echo, Foxtrot')).toBe(true)
+  expect(mockReviewMatches(title, 'Alpha, Bravo, Charlie, Delta, Echo, Foxtrot, Wrong')).toBe(false)
+  expect(Date.now() - start).toBeLessThan(1000)
+})
+it('a reset mistake does not recount the same attempt (M5)', () => {
+  const m = useMistakes()
+  const input = { key: 'mock:listening:cam18-test1:part1:q1', title: 'A. Go by train' }
+  m.addMistake('mock_listening', { ...input, attemptId: 'att-1' })
+  expect(m.mistakes.value.find(x => x.key === input.key)?.count).toBe(1)
+  m.removeMistake(input.key)
+  expect(m.mistakes.value.find(x => x.key === input.key)).toBeUndefined()
+  m.addMistake('mock_listening', { ...input, attemptId: 'att-1' })
+  expect(m.mistakes.value.find(x => x.key === input.key)).toBeUndefined()
+})
+it('dedup history survives past 50 attempts (M5)', () => {
+  const m = useMistakes()
+  const input = { key: 'mock:listening:cam18-test1:part1:q2', title: 'A. Book ahead' }
+  for (let i = 0; i < 51; i++)
+    m.addMistake('mock_listening', { ...input, attemptId: `att-${i}` })
+  expect(m.mistakes.value.find(x => x.key === input.key)?.count).toBe(51)
+  m.addMistake('mock_listening', { ...input, attemptId: 'att-0' })
+  expect(m.mistakes.value.find(x => x.key === input.key)?.count).toBe(51)
 })
 it('dictation review does not clear a sentence from its first letter', async () => {
   const m = useMistakes()

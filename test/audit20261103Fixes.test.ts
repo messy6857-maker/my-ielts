@@ -49,13 +49,24 @@ describe('A-1 错题写入幂等标记', () => {
     expect(hasWrittenMockMistakes('a1')).toBe(true)
   })
 
-  it('标记列表有上限 50 条，超限淘汰最早的', () => {
+  // M5：写过标记不再按 50 条截断（满 50 后最早的 attemptId 会失效、重试
+  // 时重复记错），改为按时间淘汰（90 天，与错题本 days 窗口对齐）。
+  it('标记列表不再按条数截断，55 条全保留', () => {
     for (let i = 0; i < 55; i++)
       markMockMistakesWritten(`id-${i}`)
-    const list = JSON.parse(localStorage.getItem(KEY)!) as string[]
-    expect(list.length).toBe(50)
-    expect(hasWrittenMockMistakes('id-0')).toBe(false)
+    const list = JSON.parse(localStorage.getItem(KEY)!) as { id: string; at: number }[]
+    expect(list.length).toBe(55)
+    expect(hasWrittenMockMistakes('id-0')).toBe(true)
     expect(hasWrittenMockMistakes('id-54')).toBe(true)
+  })
+
+  it('超过 90 天的标记被淘汰', () => {
+    const old = Date.now() - 91 * 24 * 3600 * 1000
+    localStorage.setItem(KEY, JSON.stringify([{ id: 'old-1', at: old }]))
+    expect(hasWrittenMockMistakes('old-1')).toBe(false)
+    markMockMistakesWritten('new-1')
+    const list = JSON.parse(localStorage.getItem(KEY)!) as { id: string; at: number }[]
+    expect(list.map(e => e.id)).toEqual(['new-1'])
   })
 })
 

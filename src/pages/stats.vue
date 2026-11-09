@@ -189,7 +189,7 @@ const last14Checkin = computed(() => {
             {{ formatDuration(timer.dailySeconds.value) }}
           </p>
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            目标 2 小时 ·
+            目标 {{ formatDuration(timer.dailyGoal) }} ·
             {{
               timer.dailySeconds.value >= timer.dailyGoal
                 ? "今日目标已达成 🎉"

@@ -92,11 +92,31 @@ export function nsKey(base: string, user?: string | null) {
 export function studyDay(date = new Date()) {
   return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
 }
+interface MistakeAttempt { id: string; at: number }
 interface MistakePart extends MistakeItem {
   legacyActivity?: 'vocabulary' | 'flashcard'
-  recordedAttempts?: string[]
+  /** 去重历史：新格式带时间戳；旧版纯字符串数组兼容读取。 */
+  recordedAttempts?: Array<MistakeAttempt | string>
   epoch: string
   days: Record<string, number>
+}
+
+/** M5：去重历史按时间淘汰（90 天，与 days 窗口对齐）；旧版纯字符串按读取时间计。 */
+const MISTAKE_ATTEMPT_TTL_MS = 90 * 86400000
+function normalizeMistakeAttempts(raw: unknown, now: number): MistakeAttempt[] {
+  if (!Array.isArray(raw))
+    return []
+  const out: MistakeAttempt[] = []
+  for (const v of raw) {
+    if (typeof v === 'string') {
+      if (v)
+        out.push({ id: v, at: now })
+    }
+    else if (v && typeof v === 'object' && typeof (v as any).id === 'string' && typeof (v as any).at === 'number') {
+      out.push({ id: (v as any).id, at: (v as any).at })
+    }
+  }
+  return out.filter(a => now - a.at < MISTAKE_ATTEMPT_TTL_MS)
 }
 export function migrateMistakes(user: string | null) {
   const marker = `myielts_local_mistakes_migrated:${nsKey('mistakes_v1', user)}`
@@ -241,9 +261,10 @@ export const useMistakes = createGlobalState(() => {
       currentUser.value,
     )
     const previous = old?.epoch === epoch ? old : undefined
-    const priorAttempts = previous?.recordedAttempts
-    const attempts = Array.isArray(priorAttempts) ? priorAttempts : []
-    if (input.attemptId && attempts.includes(input.attemptId))
+    // M5：去重历史与 epoch 脱钩——重置清计数、不清"已见过哪些 attempt"。
+    // 否则重置后重提交的旧 attemptId 会被当作全新错题再计一次。
+    const attempts = normalizeMistakeAttempts(old?.recordedAttempts, now)
+    if (input.attemptId && attempts.some(a => a.id === input.attemptId))
       return true
     const days = { ...previous?.days, [day]: (previous?.days[day] ?? 0) + 1 }
     const cutoff = now - 90 * 86400000
@@ -263,7 +284,9 @@ export const useMistakes = createGlobalState(() => {
       lastAt: now,
       epoch,
       days,
-      recordedAttempts: input.attemptId ? [...attempts, input.attemptId].slice(-50) : previous?.recordedAttempts,
+      recordedAttempts: input.attemptId
+        ? [...attempts, { id: input.attemptId, at: now }]
+        : attempts,
     })
   }
   // 撤销本机评分只扣当前作者；179 纠错显式使用 all，消除跨设备的未解决失败。
@@ -449,8 +472,45 @@ export const useMistakes = createGlobalState(() => {
 export const useProgress = createGlobalState(() => {
   const store = useRecordMap<ModuleProgress>('progress_v1')
   const spelling = useRecordMap<any>('vocabulary_spell_v2')
+  // D-2：听力 179 进度改逐行记录（每行一条，id = 行号 1–179）。
+  // 按行同步，两个设备各学不同行不会互相覆盖。
+  const listening179Done = useRecordMap<{ doneAt: number }>('listening179_done_v1')
+  const { currentUser } = useAuth()
+  // 旧记录 { done: N } 迁移为第 1–N 行已学（与旧"最远到达"语义一致的
+  // 唯一合理映射）。幂等：只有旧记录存在、且尚无任何行记录时才执行一次。
+  function migrateListening179() {
+    const old = store.state.value.listening
+    if (!old || typeof old.done !== 'number' || old.done <= 0)
+      return
+    if (Object.keys(listening179Done.state.value).length > 0)
+      return
+    const now = Date.now()
+    const total = old.total || 179
+    const n = Math.min(Math.floor(old.done), total)
+    batchStorage(() => {
+      for (let i = 1; i <= n; i++)
+        listening179Done.set(String(i), { doneAt: now })
+    })
+  }
+  migrateListening179()
+  // 切换账号时重新迁移（各账号的旧记录互不干扰）
+  watch(currentUser, migrateListening179, { flush: 'sync' })
+  function markListening179RowStudied(index: number) {
+    listening179Done.set(String(index), { doneAt: Date.now() })
+  }
   const progress = computed(() => {
     const out = { ...store.state.value }
+    // D-2：听力 179 进度按逐行记录派生（done = 已学行数），覆盖旧的"最远到达"值。
+    const rows = listening179Done.state.value
+    const rowIds = Object.keys(rows)
+    if (rowIds.length > 0 || store.state.value.listening) {
+      const doneAt = rowIds.reduce((max, id) => Math.max(max, rows[id]?.doneAt || 0), 0)
+      out.listening = {
+        done: rowIds.length,
+        total: store.state.value.listening?.total || 179,
+        updatedAt: Math.max(doneAt, store.state.value.listening?.updatedAt || 0),
+      }
+    }
     const grouped = new Map<string, Set<string>>()
     const add = (chapter: string, id: string, value: any) => {
       if (value?.requiresSelection && !grouped.has(chapter))
@@ -557,6 +617,7 @@ export const useProgress = createGlobalState(() => {
   return {
     progress,
     setProgress,
+    markListening179RowStudied,
     clearChapterProgress() {
       for (const key of Object.keys(store.state.value)) {
         if (key.startsWith('flashcard:'))

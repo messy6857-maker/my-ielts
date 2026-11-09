@@ -58,6 +58,15 @@ function storedToken(): SessionToken | null {
 export function getTokenOwner() {
   return storedToken()?.username ?? null
 }
+/**
+ * M8：上传/拉取中途的会话守卫只看账号 owner 是否变化，不看 token 值。
+ * 同一用户 token 轮换（本机重登录、另一页签登录）继续传无妨——api()
+ * 每次请求都取最新 token；只有切到另一账号（或登出）才必须中断，
+ * 否则会把旧账号数据顶到新账号名下。
+ */
+function sessionOwnerChanged(username: string): boolean {
+  return getTokenOwner() !== username
+}
 export function getToken(username?: string | null) {
   const v = storedToken()
   return v && (username === undefined || v.username === username)
@@ -463,14 +472,13 @@ export function apiLogin(username: string, password: string) {
   return api('/login', 'POST', { username, password })
 }
 export async function apiPull(username = getTokenOwner() ?? '') {
-  const token = getToken(username)
   for (let attempt = 0; attempt < 3; attempt++) {
     let result = await api('/sync', 'GET', undefined, username)
     const all: Record<string, string> = { ...(result.data || {}) }
     const cursors = new Set<string>()
     let restart = false
     while (result.ok && result.nextCursor) {
-      if (getToken(username) !== token) {
+      if (sessionOwnerChanged(username)) {
         return {
           ok: false,
           status: 401,
@@ -494,7 +502,7 @@ export async function apiPull(username = getTokenOwner() ?? '') {
     }
     if (restart)
       continue
-    if (getToken(username) !== token) {
+    if (sessionOwnerChanged(username)) {
       return {
         ok: false,
         status: 401,
@@ -528,7 +536,7 @@ export function apiPush(
 ): Promise<ApiResult> {
   const token = getToken(username)
   const task = pushQueue.then(async () => {
-    if (!token || token !== getToken(username)) {
+    if (!token || sessionOwnerChanged(username)) {
       return {
         ok: false,
         status: 401,
@@ -566,7 +574,7 @@ export function apiPush(
       )
       if (!capability.ok)
         return capability
-      if (getToken(username) !== token)
+      if (sessionOwnerChanged(username))
         return { ok: false, status: 401, message: '账号会话已变化，未继续上传' }
       if (capability.studyExtensions === true)
         reopenSupportedEntries(username)
@@ -610,7 +618,7 @@ export function apiPush(
     const send = async (
       entries: Array<[string, string]>,
     ): Promise<ApiResult> => {
-      if (getToken(username) !== token) {
+      if (sessionOwnerChanged(username)) {
         return {
           ok: false,
           status: 401,
@@ -628,7 +636,7 @@ export function apiPush(
         const left = await send(entries.slice(0, middle))
         return left.ok ? send(entries.slice(middle)) : left
       }
-      if (getToken(username) !== token)
+      if (sessionOwnerChanged(username))
         return { ok: false, status: 401, message: '账号会话已变化，未应用旧账号响应' }
       if (reply.ok) {
         if (reply.studyExtensions === true)

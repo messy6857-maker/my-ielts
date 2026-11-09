@@ -378,13 +378,13 @@ onUnmounted(() => {
           </span>
           <span
             class="text-xs text-gray-400"
-            title="今日累计学习时长（目标 2 小时）"
+            :title="`今日累计学习时长（目标 ${formatDuration(timer.dailyGoal)}）`"
           >
             今日 {{ formatDuration(timer.dailySeconds.value) }}
           </span>
           <div
             class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
-            title="今日目标 2 小时"
+            :title="`今日目标 ${formatDuration(timer.dailyGoal)}`"
           >
             <div
               class="h-full rounded-full bg-green-500 transition-all"
@@ -681,7 +681,7 @@ onUnmounted(() => {
             {{
               timer.dailySeconds.value >= timer.dailyGoal
                 ? '今日目标已达成 🎉'
-                : `距离今日目标 2 小时还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}`
+                : `距离今日目标 ${formatDuration(timer.dailyGoal)}还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}`
             }}
           </p>
           <div class="flex gap-3">

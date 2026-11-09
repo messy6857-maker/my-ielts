@@ -55,7 +55,8 @@ const chapterById = new Map<string, string>(Object.entries(WORD_CHAPTER_INDEX))
 const vocabulary = shallowRef<Record<string, VocabularyChapter>>({})
 const vocabReady = ref(false)
 const vocabError = ref(false)
-const crossChapter = ref(useRoute()?.query?.review === 'due')
+const route = useRoute()
+const crossChapter = ref(route.query?.review === 'due')
 const { currentUser: sessionUser } = useAuth()
 const category = ref(
   readChapterPreference(CHAPTER_KEY, chapters, sessionUser.value),
@@ -66,6 +67,15 @@ const scheduleStore = useWordSchedule()
 const daily = useDailyGoal()
 const router = useRouter()
 const timer = useStudyTimer()
+// M4：同路径仅 query 变化时组件实例复用、setup 不重跑，需监听 query 同步模式
+watch(() => route.query.review, (review) => {
+  crossChapter.value = review === 'due'
+})
+// 复选框切换时回写 URL，刷新/后退保留模式（与上面 watcher 互不循环：
+// 回写后 query 触发的赋值与当前值相同，不会再次触发）
+watch(crossChapter, (value) => {
+  router.replace({ query: { ...route.query, review: value ? 'due' : undefined } })
+})
 const showExitModal = ref(false)
 // 页面级累计：每次退出弹窗的 pause() 段秒数累加，弹窗显示进页总时长
 // （timer.pause() 只返回当前段，取消退出再退会只显示最后一段）
@@ -913,13 +923,13 @@ onUnmounted(() => {
           </span>
           <span
             class="text-xs text-gray-400"
-            title="今日累计学习时长（目标 2 小时）"
+            :title="`今日累计学习时长（目标 ${formatDuration(timer.dailyGoal)}）`"
           >
             今日 {{ formatDuration(timer.dailySeconds.value) }}
           </span>
           <div
             class="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700"
-            title="今日目标 2 小时"
+            :title="`今日目标 ${formatDuration(timer.dailyGoal)}`"
           >
             <div
               class="h-full rounded-full bg-green-500 transition-all"
@@ -1476,7 +1486,7 @@ onUnmounted(() => {
             {{
               timer.dailySeconds.value >= timer.dailyGoal
                 ? "今日目标已达成 🎉"
-                : `距离今日目标 2 小时还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}`
+                : `距离今日目标 ${formatDuration(timer.dailyGoal)}还差 ${formatDuration(timer.dailyGoal - timer.dailySeconds.value)}`
             }}
           </p>
           <div class="flex gap-3">

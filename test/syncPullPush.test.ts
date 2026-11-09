@@ -46,3 +46,44 @@ it('拉取成功但无 pending 时，不额外补推', async () => {
   await vi.advanceTimersByTimeAsync(8000)
   expect(putCalls().length).toBe(0)
 })
+
+it('same-user token rotation mid-upload does not interrupt the push (M8)', async () => {
+  const { apiPush } = await import('../src/composables/syncClient')
+  const big = 'x'.repeat(30000)
+  const data: Record<string, string> = {}
+  for (let i = 0; i < 10; i++)
+    data[`k${i}`] = big
+  let puts = 0
+  fetchMock.mockImplementation(async (_url: string, init: any) => {
+    if (init?.method === 'PUT') {
+      puts++
+      if (puts === 1)
+        setToken('token-rotated', 'alice') // 同用户换 token，继续传
+    }
+    return { ok: true, status: 200, json: async () => ({ ok: true, protocolVersion: 2, data: {} }) }
+  })
+  const result = await apiPush(data, 'alice')
+  expect(result.ok).toBe(true)
+  expect(putCalls().length).toBe(2)
+})
+
+it('switching to another user mid-upload stops the push (M8)', async () => {
+  const { apiPush } = await import('../src/composables/syncClient')
+  const big = 'x'.repeat(30000)
+  const data: Record<string, string> = {}
+  for (let i = 0; i < 10; i++)
+    data[`k${i}`] = big
+  let puts = 0
+  fetchMock.mockImplementation(async (_url: string, init: any) => {
+    if (init?.method === 'PUT') {
+      puts++
+      if (puts === 1)
+        setToken('bob-token', 'bob') // 切到另一账号，必须中断
+    }
+    return { ok: true, status: 200, json: async () => ({ ok: true, protocolVersion: 2, data: {} }) }
+  })
+  const result = await apiPush(data, 'alice')
+  expect(result.ok).toBe(false)
+  expect(result.status).toBe(401)
+  expect(putCalls().length).toBe(1)
+})

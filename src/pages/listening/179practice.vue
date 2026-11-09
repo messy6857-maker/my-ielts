@@ -24,7 +24,7 @@ const ws = reactive(
 )
 
 const { addMistake, decrementMistake, mistakeOutstanding } = useMistakes()
-const { setProgress, getProgress } = useProgress()
+const { markListening179RowStudied } = useProgress()
 
 function onKeydown(e, word) {
   if (e.key === '`') {
@@ -87,10 +87,9 @@ function next(index) {
     // 上次记错、本次改对：错题计数减一，扣回原失败日的桶（无原失败日时沿用当日默认）
     decrementMistake(mistakeKey, outstanding.failureDate ?? undefined, 'all')
   }
-  // 进度取“已到达的最远行”，不随检查顺序倒退（先查第 100 行再查第 1 行
-  // 不应把进度从 100/179 打回 1/179）；进度 store 本身只存 done/total，
-  // 无逐行集合，故此处取大值即最远到达语义
-  setProgress('listening', Math.max(getProgress('listening').done, index + 1), words.length)
+  // D-2：进度按逐行记录——只标记本行已学，done = 已学行数。
+  // 先查第 100 行再查第 1 行，进度是 2/179 而不是 100/179。
+  markListening179RowStudied(cw.index)
 
   // window.console.log(cw)
 

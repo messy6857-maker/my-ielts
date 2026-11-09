@@ -319,14 +319,15 @@ it('uses the latest same-word schedule while preserving both writers attempt tot
 })
 
 it('a newer remote envelope cannot move an AI retention watermark backwards', () => {
-  const key = accountKey('aigrade_v1_1', 'alice')
+  // M7：旧版 cutoff 已退役，改用水印仍在生效的 v2 写作 marker 验证同一语义。
+  const key = accountKey('aigrade_v2_1', 'alice')
   saveValue(key, { essay: 'retired' })
   const old = localStorage.getItem(key)!
   pruneArchives('alice', 0, 0)
   applySyncData(
     {
       [key]: old,
-      [accountKey('archive_retention_v2', 'alice')]: JSON.stringify({
+      [accountKey('archive_retention_writing_v3', 'alice')]: JSON.stringify({
         __ielts: 2,
         stamp: [Date.now() + 100000, 'remote'],
         value: { cutoff: [0, 'legacy', ''] },

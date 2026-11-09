@@ -242,6 +242,41 @@ it('cross-chapter audio uses its original chapter', async () => {
   )
   expect(decodeURIComponent(el.src)).not.toContain(`/${chapters[0]}/`)
 })
+it('flashcard ?review=due follows query changes in the same tab (M4)', async () => {
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/', component: { template: '<div />' } }],
+  })
+  await router.push('/')
+  await router.isReady()
+  const Page = (await import('../src/pages/vocabulary/flashcard.vue')).default
+  const w = mount(Page, {
+    global: {
+      plugins: [router],
+      stubs: {
+        AIGradePanel: true,
+        ModelEssayView: true,
+        TaskChart: true,
+        ReadingTabs: true,
+        ListeningTabs: true,
+      },
+    },
+  })
+  wrappers.push(w)
+  await flushPromises()
+  const s = (w.vm as any).$.setupState
+  expect(s.crossChapter).toBe(false)
+  await router.push('/?review=due')
+  await flushPromises()
+  expect(s.crossChapter).toBe(true)
+  // 复选框回写 URL：刷新/后退保留模式
+  s.crossChapter = false
+  await flushPromises()
+  expect(router.currentRoute.value.query.review).toBeUndefined()
+  await router.push('/')
+  await flushPromises()
+  expect(s.crossChapter).toBe(false)
+})
 it('delayed review cannot delete another identity mistake', async () => {
   const m = useMistakes()
   m.addMistake('typing', { key: 'typing:example', title: 'example' })

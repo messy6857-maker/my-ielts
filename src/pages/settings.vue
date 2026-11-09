@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useAuth } from '../composables/useAuth'
 import { useSync } from '../composables/useSync'
 import {
@@ -16,6 +16,7 @@ import {
   restoreStudyBackup,
 } from '../utils/backup'
 import { pruneArchives } from '../utils/archives'
+import { useDailyStudyGoal } from '../composables/useStudyTimer'
 import { useGoBack } from '../composables/useGoBack'
 import {
   AI_PROVIDERS,
@@ -33,6 +34,12 @@ import {
 
 const { currentUser } = useAuth()
 const { rejectedNotice, dismissRejectedNotice, pushNow } = useSync()
+// C-07：每日学习目标（分钟），按账号存、跨设备同步；输入即保存（15–480 分钟）。
+const { minutes: goalMinutes, setMinutes: setGoalMinutes } = useDailyStudyGoal()
+const goalMinutesInput = computed({
+  get: () => goalMinutes.value,
+  set: (v: number) => setGoalMinutes(v),
+})
 const language = ref(
   localStorage.getItem('myielts_tts_language') === 'en-GB' ? 'en-GB' : 'en-US',
 )
@@ -275,7 +282,7 @@ async function onDetect() {
       </h3>
       <p class="mb-3 text-sm text-gray-500">
         备份包含当前身份的学习记录及作文草稿，不包含密码、登录令牌或 API
-        Key。AI评分存档保留最近30份，合计不超过1 MiB；导出后可清理旧存档。
+        Key。AI评分存档：新版写作保留最近30份、不超过1 MiB；口语与旧版作文评分永久保留，可手动清理。导出后可清理旧存档。
       </p>
       <button class="mr-3 border rounded px-3 py-2 text-sm" @click="backup">
         导出学习备份
@@ -283,6 +290,20 @@ async function onDetect() {
       <button class="border rounded px-3 py-2 text-sm" @click="cleanupArchives">
         整理旧评分存档
       </button>
+      <label class="mt-4 block text-sm">每日学习目标
+        <input
+          v-model.number="goalMinutesInput"
+          type="number"
+          min="15"
+          max="480"
+          step="5"
+          class="ml-2 w-20 border rounded bg-transparent p-2"
+        >
+        分钟
+      </label>
+      <p class="mt-2 text-xs text-gray-500">
+        各页计时进度按此目标计算（15–480 分钟，默认 120 分钟），改完立即生效并同步到其他设备。
+      </p>
       <div
         v-if="quarantined.length"
         class="mt-4 border border-amber-300 rounded-lg bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-900/20"
