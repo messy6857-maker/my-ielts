@@ -2,6 +2,7 @@
 import { speechLanguage } from '../../composables/useAudioGroup'
 
 import TextHighlights from '../../components/TextHighlights.vue'
+import PageBookmark from '../../components/PageBookmark.vue'
 import { useAuth } from '../../composables/useAuth'
 import { getToken } from '../../composables/syncClient'
 import { SYNC_API_BASE } from '../../sync-config'
@@ -954,21 +955,23 @@ function paragraphs(passage: string): string[] {
       </template>
     </template>
 
-    <!-- 右下角阅读索引：快速跳转 -->
+    <!-- 右下角：书签贴着阅读索引（自适应，有几个 pill 就顶上去） -->
     <nav
-      v-if="readingIndex.length > 1"
       class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2"
-      aria-label="阅读目录"
+      aria-label="书签与阅读目录"
     >
-      <button
-        v-for="item in readingIndex"
-        :key="item.id"
-        type="button"
-        class="border border-gray-200 rounded-full bg-white/90 px-3.5 py-1.5 text-xs font-medium text-gray-600 shadow-md backdrop-blur transition-colors dark:border-gray-600 hover:border-blue-400 dark:bg-gray-800/90 hover:bg-blue-50 dark:text-gray-300 hover:text-blue-700 dark:hover:border-blue-500 dark:hover:bg-blue-900/40 dark:hover:text-blue-300"
-        @click="jumpTo(item.id)"
-      >
-        {{ item.label }}
-      </button>
+      <PageBookmark inline />
+      <template v-if="readingIndex.length > 1">
+        <button
+          v-for="item in readingIndex"
+          :key="item.id"
+          type="button"
+          class="border border-gray-200 rounded-full bg-white/90 px-3.5 py-1.5 text-xs font-medium text-gray-600 shadow-md backdrop-blur transition-colors dark:border-gray-600 hover:border-blue-400 dark:bg-gray-800/90 hover:bg-blue-50 dark:text-gray-300 hover:text-blue-700 dark:hover:border-blue-500 dark:hover:bg-blue-900/40 dark:hover:text-blue-300"
+          @click="jumpTo(item.id)"
+        >
+          {{ item.label }}
+        </button>
+      </template>
     </nav>
 
     <!-- 点词查义 / 选中翻译：单词旁边的浮动卡片 -->
