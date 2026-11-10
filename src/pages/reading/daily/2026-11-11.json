@@ -1,0 +1,307 @@
+{
+  "date": "2026-11-11",
+  "newsReadings": [
+    {
+      "title": "A Small Decline with a Large Caveat: Fossil Fuel Emissions Edge Downward",
+      "source": "Global Carbon Budget 2026 (via Reuters / zot.news)",
+      "passage": "For the first time since the COVID-19 pandemic brought the world economy to a near standstill, carbon dioxide emissions from fossil fuels are projected to decline. The 2026 Global Carbon Budget, an annual assessment compiled by an international team of scientists and released on 10 November as the COP31 climate talks opened in Antalya, Turkiye, estimates that fossil fuel emissions will fall by 0.4 percent this year, to 38.2 billion tonnes. The figures have been greeted with cautious optimism: after years in which emissions climbed almost relentlessly, even a modest fall suggests that the long-promised transition away from coal, oil and gas may finally be gathering momentum. Yet the authors of the report, and the diplomats gathered in Antalya, are at pains to stress that a single year of decline is not, in itself, a turning point.\n\nThe decline has more than one cause, and not all of them are welcome news. Oil emissions are projected to fall by 1.9 percent, a drop the report links to supply constraints and higher prices arising from the conflict involving Iran, which has reduced demand rather than reflecting a deliberate shift in energy policy. Natural gas emissions are expected to edge down by 0.3 percent, while coal emissions, the most carbon-intensive of the fossil fuels, are projected to rise by 0.6 percent, partly offsetting the gains elsewhere. The cleaner part of the story comes from the rapid expansion of solar and wind power and the accelerating adoption of electric vehicles, which together are beginning to displace fossil fuels in power generation and transport. China has played a particularly significant role, accounting for roughly half of the emissions avoided globally through renewables and electric vehicles; the country, which produces around 32 percent of the world's fossil fuel emissions, is itself expected to record a fall of 0.9 percent.\n\nThe regional picture is uneven. Emissions are projected to fall by 1.5 percent in the European Union, by 1.3 percent in the United States and by 1 percent in Japan. India, by contrast, is moving in the opposite direction, with emissions forecast to rise by 4.4 percent as its economy expands and energy demand grows. Even so, the report finds evidence that economic growth and rising emissions are becoming less tightly coupled: 59 countries recorded lower emissions in 2025 than in 2019, despite continued expansion of their economies. For climate economists, this gradual decoupling is the most encouraging signal in the report, since it suggests that prosperity need not depend indefinitely on burning more fossil fuel.\n\nThe headline figure, however, conceals a less comforting reality. Once emissions from land use are included - above all the peat fires, deforestation and forest fires associated with dry El Nino conditions - total carbon dioxide emissions are projected to reach a record 43.3 billion tonnes in 2026, up from 42.8 billion tonnes last year. The remaining carbon budget for limiting global warming to 1.5 degrees Celsius above pre-industrial levels now amounts to less than four years of emissions at the current rate. Glen Peters, a research professor at the CICERO Center for International Climate Research, warned that a single year of falling fossil fuel emissions 'does not necessarily mean the world has reached a lasting turning point', and that it is essential to distinguish structural progress from temporary disruption. United Nations climate chief Simon Stiell struck a similar note in his opening address, observing that 'this year's fossil fuel cost chaos has delivered a global shockwave, hitting households hard and spreading inflation like a cancer'.\n\nWhether 2026 proves to be the year the tide turned will depend largely on what happens after the conference in Antalya ends. COP31, which runs from 9 to 20 November under the presidency of Turkiye, with Australia's Chris Bowen presiding over the negotiations, is expected to test whether governments are prepared to convert a fragile, partly accidental decline into a deliberate and durable one. That would require sustained investment in renewable energy, the phasing out of fossil fuel subsidies and credible policies to curb demand - measures that have been promised at previous summits and only partially delivered. For now, the 2026 Global Carbon Budget offers a glimpse of a lower-carbon future, but it also serves as a reminder of how narrow the window for achieving it has become.",
+      "notes": [
+        {
+          "word": "standstill",
+          "pos": "n.",
+          "meaning": "停滞；停止"
+        },
+        {
+          "word": "relentlessly",
+          "pos": "adv.",
+          "meaning": "不断地；无情地"
+        },
+        {
+          "word": "momentum",
+          "pos": "n.",
+          "meaning": "势头；动力"
+        },
+        {
+          "word": "turning point",
+          "pos": "n.",
+          "meaning": "转折点"
+        },
+        {
+          "word": "constraint",
+          "pos": "n.",
+          "meaning": "限制；约束"
+        },
+        {
+          "word": "offset",
+          "pos": "v.",
+          "meaning": "抵消；补偿"
+        },
+        {
+          "word": "displace",
+          "pos": "v.",
+          "meaning": "取代；排挤"
+        },
+        {
+          "word": "uneven",
+          "pos": "adj.",
+          "meaning": "不均衡的；参差不齐的"
+        },
+        {
+          "word": "decoupling",
+          "pos": "n.",
+          "meaning": "脱钩；脱离"
+        },
+        {
+          "word": "conceal",
+          "pos": "v.",
+          "meaning": "掩盖；隐藏"
+        },
+        {
+          "word": "associated with",
+          "pos": "phr.",
+          "meaning": "与……有关"
+        },
+        {
+          "word": "distinguish",
+          "pos": "v.",
+          "meaning": "区分；辨别"
+        },
+        {
+          "word": "durable",
+          "pos": "adj.",
+          "meaning": "持久的；耐久的"
+        },
+        {
+          "word": "curb",
+          "pos": "v.",
+          "meaning": "控制；抑制"
+        },
+        {
+          "word": "glimpse",
+          "pos": "n.",
+          "meaning": "一瞥；初步迹象"
+        }
+      ],
+      "questions": [
+        {
+          "q": "According to the passage, fossil fuel emissions in 2026 are projected to",
+          "options": [
+            "fall by 0.4% to 38.2 billion tonnes",
+            "rise by 0.4% to 38.2 billion tonnes",
+            "fall to 43.3 billion tonnes",
+            "remain at the same level as in 2025"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "What is the main reason given for the projected fall in oil emissions?",
+          "options": [
+            "The rapid expansion of solar and wind power",
+            "Supply constraints and higher prices linked to the conflict involving Iran",
+            "A deliberate shift in government energy policy",
+            "A sharp fall in demand for transport"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Total carbon dioxide emissions, including those from land use, are expected to fall in 2026.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The remaining carbon budget for limiting warming to 1.5 degrees Celsius is less than four years of emissions at the current rate.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "What does Glen Peters warn about?",
+          "options": [
+            "The figures in the report are unreliable",
+            "A single year's decline does not necessarily indicate a lasting turning point",
+            "COP31 is certain to fail",
+            "Renewable energy is growing too slowly"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Coal emissions are projected to decline in 2026.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The fact that 59 countries had lower emissions in 2025 than in 2019 is presented as evidence of",
+          "options": [
+            "the success of COP31",
+            "the decoupling of economic growth from rising emissions",
+            "falling energy demand worldwide",
+            "the impact of the conflict involving Iran"
+          ],
+          "answer": 1
+        }
+      ]
+    },
+    {
+      "title": "Faster, Cheaper, Smarter: Anthropic's New Claude Models Raise the Bar",
+      "source": "Anthropic announcement, 9 November 2026 (via thetechoutlook.com / thedarwin.co)",
+      "passage": "On 9 November 2026, barely two months after the previous version appeared, the artificial intelligence company Anthropic unveiled its newest models, Claude Fable 5.2 and Claude Mythos 5.2. The launch, which comes as the company prepares for a widely anticipated public listing, is the latest salvo in an intensifying race among the world's leading AI laboratories to build systems that are faster, cheaper and more capable than those of their rivals. According to Anthropic, the new models generate output up to 30 percent faster than their predecessors, cost less to use, and outperform the company's flagship Opus 5.5 model on several demanding benchmarks. If those claims withstand independent scrutiny, the release could reshape the economics of deploying AI at scale.\n\nFable 5.2 and Mythos 5.2 are, in fact, the same underlying model, offered in two versions. Fable is the version available to the general public: it is distributed through Anthropic's paid plans, its coding tool Claude Code, its developer platform and the cloud services of Amazon, Google and Microsoft, and it carries strong safeguards that block high-risk cybersecurity work, such as penetration testing and the generation of exploits, as well as most research in biology. Mythos is the same model with some of those safeguards relaxed, and access is restricted to organisations approved through Anthropic's Cyber Verification Program or its Life Sciences Verification Program. The distinction reflects a deliberate strategy: to make a powerful general-purpose model widely available, while reserving its most sensitive capabilities for vetted users working in approved fields.\n\nFor developers, the most immediately attractive changes concern speed and price. The models cost 8 dollars per million input tokens and 40 dollars per million output tokens, down from 10 and 50 dollars for the 5.1 versions, and an optional fast mode can generate tokens up to 2.5 times more quickly, at 16 and 80 dollars respectively. They also support a context window of one million tokens - roughly the equivalent of several long novels - and can produce up to 128,000 tokens in a single response. Early testers also reported clearer communication and about 55 percent fewer unnecessary safeguard blocks than in the previous version, with reductions of around 60 percent in cybersecurity tasks and 40 percent in biology.\n\nThe benchmark results published by Anthropic are striking, though they come with an important caveat: they are the company's own figures, drawn from its own testing, and have not yet been independently validated. On FrontierCode 2.0, a test of agentic coding, Fable 5.2 scored 49.1 percent, up from 32.4 percent for Fable 5.1 and ahead of Opus 5.5 at 45.5 percent. On Terminal-Bench-Science, which measures scientific problem-solving, it scored 74.6 percent against 52.6 percent for its predecessor, while Mythos 5.2 reached 89.6 percent on a test of rediscovering known software vulnerabilities, up from 78.3 percent. In robotics, Fable 5.2 scored 64.9 percent on the RoboDojo simulation, more than double the result for Fable 5.1.\n\nBeyond the benchmarks, Anthropic points to a series of research feats achieved with the new models. Fable 5.2 helped solve two open problems in the physics of black holes, with preprints posted for both results, and a team of 1,000 Fable 5.2 agents formalised the proof of Fermat's Last Theorem - one of mathematics' most celebrated results - in the Lean proof system in just 30 hours. The model also designed three working electronic devices from scratch, circuit boards and software included, while Mythos 5.2 accurately modelled 28 of the 34 protein capsid structures it attempted, structures that form the protective shells of viruses. Such demonstrations are intended to show that the models can do more than answer questions: they can carry out extended, open-ended scientific work.\n\nWhether the launch proves to be a genuine advance or merely a well-marketed step in an incremental race will become clearer as independent researchers put the models through their paces. Anthropic says Mythos 5.2 performed as well as, or better than, Opus 5.5 and other leading models on an automated behavioural audit covering roughly 1,900 scenarios, and that Fable 5.2 carries the company's strongest protections yet against distillation - the practice of using one model to train a rival. For now, the release underscores a broader shift in the industry: capability alone is no longer enough, and the contest is increasingly being fought on speed, price and the ability to work reliably, for hours at a time, on tasks that once required a team of specialists.",
+      "notes": [
+        {
+          "word": "salvo",
+          "pos": "n.",
+          "meaning": "齐射；(竞争中的)先发制人举动"
+        },
+        {
+          "word": "withstand",
+          "pos": "v.",
+          "meaning": "经受住；抵挡"
+        },
+        {
+          "word": "scrutiny",
+          "pos": "n.",
+          "meaning": "仔细审查；细查"
+        },
+        {
+          "word": "vetted",
+          "pos": "adj.",
+          "meaning": "经过审查的"
+        },
+        {
+          "word": "safeguard",
+          "pos": "n.",
+          "meaning": "保障措施；防护手段"
+        },
+        {
+          "word": "exploit",
+          "pos": "n.",
+          "meaning": "漏洞利用程序"
+        },
+        {
+          "word": "token",
+          "pos": "n.",
+          "meaning": "词元(文本处理的基本单位)"
+        },
+        {
+          "word": "predecessor",
+          "pos": "n.",
+          "meaning": "前任；前身；上一代产品"
+        },
+        {
+          "word": "caveat",
+          "pos": "n.",
+          "meaning": "警告；限定条件"
+        },
+        {
+          "word": "benchmark",
+          "pos": "n.",
+          "meaning": "基准测试"
+        },
+        {
+          "word": "feat",
+          "pos": "n.",
+          "meaning": "功绩；壮举"
+        },
+        {
+          "word": "formalise",
+          "pos": "v.",
+          "meaning": "使形式化；用形式语言表述"
+        },
+        {
+          "word": "from scratch",
+          "pos": "phr.",
+          "meaning": "从零开始"
+        },
+        {
+          "word": "incremental",
+          "pos": "adj.",
+          "meaning": "渐进的；逐步的"
+        },
+        {
+          "word": "distillation",
+          "pos": "n.",
+          "meaning": "蒸馏；(此处指)模型蒸馏"
+        }
+      ],
+      "questions": [
+        {
+          "q": "Fable 5.2 and Mythos 5.2 are best described as",
+          "options": [
+            "two completely different models",
+            "the same underlying model offered in two versions",
+            "both restricted to verified organisations",
+            "both free for all users to access"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Compared with version 5.1, the new models are",
+          "options": [
+            "slower but cheaper",
+            "up to 30% faster and cheaper to use",
+            "faster but more expensive",
+            "unchanged in speed and price"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Mythos 5.2 is available to any member of the general public.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The benchmark figures cited in the passage have been independently validated.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "On FrontierCode 2.0, Fable 5.2 scored",
+          "options": [
+            "32.4%",
+            "45.5%",
+            "49.1%",
+            "74.6%"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "A team of 1,000 Fable 5.2 agents formalised the proof of Fermat's Last Theorem in 30 hours.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "According to the passage, competition in the AI industry is increasingly being fought on",
+          "options": [
+            "capability alone",
+            "speed, price and the ability to work reliably for hours at a time",
+            "marketing and publicity",
+            "government regulation"
+          ],
+          "answer": 1
+        }
+      ]
+    }
+  ]
+}
