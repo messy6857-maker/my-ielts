@@ -6,6 +6,7 @@ import {
   addPageBookmark,
   getPageBookmarks,
   jumpToPageBookmark,
+  migrateGuestPageBookmarks,
   pageBookmarksState,
   reloadPageBookmarks,
   removePageBookmark,
@@ -211,5 +212,176 @@ describe('回到顶部按钮（与书签同一列右下角）', () => {
     const last = buttons[buttons.length - 1]
     expect(last.attributes('aria-label')).toBe('回到顶部')
     wrapper.unmount()
+  })
+})
+
+describe('登录迁移游客书签（Item 6/L11）', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    pageBookmarksState.value = {}
+  })
+
+  it('把本设备游客的书签按日期迁到账号名下，游客 scope 删掉', () => {
+    const guest = 'device-123'
+    const guestPath = `/reading/daily:${JSON.stringify(['2026-11-09', guest])}`
+    addPageBookmark(guestPath, 1200)
+    addPageBookmark(guestPath, 2400)
+    expect(getPageBookmarks(guestPath)).toHaveLength(2)
+    migrateGuestPageBookmarks(guest, 'alice')
+    expect(getPageBookmarks(guestPath)).toHaveLength(0)
+    const userPath = `/reading/daily:${JSON.stringify(['2026-11-09', 'alice'])}`
+    expect(getPageBookmarks(userPath)).toHaveLength(2)
+    expect(getPageBookmarks(userPath).map(b => b.y)).toEqual([1200, 2400])
+    // 落盘了，刷新后还在
+    reloadPageBookmarks()
+    expect(getPageBookmarks(userPath)).toHaveLength(2)
+  })
+
+  it('账号下已有同一位置的书签时不重复迁', () => {
+    const guest = 'device-123'
+    const guestPath = `/reading/daily:${JSON.stringify(['2026-11-09', guest])}`
+    const userPath = `/reading/daily:${JSON.stringify(['2026-11-09', 'alice'])}`
+    addPageBookmark(userPath, 1200)
+    addPageBookmark(guestPath, 1220)
+    addPageBookmark(guestPath, 3000)
+    migrateGuestPageBookmarks(guest, 'alice')
+    const merged = getPageBookmarks(userPath)
+    expect(merged.map(b => b.y)).toEqual([1200, 3000])
+  })
+
+  it('没有游客书签时什么都不做，别人的 scope 不动', () => {
+    const otherPath = `/reading/daily:${JSON.stringify(['2026-11-09', 'bob'])}`
+    addPageBookmark(otherPath, 900)
+    migrateGuestPageBookmarks('device-123', 'alice')
+    expect(getPageBookmarks(otherPath)).toHaveLength(1)
+    expect(getPageBookmarks(`/reading/daily:${JSON.stringify(['2026-11-09', 'alice'])}`)).toHaveLength(0)
+  })
+})
+
+describe('零高度段落跳转（Item 8）', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    pageBookmarksState.value = {}
+  })
+
+  /** 按给定的 rect（top/height）搭一个 .passage-text，段落按 :scope > p 取 */
+  function passageWithRects(rects: Array<{ top: number; height: number }>) {
+    const passage = document.createElement('div')
+    passage.className = 'passage-text'
+    passage.setAttribute('data-article', 'news-0')
+    const ps = rects.map(() => {
+      const p = document.createElement('p')
+      passage.appendChild(p)
+      return p
+    })
+    document.body.appendChild(passage)
+    const previous = Object.getOwnPropertyDescriptor(window, 'scrollY')
+    Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 })
+    ps.forEach((p, i) => {
+      const { top, height } = rects[i]
+      vi.spyOn(p, 'getBoundingClientRect').mockReturnValue({ top, bottom: top + height, height, left: 0, right: 100, width: 100, x: 0, y: top, toJSON: () => ({}) } as DOMRect)
+    })
+    return {
+      cleanup() {
+        document.body.removeChild(passage)
+        if (previous)
+          Object.defineProperty(window, 'scrollY', previous)
+      },
+    }
+  }
+
+  it('锚点段落零高度（不渲染，rect 全 0）时跳到后面第一个有高度的段落，而不是回页顶', () => {
+    // 段 0 高 100（top 0），段 1 不渲染（top 0、高 0），段 2 高 100（top 120）；书签锚在段 1
+    const { cleanup } = passageWithRects([{ top: 0, height: 100 }, { top: 0, height: 0 }, { top: 120, height: 100 }])
+    try {
+      const item = { id: 'x', y: 50, createdAt: 0, anchor: { article: 'news-0', paragraph: 1, offset: 30 } }
+      // 旧算法按段 1 算：0+0+min(30,0)-90 钳到 0（回页顶，错）；新算法用段 2：120-90=30
+      expect(resolveBookmarkY(item)).toBe(30)
+      const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+      addPageBookmark('/reading/daily', 50, { article: 'news-0', paragraph: 1, offset: 30 })
+      const id = getPageBookmarks('/reading/daily')[0].id
+      expect(jumpToPageBookmark('/reading/daily', id)).toBe(true)
+      expect(scrollTo).toHaveBeenCalledWith({ top: 30, behavior: 'instant' })
+      scrollTo.mockRestore()
+    }
+    finally {
+      cleanup()
+    }
+  })
+
+  it('锚点段落零高度且后面没有有高度段落时往前找', () => {
+    // 段 0 高 100（top 0），段 1 高 0（top 100），段 2 不渲染（top 0、高 0）；书签锚在段 2
+    const { cleanup } = passageWithRects([{ top: 0, height: 100 }, { top: 100, height: 0 }, { top: 0, height: 0 }])
+    try {
+      const item = { id: 'x', y: 50, createdAt: 0, anchor: { article: 'news-0', paragraph: 2, offset: 0 } }
+      // 往后没有，往前找到段 0，top 0，减 90 钳到 0
+      expect(resolveBookmarkY(item)).toBe(0)
+    }
+    finally {
+      cleanup()
+    }
+  })
+
+  it('有高度的段落仍按原段落加 offset 算', () => {
+    const { cleanup } = passageWithRects([{ top: 0, height: 100 }, { top: 100, height: 80 }, { top: 180, height: 100 }])
+    try {
+      const item = { id: 'x', y: 50, createdAt: 0, anchor: { article: 'news-0', paragraph: 1, offset: 30 } }
+      // 段 1 top 100，offset 30，100+30-90=40
+      expect(resolveBookmarkY(item)).toBe(40)
+    }
+    finally {
+      cleanup()
+    }
+  })
+})
+
+describe('删最后一个旧书签的提示（Item 7）', () => {
+  async function mountBookmark(props: Record<string, unknown> = {}) {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/reading/daily', component: PageBookmark }],
+    })
+    await router.push('/reading/daily')
+    await router.isReady()
+    return mount(PageBookmark, { props, global: { plugins: [router] } })
+  }
+
+  it('删最后一个旧书签时给一句提示并回到当前日期的书签', async () => {
+    // 旧书签（无 scope，按路径存）+ 当前日期书签（有 scope）
+    addPageBookmark('/reading/daily', 500)
+    const scope = JSON.stringify(['2026-11-09', 'alice'])
+    addPageBookmark(`/reading/daily:${scope}`, 1500)
+    const w = await mountBookmark({ inline: true, scope })
+    await w.vm.$nextTick()
+    // 点“查看旧书签”切到旧书签列表
+    const legacyBtn = w.findAll('button').find(b => b.text().includes('旧书签'))
+    expect(legacyBtn?.exists()).toBe(true)
+    await legacyBtn!.trigger('click')
+    await w.vm.$nextTick()
+    expect(w.text()).toContain('书签 1')
+    // 删掉唯一的旧书签
+    await w.find('[aria-label="删除书签 1"]').trigger('click')
+    await w.vm.$nextTick()
+    expect(w.text()).toContain('旧书签已删完，已回到当前日期的书签')
+    // 列表已切回当前日期的书签
+    expect(getPageBookmarks('/reading/daily')).toHaveLength(0)
+    expect(getPageBookmarks(`/reading/daily:${scope}`)).toHaveLength(1)
+    w.unmount()
+  })
+
+  it('删的不是最后一个旧书签时不提示', async () => {
+    addPageBookmark('/reading/daily', 500)
+    addPageBookmark('/reading/daily', 900)
+    const scope = JSON.stringify(['2026-11-09', 'alice'])
+    const w = await mountBookmark({ inline: true, scope })
+    await w.vm.$nextTick()
+    const legacyBtn = w.findAll('button').find(b => b.text().includes('旧书签'))
+    await legacyBtn!.trigger('click')
+    await w.vm.$nextTick()
+    await w.find('[aria-label="删除书签 1"]').trigger('click')
+    await w.vm.$nextTick()
+    expect(w.text()).not.toContain('旧书签已删完')
+    expect(getPageBookmarks('/reading/daily')).toHaveLength(1)
+    w.unmount()
   })
 })

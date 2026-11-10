@@ -92,14 +92,86 @@ export function getPageBookmarks(path: string): PageBookmarkItem[] {
 export function resolveBookmarkY(item: PageBookmarkItem): number {
   if (!item.anchor)
     return item.y
-  const { article, paragraph, offset } = item.anchor
+  return anchorTop(item.anchor) ?? item.y
+}
+
+/** 锚点在当前布局下的滚动位置；文章或段落不存在返回 undefined，调用方回退到记录时的 y。
+ * Item 8：零高度段落（空段落/内容被折叠）本身没高度、位置是两段边界，按它算会落错地方——
+ * 往后找第一个有高度的段落，找不到再往前找；offset 只对原段落有效，换段落后按段首算。
+ * 都没有有高度的段落时按原段落位置算（与原来一致）。 */
+function anchorTop(anchor: BookmarkAnchor): number | undefined {
+  const { article, paragraph, offset } = anchor
   const passage = Array.from(document.querySelectorAll<HTMLElement>('.passage-text[data-article]'))
     .find(el => el.dataset.article === article)
-  const target = passage?.querySelectorAll<HTMLElement>(':scope > p')[paragraph]
+  if (!passage)
+    return undefined
+  const paragraphs = Array.from(passage.querySelectorAll<HTMLElement>(':scope > p'))
+  const target = paragraphs[paragraph]
   if (!target)
-    return item.y
+    return undefined
   const rect = target.getBoundingClientRect()
-  return Math.max(0, window.scrollY + rect.top + Math.min(offset, rect.height) - 90)
+  if (rect.height > 0)
+    return Math.max(0, window.scrollY + rect.top + Math.min(offset, rect.height) - 90)
+  for (let i = paragraph + 1; i < paragraphs.length; i++) {
+    const next = paragraphs[i].getBoundingClientRect()
+    if (next.height > 0)
+      return Math.max(0, window.scrollY + next.top - 90)
+  }
+  for (let i = paragraph - 1; i >= 0; i--) {
+    const prev = paragraphs[i].getBoundingClientRect()
+    if (prev.height > 0)
+      return Math.max(0, window.scrollY + prev.top - 90)
+  }
+  return Math.max(0, window.scrollY + rect.top - 90)
+}
+
+/** 登录时把本设备游客的书签迁到账号名下（Item 6/L11）。
+ * 游客书签按 [日期, 设备 id] 分 scope，登录后 scope 变成 [日期, 账号]，旧书签就看不见了。
+ * 找到所有 scope 第二项是该设备 id 的 daily 书签，按日期合并进对应的账号 scope（按位置去重，与 M1 同规则），
+ * 再删掉游客 scope。localStorage 是设备级的，这里的游客书签只可能是本设备的，放心迁。
+ * 没有游客书签时什么都不做。 */
+export function migrateGuestPageBookmarks(guestId: string, username: string): void {
+  if (!guestId || !username || guestId === username)
+    return
+  const map = pageBookmarksState.value
+  let changed = false
+  const next: PageBookmarks = { ...map }
+  for (const [path, items] of Object.entries(map)) {
+    if (!path.startsWith('/reading/daily:'))
+      continue
+    const scopeRaw = path.slice('/reading/daily:'.length)
+    let scope: unknown
+    try {
+      scope = JSON.parse(scopeRaw)
+    }
+    catch {
+      continue
+    }
+    if (!Array.isArray(scope) || scope.length !== 2 || scope[1] !== guestId)
+      continue
+    const targetPath = `/reading/daily:${JSON.stringify([scope[0], username])}`
+    const target = next[targetPath] ?? []
+    const merged = [...target]
+    for (const item of items) {
+      const dup = merged.some(b => (
+        item.anchor && b.anchor
+          ? b.anchor.article === item.anchor.article
+            && b.anchor.paragraph === item.anchor.paragraph
+            && Math.abs(b.anchor.offset - item.anchor.offset) <= DEDUP_PX
+          : Math.abs(b.y - item.y) <= DEDUP_PX
+      ))
+      if (!dup)
+        merged.push(item)
+    }
+    if (merged.length)
+      next[targetPath] = merged
+    delete next[path]
+    changed = true
+  }
+  if (!changed)
+    return
+  pageBookmarksState.value = next
+  persistBookmarks(next)
 }
 /** 在当前位置增加一个书签；50px 内已有书签时不重复加，返回 null */
 export function readingBookmarkAnchor(): BookmarkAnchor | undefined {
@@ -163,15 +235,9 @@ export function jumpToPageBookmark(path: string, id: string): boolean {
     return false
   let top = item.y
   if (item.anchor) {
-    const { article, paragraph, offset } = item.anchor
-    const passage = Array.from(document.querySelectorAll<HTMLElement>('.passage-text[data-article]'))
-      .find(el => el.dataset.article === article)
-    const target = passage?.querySelectorAll<HTMLElement>(':scope > p')[paragraph]
-    if (target) {
-      const rect = target.getBoundingClientRect()
-      top = window.scrollY + rect.top + Math.min(offset, rect.height) - 90
-    }
-    // L2：段落找不到了（文章改版/篇数变化）回退到记录时的 y，不精确但比完全不跳好
+    // L2：段落找不到了（文章改版/篇数变化）回退到记录时的 y，不精确但比完全不跳好。
+    // Item 8：零高度段落由 anchorTop 跳到最近的有高度段落，不直接按零高度位置算。
+    top = anchorTop(item.anchor) ?? item.y
   }
   window.scrollTo({ top: Math.max(0, top), behavior: 'instant' })
   return true

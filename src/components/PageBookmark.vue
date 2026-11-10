@@ -43,9 +43,13 @@ const bookmarks = computed(() => {
   return tick >= 0 ? getPageBookmarks(bookmarkPath.value) : []
 })
 const jumpFailed = ref(false)
+// Item 7：删最后一个旧书签时列表静默切回当前日期书签的提示（与 jumpFailed 同样式，
+// 下一次操作时清掉）。
+const notice = ref('')
 watch(scopedPath, () => {
   showLegacy.value = false
   jumpFailed.value = false
+  notice.value = ''
 })
 
 /** 该书签在页面里的进度（方便区分几个书签都在哪）；锚点书签按当前布局下的位置算 */
@@ -81,14 +85,25 @@ function bumpLayoutTick() {
 function onAdd() {
   showLegacy.value = false
   jumpFailed.value = false
+  notice.value = ''
   addPageBookmark(scopedPath.value, window.scrollY, props.scope ? readingBookmarkAnchor() : undefined)
 }
 function onJump(id: string) {
+  notice.value = ''
   jumpFailed.value = !jumpToPageBookmark(bookmarkPath.value, id)
 }
 function onRemove(id: string) {
   jumpFailed.value = false
+  notice.value = ''
+  // Item 7：删最后一个旧书签时列表会静默切回当前日期的书签（hasLegacy 变 false，
+  // bookmarkPath 自动变回 scoped），用户不知道发生了什么。删完给一句提示。
+  const viewingLegacy = showLegacy.value && hasLegacy.value
+  const legacyCount = viewingLegacy ? getPageBookmarks(path.value).length : 0
   removePageBookmark(bookmarkPath.value, id)
+  if (viewingLegacy && legacyCount <= 1) {
+    showLegacy.value = false
+    notice.value = '旧书签已删完，已回到当前日期的书签'
+  }
 }
 </script>
 
@@ -101,6 +116,9 @@ function onRemove(id: string) {
   >
     <p v-if="jumpFailed" role="status" class="rounded bg-white px-2 py-1 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
       当前文章未加载或原段落已变更
+    </p>
+    <p v-if="notice" role="status" class="rounded bg-white px-2 py-1 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+      {{ notice }}
     </p>
     <button
       v-if="hasLegacy"

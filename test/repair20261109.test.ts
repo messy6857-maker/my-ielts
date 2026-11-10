@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import { useAuth } from '../src/composables/useAuth'
 import { apiPull, collectSyncData, getQuarantinedKeys, handleRejectedKeys, setToken } from '../src/composables/syncClient'
 import { useMockMistakeSave } from '../src/composables/useMockMistakeSave'
+import { hasWrittenMockMistakes } from '../src/utils/mockMistakes'
 import { useMistakes } from '../src/composables/useStudyData'
 import { accountKey, entryKey, saveValue } from '../src/utils/storage'
 import { addPageBookmark, getPageBookmarks, reloadPageBookmarks } from '../src/composables/usePageBookmark'
@@ -296,5 +297,112 @@ it('daily bookmarks follow a paragraph after layout changes and stay scoped to t
   finally {
     if (previous)
       Object.defineProperty(window, 'scrollY', previous)
+  }
+})
+
+it('does not lose entries when another tab saves the same attempt concurrently (Item 3)', () => {
+  const records = useMistakes()
+  const set = Storage.prototype.setItem
+  const blocked = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (key.includes('_mistake_parts_v2__entry_'))
+      throw new DOMException('fixture', 'QuotaExceededError')
+    return set.call(this, key, value)
+  })
+  const saver = useMockMistakeSave()
+  saver.save('race', entries('a'))
+  const pendingKey = entryKey('mock_mistake_pending_v2', 'race', 'alice')
+  const stored = JSON.parse(localStorage.getItem(pendingKey)!)
+  expect(stored.entries.map((e: any) => e.key)).toEqual(['a'])
+  // 模拟另一页签在 save() 的重读之前又存了一题：第二次读到该 pending 时多出 'b'。
+  // 旧代码只在 save 开头读一次，会把 'b' 覆盖丢掉；新代码写前重读再合并，'b' 应保留。
+  const get = Storage.prototype.getItem
+  let reads = 0
+  const getSpy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function (this: Storage, key: string) {
+    const value = get.call(this, key)
+    if (key === pendingKey) {
+      reads++
+      if (reads >= 2)
+        return JSON.stringify({ ...stored, entries: [...stored.entries, ...entries('b')] })
+    }
+    return value
+  })
+  try {
+    saver.save('race', entries('c'))
+  }
+  finally {
+    getSpy.mockRestore()
+  }
+  const final = JSON.parse(localStorage.getItem(pendingKey)!)
+  expect(final.entries.map((e: any) => e.key).sort()).toEqual(['a', 'b', 'c'])
+  blocked.mockRestore()
+  saver.retry()
+  expect(records.mistakes.value.map(({ key, count }) => [key, count]).sort()).toEqual([['a', 1], ['b', 1], ['c', 1]])
+  expect(saver.failed.value).toBe(false)
+})
+
+it('does not mark an attempt written when saved with no entries (Item 4)', () => {
+  const saver = useMockMistakeSave()
+  saver.save('empty', [])
+  // 空保存不建 pending，也不标记已写（零错题不等于“已记过”）
+  expect(localStorage.getItem(entryKey('mock_mistake_pending_v2', 'empty', 'alice'))).toBeNull()
+  expect(hasWrittenMockMistakes('empty')).toBe(false)
+  expect(saver.failed.value).toBe(false)
+})
+
+it('still records later entries after an empty save (Item 4)', () => {
+  const records = useMistakes()
+  const set = Storage.prototype.setItem
+  const blocked = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    if (key.includes('_mistake_parts_v2__entry_'))
+      throw new DOMException('fixture', 'QuotaExceededError')
+    return set.call(this, key, value)
+  })
+  const saver = useMockMistakeSave()
+  saver.save('empty-then-real', [])
+  expect(hasWrittenMockMistakes('empty-then-real')).toBe(false)
+  saver.save('empty-then-real', entries('real'))
+  // 有新错题就建 pending 兜底重试，不因之前空保存而跳过
+  expect(saver.failed.value).toBe(true)
+  expect(localStorage.getItem(entryKey('mock_mistake_pending_v2', 'empty-then-real', 'alice'))).not.toBeNull()
+  blocked.mockRestore()
+  saver.retry()
+  expect(records.mistakes.value.map(({ key, count }) => [key, count])).toEqual([['real', 1]])
+  expect(saver.failed.value).toBe(false)
+})
+
+it('frees space by pruning expired pending tasks when a write fails (Item 5)', () => {
+  // 一个已过期（91 天）的 pending 任务占着地方；新任务第一次写模拟存储满了，
+  // 清掉过期任务后重试应成功落盘（而不是只剩内存兜底）。
+  const staleKey = entryKey('mock_mistake_pending_v2', 'stale', 'alice')
+  localStorage.setItem(staleKey, JSON.stringify({
+    owner: 'alice',
+    attemptId: 'stale',
+    entries: entries('stale-first'),
+    createdAt: Date.now() - 91 * 24 * 3600 * 1000,
+  }))
+  const set = Storage.prototype.setItem
+  const newKey = entryKey('mock_mistake_pending_v2', 'fresh', 'alice')
+  let failedOnce = false
+  const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
+    // 错题本身写不进去（pending 才留得住），新 pending 第一次写模拟存储满了
+    if (key.includes('_mistake_parts_v2__entry_'))
+      throw new DOMException('fixture', 'QuotaExceededError')
+    if (key === newKey && !failedOnce) {
+      failedOnce = true
+      throw new DOMException('fixture', 'QuotaExceededError')
+    }
+    return set.call(this, key, value)
+  })
+  try {
+    const saver = useMockMistakeSave()
+    saver.save('fresh', entries('fresh-first'))
+    // 过期任务被清掉腾地方，新任务落盘成功（不在内存兜底里）
+    expect(localStorage.getItem(staleKey)).toBeNull()
+    expect(localStorage.getItem(newKey)).not.toBeNull()
+    expect(JSON.parse(localStorage.getItem(newKey)!).entries.map((e: any) => e.key)).toEqual(['fresh-first'])
+    expect(saver.failed.value).toBe(true)
+  }
+  finally {
+    spy.mockRestore()
   }
 })

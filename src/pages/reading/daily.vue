@@ -3,6 +3,7 @@ import { speechLanguage } from '../../composables/useAudioGroup'
 
 import TextHighlights from '../../components/TextHighlights.vue'
 import PageBookmark from '../../components/PageBookmark.vue'
+import { migrateGuestPageBookmarks } from '../../composables/usePageBookmark'
 import { useAuth } from '../../composables/useAuth'
 import { getToken } from '../../composables/syncClient'
 import { SYNC_API_BASE } from '../../sync-config'
@@ -15,7 +16,8 @@ import indexData from './daily/index.json'
 
 const { currentUser } = useAuth()
 // L11：游客没有账号，用设备 id 区分（同一设备先后两位游客仍共享，localStorage 本来就是设备级的；
-// 不同设备/浏览器互不干扰）。登录后 scope 变账号，游客书签按账号隔离不可见，属设计取舍。
+// 不同设备/浏览器互不干扰）。Item 6：登录后把本设备游客的书签迁到账号名下（见下方 watch/onMounted），
+// 免得游客时期记的书签登录后看不见；迁移按日期合并去重。
 const guestId = getDeviceId()
 
 interface WordNote {
@@ -237,7 +239,7 @@ watch(selectedDate, () => {
   expandedNotes.value = new Set()
   answers.value = {}
 })
-watch(currentUser, () => {
+watch(currentUser, (user) => {
   // Public news answers remain valid. Private reading changes with owner.
   const privatePrefix = `${selectedDate.value}-vocab-`
   answers.value = Object.fromEntries(
@@ -246,6 +248,10 @@ watch(currentUser, () => {
   expandedNotes.value = new Set(
     [...expandedNotes.value].filter(key => !key.startsWith(privatePrefix)),
   )
+  // Item 6/L11：登录后把本设备游客的书签迁到账号名下（按日期合并去重）；
+  // 没有游客书签时是空操作。
+  if (user)
+    migrateGuestPageBookmarks(guestId, user)
 }, { flush: 'sync' })
 
 // 右下角阅读索引：点击直接跳到对应文章（词汇阅读 + 热点阅读按顺序编号）
@@ -584,6 +590,9 @@ onMounted(() => {
   document.addEventListener('selectionchange', onSelectionChange)
   document.addEventListener('click', onDocumentClickCapture, true)
   window.addEventListener('scroll', onWindowScroll, { capture: true, passive: true })
+  // Item 6/L11：已登录进页时也迁一次（补迁上次游客时期留下的书签）；没有游客书签时是空操作。
+  if (currentUser.value)
+    migrateGuestPageBookmarks(guestId, currentUser.value)
 })
 onUnmounted(() => {
   document.removeEventListener('selectionchange', onSelectionChange)

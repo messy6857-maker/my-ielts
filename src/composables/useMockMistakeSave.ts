@@ -108,8 +108,10 @@ function updatePending(task: Pending, complete = false) {
       inMemory.delete(key)
     }
     else {
-      localStorage.setItem(key, JSON.stringify(task))
-      inMemory.delete(key)
+      // 写成功才清内存；写失败（writePendingTask 已试过清过期任务重试）
+      // 则留内存兜底，本页签内仍可重试。
+      if (writePendingTask(key, task, owner))
+        inMemory.delete(key)
     }
     if (readTask(legacyKey, owner)?.attemptId === attemptId)
       localStorage.removeItem(legacyKey)
@@ -118,6 +120,48 @@ function updatePending(task: Pending, complete = false) {
     // A failed write leaves the latest unsaved questions available in this page.
   }
   revision.value++
+}
+
+/** 清掉该账号已过期（>90 天）的 pending 任务与 legacy 槽，给写失败腾地方。只删过期任务，不动有效任务。 */
+function pruneExpiredPending(owner: string | null): void {
+  const legacyKey = accountKey(LEGACY_PENDING, owner)
+  try {
+    const legacy = readTask(legacyKey, owner)
+    if (legacy && isPendingExpired(legacy))
+      localStorage.removeItem(legacyKey)
+  }
+  catch {}
+  const prefix = `${accountKey(PENDING, owner)}__entry_`
+  for (const key of Object.keys(localStorage)) {
+    if (!key.startsWith(prefix))
+      continue
+    try {
+      const task = readTask(key, owner)
+      if (task && isPendingExpired(task))
+        localStorage.removeItem(key)
+    }
+    catch {}
+  }
+}
+
+/** 写 pending 任务。Item 5：setItem 失败（常是存储满了）时，先清掉该账号已过期的 pending 任务腾地方，
+ * 再重试一次；还写不进去才返回 false，由调用方留内存兜底（本页签可见、跨页签不可见）。
+ * 清过期任务再重试，让内存兜底只在存储真的满到清无可清时才发生，而不是一失败就只剩内存。 */
+function writePendingTask(key: string, task: Pending, owner: string | null): boolean {
+  try {
+    localStorage.setItem(key, JSON.stringify(task))
+    return true
+  }
+  catch {
+    try {
+      pruneExpiredPending(owner)
+      localStorage.setItem(key, JSON.stringify(task))
+      return true
+    }
+    catch {
+      return false
+    }
+  }
 }
 
 export function useMockMistakeSave() {
@@ -163,31 +207,33 @@ export function useMockMistakeSave() {
 
   function save(attemptId: string, entries: Entries) {
     const owner = currentUser.value
+    // Item 4：空 entries 且无待处理任务时什么都不做——不建 pending、不标记已写。
+    // 否则一次零错题的保存会把 attempt 标成已写，后面再有错题进来时，
+    // 旧代码因 hasWritten 为真建不出 pending，写失败就丢了重试兜底。
     const existing = readPending(owner).get(attemptId)
-    let task: Pending
-    if (existing) {
-      // L5：同 attemptId 二次 save() 时不再丢弃新 entries——按 key 合并进 remainder，
-      // 已记过的由 addMistake 的 recordedAttempts 去重，不会重复计。
-      const seen = new Set(existing.entries.map(e => e.key))
-      const merged = [...existing.entries]
-      let mergedNew = false
-      for (const entry of entries) {
-        if (!seen.has(entry.key)) {
-          seen.add(entry.key)
-          merged.push(entry)
-          mergedNew = true
-        }
+    if (!existing && entries.length === 0)
+      return
+    // Item 3：跨页签同时 save 同一 attempt 时，后写的会覆盖先写的合并结果（丢更新）。
+    // 写之前重读一次最新落盘状态再合并，把竞态窗口收到重读与落盘之间这一步；
+    // 即便仍有极窄窗口撞上，addMistake 的 recordedAttempts 去重也能保证不重复计。
+    const latest = readPending(owner).get(attemptId)
+      ?? { owner, attemptId, entries: [], createdAt: Date.now() }
+    const seen = new Set(latest.entries.map(e => e.key))
+    const merged = [...latest.entries]
+    let mergedNew = false
+    for (const entry of entries) {
+      if (!seen.has(entry.key)) {
+        seen.add(entry.key)
+        merged.push(entry)
+        mergedNew = true
       }
-      task = { ...existing, entries: merged }
-      // 合并进来的新 entries 先落盘，免得 writeMistakes 抛错时丢失
-      if (mergedNew)
-        updatePending(task)
     }
-    else {
-      task = { owner, attemptId, entries, createdAt: Date.now() }
-      if (entries.length && !hasWrittenMockMistakes(attemptId))
-        updatePending(task)
-    }
+    const task: Pending = { ...latest, entries: merged }
+    // Item 4：只要有新 entries 就落盘建 pending，不再看 hasWritten——
+    // 空保存已标过已写的情况下，后面再进来的错题也得有 pending 兜底重试。
+    // 合并进来的新 entries 先落盘，免得 writeMistakes 抛错时丢失。
+    if (mergedNew)
+      updatePending(task)
     batchStorage(() => writeMistakes(task))
   }
 
