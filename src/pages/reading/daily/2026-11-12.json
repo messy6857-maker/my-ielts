@@ -1,0 +1,307 @@
+{
+  "date": "2026-11-12",
+  "newsReadings": [
+    {
+      "title": "Proved, Not Just Tested: AI Verifies Signal's Encryption at Machine-Code Level",
+      "source": "Google DeepMind announcement, 10 November 2026 (via The Register / getaibook.com)",
+      "passage": "On 10 November 2026, Google DeepMind announced a result long pursued in computer security: a machine-checked mathematical proof that the cryptographic core of the Signal messaging protocol does what it promises — not merely in theory, but in the actual compiled code that runs on a phone. The system behind the achievement, called AlphaProof Code, is a multi-agent framework that combines human expertise with teams of artificial intelligence agents to carry out formal verification, a technique long regarded as the gold standard of software correctness but so labour-intensive that it has rarely been applied to widely used software. Signal matters because its protocol underpins end-to-end encryption not only in the Signal app but also, in adapted forms, in WhatsApp, Facebook Messenger and Google Messages, protecting the conversations of billions of people.\n\nFormal verification differs fundamentally from conventional testing. Testing runs a program against selected inputs and checks the outputs; it can reveal bugs, but never demonstrate their absence. Formal verification, by contrast, expresses the desired properties of a system as precise mathematical statements and then constructs a proof that those statements hold for every possible input. The catch has always been cost: writing such proofs by hand is painstaking work. Landmark efforts such as the verified seL4 microkernel consumed roughly twenty person-years. AlphaProof Code compresses that timescale dramatically: a team of five researchers, working with AI agents, completed the Signal verification in four weeks.\n\nThe target was libsignal version 0.105.4, the reference implementation of the Signal protocol, compiled with the standard Rust compiler into AArch64 machine code — the instruction set of the ARM processors in most smartphones. About 560 kilobytes of code, roughly 140,000 machine instructions, were verified. The proof covers the two mechanisms guarding a one-to-one conversation: the PQXDH handshake, a post-quantum key agreement establishing a secure session, and the Triple Ratchet, which rotates the encryption keys as messages flow, mixing in a post-quantum exchange alongside the classic Double Ratchet. Under two standard models of protocol security, the proof establishes forward secrecy — past messages stay secret even if a key is later stolen — post-compromise security, which restores protection after a brief exposure of a device's keys, and the authenticity of both parties.\n\nThe process rested on a clear division of labour between humans and machines. Human experts first translated Signal's security goals into formal specifications in Lean, a language designed for mathematical proofs, and reviewed every line — about 18,000 lines, plus roughly 8,000 describing the semantics of the AArch64 instruction set. AI agents, powered by Google's Gemini 4 Carbon model and working in teams of forty to eighty, then wrote the proofs: some 6.5 million lines of Lean code, about 5.3 million of which reason about the binary itself — registers, stack frames and memory layout. Crucially, nobody has to trust those millions of lines: Lean's kernel checks every step mechanically and rejects any that does not hold, so the guarantee rests only on the much smaller trusted base of specifications. As the researchers put it, specifications are trusted; proofs are not.\n\nTo test whether the system could distinguish secure code from flawed code, DeepMind deliberately reintroduced two bugs previously found and fixed in libsignal. In both cases it produced a machine-checked demonstration that the altered code was insecure. The specifications and proofs have been released as open source, inviting independent scrutiny.\n\nThe limitations, however, are substantial, and the researchers are explicit about them. The proof applies only to one-to-one conversations; group chats, which most messaging users rely on daily, remain unverified. It covers one version of the library, compiled for one processor architecture and linked into a small test harness, not the complete Signal apps. The low-level cryptographic building blocks are assumed secure rather than proven, and the computational proof does not establish the post-quantum guarantee that the new SPQR ratchet was designed to provide, because the proof allows the attacker to choose its keys. Above all, a mistake in the human-approved specifications would weaken the entire guarantee: the proof shows that the code matches the specification, not that the specification itself is right.\n\nEven with these caveats, the achievement is widely seen as a milestone: in April 2026, the Beneficial AI Foundation set a grand challenge to verify the Signal protocol and app formally, and AlphaProof Code is the first major step towards it. More broadly, it suggests formal verification — once confined to small, specialised systems — could become practical for critical software, from operating systems to power grids. Yet a proof is not a promise that software can never be hacked; it is a precisely bounded claim about a precisely defined system. Its value lies not in declaring Signal unbreakable, but in showing that rigorous, machine-checked assurance about software billions trust can now be produced in weeks rather than decades.",
+      "notes": [
+        {
+          "word": "formal verification",
+          "pos": "n. phrase",
+          "meaning": "形式化验证（用数学证明软件正确性的方法）"
+        },
+        {
+          "word": "cryptographic",
+          "pos": "adj.",
+          "meaning": "密码学的；加密的"
+        },
+        {
+          "word": "compiled code",
+          "pos": "n. phrase",
+          "meaning": "编译后的代码"
+        },
+        {
+          "word": "end-to-end encryption",
+          "pos": "n. phrase",
+          "meaning": "端到端加密"
+        },
+        {
+          "word": "labour-intensive",
+          "pos": "adj.",
+          "meaning": "劳动密集型的"
+        },
+        {
+          "word": "painstaking",
+          "pos": "adj.",
+          "meaning": "费力的；煞费苦心的"
+        },
+        {
+          "word": "forward secrecy",
+          "pos": "n. phrase",
+          "meaning": "前向保密（密钥泄露后以往消息仍保密）"
+        },
+        {
+          "word": "post-compromise security",
+          "pos": "n. phrase",
+          "meaning": "泄露后安全性（密钥短暂暴露后恢复保护）"
+        },
+        {
+          "word": "handshake",
+          "pos": "n.",
+          "meaning": "握手（建立安全会话的初始协商）"
+        },
+        {
+          "word": "ratchet",
+          "pos": "n.",
+          "meaning": "棘轮机制（不断更换密钥的机制）"
+        },
+        {
+          "word": "specification",
+          "pos": "n.",
+          "meaning": "规范；规格说明"
+        },
+        {
+          "word": "kernel",
+          "pos": "n.",
+          "meaning": "内核；核心程序"
+        },
+        {
+          "word": "scrutiny",
+          "pos": "n.",
+          "meaning": "细查；仔细审查"
+        },
+        {
+          "word": "caveat",
+          "pos": "n.",
+          "meaning": "警告；限制条件"
+        },
+        {
+          "word": "milestone",
+          "pos": "n.",
+          "meaning": "里程碑；重大进展"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What is the main achievement announced by Google DeepMind?",
+          "options": [
+            "A machine-checked proof that Signal's cryptographic core behaves as intended in its compiled code",
+            "A new messaging app designed to replace Signal",
+            "A faster version of the Signal protocol",
+            "A method for breaking end-to-end encryption"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "According to the passage, how does formal verification differ from conventional testing?",
+          "options": [
+            "It tests the program against more inputs",
+            "It proves that properties hold for every possible input, rather than checking selected cases",
+            "It requires no human involvement at all",
+            "It only works on very small programs"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The verification covered group chats as well as one-to-one conversations.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "How long did the Signal verification take, and how many researchers were involved?",
+          "options": [
+            "Four weeks, with a team of five researchers",
+            "Six years, with a team of twenty researchers",
+            "Twenty person-years of work",
+            "Four months, with forty researchers"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The AI agents wrote all of the specifications as well as the proofs.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What does the passage say about the 6.5 million lines of Lean proof code?",
+          "options": [
+            "They must be trusted on faith",
+            "They are checked mechanically by Lean's kernel, so they do not need to be trusted",
+            "They were written entirely by human researchers",
+            "They have been shown to contain no errors"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "DeepMind claims that the proof guarantees Signal can never be hacked.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        }
+      ]
+    },
+    {
+      "title": "A Metal Honeycomb That Cools: A Refrigerant-Free Future Takes Shape",
+      "source": "HKUST research published in Science, 6 November 2026 (via Tech Xplore)",
+      "passage": "As summers grow hotter and air conditioning spreads to regions that once managed without it, demand for cooling is rising faster than demand for almost any other form of energy. Conventional refrigeration, however, carries a heavy environmental price. Vapour-compression systems — the technology inside nearly every fridge and air conditioner — consume large amounts of electricity and rely on refrigerant gases, many of which are potent greenhouse gases when they leak. Finding a cleaner way to cool things has therefore become one of the more urgent challenges of the energy transition. A team at the Hong Kong University of Science and Technology (HKUST) believes it has taken a significant step towards an answer, with a solid-state cooling device inspired by the structure of a honeycomb and described in the journal Science on 6 November 2026.\n\nThe device exploits the elastocaloric effect, a phenomenon in which certain materials — known as shape memory alloys — absorb heat when they are stretched and release it when the stress is removed. The underlying mechanism is a reversible transformation in the crystal structure of the alloy: as the material switches between two phases, it takes in or gives out thermal energy. Because the process is driven by mechanical force rather than by the compression and expansion of a gas, it needs no refrigerant at all, and it can in principle be far more efficient than a conventional compressor. Elastocaloric cooling has been studied for years, but practical devices have been held back by a stubborn trade-off: materials that transfer heat well tend to break after relatively few cycles, while durable designs tend to cool poorly or cost too much to manufacture.\n\nThe HKUST team's advance lies in the architecture of the material rather than in a new alloy. Using a manufacturing process they call \"stamping and stacking\", the researchers fabricated thin, porous chips of a nickel-titanium alloy and assembled them into a structure resembling the stacked cells of a honeycomb. The pores allow a fluid to flow through the structure and carry heat away efficiently, while the honeycomb geometry distributes mechanical stress evenly, preventing the cracks that usually accumulate with repeated use. A refrigerant unit just 30 millimetres long, containing 200 stacked chips, achieved a temperature span of 11.7 kelvin and a specific cooling power of 3.85 watts per gram in a prototype — excellent figures for a device of this size.\n\nDurability is the headline result. In laboratory tests, the structure withstood more than 100 million operating cycles — the equivalent of over ten years of service under the tested conditions — without significant degradation. That longevity matters because a cooling device in a home or a data centre must survive years of continuous switching between its hot and cold states; a material that fails after a few thousand cycles is a laboratory curiosity, not a product. The stamping-and-stacking method also matters for a different reason: it is cheap and scalable, raising the prospect that elastocaloric devices could be manufactured in volume rather than assembled by hand in a research laboratory.\n\nThe result is the team's third breakthrough in less than a year, suggesting rapid progress in a field that had long moved slowly. In January 2026, the same group reported the world's first sub-zero elastocaloric freezer, capable of reaching minus 12 degrees Celsius, in the journal Nature. In August, they developed a fatigue-resistant alloy and built what they described as the world's first zero-degradation elastocaloric cooling device, with results published in Joule. Each advance has addressed a different obstacle — temperature range, then durability, then the combination of durability, efficiency and cost in a single manufacturable structure.\n\nSignificant challenges remain before such devices appear in homes or offices. Scaling a 30-millimetre prototype up to a system capable of cooling a room, integrating it with heat exchangers and controls, and proving its reliability outside the laboratory will all take years, and elastocaloric cooling is not the only solid-state approach competing for attention — magnetocaloric systems, which use magnetic fields rather than mechanical stress, are also advancing. Yet the potential prize is large. Cooling already accounts for roughly a fifth of the electricity used in buildings, and its share grows as incomes rise and heatwaves intensify. A technology that cools without greenhouse gases and with far less electricity could therefore cut emissions on two fronts at once.\n\nFor now, the HKUST device remains a prototype, and its inventors are careful not to promise a revolution. But the trajectory is striking: three advances in ten months, each published in a leading journal, each removing an obstacle that once seemed fundamental. If that pace continues, the familiar hum of the compressor — and the refrigerant gases it depends on — may one day give way to the silent flexing of a metal honeycomb.",
+      "notes": [
+        {
+          "word": "vapour-compression",
+          "pos": "adj.",
+          "meaning": "蒸汽压缩（式）的"
+        },
+        {
+          "word": "refrigerant",
+          "pos": "n.",
+          "meaning": "制冷剂"
+        },
+        {
+          "word": "potent",
+          "pos": "adj.",
+          "meaning": "强效的；效力大的"
+        },
+        {
+          "word": "shape memory alloy",
+          "pos": "n. phrase",
+          "meaning": "形状记忆合金"
+        },
+        {
+          "word": "reversible",
+          "pos": "adj.",
+          "meaning": "可逆的"
+        },
+        {
+          "word": "porous",
+          "pos": "adj.",
+          "meaning": "多孔的"
+        },
+        {
+          "word": "honeycomb",
+          "pos": "n.",
+          "meaning": "蜂窝；蜂巢"
+        },
+        {
+          "word": "distribute",
+          "pos": "v.",
+          "meaning": "分配；分布"
+        },
+        {
+          "word": "degradation",
+          "pos": "n.",
+          "meaning": "退化；性能下降"
+        },
+        {
+          "word": "prototype",
+          "pos": "n.",
+          "meaning": "原型；样机"
+        },
+        {
+          "word": "longevity",
+          "pos": "n.",
+          "meaning": "耐久性；长寿"
+        },
+        {
+          "word": "scalable",
+          "pos": "adj.",
+          "meaning": "可规模化生产的"
+        },
+        {
+          "word": "heat exchanger",
+          "pos": "n. phrase",
+          "meaning": "热交换器"
+        },
+        {
+          "word": "intensify",
+          "pos": "v.",
+          "meaning": "加剧；增强"
+        },
+        {
+          "word": "trajectory",
+          "pos": "n.",
+          "meaning": "发展轨迹；轨道"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What is the main environmental problem with conventional refrigeration mentioned in the passage?",
+          "options": [
+            "It consumes large amounts of electricity and uses refrigerant gases that are potent greenhouse gases",
+            "It is too noisy for domestic use",
+            "It cannot cool large buildings",
+            "It consumes too much water"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "How does elastocaloric cooling work?",
+          "options": [
+            "By compressing a gas until it liquefies",
+            "By applying and removing mechanical stress to a shape memory alloy, causing it to absorb and release heat",
+            "By using magnetic fields to change a material's temperature",
+            "By evaporating water from a porous surface"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The HKUST device uses a newly discovered alloy.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What did the prototype achieve in laboratory tests?",
+          "options": [
+            "More than 100 million operating cycles without significant degradation",
+            "Cooling to minus 12 degrees Celsius",
+            "A temperature span of 50 kelvin",
+            "Operation using no electricity at all"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The team's January 2026 freezer was the first elastocaloric device to reach sub-zero temperatures.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "According to the passage, why is the stamping-and-stacking method important?",
+          "options": [
+            "It makes the device completely silent",
+            "It is cheap and scalable, allowing the devices to be manufactured in volume",
+            "It eliminates the need for a heat exchanger",
+            "It was the first manufacturing method ever used for cooling devices"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The passage states that elastocaloric devices will replace conventional air conditioners within a year.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        }
+      ]
+    }
+  ]
+}
