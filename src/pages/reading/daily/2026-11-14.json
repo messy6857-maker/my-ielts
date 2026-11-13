@@ -1,0 +1,297 @@
+{
+  "date": "2026-11-14",
+  "newsReadings": [
+    {
+      "title": "Mapping the Brain's Movement Centre, Cell by Cell",
+      "source": "National Institutes of Health (NIH), 12 November 2026; reported by National Geographic and Reuters",
+      "passage": "Deep inside the human brain, beneath the folded outer cortex, lies a cluster of structures known collectively as the basal ganglia. Though small in volume, this region performs a task of extraordinary importance: it converts intentions into action, turning a decision to reach for a cup into the smooth, coordinated movement of an arm, and transforming repeated behaviour into habit. When it malfunctions, the consequences are devastating — the tremors and rigidity of Parkinson's disease and the involuntary movements of Huntington's disease both originate in this circuitry. Yet until now, scientists have lacked a detailed inventory of the cells that make the basal ganglia work.\n\nThat gap has now been closed on a remarkable scale. On 12 November, researchers working under the National Institutes of Health's BRAIN Initiative Cell Atlas Network published 27 papers in the journal Cell and its sister journals, presenting the first comprehensive cellular atlas of the basal ganglia. The scale of the undertaking is difficult to grasp: the team profiled 25.5 million individual cells — 21.0 million from humans, 3.0 million from macaques, and 1.5 million from marmosets — identifying each cell by the genes it switches on and the connections it forms with its neighbours. It is, in effect, a census of one of the brain's most consequential neighbourhoods, conducted cell by cell.\n\nThe value of such an atlas lies not in its size alone but in the comparisons it makes possible. By examining the same structures across three primate species, the researchers could distinguish features that are ancient and shared from those that are distinctively human. Some cell types appeared almost unchanged across tens of millions of years of evolution, suggesting that the basic machinery for initiating movement was established long before humans appeared. Others, however, showed striking differences in the human brain, including cell populations whose proportions or genetic profiles have no close counterpart in monkeys. These differences may help to explain why certain neurological disorders affect humans in ways that animal models have struggled to reproduce — a persistent frustration in the search for treatments.\n\nThe atlas also opens new avenues for therapy. One of the most promising findings concerns the delivery of treatments to precise locations in the brain: in experiments with mice, researchers demonstrated a method for directing therapeutic molecules to specific cell types within the basal ganglia, rather than flooding the whole region. Such precision matters enormously, because drugs that act on the entire brain often produce side effects that limit their usefulness. If the approach can be adapted for human patients, it could transform the treatment of Parkinson's disease, where existing drugs gradually lose their effectiveness and frequently cause involuntary movements of their own.\n\nThe scientists involved are careful to stress what the atlas is not. It is a reference map, not a cure: knowing which cells exist, and how they are wired together, does not by itself explain how they generate behaviour, nor does it immediately produce a drug. The full-brain atlas that the consortium aims to complete by 2028 will be an even larger endeavour, requiring still more powerful methods for handling data on a scale that neuroscience has never attempted before. Yet the basal ganglia atlas already changes the questions researchers can ask. Instead of studying a brain region as an undifferentiated mass, they can now investigate individual cell types, trace their connections, and test interventions with a precision that was unimaginable a decade ago. For the millions of people living with movement disorders, that shift — from approximate knowledge to a cellular map — may prove to be the decisive step towards treatments that work.",
+      "notes": [
+        {
+          "word": "atlas",
+          "pos": "n.",
+          "meaning": "地图集；图谱"
+        },
+        {
+          "word": "comprehensive",
+          "pos": "adj.",
+          "meaning": "全面的；综合的"
+        },
+        {
+          "word": "profile",
+          "pos": "v.",
+          "meaning": "剖析；描绘…的特征"
+        },
+        {
+          "word": "coordinate",
+          "pos": "v.",
+          "meaning": "协调；使协调"
+        },
+        {
+          "word": "malfunction",
+          "pos": "v./n.",
+          "meaning": "发生故障；故障"
+        },
+        {
+          "word": "degenerative",
+          "pos": "adj.",
+          "meaning": "退行性的；退化的"
+        },
+        {
+          "word": "involuntary",
+          "pos": "adj.",
+          "meaning": "不由自主的；无意识的"
+        },
+        {
+          "word": "inventory",
+          "pos": "n.",
+          "meaning": "清单；目录"
+        },
+        {
+          "word": "census",
+          "pos": "n.",
+          "meaning": "普查；统计"
+        },
+        {
+          "word": "counterpart",
+          "pos": "n.",
+          "meaning": "相对应的人或物"
+        },
+        {
+          "word": "reproduce",
+          "pos": "v.",
+          "meaning": "复制；再现"
+        },
+        {
+          "word": "therapeutic",
+          "pos": "adj.",
+          "meaning": "治疗的"
+        },
+        {
+          "word": "intervention",
+          "pos": "n.",
+          "meaning": "干预；介入"
+        },
+        {
+          "word": "undifferentiated",
+          "pos": "adj.",
+          "meaning": "未分化的；无差别的"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What is the primary role of the basal ganglia, according to the passage?",
+          "options": [
+            "To store long-term memories of past experiences.",
+            "To convert intentions into coordinated movement and habit.",
+            "To filter sensory information before it reaches the cortex.",
+            "To regulate the body's temperature and sleep cycles."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "How many individual cells did the research team profile in total?",
+          "options": [
+            "3.0 million",
+            "21.0 million",
+            "25.5 million",
+            "27 million"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "Why did the researchers study the basal ganglia in three different primate species?",
+          "options": [
+            "To find out which species has the largest brain overall.",
+            "To test whether the new drugs work equally well in all primates.",
+            "To distinguish ancient, shared features from those that are distinctively human.",
+            "To prove that monkeys and humans have identical brain structures."
+          ],
+          "answer": 2
+        },
+        {
+          "q": "What is the significance of the new drug-delivery method tested in mice?",
+          "options": [
+            "It can cure Parkinson's disease completely within weeks.",
+            "It allows treatments to target specific cell types, potentially reducing side effects.",
+            "It replaces the need for any further research into the basal ganglia.",
+            "It works by flooding the whole brain with therapeutic molecules."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The basal ganglia atlas was published in a single paper in the journal Cell.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Some cell types in the human basal ganglia have no close counterpart in monkeys.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The full-brain atlas is expected to be completed by 2028.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        }
+      ]
+    },
+    {
+      "title": "When the Cloud Goes Dark: A Day Without Microsoft 365",
+      "source": "USA Today, 13 November 2026; Microsoft 365 Status",
+      "passage": "For most office workers, the working day begins with a ritual so routine it barely registers as a decision: open the laptop, check the inbox, join the first video call. On Thursday 12 November, that ritual failed for millions of people at once. At around 1 p.m. Eastern Time, Microsoft 365 — the cloud platform that provides Outlook email, Teams messaging, SharePoint document storage, and the Copilot artificial intelligence assistant to more than 430 million users — began to falter. Inboxes would not load, messages would not send, and meetings could not be joined. By early afternoon, the monitoring service Downdetector had recorded roughly 130,000 reports of problems with Outlook and nearly 50,000 with Microsoft 365 itself, figures that capture only a fraction of those affected, since many users simply waited in silence for the service to return.\n\nThe disruption lasted far longer than a routine glitch. Microsoft's engineers traced the fault to a core process on its servers responsible for establishing secure connections — the digital handshake that verifies a user's identity before granting access to their email or files. A large number of servers failed their automated health checks and dropped out of service; the workload then shifted onto the remaining machines, which struggled to cope with the sudden surge. In effect, the system designed to protect users from faulty hardware became the mechanism by which the failure spread, as server after server was declared unhealthy and removed from the pool. Recovery was painstaking: engineers reintroduced servers gradually, warning that machines could become unresponsive again as soon as traffic returned, and it was not until Friday afternoon — more than 24 hours after the first reports — that Microsoft reported broad recovery and stability across its services.\n\nMicrosoft was quick to rule out the explanation many users feared most. In a statement on Friday, the company confirmed that the incident was not the result of a cyberattack and had nothing to do with artificial intelligence agents. Instead, it attributed the failure to an issue introduced during an earlier network capacity upgrade, which surfaced only after a recent network change. The distinction matters: a hostile attack would have raised questions about the security of the data stored in the cloud, whereas a self-inflicted technical failure raises a different, arguably more uncomfortable question — how a company with Microsoft's resources could allow a routine upgrade to disable services on which hospitals, schools, government offices, and businesses depend.\n\nThat question points to a broader vulnerability in the way modern work is organised. Over the past decade, organisations have concentrated their communications, documents, and calendars in a small number of cloud platforms, attracted by the convenience and the promise that a specialist provider could manage infrastructure more reliably than any single company. The bargain has generally held: large cloud services are, on most days, far more dependable than the servers they replaced. Yet concentration creates a single point of failure. When one provider stumbles, there is no ready alternative — employees cannot simply switch to a rival email system for the afternoon, because their messages, contacts, and files are all held within the system that has failed. The outage therefore functioned as a stress test, revealing how little redundancy exists behind the apparent resilience of everyday digital tools.\n\nThe immediate consequences were mundane but widespread: meetings postponed, deadlines missed, and messages delayed — Microsoft extended its email timeout window to 48 hours to protect mail caught in the disruption. The company has promised a full post-incident report once its review is complete, including the root cause and the safeguards it will introduce to prevent a repeat. Whether that report satisfies its customers remains to be seen. For the millions who spent a working day staring at error messages, the episode was a reminder that the cloud, for all its abstraction, still runs on physical machines in specific buildings — and that even the most sophisticated infrastructure can be brought down by an ordinary change, made on an ordinary day, that goes wrong.",
+      "notes": [
+        {
+          "word": "outage",
+          "pos": "n.",
+          "meaning": "（电力、服务）中断；停供"
+        },
+        {
+          "word": "falter",
+          "pos": "v.",
+          "meaning": "摇晃；衰弱；迟疑"
+        },
+        {
+          "word": "disruption",
+          "pos": "n.",
+          "meaning": "中断；扰乱"
+        },
+        {
+          "word": "infrastructure",
+          "pos": "n.",
+          "meaning": "基础设施"
+        },
+        {
+          "word": "handshake",
+          "pos": "n.",
+          "meaning": "（计算机）握手；确认连接"
+        },
+        {
+          "word": "surge",
+          "pos": "n./v.",
+          "meaning": "激增；汹涌"
+        },
+        {
+          "word": "redundancy",
+          "pos": "n.",
+          "meaning": "冗余；后备"
+        },
+        {
+          "word": "resilience",
+          "pos": "n.",
+          "meaning": "恢复力；弹性"
+        },
+        {
+          "word": "vulnerability",
+          "pos": "n.",
+          "meaning": "脆弱性；弱点"
+        },
+        {
+          "word": "attribute",
+          "pos": "v.",
+          "meaning": "把…归因于"
+        },
+        {
+          "word": "speculation",
+          "pos": "n.",
+          "meaning": "猜测；推测"
+        },
+        {
+          "word": "malicious",
+          "pos": "adj.",
+          "meaning": "恶意的；怀有敌意的"
+        },
+        {
+          "word": "mundane",
+          "pos": "adj.",
+          "meaning": "平凡的；日常的"
+        },
+        {
+          "word": "safeguard",
+          "pos": "n./v.",
+          "meaning": "保障措施；保护"
+        }
+      ],
+      "questions": [
+        {
+          "q": "According to the passage, how many people use Microsoft 365?",
+          "options": [
+            "About 50,000",
+            "About 130,000",
+            "More than 430 million",
+            "More than 48 million"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "What was the technical cause of the outage?",
+          "options": [
+            "A cyberattack that disabled Microsoft's security systems.",
+            "A failure in the process that establishes secure connections, causing servers to drop out and overload the rest.",
+            "A sudden surge in user demand that exceeded the system's capacity.",
+            "A power cut at Microsoft's main data centre."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Why was the recovery process slow?",
+          "options": [
+            "Engineers had to wait for a software update from an external supplier.",
+            "Servers had to be reintroduced gradually because they could fail again once traffic returned.",
+            "Microsoft refused to acknowledge the problem for the first 24 hours.",
+            "Users kept overloading the system by repeatedly trying to log in."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What broader point does the passage make about cloud computing?",
+          "options": [
+            "Cloud platforms are less reliable than the servers they replaced.",
+            "Concentrating work in a few platforms creates a single point of failure with no ready alternative.",
+            "Most organisations should return to storing files on local servers.",
+            "Artificial intelligence assistants are the main cause of cloud outages."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Downdetector recorded more reports about Microsoft 365 than about Outlook.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Microsoft stated that the outage was caused by a cyberattack.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Microsoft extended its email timeout window to 48 hours during the disruption.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        }
+      ]
+    }
+  ]
+}
