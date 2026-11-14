@@ -88,6 +88,13 @@ export default antfu(
     rules: {
       // 原生 alert/confirm 只在 useDialog 的兜底里出现，保持提醒级别
       'no-alert': 'warn',
+      // 中文字符区间（如 一-龥、全角符号）是有意写的，不算“看不懂的区间”
+      'regexp/no-obscure-range': 'off',
+      // 以下为已有正则的风格/性能提示：这些正则都有测试覆盖、输入都很短，先保留为提醒，不改动行为
+      'regexp/no-unused-capturing-group': 'warn',
+      'regexp/no-super-linear-backtracking': 'warn',
+      'regexp/no-misleading-capturing-group': 'warn',
+      'regexp/no-useless-non-capturing-group': 'warn',
     },
   },
 )

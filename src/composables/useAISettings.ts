@@ -308,7 +308,7 @@ async function callChatApi(
     })
     body = await res.json().catch(() => null)
   }
-  catch (e) {
+  catch {
     throw new Error(
       signal?.aborted
         ? '已取消评分'

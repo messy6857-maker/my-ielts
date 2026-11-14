@@ -721,7 +721,8 @@ function copyAllError() {
 
                         <template v-if="isTrainingModel">
                           <i
-                            :class="`${item.showSource ? 'i-ph-eye-slash-bold' : 'i-ph-eye-bold'} inline-block cursor-pointer ml-4`"
+                            class="ml-4 inline-block cursor-pointer"
+                            :class="item.showSource ? 'i-ph-eye-slash-bold' : 'i-ph-eye-bold'"
                             title="显示原词"
                             @click="item.showSource = !item.showSource"
                           />

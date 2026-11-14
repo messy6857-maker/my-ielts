@@ -23,7 +23,7 @@ export function diffWords(oldText: string, newText: string): DiffToken[] {
   const same = (x: string, y: string) => x === y || (isWs(x) && isWs(y))
   // dp[i][j] = a[i:] 与 b[j:] 的 LCS 长度
   const dp: number[][] = Array.from({ length: m + 1 }, () =>
-    Array.from({ length: n + 1 }).fill(0))
+    Array.from<number>({ length: n + 1 }).fill(0))
   for (let i = m - 1; i >= 0; i--) {
     for (let j = n - 1; j >= 0; j--) {
       dp[i][j] = same(a[i], b[j])
