@@ -45,7 +45,9 @@ export const useDailyStudyGoal = createGlobalState(() => {
       : DEFAULT_DAILY_STUDY_GOAL_MINUTES
   })
   function setMinutes(min: number) {
-    store.set('goal', { minutes: clampGoalMinutes(min) })
+    store.set('goal', {
+      minutes: clampGoalMinutes(min),
+    })
   }
   return { minutes, setMinutes }
 })
@@ -83,7 +85,9 @@ export function sumDeviceTimerRecords(
 ) {
   return records.reduce(
     (n, r) =>
-      n + (r.date === date ? Math.max(0, Math.round(r.seconds) || 0) : 0),
+      n + (r.date === date
+        ? Math.max(0, Math.round(r.seconds) || 0)
+        : 0),
     0,
   )
 }
@@ -185,14 +189,23 @@ export function useStudyTimer() {
     if (running.value && user === owner) {
       const midnight = new Date()
       midnight.setHours(0, 0, 0, 0)
-      parts.push({ date, device, start: Math.max(startAt, midnight.getTime()), end: Date.now() })
+      parts.push({
+        date,
+        device,
+        start: Math.max(startAt, midnight.getTime()),
+        end: Date.now(),
+      })
     }
     let total = legacyTimerSeconds(parts, nsKey('study_time_v1', user), date)
     for (const part of parts) {
       if (part.date !== date)
         continue
-      if (part.start !== undefined && part.end !== undefined)
-        groups.set(part.device, [...(groups.get(part.device) ?? []), part])
+      if (part.start !== undefined && part.end !== undefined) {
+        groups.set(part.device, [
+          ...(groups.get(part.device) ?? []),
+          part,
+        ])
+      }
     }
     for (const parts of groups.values()) {
       parts.sort((a, b) => a.start! - b.start!)
@@ -238,7 +251,12 @@ export function useStudyTimer() {
       saveRecord(
         'timer_sessions_v2',
         `${session}:${date}`,
-        { date, device, start: cursor, end: segmentEnd },
+        {
+          date,
+          device,
+          start: cursor,
+          end: segmentEnd,
+        },
         owner,
       )
       cursor = segmentEnd
@@ -322,8 +340,9 @@ export function useStudyTimer() {
       || key.startsWith(
         `${accountKey('timer_sessions_v2', currentUser.value)}__entry_`,
       )
-    )
+    ) {
       load()
+    }
   })
   function dispose() {
     pause()

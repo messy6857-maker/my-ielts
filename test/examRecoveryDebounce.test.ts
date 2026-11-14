@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { defineComponent, ref } from 'vue'
 import { useAuth } from '../src/composables/useAuth'
 import { useExamRecovery } from '../src/composables/useExamRecovery'
@@ -43,7 +43,9 @@ function draftKeys() {
 }
 function draftValue() {
   const k = draftKeys()[0]
-  return k ? JSON.parse(localStorage.getItem(k)!) : null
+  return k
+    ? JSON.parse(localStorage.getItem(k)!)
+    : null
 }
 
 beforeEach(() => {

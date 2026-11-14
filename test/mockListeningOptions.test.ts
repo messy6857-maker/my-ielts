@@ -43,7 +43,14 @@ it('cam19-test2 听力 Q25-28 组内每题均有配对选项框（B4）', () => 
 })
 
 it('cam20-test4 听力 Q15-20 组内每题均有配对选项框（B4）', () => {
-  const group = groupOf(cam20Test4Listening, ['Q15', 'Q16', 'Q17', 'Q18', 'Q19', 'Q20'])
+  const group = groupOf(cam20Test4Listening, [
+    'Q15',
+    'Q16',
+    'Q17',
+    'Q18',
+    'Q19',
+    'Q20',
+  ])
   for (const q of group) {
     expect(q.type).toBe('map-label')
     expect(q.options).toEqual(FOOTBALL_OPTIONS)

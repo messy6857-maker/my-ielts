@@ -1,19 +1,25 @@
+import { flushPromises, mount } from '@vue/test-utils'
 // Correct-behavior regressions for the repair self-audit.
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import { setToken } from '../src/composables/syncClient'
+import {
+  accountNotice,
+  accountNotices,
+  useAuth,
+} from '../src/composables/useAuth'
+import { studyDay, useMistakes } from '../src/composables/useStudyData'
+import { getDeviceId, useStudyTimer } from '../src/composables/useStudyTimer'
+import * as vocabularyDetails from '../src/composables/useVocabularyDetails'
+import { previewStudyBackup, restoreStudyBackup } from '../src/utils/backup'
 import {
   emergencyWritingDrafts,
   listDrafts,
   readDraft,
   saveDraft,
 } from '../src/utils/drafts'
-import {
-  accountNotice,
-  accountNotices,
-  useAuth,
-} from '../src/composables/useAuth'
+import { pruneCollectionData } from '../src/utils/retention'
 import {
   accountKey,
   entryKey,
@@ -22,12 +28,6 @@ import {
   saveRecord,
   storageFailures,
 } from '../src/utils/storage'
-import { previewStudyBackup, restoreStudyBackup } from '../src/utils/backup'
-import { pruneCollectionData } from '../src/utils/retention'
-import { getDeviceId, useStudyTimer } from '../src/composables/useStudyTimer'
-import { studyDay, useMistakes } from '../src/composables/useStudyData'
-import { setToken } from '../src/composables/syncClient'
-import * as vocabularyDetails from '../src/composables/useVocabularyDetails'
 
 const auth = useAuth()
 const wrappers: any[] = []
@@ -41,7 +41,10 @@ beforeEach(() => {
   setToken('audit-local-only', 'alice')
   accountNotice.value = ''
   accountNotices.value = []
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
   vi.stubGlobal(
     'SpeechSynthesisUtterance',
     class {
@@ -62,7 +65,9 @@ afterEach(() => {
 async function page(Page: any) {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/', component: Page }],
+    routes: [
+      { path: '/', component: Page },
+    ],
   })
   await router.push('/')
   await router.isReady()
@@ -93,7 +98,7 @@ async function page(Page: any) {
   return { w, s, router }
 }
 it.each(['reading', 'listening'])(
-  'D01 %s mock stores the same real score shown on screen',
+  'd01 %s mock stores the same real score shown on screen',
   async (kind) => {
     const Page
       = kind === 'reading'
@@ -114,13 +119,13 @@ it.each(['reading', 'listening'])(
   },
 )
 it.each(['task1', 'task2'])(
-  'D02 %s retrying an older failed essay preserves a different unfinished draft',
+  'd02 %s retrying an older failed essay preserves a different unfinished draft',
   async (task) => {
     const { TASK1_PROMPTS } = await import(
-      '../src/pages/writing/task1/prompts'
+      '../src/pages/writing/task1/prompts',
     )
     const { CAMBRIDGE_WRITING } = await import(
-      '../src/pages/writing/cambridge'
+      '../src/pages/writing/cambridge',
     )
     const prompts
       = task === 'task1'
@@ -164,7 +169,7 @@ it.each(['task1', 'task2'])(
   },
 )
 it.each(['reading', 'listening'])(
-  'D03 %s retires a resumed former-tab attempt after successful submission',
+  'd03 %s retires a resumed former-tab attempt after successful submission',
   async (kind) => {
     const key = `${accountKey(`mock_draft_v1_${kind}_cam21-test1`, 'alice')}__session_former-tab`
     localStorage.setItem(
@@ -192,7 +197,7 @@ it.each(['reading', 'listening'])(
     expect(s.recovery.draft.value).toBeNull()
   },
 )
-it('D04 retains timer and overtime revisions even when the writing text is unchanged', () => {
+it('d04 retains timer and overtime revisions even when the writing text is unchanged', () => {
   const old = `${accountKey('task1_draft_v1', 'alice')}__prompt_same__session_former`
   localStorage.setItem(
     old,
@@ -217,9 +222,13 @@ it('D04 retains timer and overtime revisions even when the writing text is uncha
   expect(restored?.secondsLeft).toBe(0)
   expect(restored?.overtime).toBe(true)
 })
-it('D05 importing a second-device yearly check-in backup preserves the union', () => {
+it('d05 importing a second-device yearly check-in backup preserves the union', () => {
   const key = entryKey('checkin_years_v2', '2026', 'alice')
-  saveEnvelope(key, { __ielts: 2, stamp: [1, 'device-a'], value: [1, 2] })
+  saveEnvelope(key, {
+    __ielts: 2,
+    stamp: [1, 'device-a'],
+    value: [1, 2],
+  })
   const preview = previewStudyBackup(
     JSON.stringify({
       format: 'my-ielts-backup',
@@ -237,7 +246,7 @@ it('D05 importing a second-device yearly check-in backup preserves the union', (
   expect(restoreStudyBackup(preview, 'alice').imported).toBe(1)
   expect(readRecords('checkin_years_v2', 'alice')['2026']).toEqual([1, 2, 3])
 })
-it('D06 deleted history never forces collection of a still-retained sole live essay', () => {
+it('d06 deleted history never forces collection of a still-retained sole live essay', () => {
   const entries: Record<string, string> = {}
   const oldId = String(1700000000000)
   const old = entryKey('task1_essays_v1', oldId, 'alice')
@@ -248,7 +257,11 @@ it('D06 deleted history never forces collection of a still-retained sole live es
   })
   for (let i = 1; i <= 101; i++) {
     entries[entryKey('task1_essays_v1', String(1700000000000 + i), 'alice')]
-      = JSON.stringify({ __ielts: 2, stamp: [i, 'writer'], deleted: true })
+      = JSON.stringify({
+        __ielts: 2,
+        stamp: [i, 'writer'],
+        deleted: true,
+      })
   }
   const pruned = pruneCollectionData(entries, 'alice')
   expect(pruned[old]).toBeDefined()
@@ -258,7 +271,7 @@ it('D06 deleted history never forces collection of a still-retained sole live es
     ),
   ).toBe(true)
 })
-it('D07 live timer unions overlapping activity received from another tab', async () => {
+it('d07 live timer unions overlapping activity received from another tab', async () => {
   vi.useFakeTimers()
   const timer = useStudyTimer()
   timer.start()
@@ -269,27 +282,38 @@ it('D07 live timer unions overlapping activity received from another tab', async
   saveRecord(
     'timer_sessions_v2',
     `other:${studyDay()}`,
-    { date: studyDay(), device: getDeviceId(), start: now - 15000, end: now },
+    {
+      date: studyDay(),
+      device: getDeviceId(),
+      start: now - 15000,
+      end: now,
+    },
     'alice',
   )
   window.dispatchEvent(new StorageEvent('storage', { key }))
   expect(timer.dailySeconds.value).toBe(15)
   timer.dispose()
 })
-it('D08 valid capitalized spelling survives reload with immediately saved progress', async () => {
+it('d08 valid capitalized spelling survives reload with immediately saved progress', async () => {
   const Page = (await import('../src/pages/vocabulary/index.vue')).default
   const { s } = await page(Page)
   const item = s.refVocabulary[s.category].words[0][0]
-  s.onSpellInput({ target: { value: item.word[0].toUpperCase() } }, item)
+  s.onSpellInput({
+    target: {
+      value: item.word[0].toUpperCase(),
+    },
+  }, item)
   s.restoreSpellValues()
   expect(item.spellError).toBe(false)
   expect(
     readRecords<any>('progress_v1', 'alice')[`spelling:${s.category}`].done,
   ).toBeGreaterThan(0)
-  s.onInputFocusOut({ target: { id: 'word-1', value: item.spellValue } }, item)
+  s.onInputFocusOut({
+    target: { id: 'word-1', value: item.spellValue },
+  }, item)
   expect(item.spellError).toBe(false)
 })
-it('D09 quick self-grading preserves the pending notes for the card still being studied', async () => {
+it('d09 quick self-grading preserves the pending notes for the card still being studied', async () => {
   let finish!: (data: any) => void
   vi.spyOn(vocabularyDetails, 'loadVocabularyDetails').mockImplementation(
     () =>
@@ -313,14 +337,18 @@ it('D09 quick self-grading preserves the pending notes for the card still being 
   expect(s.studying.example).toBe('This verified example should be visible.')
   expect(s.studying.extra).toBe('useful notes')
 })
-it('D10 legacy table import reports failed writes accurately', () => {
+it('d10 legacy table import reports failed writes accurately', () => {
   const key = accountKey('progress_v1', 'alice')
   const preview = previewStudyBackup(
     JSON.stringify({
       format: 'my-ielts-backup',
       version: 2,
       username: 'alice',
-      data: { [key]: JSON.stringify({ reading: { done: 1, total: 10 } }) },
+      data: {
+        [key]: JSON.stringify({
+          reading: { done: 1, total: 10 },
+        }),
+      },
     }),
   )
   const original = Storage.prototype.setItem
@@ -337,7 +365,7 @@ it('D10 legacy table import reports failed writes accurately', () => {
   expect(result).toEqual({ imported: 0, keptNewer: 0, failed: 1 })
   expect(readRecords('progress_v1', 'alice')).toEqual({})
 })
-it('D11 local undo decrements only its own mistake writer', () => {
+it('d11 local undo decrements only its own mistake writer', () => {
   const m = useMistakes()
   const key = 'flashcard:1'
   const now = Date.now()
@@ -363,11 +391,10 @@ it('D11 local undo decrements only its own mistake writer', () => {
   const parts = readRecords<any>('mistake_parts_v2', 'alice')
   expect(parts[`${key}|other-writer`].count).toBe(1)
   expect(
-    Object.entries(parts).find(([id]) => id !== `${key}|other-writer`)?.[1]
-      .count,
+    Object.entries(parts).find(([id]) => id !== `${key}|other-writer`)?.[1].count,
   ).toBe(0)
 })
-it('D12 returning to the exam owner retires only its queued pause notice', async () => {
+it('d12 returning to the exam owner retires only its queued pause notice', async () => {
   const Page = (await import('../src/pages/mock/reading-test.vue')).default
   const { s } = await page(Page)
   s.startTest()
@@ -383,13 +410,13 @@ it('D12 returning to the exam owner retires only its queued pause notice', async
   ).toBe(false)
 })
 it.each(['task1', 'task2'])(
-  'D14 %s logout cancels after a failed draft flush and preserves the unsaved essay',
+  'd14 %s logout cancels after a failed draft flush and preserves the unsaved essay',
   async (task) => {
     const { TASK1_PROMPTS } = await import(
-      '../src/pages/writing/task1/prompts'
+      '../src/pages/writing/task1/prompts',
     )
     const { CAMBRIDGE_WRITING } = await import(
-      '../src/pages/writing/cambridge'
+      '../src/pages/writing/cambridge',
     )
     const prompt
       = task === 'task1'
@@ -430,16 +457,24 @@ it.each(['task1', 'task2'])(
   },
 )
 
-it('D05b normal legacy-stamped yearly sets union during backup restore', () => {
+it('d05b normal legacy-stamped yearly sets union during backup restore', () => {
   const key = entryKey('checkin_years_v2', '2026', 'alice')
-  saveEnvelope(key, { __ielts: 2, stamp: [0, 'legacy'], value: [1, 2] })
+  saveEnvelope(key, {
+    __ielts: 2,
+    stamp: [0, 'legacy'],
+    value: [1, 2],
+  })
   const preview = previewStudyBackup(
     JSON.stringify({
       format: 'my-ielts-backup',
       version: 2,
       username: 'alice',
       data: {
-        [key]: JSON.stringify({ __ielts: 2, stamp: [0, 'legacy'], value: [3] }),
+        [key]: JSON.stringify({
+          __ielts: 2,
+          stamp: [0, 'legacy'],
+          value: [3],
+        }),
       },
     }),
   )
@@ -448,7 +483,7 @@ it('D05b normal legacy-stamped yearly sets union during backup restore', () => {
 })
 
 it.each(['reading', 'listening'])(
-  'D01 %s retry preserves the real score after a history write failure',
+  'd01 %s retry preserves the real score after a history write failure',
   async (kind) => {
     const Page
       = kind === 'reading'
@@ -478,17 +513,17 @@ it.each(['reading', 'listening'])(
   },
 )
 it.each(['task1', 'task2'])(
-  'D14 %s failed forced-switch draft survives unmount and remains private to its owner',
+  'd14 %s failed forced-switch draft survives unmount and remains private to its owner',
   async (task) => {
     const Page
       = task === 'task1'
         ? (await import('../src/pages/writing/task1/TaskOne.vue')).default
         : (await import('../src/pages/writing/task2/TaskTwo.vue')).default
     const { TASK1_PROMPTS } = await import(
-      '../src/pages/writing/task1/prompts'
+      '../src/pages/writing/task1/prompts',
     )
     const { CAMBRIDGE_WRITING } = await import(
-      '../src/pages/writing/cambridge'
+      '../src/pages/writing/cambridge',
     )
     const prompt
       = task === 'task1'
@@ -522,7 +557,7 @@ it.each(['task1', 'task2'])(
   },
 )
 it.each(['reading', 'listening'])(
-  'D03 %s completion retires stale snapshots of the same attempt but keeps independent attempts',
+  'd03 %s completion retires stale snapshots of the same attempt but keeps independent attempts',
   async (kind) => {
     const prefix = accountKey(`mock_draft_v1_${kind}_cam21-test1`, 'alice')
     const old = {
@@ -564,7 +599,7 @@ it.each(['reading', 'listening'])(
   },
 )
 
-it('D10 partial legacy import reports each actual record and retries only missing entries', () => {
+it('d10 partial legacy import reports each actual record and retries only missing entries', () => {
   const table = accountKey('progress_v1', 'alice')
   const preview = previewStudyBackup(
     JSON.stringify({

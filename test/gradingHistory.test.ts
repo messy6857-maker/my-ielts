@@ -7,16 +7,39 @@ import { accountKey, saveValue } from '../src/utils/storage'
 const auth = useAuth()
 
 const writingResult = {
-  scores: { ta: 6, cc: 6, lr: 6.5, gra: 6, overall: 6 },
-  comments: { ta: 'c-ta', cc: 'c-cc', lr: 'c-lr', gra: 'c-gra' },
-  corrections: [{ original: 'a', fixed: 'b', reason: 'r' }],
+  scores: {
+    ta: 6,
+    cc: 6,
+    lr: 6.5,
+    gra: 6,
+    overall: 6,
+  },
+  comments: {
+    ta: 'c-ta',
+    cc: 'c-cc',
+    lr: 'c-lr',
+    gra: 'c-gra',
+  },
+  corrections: [
+    { original: 'a', fixed: 'b', reason: 'r' },
+  ],
   suggestion: 'sug',
-  advice: { ta: 'a-ta', cc: 'a-cc', lr: 'a-lr', gra: 'a-gra' },
+  advice: {
+    ta: 'a-ta',
+    cc: 'a-cc',
+    lr: 'a-lr',
+    gra: 'a-gra',
+  },
   rewritten: 'para1\n\npara2',
 }
 
 const speakingResult = {
-  scores: { fluency: 6, lexical: 6.5, grammar: 6, overall: 6 },
+  scores: {
+    fluency: 6,
+    lexical: 6.5,
+    grammar: 6,
+    overall: 6,
+  },
   comments: { fluency: 'f', lexical: 'l', grammar: 'g' },
   suggestion: 'sug',
 }
@@ -63,7 +86,12 @@ describe('批改记录列表', () => {
   it('形状不合格或损坏的条目跳过，不崩溃', () => {
     saveValue(accountKey('aigrade_v2_bad', 'alice'), { text: 'not a grade' })
     saveValue(accountKey('aigrade_speaking_v1_na_bad', 'alice'), {
-      scores: { fluency: 6, lexical: 6, grammar: 6, overall: 9 },
+      scores: {
+        fluency: 6,
+        lexical: 6,
+        grammar: 6,
+        overall: 9,
+      },
       comments: { fluency: 'f', lexical: 'l', grammar: 'g' },
       suggestion: '',
     })

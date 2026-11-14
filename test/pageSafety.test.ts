@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { RouterView, createMemoryHistory, createRouter } from 'vue-router'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
+import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
+import { setToken } from '../src/composables/syncClient'
 import { useAuth } from '../src/composables/useAuth'
 import { readDraft } from '../src/utils/drafts'
 import { readValue } from '../src/utils/storage'
-import { setToken } from '../src/composables/syncClient'
 
 const wrappers: any[] = []
 const stubs = {
@@ -21,7 +21,10 @@ beforeEach(() => {
   sessionStorage.clear()
   useAuth().currentUser.value = 'alice'
   setToken('token', 'alice')
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
   vi.stubGlobal(
     'SpeechSynthesisUtterance',
     class {
@@ -38,7 +41,10 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 function show(Page: any, options: any = {}) {
-  const w = mount(Page, { global: { stubs, ...options.global }, ...options })
+  const w = mount(Page, {
+    global: { stubs, ...options.global },
+    ...options,
+  })
   wrappers.push(w)
   return w
 }
@@ -47,14 +53,25 @@ async function routerFor(Page: any, path: string) {
     history: createMemoryHistory(),
     routes: [
       { path, component: Page },
-      { path: '/outside', component: { template: '<div>outside</div>' } },
-      { path: '/', component: { template: '<div>home</div>' } },
+      {
+        path: '/outside',
+        component: { template: '<div>outside</div>' },
+      },
+      {
+        path: '/',
+        component: { template: '<div>home</div>' },
+      },
     ],
   })
   await router.push(path)
   await router.isReady()
-  show(defineComponent({ render: () => h(RouterView) }), {
-    global: { plugins: [router], stubs },
+  show(defineComponent({
+    render: () => h(RouterView),
+  }), {
+    global: {
+      plugins: [router],
+      stubs,
+    },
   })
   await flushPromises()
   return router
@@ -180,9 +197,17 @@ it('a late AI response is discarded after the essay changes', async () => {
   })
   const state = (w.vm as any).$.setupState
   const pending = state.runAIGrade()
-  await w.setProps({ essay: 'changed '.repeat(30) })
+  await w.setProps({
+    essay: 'changed '.repeat(30),
+  })
   const grade = {
-    scores: { ta: 6, cc: 6, lr: 6, gra: 6, overall: 6 },
+    scores: {
+      ta: 6,
+      cc: 6,
+      lr: 6,
+      gra: 6,
+      overall: 6,
+    },
     comments: { ta: 'a', cc: 'b', lr: 'c', gra: 'd' },
     corrections: [],
     suggestion: 'suggestion',
@@ -192,7 +217,15 @@ it('a late AI response is discarded after the essay changes', async () => {
     status: 200,
     json: async () => ({
       ok: true,
-      data: { choices: [{ message: { content: JSON.stringify(grade) } }] },
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify(grade),
+            },
+          },
+        ],
+      },
     }),
   })
   await pending
@@ -215,7 +248,9 @@ it('speech AI grading is disabled below ten words', async () => {
   )
   const Page = (await import('../src/pages/speaking/AIGradeSpeaking.vue'))
     .default
-  const w = show(Page, { props: { question: 'question', transcript: 'hello' } })
+  const w = show(Page, {
+    props: { question: 'question', transcript: 'hello' },
+  })
   const button = w.findAll('button').find((b: any) => b.text().includes('评分'))
   expect(button).toBeDefined()
   expect(button!.attributes('disabled')).toBeDefined()

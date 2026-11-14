@@ -1,37 +1,37 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue'
-import { useAuth } from '../composables/useAuth'
-import { useSync } from '../composables/useSync'
 import {
-  REJECTED_REASON_LABELS,
   clearQuarantinedKeys,
   getQuarantinedKeys,
   getRejectedReason,
+  REJECTED_REASON_LABELS,
   unquarantineKeys,
 } from '../composables/syncClient'
-import { decodeId, subscribeStorage } from '../utils/storage'
-import {
-  downloadStudyBackup,
-  previewStudyBackup,
-  restoreStudyBackup,
-} from '../utils/backup'
-import { pruneArchives } from '../utils/archives'
-import { useDailyStudyGoal } from '../composables/useStudyTimer'
-import { useGoBack } from '../composables/useGoBack'
 import {
   AI_PROVIDERS,
-  MODEL_STRENGTH_LABELS,
   aiSettingsState,
   detectAIProvider,
   getAISettings,
   getModelOption,
   getProviderForBaseUrl,
+  MODEL_STRENGTH_LABELS,
   modelSupportsReasoningEffort,
   reasoningEffortForProvider,
   saveAISettings,
   switchProviderSettings,
   testAIConnection,
 } from '../composables/useAISettings'
+import { useAuth } from '../composables/useAuth'
+import { useGoBack } from '../composables/useGoBack'
+import { useDailyStudyGoal } from '../composables/useStudyTimer'
+import { useSync } from '../composables/useSync'
+import { pruneArchives } from '../utils/archives'
+import {
+  downloadStudyBackup,
+  previewStudyBackup,
+  restoreStudyBackup,
+} from '../utils/backup'
+import { decodeId, subscribeStorage } from '../utils/storage'
 
 const { currentUser } = useAuth()
 const { rejectedNotice, dismissRejectedNotice, pushNow } = useSync()
@@ -42,7 +42,9 @@ const goalMinutesInput = computed({
   set: (v: number) => setGoalMinutes(v),
 })
 const language = ref(
-  localStorage.getItem('myielts_tts_language') === 'en-GB' ? 'en-GB' : 'en-US',
+  localStorage.getItem('myielts_tts_language') === 'en-GB'
+    ? 'en-GB'
+    : 'en-US',
 )
 watch(language, value => localStorage.setItem('myielts_tts_language', value))
 const importText = ref('')
@@ -115,7 +117,9 @@ function describeQuarantinedKey(k: string) {
   if (idx === -1)
     return k
   const id = decodeId(k.slice(idx + 8))
-  return id === null ? k : `${k.slice(0, idx)} · ${id}`
+  return id === null
+    ? k
+    : `${k.slice(0, idx)} · ${id}`
 }
 function rejectedReasonLabel(k: string) {
   const r = getRejectedReason(currentUser.value, k)
@@ -138,10 +142,14 @@ async function clearQuarantine() {
 }
 const { goBack } = useGoBack('/')
 
-const form = ref({ ...getAISettings() })
+const form = ref({
+  ...getAISettings(),
+})
 // AI 设置按账号分开保存：切换账号/退出时换成该身份自己的设置
 watch(currentUser, () => {
-  form.value = { ...getAISettings() }
+  form.value = {
+    ...getAISettings(),
+  }
   aiSettingsState.value = getAISettings()
 })
 let detectRevision = 0
@@ -209,7 +217,9 @@ async function onTest() {
     testOk.value = true
   }
   catch (e) {
-    testMsg.value = e instanceof Error ? e.message : '连接失败'
+    testMsg.value = e instanceof Error
+      ? e.message
+      : '连接失败'
     testOk.value = false
   }
   finally {
@@ -219,7 +229,12 @@ async function onTest() {
 const detecting = ref(false)
 const detectMsg = ref('')
 const detectOk = ref(false)
-watch([() => form.value.apiKey, () => form.value.baseUrl, () => form.value.model, currentUser], () => {
+watch([
+  () => form.value.apiKey,
+  () => form.value.baseUrl,
+  () => form.value.model,
+  currentUser,
+], () => {
   detectRevision++
   detectMsg.value = ''
 }, { flush: 'sync' })
@@ -244,7 +259,10 @@ async function onDetect() {
     if (provider) {
       form.value.model = provider.models[0].id
       // 刚识别出的 Key 就属于这家，记到它名下（切换回来还能看到）
-      form.value.apiKeys = { ...(form.value.apiKeys ?? {}), [provider.id]: key }
+      form.value.apiKeys = {
+        ...(form.value.apiKeys ?? {}),
+        [provider.id]: key,
+      }
     }
     detectMsg.value = `已识别为 ${result.label}，模型已设为 ${provider?.models[0].label ?? form.value.model}，点“保存”即可用`
     detectOk.value = true
@@ -252,7 +270,9 @@ async function onDetect() {
   catch (e) {
     if (revision !== detectRevision)
       return
-    detectMsg.value = e instanceof Error ? e.message : '识别失败'
+    detectMsg.value = e instanceof Error
+      ? e.message
+      : '识别失败'
     detectOk.value = false
   }
   finally {
@@ -334,7 +354,7 @@ async function onDetect() {
         v-if="quarantined.length"
         class="mt-4 border border-amber-300 rounded-lg bg-amber-50 p-3 dark:border-amber-700 dark:bg-amber-900/20"
       >
-        <p class="text-sm font-medium text-amber-800 dark:text-amber-200">
+        <p class="text-sm text-amber-800 font-medium dark:text-amber-200">
           ⚠️ 有
           {{ quarantined.length }}
           条学习记录因格式异常被服务端拒绝，已隔离不再随包上传（本机记录仍在，可先导出备份）。
@@ -455,7 +475,7 @@ async function onDetect() {
       <div class="mb-4 flex flex-wrap items-center gap-3">
         <button
           type="button"
-          class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          class="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white font-medium hover:bg-blue-700 disabled:opacity-50"
           :disabled="detecting || !form.apiKey.trim()"
           @click="onDetect"
         >
@@ -522,7 +542,7 @@ async function onDetect() {
 
       <div class="flex flex-wrap items-center gap-3">
         <button
-          class="rounded-xl bg-blue-700 px-5 py-2.5 text-sm font-bold text-white dark:bg-blue-600 hover:bg-blue-800"
+          class="rounded-xl bg-blue-700 px-5 py-2.5 text-sm text-white font-bold dark:bg-blue-600 hover:bg-blue-800"
           @click="onSave"
         >
           保存

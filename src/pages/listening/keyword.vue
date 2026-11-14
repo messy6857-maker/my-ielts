@@ -1,7 +1,7 @@
 <script setup>
-import { useAudioGroup } from '../../composables/useAudioGroup'
-
 import { resolveAudioUrl } from '../../composables/useAudio'
+
+import { useAudioGroup } from '../../composables/useAudioGroup'
 import words from './listening179.json'
 
 const managedAudio = useAudioGroup()
@@ -30,23 +30,23 @@ const filteredWs = computed(() => {
   <!-- Card header -->
   <div class="mt-6 items-center justify-between lg:flex">
     <div class="mb-4 lg:mb-0">
-      <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+      <h3 class="mb-2 text-xl text-gray-900 font-bold dark:text-white">
         听力 179 考点词
       </h3>
-      <span class="text-base font-normal text-gray-500 dark:text-gray-400">考点词以及对应的同义替换</span>
+      <span class="text-base text-gray-500 font-normal dark:text-gray-400">考点词以及对应的同义替换</span>
     </div>
     <div class="items-center sm:flex">
       <div class="flex items-center">
         <button
           type="button"
-          class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+          class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
           @click="$router.push('179practice')"
         >
           练习
         </button>
         <button
           type="button"
-          class="ml-2 rounded-lg bg-green-700 px-5 py-2.5 text-sm font-medium text-white dark:bg-green-600 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:hover:bg-green-700"
+          class="ml-2 rounded-lg bg-green-700 px-5 py-2.5 text-sm text-white font-medium dark:bg-green-600 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:hover:bg-green-700"
           @click="$router.push('/listening/flashcard')"
         >
           自测卡片
@@ -88,7 +88,7 @@ const filteredWs = computed(() => {
         class="min-w-[640px] w-full text-left text-sm text-gray-500 dark:text-gray-400"
       >
         <thead
-          class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"
+          class="bg-gray-50 text-xs text-gray-700 uppercase dark:bg-gray-700 dark:text-gray-400"
         >
           <tr>
             <th class="w-0 px-6 py-3">
@@ -127,7 +127,7 @@ const filteredWs = computed(() => {
             </td>
             <th
               scope="row"
-              class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white"
+              class="whitespace-nowrap px-6 py-4 text-gray-900 font-medium dark:text-white"
             >
               <a
                 class="hover:underline"

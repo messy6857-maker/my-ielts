@@ -43,7 +43,14 @@ it('merges late old progress without overwriting real row stamps or reseeding de
   saveRecord('listening179_done_v1', '2', undefined, 'alice')
   const key = entryKey('progress_v1', 'listening', 'alice')
   const payload = {
-    [key]: JSON.stringify({ __ielts: 2, stamp: [Date.now(), 'remote'], value: { done: 6, total: 179, updatedAt: 1 } }),
+    [key]: JSON.stringify({
+      __ielts: 2,
+      stamp: [
+        Date.now(),
+        'remote',
+      ],
+      value: { done: 6, total: 179, updatedAt: 1 },
+    }),
   }
   applySyncData(payload, 'alice')
   expect(p.getProgress('listening').done).toBe(6)

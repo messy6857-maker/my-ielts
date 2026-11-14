@@ -1,19 +1,19 @@
 <script setup lang="ts">
+import type { DiffToken } from '../../utils/dictationDiff'
+import type { SentenceTiming } from './timings/loadTimings'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { resolveMediaUrl } from '../../composables/useAudio'
 import { speechLanguage } from '../../composables/useAudioGroup'
 import { useAuth } from '../../composables/useAuth'
 import { useMistakes } from '../../composables/useStudyData'
 import { useStudyTimer } from '../../composables/useStudyTimer'
-import { transcriptSentenceEntries } from '../../utils/text'
-import { resolveMediaUrl } from '../../composables/useAudio'
-import type { DiffToken } from '../../utils/dictationDiff'
 import { diffDictation } from '../../utils/dictationDiff'
 import {
   getDictationPartProgress,
   saveDictationPartProgress,
   summarizeDictationPart,
 } from '../../utils/dictationProgress'
-import type { SentenceTiming } from './timings/loadTimings'
+import { transcriptSentenceEntries } from '../../utils/text'
 import { loadTestTimings, prefersOriginalAudio, shouldUseTtsFallback } from './timings/loadTimings'
 
 const mediaError = ref('')
@@ -369,8 +369,9 @@ async function loadTranscript() {
       sequence !== transcriptSequence
       || test !== selectedTest.value
       || part !== selectedPart.value
-    )
+    ) {
       return
+    }
     const key = Object.keys(mod).find(k => k.endsWith('ListeningTranscript'))
     if (key)
       transcript.value = mod[key][part] || ''
@@ -419,7 +420,9 @@ const currentDictationIdx = computed(() => {
 
 const currentDictationEntry = computed(() => {
   const i = currentDictationIdx.value
-  return i >= 0 ? sentenceEntries.value[i] : null
+  return i >= 0
+    ? sentenceEntries.value[i]
+    : null
 })
 
 const dictationInput = computed({
@@ -471,7 +474,9 @@ function loadDictationCursor() {
   )
   const poolLen = dictatableIndexes.value.length
   dictationIndex.value
-    = poolLen > 0 ? Math.min(progress.cursor, poolLen - 1) : 0
+    = poolLen > 0
+      ? Math.min(progress.cursor, poolLen - 1)
+      : 0
   refreshPartSummary()
   resetDictationUi()
 }
@@ -592,7 +597,9 @@ function prevDictationSentence() {
   if (dictationChecked.value)
     dictationDrafts.delete(currentDictationIdx.value)
   dictationIndex.value
-    = dictationIndex.value > 0 ? dictationIndex.value - 1 : pool.length - 1
+    = dictationIndex.value > 0
+      ? dictationIndex.value - 1
+      : pool.length - 1
   const progress = getDictationPartProgress(
     currentUser.value,
     selectedTest.value,
@@ -635,14 +642,26 @@ watch(
 )
 
 watch(
-  [mode, selectedTest, selectedPart, () => sentenceEntries.value.length, currentUser],
+  [
+    mode,
+    selectedTest,
+    selectedPart,
+    () => sentenceEntries.value.length,
+    currentUser,
+  ],
   () => {
     if (mode.value === 'dictation')
       loadDictationCursor()
   },
 )
 
-watch([dictatableIndexes, timingsLoading, loading, mode, currentUser], ([indexes, loadingTimes, loadingText, activeMode]) => {
+watch([
+  dictatableIndexes,
+  timingsLoading,
+  loading,
+  mode,
+  currentUser,
+], ([indexes, loadingTimes, loadingText, activeMode]) => {
   if (activeMode !== 'dictation' || loadingTimes || loadingText)
     return
   const previous = stableDictationPool
@@ -713,7 +732,7 @@ const testLabel = computed(
       {{ ttsError }}
     </p>
     <div class="mb-4">
-      <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+      <h3 class="mb-2 text-xl text-gray-900 font-bold dark:text-white">
         听力精听
       </h3>
       <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -859,7 +878,7 @@ const testLabel = computed(
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <button
-            class="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            class="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white font-medium hover:bg-blue-700"
             :disabled="timingsLoading"
             @click="speakingIndex === currentDictationIdx ? stopSentence() : playCurrentDictation()"
           >
@@ -893,7 +912,7 @@ const testLabel = computed(
         />
         <div class="flex flex-wrap gap-2">
           <button
-            class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+            class="rounded-lg bg-emerald-600 px-3 py-2 text-sm text-white font-medium disabled:opacity-50"
             :disabled="dictationChecked || timingsLoading || !dictationInput.trim()"
             @click="checkDictation"
           >
@@ -972,7 +991,7 @@ const testLabel = computed(
         class="w-full flex items-center justify-between p-4 text-left"
         @click="showTranscript = !showTranscript"
       >
-        <span class="font-medium text-gray-900 dark:text-white">
+        <span class="text-gray-900 font-medium dark:text-white">
           📄 {{ showTranscript ? "隐藏原文" : "查看原文对照" }}
         </span>
         <span class="text-gray-500">{{ showTranscript ? "▲" : "▼" }}</span>
@@ -1019,10 +1038,10 @@ const testLabel = computed(
               v-if="timingStatus(i) === 'tts'"
               class="mt-1 shrink-0 text-[10px] text-gray-400"
             >TTS</span>
-            <p class="text-sm leading-7 text-gray-800 dark:text-gray-200">
+            <p class="text-sm text-gray-800 leading-7 dark:text-gray-200">
               <span
                 v-if="entry.speaker"
-                class="mr-2 rounded bg-gray-100 px-1 text-xs font-bold text-gray-600 dark:bg-gray-700"
+                class="mr-2 rounded bg-gray-100 px-1 text-xs text-gray-600 font-bold dark:bg-gray-700"
               >{{ entry.speaker }}</span>{{ entry.text }}
             </p>
           </div>

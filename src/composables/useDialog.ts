@@ -76,5 +76,7 @@ export function settleDialog(id: number, ok: boolean) {
   if (!request)
     return
   dialogQueue.value = dialogQueue.value.filter(d => d.id !== id)
-  request.resolve(request.kind === 'alert' ? true : ok)
+  request.resolve(request.kind === 'alert'
+    ? true
+    : ok)
 }

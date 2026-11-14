@@ -1,17 +1,17 @@
 <script setup lang="ts">
-import { speechLanguage } from '../../composables/useAudioGroup'
+import PageBookmark from '../../components/PageBookmark.vue'
 
 import TextHighlights from '../../components/TextHighlights.vue'
-import PageBookmark from '../../components/PageBookmark.vue'
-import { migrateGuestPageBookmarks } from '../../composables/usePageBookmark'
-import { useAuth } from '../../composables/useAuth'
 import { getToken } from '../../composables/syncClient'
-import { SYNC_API_BASE } from '../../sync-config'
-import { wordPhonetics } from '../vocabulary/wordPhonetics'
-import { lookupVocabularyMeaning } from '../vocabulary/loadVocabulary'
 import { translateWithAI } from '../../composables/useAISettings'
+import { speechLanguage } from '../../composables/useAudioGroup'
+import { useAuth } from '../../composables/useAuth'
+import { migrateGuestPageBookmarks } from '../../composables/usePageBookmark'
 import { stopAllAudio } from '../../composables/useSingleAudio'
 import { getDeviceId } from '../../composables/useStudyTimer'
+import { SYNC_API_BASE } from '../../sync-config'
+import { lookupVocabularyMeaning } from '../vocabulary/loadVocabulary'
+import { wordPhonetics } from '../vocabulary/wordPhonetics'
 import indexData from './daily/index.json'
 
 const { currentUser } = useAuth()
@@ -115,8 +115,9 @@ async function loadMyVocabReading() {
       seq !== vocabReqSeq
       || owner !== currentUser.value
       || t !== getToken(owner)
-    )
+    ) {
       return
+    }
     if (!resp.ok)
       throw new Error(`HTTP ${resp.status}`)
     const data = await resp.json()
@@ -124,8 +125,9 @@ async function loadMyVocabReading() {
       seq !== vocabReqSeq
       || owner !== currentUser.value
       || t !== getToken(owner)
-    )
+    ) {
       return
+    }
     if (
       data.ok
       && data.reading
@@ -150,12 +152,14 @@ async function loadMyVocabReading() {
           && q.answer >= 0
           && q.answer < q.options.length,
       )
-    )
+    ) {
       myVocabReading.value = data.reading
+    }
     // 校验失败不是“无阅读”：后端结构损坏时与 HTTP 失败同态，走加载失败分支；
     // 只有 ok:true 且 reading:null 才是真正无阅读，仍落入“暂无”分支。
-    else if (seq === vocabReqSeq && !(data.ok && data.reading === null))
+    else if (seq === vocabReqSeq && !(data.ok && data.reading === null)) {
       vocabError.value = true
+    }
   }
   catch {
     // 只有最新请求才置失败态，旧请求的失败不干扰新日期
@@ -256,7 +260,7 @@ watch(currentUser, (user) => {
 
 // 右下角阅读索引：点击直接跳到对应文章（词汇阅读 + 热点阅读按顺序编号）
 const readingIndex = computed(() => {
-  const items: { id: string; label: string }[] = []
+  const items: { id: string, label: string }[] = []
   if (myVocabReading.value)
     items.push({ id: 'reading-vocab', label: '阅读1' })
   const n = daily.value?.newsReadings.length ?? 0
@@ -300,7 +304,7 @@ interface TranslatePopupState {
   error: string
   showTranslateButton: boolean
   /** 锚点（单词/选区的视口包围盒），卡片贴着它显示 */
-  anchor: { left: number; top: number; bottom: number; right: number }
+  anchor: { left: number, top: number, bottom: number, right: number }
 }
 const translatePopup = ref<TranslatePopupState | null>(null)
 const translatePopupEl = ref<HTMLElement | null>(null)
@@ -374,13 +378,20 @@ async function runAITranslate() {
     if (seq !== translateSeq)
       return
     popup.loading = false
-    popup.error = e instanceof Error ? e.message : '翻译失败，请重试'
+    popup.error = e instanceof Error
+      ? e.message
+      : '翻译失败，请重试'
     popup.showTranslateButton = true
   }
 }
 
 function rectToAnchor(rect: DOMRect): TranslatePopupState['anchor'] {
-  return { left: rect.left, top: rect.top, bottom: rect.bottom, right: rect.right }
+  return {
+    left: rect.left,
+    top: rect.top,
+    bottom: rect.bottom,
+    right: rect.right,
+  }
 }
 
 /** 点词查义：文章注释 → 本站词库 → AI（自动走，不用再点）。 */
@@ -441,7 +452,9 @@ async function openWordPopup(word: string, notes: WordNote[], rect: DOMRect) {
     if (seq !== translateSeq)
       return
     popup.loading = false
-    popup.error = e instanceof Error ? e.message : '翻译失败，请重试'
+    popup.error = e instanceof Error
+      ? e.message
+      : '翻译失败，请重试'
     popup.showTranslateButton = true
   }
 }
@@ -454,7 +467,9 @@ function openSelectionPopup(text: string, rect: DOMRect) {
   translateAbort?.abort()
   translateAbort = null
   translatePopup.value = {
-    source: trimmed.length > 2000 ? trimmed.slice(0, 2000) : trimmed,
+    source: trimmed.length > 2000
+      ? trimmed.slice(0, 2000)
+      : trimmed,
     kind: 'selection',
     phonetic: '',
     pos: '',
@@ -468,31 +483,33 @@ function openSelectionPopup(text: string, rect: DOMRect) {
 }
 
 /** 点中单词：用点击坐标找所在单词，并返回单词的包围盒做卡片锚点。 */
-function wordAtPoint(x: number, y: number): { word: string; rect: DOMRect } | null {
+function wordAtPoint(x: number, y: number): { word: string, rect: DOMRect } | null {
   const doc = document as Document & {
-    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node; offset: number } | null
+    caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node, offset: number } | null
     caretRangeFromPoint?: (x: number, y: number) => Range | null
   }
   const caret = doc.caretPositionFromPoint?.(x, y)
   // L4：Firefox 点在元素边界时可能返回非文本 offsetNode，此时改用 caretRangeFromPoint，
   // 而不是直接返回 null（旧代码 caret 非空就不再回退）。
   const useCaret = !!caret && caret.offsetNode.nodeType === Node.TEXT_NODE
-  const range = useCaret ? null : doc.caretRangeFromPoint?.(x, y)
+  const range = useCaret
+    ? null
+    : doc.caretRangeFromPoint?.(x, y)
   const node = useCaret ? caret!.offsetNode : range?.startContainer
   if (!node || node.nodeType !== Node.TEXT_NODE)
     return null
   const text = node.textContent ?? ''
   const offset = useCaret ? caret!.offset : range!.startOffset
-  const isLetter = (i: number) => i >= 0 && i < text.length && /[A-Za-z]/.test(text[i])
+  const isLetter = (i: number) => i >= 0 && i < text.length && /[A-Z]/i.test(text[i])
   // 点在字母上才算点中单词（点在空格/标点上不触发）
   if (!isLetter(offset) && !isLetter(offset - 1))
     return null
   let start = offset
-  while (start > 0 && /[A-Za-z']/.test(text[start - 1])) start--
+  while (start > 0 && /[A-Z']/i.test(text[start - 1])) start--
   let end = offset
-  while (end < text.length && /[A-Za-z']/.test(text[end])) end++
+  while (end < text.length && /[A-Z']/i.test(text[end])) end++
   const word = text.slice(start, end).replace(/^'+|'+$/g, '')
-  if (!/^[A-Za-z]+(?:'[A-Za-z]+)?$/.test(word))
+  if (!/^[A-Z]+(?:'[A-Z]+)?$/i.test(word))
     return null
   const wordRange = document.createRange()
   wordRange.setStart(node, start)
@@ -516,7 +533,9 @@ function onPassageClick(e: MouseEvent, notes: WordNote[]) {
 
 /** 选区所在文章的注释（双击选词时也要先查文章注释）。 */
 function articleNotesForNode(node: Node | null): WordNote[] {
-  const el = node instanceof Element ? node : node?.parentElement
+  const el = node instanceof Element
+    ? node
+    : node?.parentElement
   const container = el?.closest?.('[data-article]')
   const key = container?.getAttribute('data-article') ?? ''
   if (key === 'vocab')
@@ -550,16 +569,20 @@ function onSelectionChange() {
     const anchor = sel.anchorNode
     if (!anchor)
       return
-    const el = anchor instanceof Element ? anchor : anchor.parentElement
+    const el = anchor instanceof Element
+      ? anchor
+      : anchor.parentElement
     const passage = el?.closest('.passage-text')
-    const range = sel.rangeCount > 0 ? sel.getRangeAt(0) : null
+    const range = sel.rangeCount > 0
+      ? sel.getRangeAt(0)
+      : null
     if (!passage || !range || !passage.contains(range.commonAncestorContainer))
       return
     const rect = range?.getBoundingClientRect()
     if (!rect || (rect.width === 0 && rect.height === 0))
       return
     // 单词选区（双击）直接给释义，不用再点翻译
-    if (/^[A-Za-z]+(?:'[A-Za-z]+)?$/.test(text)) {
+    if (/^[A-Z]+(?:'[A-Z]+)?$/i.test(text)) {
       openWordPopup(text, articleNotesForNode(anchor), rect)
       return
     }
@@ -624,7 +647,7 @@ function paragraphs(passage: string): string[] {
   <div class="mx-auto max-w-3xl px-4 pt-6 2xl:px-0">
     <ReadingTabs />
     <div class="mb-6 flex items-center justify-between">
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+      <h2 class="text-2xl text-gray-900 font-bold dark:text-white">
         📅 每日阅读
       </h2>
       <button
@@ -653,7 +676,7 @@ function paragraphs(passage: string): string[] {
       <!-- 日期选择 -->
       <div class="mb-6">
         <label
-          class="mb-2 block text-sm font-medium text-gray-600 dark:text-gray-400"
+          class="mb-2 block text-sm text-gray-600 font-medium dark:text-gray-400"
         >选择日期</label>
         <select
           v-model="selectedDate"
@@ -668,17 +691,17 @@ function paragraphs(passage: string): string[] {
       <template v-if="daily">
         <!-- 第一部分：词汇阅读（按账号个性化；游客不显示） -->
         <section v-if="myVocabReading" class="mb-8">
-          <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">
+          <h3 class="mb-4 text-lg text-gray-900 font-bold dark:text-white">
             📖 词汇阅读
             <span
-              class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400"
+              class="ml-2 text-sm text-gray-500 font-normal dark:text-gray-400"
             >基于你昨天学过的单词</span>
           </h3>
           <article
             id="reading-vocab"
             class="scroll-mt-20 border border-gray-200 rounded-2xl bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
           >
-            <h4 class="mb-3 text-xl font-bold text-gray-900 dark:text-white">
+            <h4 class="mb-3 text-xl text-gray-900 font-bold dark:text-white">
               {{ myVocabReading.title }}
             </h4>
             <p class="mb-3 text-xs text-gray-400 dark:text-gray-500">
@@ -691,13 +714,13 @@ function paragraphs(passage: string): string[] {
               <span
                 v-for="w in myVocabReading.basedOn"
                 :key="w"
-                class="rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                class="rounded-full bg-blue-100 px-3 py-1 text-xs text-blue-700 font-medium dark:bg-blue-900/40 dark:text-blue-300"
               >
                 {{ w }}
               </span>
             </div>
             <div
-              class="passage-text mb-4 leading-relaxed text-gray-700 space-y-4 dark:text-gray-300"
+              class="passage-text mb-4 text-gray-700 leading-relaxed space-y-4 dark:text-gray-300"
               data-article="vocab"
               @click="onPassageClick($event, myVocabReading.notes)"
             >
@@ -716,10 +739,10 @@ function paragraphs(passage: string): string[] {
               class="mb-4 rounded-xl bg-gray-50 p-4 dark:bg-gray-900/50"
             >
               <p
-                class="mb-2 text-sm font-bold text-gray-700 dark:text-gray-300"
+                class="mb-2 text-sm text-gray-700 font-bold dark:text-gray-300"
               >
                 生词注释
-                <span class="font-normal text-gray-400">（点击单词查看中文）</span>
+                <span class="text-gray-400 font-normal">（点击单词查看中文）</span>
               </p>
               <ul class="space-y-1.5">
                 <li
@@ -752,7 +775,7 @@ function paragraphs(passage: string): string[] {
                   </button>
                   <span
                     v-if="n.pos"
-                    class="ml-1 italic text-gray-500 dark:text-gray-400"
+                    class="ml-1 text-gray-500 italic dark:text-gray-400"
                     style="font-family: times"
                   >{{ n.pos }}</span>
                   <span
@@ -771,7 +794,7 @@ function paragraphs(passage: string): string[] {
                 class="border border-gray-100 rounded-xl p-4 dark:border-gray-700"
               >
                 <p
-                  class="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200"
+                  class="mb-3 text-sm text-gray-800 font-medium dark:text-gray-200"
                 >
                   {{ qi + 1 }}. {{ qs.q }}
                 </p>
@@ -856,10 +879,10 @@ function paragraphs(passage: string): string[] {
 
         <!-- 第二部分：热点阅读 -->
         <section v-if="daily.newsReadings.length" class="mb-8">
-          <h3 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">
+          <h3 class="mb-4 text-lg text-gray-900 font-bold dark:text-white">
             📰 热点阅读
             <span
-              class="ml-2 text-sm font-normal text-gray-500 dark:text-gray-400"
+              class="ml-2 text-sm text-gray-500 font-normal dark:text-gray-400"
             >{{ daily.newsReadings.length }} 篇</span>
           </h3>
           <article
@@ -868,7 +891,7 @@ function paragraphs(passage: string): string[] {
             :key="ai"
             class="mb-6 scroll-mt-20 border border-gray-200 rounded-2xl bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
           >
-            <h4 class="mb-1 text-xl font-bold text-gray-900 dark:text-white">
+            <h4 class="mb-1 text-xl text-gray-900 font-bold dark:text-white">
               {{ art.title }}
             </h4>
             <p v-if="art.source" class="mb-3 text-xs text-gray-400">
@@ -878,7 +901,7 @@ function paragraphs(passage: string): string[] {
               💡 点单词查中文意思，选中一句话可以翻译
             </p>
             <div
-              class="passage-text mb-4 leading-relaxed text-gray-700 space-y-4 dark:text-gray-300"
+              class="passage-text mb-4 text-gray-700 leading-relaxed space-y-4 dark:text-gray-300"
               :data-article="`news-${ai}`"
               @click="onPassageClick($event, art.notes)"
             >
@@ -897,10 +920,10 @@ function paragraphs(passage: string): string[] {
               class="mb-4 rounded-xl bg-gray-50 p-4 dark:bg-gray-900/50"
             >
               <p
-                class="mb-2 text-sm font-bold text-gray-700 dark:text-gray-300"
+                class="mb-2 text-sm text-gray-700 font-bold dark:text-gray-300"
               >
                 生词注释
-                <span class="font-normal text-gray-400">（点击单词查看中文）</span>
+                <span class="text-gray-400 font-normal">（点击单词查看中文）</span>
               </p>
               <ul class="space-y-1.5">
                 <li v-for="(n, i) in art.notes" :key="i" class="text-sm">
@@ -917,7 +940,7 @@ function paragraphs(passage: string): string[] {
                   </button>
                   <span
                     v-if="n.pos"
-                    class="ml-1 italic text-gray-500 dark:text-gray-400"
+                    class="ml-1 text-gray-500 italic dark:text-gray-400"
                     style="font-family: times"
                   >{{ n.pos }}</span>
                   <span
@@ -936,7 +959,7 @@ function paragraphs(passage: string): string[] {
                 class="border border-gray-100 rounded-xl p-4 dark:border-gray-700"
               >
                 <p
-                  class="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200"
+                  class="mb-3 text-sm text-gray-800 font-medium dark:text-gray-200"
                 >
                   {{ qi + 1 }}. {{ qs.q }}
                 </p>
@@ -995,7 +1018,7 @@ function paragraphs(passage: string): string[] {
           v-for="item in readingIndex"
           :key="item.id"
           type="button"
-          class="border border-gray-200 rounded-full bg-white/90 px-3.5 py-1.5 text-xs font-medium text-gray-600 shadow-md backdrop-blur transition-colors dark:border-gray-600 hover:border-blue-400 dark:bg-gray-800/90 hover:bg-blue-50 dark:text-gray-300 hover:text-blue-700 dark:hover:border-blue-500 dark:hover:bg-blue-900/40 dark:hover:text-blue-300"
+          class="border border-gray-200 rounded-full bg-white/90 px-3.5 py-1.5 text-xs text-gray-600 font-medium shadow-md backdrop-blur transition-colors dark:border-gray-600 hover:border-blue-400 dark:bg-gray-800/90 hover:bg-blue-50 dark:text-gray-300 hover:text-blue-700 dark:hover:border-blue-500 dark:hover:bg-blue-900/40 dark:hover:text-blue-300"
           @click="jumpTo(item.id)"
         >
           {{ item.label }}
@@ -1014,7 +1037,7 @@ function paragraphs(passage: string): string[] {
     >
       <div class="mb-2 flex items-start justify-between gap-3">
         <div class="min-w-0">
-          <p class="break-words text-base font-bold text-gray-900 dark:text-white">
+          <p class="break-words text-base text-gray-900 font-bold dark:text-white">
             {{ translatePopup.source }}
           </p>
           <p v-if="translatePopup.phonetic || translatePopup.pos" class="mt-0.5 text-xs text-gray-400">
@@ -1024,7 +1047,7 @@ function paragraphs(passage: string): string[] {
         </div>
         <button
           type="button"
-          class="shrink-0 rounded-full px-1.5 py-0.5 text-base leading-none text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+          class="shrink-0 rounded-full px-1.5 py-0.5 text-base text-gray-400 leading-none hover:bg-gray-100 dark:hover:bg-gray-700"
           aria-label="关闭"
           @click="closeTranslatePopup"
         >
@@ -1034,7 +1057,7 @@ function paragraphs(passage: string): string[] {
       <div v-if="translatePopup.loading" class="text-sm text-gray-500 dark:text-gray-400" role="status">
         翻译中…
       </div>
-      <p v-else-if="translatePopup.meaning" class="text-sm leading-relaxed text-gray-800 dark:text-gray-200">
+      <p v-else-if="translatePopup.meaning" class="text-sm text-gray-800 leading-relaxed dark:text-gray-200">
         {{ translatePopup.meaning }}
       </p>
       <div v-else-if="translatePopup.error" class="text-sm text-red-600 dark:text-red-400" role="alert">
@@ -1051,7 +1074,7 @@ function paragraphs(passage: string): string[] {
         <button
           v-if="translatePopup.kind === 'word'"
           type="button"
-          class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+          class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white font-medium hover:bg-blue-700"
           @click="speak(translatePopup.source)"
         >
           🔊 朗读
@@ -1059,7 +1082,7 @@ function paragraphs(passage: string): string[] {
         <button
           v-if="translatePopup.showTranslateButton"
           type="button"
-          class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm text-white font-medium hover:bg-blue-700 disabled:opacity-50"
           :disabled="translatePopup.loading"
           @click="runAITranslate"
         >

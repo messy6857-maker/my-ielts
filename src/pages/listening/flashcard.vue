@@ -10,7 +10,9 @@ const cards: DeckCard[] = (words as any[]).map(w => ({
   word: w.word,
   pos: w.type || '短语',
   meaning: w.meaning,
-  synonyms: Array.isArray(w.replace) ? w.replace : [],
+  synonyms: Array.isArray(w.replace)
+    ? w.replace
+    : [],
 }))
 
 // 媒体站绝对地址（见 useAudio.ts）

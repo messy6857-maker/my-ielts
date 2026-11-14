@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
 import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 import sources from '../docs/evidence/reading-options/sources.json'
 

@@ -1,8 +1,8 @@
+import type { Envelope } from './storage'
+import { mergeLegacy } from './legacyMerge'
 import { mergeDeletionEntries } from './retention'
 import { mergeWriters } from './statsArchive'
-import type { Envelope } from './storage'
 import { compareStamp } from './storage'
-import { mergeLegacy } from './legacyMerge'
 
 /** Identical merge rules for cloud replies and manual restores. */
 export function mergeEntry(
@@ -12,7 +12,9 @@ export function mergeEntry(
 ): Envelope {
   if (!previous)
     return incoming
-  const latest = compareStamp(previous, incoming) >= 0 ? previous : incoming
+  const latest = compareStamp(previous, incoming) >= 0
+    ? previous
+    : incoming
   if (!previous.deleted && !incoming.deleted) {
     if (base.startsWith('deletion_archive_v3__entry_')) {
       return {
@@ -41,8 +43,12 @@ export function mergeEntry(
         ...latest,
         value: [
           ...new Set([
-            ...(Array.isArray(previous.value) ? previous.value : []),
-            ...(Array.isArray(incoming.value) ? incoming.value : []),
+            ...(Array.isArray(previous.value)
+              ? previous.value
+              : []),
+            ...(Array.isArray(incoming.value)
+              ? incoming.value
+              : []),
           ]),
         ]
           .filter(x => Number.isInteger(x) && x >= 0 && x <= 365)
@@ -76,11 +82,19 @@ export function mergeEntry(
         (a, b) =>
           a[0] - b[0] || a[1].localeCompare(b[1]) || a[2].localeCompare(b[2]),
       )
-      if (cuts.length)
-        return { ...latest, value: { cutoff: cuts.at(-1) } }
+      if (cuts.length) {
+        return {
+          ...latest,
+          value: {
+            cutoff: cuts.at(-1),
+          },
+        }
+      }
     }
     if (base === 'dictation_progress_v1') {
-      const older = latest === previous ? incoming : previous
+      const older = latest === previous
+        ? incoming
+        : previous
       const merged: Record<string, { updatedAt?: number }> = Object.assign(Object.create(null), older.value)
       for (const [key, part] of Object.entries((latest.value as Record<string, { updatedAt?: number }>) || {})) {
         const old = merged[key]

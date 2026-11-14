@@ -4,8 +4,8 @@
 import { computed } from 'vue'
 import { migrateCheckins } from '../utils/migrateStudy'
 import { useAuth } from './useAuth'
-import { useRecordMap } from './useRecordData'
 import { useDailyStore } from './useDailyStore'
+import { useRecordMap } from './useRecordData'
 
 export interface WordSchedule {
   ease: number // 记忆强度系数
@@ -37,7 +37,9 @@ export function gradeSchedule(
   if (grade === 5) {
     const reps = s.reps + 1
     const interval
-      = reps === 1 ? 1 : Math.max(1, Math.round(s.interval * s.ease))
+      = reps === 1
+        ? 1
+        : Math.max(1, Math.round(s.interval * s.ease))
     return {
       ease: Math.min(3, s.ease + 0.1),
       interval,
@@ -89,17 +91,28 @@ export const useCheckin = createGlobalState(() => {
   const totalDays = computed(() => dates.value.length)
   const streak = computed(() => {
     let n = 0
-    let offset = dates.value.includes(todayStr()) ? 0 : 1
+    let offset = dates.value.includes(todayStr())
+      ? 0
+      : 1
     while (dates.value.includes(todayStr(offset++))) n++
     return n
   })
   const weekDots = computed(() =>
     [6, 5, 4, 3, 2, 1, 0].map(offset => ({
-      label: offset ? todayStr(offset).split('-').slice(1).join('/') : '今天',
+      label: offset
+        ? todayStr(offset).split('-').slice(1).join('/')
+        : '今天',
       checked: dates.value.includes(todayStr(offset)),
     })),
   )
-  return { dates, totalDays, checkin, streak, weekDots, reload: store.reload }
+  return {
+    dates,
+    totalDays,
+    checkin,
+    streak,
+    weekDots,
+    reload: store.reload,
+  }
 })
 export const useWordSchedule = createGlobalState(() => {
   const store = useRecordMap<WordSchedule>('sr_vocabulary_v1')

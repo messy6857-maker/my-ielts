@@ -35,7 +35,9 @@ export function formatMockCorrectAnswer(q: MockQuestion): string {
   // the number+options branch below so it renders "A. True" like the mock
   // result screen does.
   if (q.type === 'fill-blank' || q.type === 'map-label') {
-    const answers = Array.isArray(q.answer) ? q.answer : [q.answer]
+    const answers = Array.isArray(q.answer)
+      ? q.answer
+      : [q.answer]
     return answers.map(a => String(a)).join(' / ')
   }
   if (typeof q.answer === 'number' && q.options?.[q.answer] != null)
@@ -103,17 +105,19 @@ export function buildMockMistakeEntry(input: {
   userAnswer: string
   audio?: string
 }): {
-    module: MistakeModule
-    key: string
-    title: string
-    detail: string
-    hint: string
-  } {
+  module: MistakeModule
+  key: string
+  title: string
+  detail: string
+  hint: string
+} {
   const q = input.question
   const correct = formatMockCorrectAnswer(q)
   const yours = formatMockUserAnswer(q, input.userAnswer)
   const module: MistakeModule
-    = input.kind === 'listening' ? 'mock_listening' : 'mock_reading'
+    = input.kind === 'listening'
+      ? 'mock_listening'
+      : 'mock_reading'
   return {
     module,
     key: mockMistakeKey(input.kind, input.testId, input.part, q.id),
@@ -141,7 +145,7 @@ export function collectMockMistakeEntries(input: {
   testId: string
   label: string
   /** part key + questions + optional audio */
-  parts: Array<{ part: string; questions: MockQuestion[]; audio?: string }>
+  parts: Array<{ part: string, questions: MockQuestion[], audio?: string }>
   answers: Record<string, string>
 }): ReturnType<typeof buildMockMistakeEntry>[] {
   const out: ReturnType<typeof buildMockMistakeEntry>[] = []
@@ -177,10 +181,19 @@ export function mockReviewMatches(expectedTitle: string, userInput: string, allo
   const optionPrefix = /^[a-z]\.\s+/i
   function variants(title: string) {
     const raw = title.trim()
-    const letter = allowOptions && optionPrefix.test(raw) ? raw[0].toLowerCase() : ''
-    const body = letter ? raw.replace(optionPrefix, '') : raw
+    const letter = allowOptions && optionPrefix.test(raw)
+      ? raw[0].toLowerCase()
+      : ''
+    const body = letter
+      ? raw.replace(optionPrefix, '')
+      : raw
     return [
-      ...(letter ? [letter, norm(raw)] : []),
+      ...(letter
+        ? [
+            letter,
+            norm(raw),
+          ]
+        : []),
       ...body.split(/\s*\/\s*/).map(norm),
     ].filter(Boolean)
   }
@@ -232,7 +245,7 @@ const MISTAKES_WRITTEN_KEY = 'mock_mistakes_written_v1'
 // M5：写过标记按时间淘汰（90 天，与错题本 days 窗口对齐），不再按 50 条
 // 截断——满 50 后最早的 attemptId 会失效、重试时重复记错。
 const WRITTEN_ATTEMPT_TTL_MS = 90 * 24 * 3600 * 1000
-interface WrittenAttempt { id: string; at: number }
+interface WrittenAttempt { id: string, at: number }
 function readWrittenMistakeAttempts(): WrittenAttempt[] {
   try {
     const raw = localStorage.getItem(MISTAKES_WRITTEN_KEY)
@@ -268,7 +281,10 @@ export function markMockMistakesWritten(attemptId: string): void {
   try {
     const list = readWrittenMistakeAttempts()
     if (!list.some(e => e.id === attemptId)) {
-      list.push({ id: attemptId, at: Date.now() })
+      list.push({
+        id: attemptId,
+        at: Date.now(),
+      })
       localStorage.setItem(MISTAKES_WRITTEN_KEY, JSON.stringify(list))
     }
   }

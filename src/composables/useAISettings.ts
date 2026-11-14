@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import { extractJson } from '../utils/text'
 import { SYNC_API_BASE } from '../sync-config'
+import { extractJson } from '../utils/text'
 import { getToken } from './syncClient'
 import { useAuth } from './useAuth'
 
@@ -18,7 +18,9 @@ export interface AISettings {
 const LEGACY_KEY = 'myielts_ai_settings_v1'
 /** 按账号的 key。故意不用 accountKey 的 myielts_u_ 前缀，确保永远不会被当成学习数据同步或导出备份 */
 export function aiSettingsKey(user: string | null): string {
-  return user ? `${LEGACY_KEY}:u:${user}` : `${LEGACY_KEY}:guest`
+  return user
+    ? `${LEGACY_KEY}:u:${user}`
+    : `${LEGACY_KEY}:guest`
 }
 function currentKey(): string {
   const key = aiSettingsKey(useAuth().currentUser.value)
@@ -75,7 +77,12 @@ export const AI_PROVIDERS: AIProvider[] = [
     baseUrl: 'https://api-cdn.thehive.ai/api/v3',
     keyHint: 'Hive 控制台',
     models: [
-      { id: 'deepseek-ai/deepseek-v4.1-flash-1017', label: 'DeepSeek V4.1 Flash', strength: 'balanced', note: '当前默认：快速、便宜，批改和翻译都够用' },
+      {
+        id: 'deepseek-ai/deepseek-v4.1-flash-1017',
+        label: 'DeepSeek V4.1 Flash',
+        strength: 'balanced',
+        note: '当前默认：快速、便宜，批改和翻译都够用',
+      },
     ],
   },
   {
@@ -84,11 +91,40 @@ export const AI_PROVIDERS: AIProvider[] = [
     baseUrl: 'https://api.openai.com/v1',
     keyHint: 'platform.openai.com → API Keys',
     models: [
-      { id: 'gpt-6.1-sol', label: 'GPT-6.1 Sol', strength: 'strong', note: '最新主力，接近旗舰水平，性价比最高；不接受 temperature', reasoning: true },
-      { id: 'gpt-6-astra', label: 'GPT-6 Astra', strength: 'flagship', note: '旗舰最强，难题和深度批改用，价格最高；不接受 temperature', reasoning: true },
-      { id: 'gpt-6.1-terra', label: 'GPT-6.1 Terra', strength: 'balanced', note: '快速均衡，日常够用；不接受 temperature', reasoning: true },
-      { id: 'gpt-6-luna', label: 'GPT-6 Luna', strength: 'light', note: '最便宜，适合翻译等简单任务；不接受 temperature', reasoning: true },
-      { id: 'gpt-4o-mini', label: 'GPT-4o mini', strength: 'light', note: '便宜老款，兼容性最好（自动识别的探测模型）' },
+      {
+        id: 'gpt-6.1-sol',
+        label: 'GPT-6.1 Sol',
+        strength: 'strong',
+        note: '最新主力，接近旗舰水平，性价比最高；不接受 temperature',
+        reasoning: true,
+      },
+      {
+        id: 'gpt-6-astra',
+        label: 'GPT-6 Astra',
+        strength: 'flagship',
+        note: '旗舰最强，难题和深度批改用，价格最高；不接受 temperature',
+        reasoning: true,
+      },
+      {
+        id: 'gpt-6.1-terra',
+        label: 'GPT-6.1 Terra',
+        strength: 'balanced',
+        note: '快速均衡，日常够用；不接受 temperature',
+        reasoning: true,
+      },
+      {
+        id: 'gpt-6-luna',
+        label: 'GPT-6 Luna',
+        strength: 'light',
+        note: '最便宜，适合翻译等简单任务；不接受 temperature',
+        reasoning: true,
+      },
+      {
+        id: 'gpt-4o-mini',
+        label: 'GPT-4o mini',
+        strength: 'light',
+        note: '便宜老款，兼容性最好（自动识别的探测模型）',
+      },
     ],
   },
   {
@@ -97,8 +133,18 @@ export const AI_PROVIDERS: AIProvider[] = [
     baseUrl: 'https://api.deepseek.com',
     keyHint: 'platform.deepseek.com → API Keys',
     models: [
-      { id: 'deepseek-flash', label: 'DeepSeek Flash', strength: 'balanced', note: '快速、便宜，批改和翻译都够用（V4.1 Flash）' },
-      { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', strength: 'flagship', note: '旗舰最强，精细批改和难题用' },
+      {
+        id: 'deepseek-flash',
+        label: 'DeepSeek Flash',
+        strength: 'balanced',
+        note: '快速、便宜，批改和翻译都够用（V4.1 Flash）',
+      },
+      {
+        id: 'deepseek-v4-pro',
+        label: 'DeepSeek V4 Pro',
+        strength: 'flagship',
+        note: '旗舰最强，精细批改和难题用',
+      },
     ],
   },
 ]
@@ -111,10 +157,14 @@ export function getProviderForBaseUrl(baseUrl: string): AIProvider | null {
 export function getProviderIdForBaseUrl(baseUrl: string): string {
   return getProviderForBaseUrl(baseUrl)?.id ?? 'custom'
 }
-/** 切服务商：先把当前 Key 存到旧服务商名下，再把新服务商存过的 Key（没填过就是空）取出来；
- *  当前模型在新服务商列表里就保留，否则换成它的第一个模型。 */
+/**
+ * 切服务商：先把当前 Key 存到旧服务商名下，再把新服务商存过的 Key（没填过就是空）取出来；
+ *  当前模型在新服务商列表里就保留，否则换成它的第一个模型。
+ */
 export function switchProviderSettings(current: AISettings, provider: AIProvider): AISettings {
-  const apiKeys = { ...(current.apiKeys ?? {}) }
+  const apiKeys = {
+    ...(current.apiKeys ?? {}),
+  }
   apiKeys[getProviderIdForBaseUrl(current.baseUrl)] = current.apiKey.trim()
   return {
     ...current,
@@ -140,19 +190,32 @@ export function modelSupportsReasoningEffort(providerId: string, modelId: string
   return false
 }
 export function reasoningEffortForProvider(providerId: string, effort: AISettings['reasoningEffort']) {
-  if (providerId === 'deepseek')
-    return effort === 'low' || effort === 'max' ? effort : 'high'
-  return effort === 'low' || effort === 'high' ? effort : effort === 'max' ? 'high' : 'medium'
+  if (providerId === 'deepseek') {
+    return effort === 'low' || effort === 'max'
+      ? effort
+      : 'high'
+  }
+  return effort === 'low' || effort === 'high'
+    ? effort
+    : effort === 'max'
+      ? 'high'
+      : 'medium'
 }
 
 export function getAISettings(): AISettings {
   try {
     const raw = localStorage.getItem(currentKey())
     if (raw) {
-      const parsed: AISettings = { ...DEFAULTS, ...JSON.parse(raw) }
+      const parsed: AISettings = {
+        ...DEFAULTS,
+        ...JSON.parse(raw),
+      }
       // 兼容旧版：只有单个 Key、没有分服务商的 map 时，把现有 Key 记到当前服务商名下
-      if (!parsed.apiKeys && parsed.apiKey.trim())
-        parsed.apiKeys = { [getProviderIdForBaseUrl(parsed.baseUrl)]: parsed.apiKey.trim() }
+      if (!parsed.apiKeys && parsed.apiKey.trim()) {
+        parsed.apiKeys = {
+          [getProviderIdForBaseUrl(parsed.baseUrl)]: parsed.apiKey.trim(),
+        }
+      }
       return parsed
     }
   }
@@ -163,7 +226,9 @@ export function getAISettings(): AISettings {
 }
 export function saveAISettings(s: AISettings) {
   // 保存时把当前 Key 写回当前服务商名下（切换服务商时取的就是这里）
-  const apiKeys = { ...(s.apiKeys ?? {}) }
+  const apiKeys = {
+    ...(s.apiKeys ?? {}),
+  }
   apiKeys[getProviderIdForBaseUrl(s.baseUrl)] = s.apiKey.trim()
   localStorage.setItem(currentKey(), JSON.stringify({ ...s, apiKeys }))
 }
@@ -243,7 +308,7 @@ async function callChatApi(
     })
     body = await res.json().catch(() => null)
   }
-  catch (e) {
+  catch {
     throw new Error(
       signal?.aborted
         ? '已取消评分'
@@ -328,11 +393,13 @@ function buildPrompt(
   question: string,
   essay: string,
 ): {
-    system: string
-    user: string
-  } {
+  system: string
+  user: string
+} {
   const descriptors
-    = taskLabel === 'Task 1' ? TASK1_DESCRIPTORS : TASK2_DESCRIPTORS
+    = taskLabel === 'Task 1'
+      ? TASK1_DESCRIPTORS
+      : TASK2_DESCRIPTORS
   const c1name
     = taskLabel === 'Task 1'
       ? '任务完成情况(Task Achievement)'
@@ -394,9 +461,11 @@ export async function gradeEssayWithAI(
     normalizeTask2Grade(parsed)
   return parsed
 }
-/** Task 2 首项 key 归一化：模型按 prompt 用 tr，面板统一按 ta 取值。
+/**
+ * Task 2 首项 key 归一化：模型按 prompt 用 tr，面板统一按 ta 取值。
  *  scores/comments/advice 三处都要归一化，否则建议区首项会空白；
- *  新批改与老存档恢复共用此函数。 */
+ *  新批改与老存档恢复共用此函数。
+ */
 export function normalizeTask2Grade(parsed: AIGradeResult): AIGradeResult {
   // 老存档可能缺 comments：先判空再读 tr，否则 Cannot read properties 会抛给用户
   const s = parsed.scores as unknown as Record<string, number> | undefined
@@ -423,18 +492,24 @@ export function roundHalf(v: number): number {
 }
 /** 四项均值（Task 2 首项接受 tr 或 ta）。 */
 function essayMean(s: Record<string, unknown>, task: 'task1' | 'task2'): number {
-  const first = task === 'task2' ? (s.ta ?? s.tr) : s.ta
+  const first = task === 'task2'
+    ? (s.ta ?? s.tr)
+    : s.ta
   return (
     (first as number) + (s.cc as number) + (s.lr as number) + (s.gra as number)
   ) / 4
 }
-/** 雅思 band 量表分数：有限数字且在 [0, 9] 内。prompt 写 4.0-9.0，但不收紧到 4-9，
- *  模型可能给 4 分以下；12、0 以下、负数、NaN 之类的一律不算合法分数。 */
+/**
+ * 雅思 band 量表分数：有限数字且在 [0, 9] 内。prompt 写 4.0-9.0，但不收紧到 4-9，
+ *  模型可能给 4 分以下；12、0 以下、负数、NaN 之类的一律不算合法分数。
+ */
 export function isBandScore(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 9
 }
-/** 逐句修改元素校验：非 null 对象，original/fixed 必须为字符串，
- *  reason 若存在必须为字符串（缺失允许，面板渲染为空）。 */
+/**
+ * 逐句修改元素校验：非 null 对象，original/fixed 必须为字符串，
+ *  reason 若存在必须为字符串（缺失允许，面板渲染为空）。
+ */
 function isValidCorrection(c: unknown): c is AICorrection {
   if (!c || typeof c !== 'object')
     return false
@@ -445,9 +520,11 @@ function isValidCorrection(c: unknown): c is AICorrection {
     return false
   return true
 }
-/** 写作新批改入口校验：四项分数与 overall 须为 [0, 9] 内有限数字、四项点评须为字符串、
+/**
+ * 写作新批改入口校验：四项分数与 overall 须为 [0, 9] 内有限数字、四项点评须为字符串、
  *  corrections 须为数组且每个元素结构合法、suggestion 须为字符串、rewritten 若存在须为字符串；
- *  Task 2 首项接受 tr 或 ta；overall 与四项均值差 ≥ 1.0 时判格式异常（面板不展示自相矛盾的总分）。 */
+ *  Task 2 首项接受 tr 或 ta；overall 与四项均值差 ≥ 1.0 时判格式异常（面板不展示自相矛盾的总分）。
+ */
 export function isValidEssayGrade(
   parsed: unknown,
   task: 'task1' | 'task2',
@@ -462,16 +539,21 @@ export function isValidEssayGrade(
   const c = p.comments
   if (!s || !c)
     return false
-  const firstScore = task === 'task2' ? (s.ta ?? s.tr) : s.ta
-  const firstComment = task === 'task2' ? (c.ta ?? c.tr) : c.ta
+  const firstScore = task === 'task2'
+    ? (s.ta ?? s.tr)
+    : s.ta
+  const firstComment = task === 'task2'
+    ? (c.ta ?? c.tr)
+    : c.ta
   if (
     !isBandScore(firstScore)
     || !isBandScore(s.cc)
     || !isBandScore(s.lr)
     || !isBandScore(s.gra)
     || !isBandScore(s.overall)
-  )
+  ) {
     return false
+  }
   if (Math.abs((s.overall as number) - essayMean(s, task)) >= 1.0)
     return false
   if (
@@ -479,40 +561,49 @@ export function isValidEssayGrade(
     || typeof c.cc !== 'string'
     || typeof c.lr !== 'string'
     || typeof c.gra !== 'string'
-  )
+  ) {
     return false
+  }
   if (
     !Array.isArray(p.corrections)
     || !p.corrections.every(isValidCorrection)
     || typeof p.suggestion !== 'string'
-  )
+  ) {
     return false
+  }
   if (p.rewritten !== undefined && typeof p.rewritten !== 'string')
     return false
   return true
 }
-/** 老存档修复：分数本身无效（缺项/非数字/超 [0, 9] 范围）才丢弃；点评缺失的补空值、
+/**
+ * 老存档修复：分数本身无效（缺项/非数字/超 [0, 9] 范围）才丢弃；点评缺失的补空值、
  *  逐句修改过滤掉不合格元素、总建议缺失补空值后展示，不再像以前那样整条丢弃。
  *  overall 与四项均值差 ≥ 1.0 时重算为均值（roundHalf），不展示自相矛盾的总分；
- *  rewritten 非字符串时置空（面板 v-if 为假即隐藏改写区）；advice/rewritten 本就是可选字段。 */
+ *  rewritten 非字符串时置空（面板 v-if 为假即隐藏改写区）；advice/rewritten 本就是可选字段。
+ */
 export function repairSavedGrade(
   parsed: AIGradeResult | null,
   task: 'task1' | 'task2',
 ): AIGradeResult | null {
   if (!parsed || typeof parsed !== 'object')
     return null
-  const p = task === 'task2' ? normalizeTask2Grade(parsed) : parsed
+  const p = task === 'task2'
+    ? normalizeTask2Grade(parsed)
+    : parsed
   const s = p.scores as unknown as Record<string, unknown> | undefined
   if (
     !s
     || !ESSAY_CRITERIA.every(k => isBandScore(s[k]))
     || !isBandScore(s.overall)
-  )
+  ) {
     return null
+  }
   if (Math.abs((s.overall as number) - essayMean(s, task)) >= 1.0)
     s.overall = roundHalf(essayMean(s, task))
   const c = (
-    p.comments && typeof p.comments === 'object' ? p.comments : {}
+    p.comments && typeof p.comments === 'object'
+      ? p.comments
+      : {}
   ) as Record<string, string>
   for (const k of ESSAY_CRITERIA) {
     if (typeof c[k] !== 'string')
@@ -581,9 +672,11 @@ ${SPEAKING_DESCRIPTORS}
 "suggestion": "整体提分建议（中文，2-3句，指出最该优先改的一项）"
 }
 其中 fluency=流利度与连贯性，lexical=词汇资源，grammar=语法多样性与准确性。全部用中文（引用考生原话时保留英文）。`
-/** 口语结果形状校验（新评分入口与存档恢复共用同一口径）：
+/**
+ * 口语结果形状校验（新评分入口与存档恢复共用同一口径）：
  *  四项齐全且为 [0, 9] 内有限数字、0.5 步进、overall 与三项均值差 < 1.0、
- *  三项点评为字符串、提分建议为非空字符串；任一项不合格即视为格式异常。 */
+ *  三项点评为字符串、提分建议为非空字符串；任一项不合格即视为格式异常。
+ */
 export function isValidSpeakingGrade(
   parsed: unknown,
 ): parsed is AISpeakingResult {
@@ -598,9 +691,15 @@ export function isValidSpeakingGrade(
     || !isBandScore(s.fluency)
     || !isBandScore(s.lexical)
     || !isBandScore(s.grammar)
-  )
+  ) {
     return false
-  const scores = [s.overall, s.fluency, s.lexical, s.grammar]
+  }
+  const scores = [
+    s.overall,
+    s.fluency,
+    s.lexical,
+    s.grammar,
+  ]
   if (scores.some(v => Math.abs(v * 2 - Math.round(v * 2)) >= 1e-9))
     return false
   const mean = (s.fluency + s.lexical + s.grammar) / 3
@@ -611,8 +710,9 @@ export function isValidSpeakingGrade(
     || typeof p.comments.fluency !== 'string'
     || typeof p.comments.lexical !== 'string'
     || typeof p.comments.grammar !== 'string'
-  )
+  ) {
     return false
+  }
   if (typeof p.suggestion !== 'string' || !p.suggestion.trim())
     return false
   return true
@@ -685,7 +785,9 @@ export async function detectAIProvider(apiKey: string): Promise<AIDetectResult> 
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
       },
-      body: JSON.stringify({ apiKey: apiKey.trim() }),
+      body: JSON.stringify({
+        apiKey: apiKey.trim(),
+      }),
     })
     body = await res.json().catch(() => null)
   }

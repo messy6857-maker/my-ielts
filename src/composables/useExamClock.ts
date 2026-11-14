@@ -1,5 +1,5 @@
-import { onUnmounted } from 'vue'
 import type { Ref } from 'vue'
+import { onUnmounted } from 'vue'
 
 export function useExamClock(
   timeLeft: Ref<number>,

@@ -1,13 +1,20 @@
 <script setup lang="ts">
+import type { MockTestPair } from './registry'
+import type { MockQuestion } from './types'
 import { useRouter } from 'vue-router'
-import { selectionInOneParagraph } from '../../utils/text'
-import { useExamClock } from '../../composables/useExamClock'
-import { useExamRecovery } from '../../composables/useExamRecovery'
+import { resolveMediaUrl } from '~/composables/useAudio'
 
+import { confirmDialog } from '~/composables/useDialog'
+import { useGoBack } from '~/composables/useGoBack'
+import { useMockMistakeSave } from '~/composables/useMockMistakeSave'
+import { useStudyTimer } from '~/composables/useStudyTimer'
+import { collectMockMistakeEntries } from '~/utils/mockMistakes'
 import ImageViewer from '../../components/ImageViewer.vue'
 import TextHighlights from '../../components/TextHighlights.vue'
+import { useExamClock } from '../../composables/useExamClock'
+import { useExamRecovery } from '../../composables/useExamRecovery'
+import { selectionInOneParagraph } from '../../utils/text'
 import { loadMockTest, mockTestList } from './registry'
-import type { MockTestPair } from './registry'
 import {
   countCorrect,
   formatCountdown,
@@ -21,13 +28,6 @@ import {
   toggleMultiSelectValue,
   totalScorePoints,
 } from './types'
-import type { MockQuestion } from './types'
-import { resolveMediaUrl } from '~/composables/useAudio'
-import { useGoBack } from '~/composables/useGoBack'
-import { useStudyTimer } from '~/composables/useStudyTimer'
-import { confirmDialog } from '~/composables/useDialog'
-import { collectMockMistakeEntries } from '~/utils/mockMistakes'
-import { useMockMistakeSave } from '~/composables/useMockMistakeSave'
 
 const router = useRouter()
 const route = useRoute()
@@ -60,7 +60,7 @@ const passageImageFailed = ref<Record<number, boolean>>({})
 const highlights = ref<Map<number, string[]>>(new Map())
 const selectionHint = ref('')
 const mapInputHint = ref('')
-const selPopup = ref<{ x: number; y: number; text: string } | null>(null)
+const selPopup = ref<{ x: number, y: number, text: string } | null>(null)
 let loadSeq = 0
 const examClock = useExamClock(timeLeft, () => {
   submit()
@@ -78,7 +78,9 @@ const recovery = useExamRecovery({
   remaining: examClock.remaining,
   extra: () => ({
     active: activePassage.value,
-    highlights: [...highlights.value.entries()],
+    highlights: [
+      ...highlights.value.entries(),
+    ],
   }),
   onUnblocked: startTimer,
 })
@@ -103,7 +105,9 @@ async function loadTest() {
     if (testId.value === active)
       return
     if (recovery.blocked.value || !recovery.saveFlush()) {
-      await router.replace({ query: { ...route.query, test: active } })
+      await router.replace({
+        query: { ...route.query, test: active },
+      })
       return
     }
   }
@@ -118,7 +122,9 @@ async function loadTest() {
   // 非法 test id（如手写 URL / 过期书签）不再静默 fallback：把 URL 参数规范化为默认套题，
   // 与实际加载内容一致，书签也被修复；replace 不产生多余历史记录，随后 watcher 以新 id 重载
   if (!mockTestList.some(t => t.id === testId.value)) {
-    router.replace({ query: { ...route.query, test: 'cam21-test1' } })
+    router.replace({
+      query: { ...route.query, test: 'cam21-test1' },
+    })
     return
   }
   const seq = ++loadSeq
@@ -132,8 +138,11 @@ async function loadTest() {
     if (recovery.blocked.value) {
       // 加载途中被阻断：不应用新套题，把 URL 换回进行中的套题
       const active = recovery.activeTestId()
-      if (active && testId.value !== active)
-        router.replace({ query: { ...route.query, test: active } })
+      if (active && testId.value !== active) {
+        router.replace({
+          query: { ...route.query, test: active },
+        })
+      }
       return
     }
     recordSaveFailed.value = false
@@ -232,8 +241,9 @@ async function discardDraftAndStart() {
       '放弃所选的这一次作答并重新开始？同一 attempt 的副本将退役，其他独立作答不受影响。',
       { danger: true, confirmText: '放弃并重新开始' },
     ))
-  )
+  ) {
     return
+  }
   if (recovery.clear())
     startTest()
 }
@@ -274,7 +284,9 @@ function toggleMultiSelect(qid: string, idx: number) {
   // 多选题最多选该题答案个数（Choose TWO 即 2 个），多出的拒绝加入，防止全选刷分
   const q = allQuestions.value.find(q => q.id === qid)
   const max
-    = q && Array.isArray(q.answer) ? q.answer.length : Number.POSITIVE_INFINITY
+    = q && Array.isArray(q.answer)
+      ? q.answer.length
+      : Number.POSITIVE_INFINITY
   answers.value[qid] = toggleMultiSelectValue(
     answers.value[qid] ?? '',
     idx,
@@ -299,7 +311,10 @@ async function onTestChange(e: Event) {
       return
   }
 
-  router.push({ path: '/mock/reading-test', query: { test: target } })
+  router.push({
+    path: '/mock/reading-test',
+    query: { test: target },
+  })
 }
 
 function questionStatus(
@@ -541,7 +556,7 @@ function switchPassage(index: number) {
         题目加载失败，可能是网络抖动
       </p>
       <button
-        class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
+        class="rounded-lg bg-blue-600 px-6 py-2 text-white font-bold hover:bg-blue-700"
         @click="loadTest"
       >
         🔄 重新加载
@@ -565,7 +580,7 @@ function switchPassage(index: number) {
         <p class="mb-4 text-5xl">
           📖
         </p>
-        <h2 class="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
+        <h2 class="mb-2 text-2xl text-gray-900 font-bold dark:text-white">
           {{ test.title }}
         </h2>
         <p class="mb-2 text-gray-500 dark:text-gray-400">
@@ -589,7 +604,7 @@ function switchPassage(index: number) {
           </select>
         </div>
         <button
-          class="rounded-xl bg-blue-600 px-10 py-3 text-lg font-bold text-white hover:bg-blue-700"
+          class="rounded-xl bg-blue-600 px-10 py-3 text-lg text-white font-bold hover:bg-blue-700"
           @click="startTest"
         >
           {{
@@ -697,7 +712,7 @@ function switchPassage(index: number) {
             >
               ← 返回
             </button>
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+            <h2 class="text-2xl text-gray-900 font-bold dark:text-white">
               📖 {{ test.title }}
             </h2>
             <select
@@ -726,7 +741,7 @@ function switchPassage(index: number) {
               v-if="!submitted"
               :disabled="recovery.retired.value"
               :title="recovery.retired.value ? '退役态下交卷不可用，请用上方横幅按钮处理' : undefined"
-              class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white disabled:cursor-not-allowed hover:bg-blue-700 disabled:opacity-50"
+              class="rounded-lg bg-blue-600 px-6 py-2 text-white font-bold disabled:cursor-not-allowed hover:bg-blue-700 disabled:opacity-50"
               @click="submit"
             >
               交卷
@@ -739,7 +754,7 @@ function switchPassage(index: number) {
           v-if="submitted"
           class="mb-8 border border-gray-200 rounded-2xl bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800"
         >
-          <p class="mb-2 text-5xl font-black text-blue-600 dark:text-blue-400">
+          <p class="mb-2 text-5xl text-blue-600 font-black dark:text-blue-400">
             {{ band.toFixed(1) }}
           </p>
           <p class="text-gray-600 dark:text-gray-400">
@@ -783,7 +798,7 @@ function switchPassage(index: number) {
               @touchend="handleSelect(pi)"
             >
               <div class="mb-4 flex items-center justify-between">
-                <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+                <h3 class="text-xl text-gray-900 font-bold dark:text-white">
                   Passage {{ pi + 1 }}：{{ p.title }}
                 </h3>
                 <button
@@ -798,7 +813,7 @@ function switchPassage(index: number) {
                 💡 选中词组可标记高亮，点击已标记的词可取消
               </p>
               <div
-                class="leading-relaxed text-gray-700 space-y-4 dark:text-gray-300"
+                class="text-gray-700 leading-relaxed space-y-4 dark:text-gray-300"
               >
                 <p
                   v-for="(para, i) in p.passage.split('\n\n')"
@@ -830,7 +845,7 @@ function switchPassage(index: number) {
                 v-if="p.headings?.length"
                 class="mt-4 border border-gray-200 rounded-lg bg-white p-4 lg:sticky lg:top-0 lg:z-10 lg:order-first lg:mt-0 dark:border-gray-700 dark:bg-gray-800"
               >
-                <p class="mb-2 text-sm font-bold text-gray-900 dark:text-white">
+                <p class="mb-2 text-sm text-gray-900 font-bold dark:text-white">
                   标题列表
                 </p>
                 <ul class="text-sm text-gray-700 space-y-1 dark:text-gray-300">
@@ -858,7 +873,7 @@ function switchPassage(index: number) {
                 "
               >
                 <p
-                  class="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200"
+                  class="mb-3 text-sm text-gray-800 font-medium dark:text-gray-200"
                 >
                   <span
                     class="mr-2 rounded bg-gray-100 px-2 py-0.5 text-xs font-bold dark:bg-gray-700"
@@ -981,7 +996,7 @@ function switchPassage(index: number) {
                 >
                   <span
                     v-if="questionStatus(q) === 'partial'"
-                    class="font-bold text-amber-700"
+                    class="text-amber-700 font-bold"
                   >部分正确（{{ multiSelectScore(q, answers[q.id] ?? "") }} /
                     {{ Array.isArray(q.answer) ? q.answer.length : 1 }} 分） · </span>正确答案：{{
                     q.type === "multi-select"
@@ -1027,7 +1042,7 @@ function switchPassage(index: number) {
         >
           <div class="flex items-center gap-2">
             <button
-              class="rounded bg-yellow-400 px-3 py-1 text-sm font-bold text-gray-900 hover:bg-yellow-300"
+              class="rounded bg-yellow-400 px-3 py-1 text-sm text-gray-900 font-bold hover:bg-yellow-300"
               @click="addHighlight"
             >
               🖍 标记
@@ -1047,7 +1062,7 @@ function switchPassage(index: number) {
         <!-- 手机端悬浮"原文"按钮 -->
         <button
           v-if="!submitted"
-          class="fixed bottom-6 right-6 z-40 rounded-full bg-blue-600 px-5 py-3 text-sm font-bold text-white shadow-lg lg:hidden hover:bg-blue-700"
+          class="fixed bottom-6 right-6 z-40 rounded-full bg-blue-600 px-5 py-3 text-sm text-white font-bold shadow-lg lg:hidden hover:bg-blue-700"
           @click="showPassageModal = true"
         >
           📖 原文
@@ -1061,7 +1076,7 @@ function switchPassage(index: number) {
           <div
             class="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700"
           >
-            <h3 class="font-bold text-gray-900 dark:text-white">
+            <h3 class="text-gray-900 font-bold dark:text-white">
               Passage {{ activePassage + 1 }}：{{
                 test.passages[activePassage].title
               }}
@@ -1080,7 +1095,7 @@ function switchPassage(index: number) {
             @touchend="handleSelect(activePassage)"
           >
             <div
-              class="leading-relaxed text-gray-700 space-y-4 dark:text-gray-300"
+              class="text-gray-700 leading-relaxed space-y-4 dark:text-gray-300"
             >
               <p
                 v-for="(para, i) in test.passages[activePassage].passage.split(
@@ -1118,7 +1133,7 @@ function switchPassage(index: number) {
               v-if="test.passages[activePassage].headings?.length"
               class="mt-4 border border-gray-200 rounded-lg p-4 dark:border-gray-700"
             >
-              <p class="mb-2 text-sm font-bold text-gray-900 dark:text-white">
+              <p class="mb-2 text-sm text-gray-900 font-bold dark:text-white">
                 标题列表
               </p>
               <ul class="text-sm text-gray-700 space-y-1 dark:text-gray-300">

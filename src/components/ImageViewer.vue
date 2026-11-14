@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 
-const props = defineProps<{ src: string; disabled?: boolean; alt?: string }>()
+const props = defineProps<{ src: string, disabled?: boolean, alt?: string }>()
 const emit = defineEmits<{ (event: 'close'): void }>()
 const scale = ref(1)
 const failed = ref(false)

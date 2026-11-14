@@ -286,7 +286,7 @@ function nextPractice() {
         </router-link>
       </div>
       <ul
-        class="mb-4 rounded-lg text-center text-sm font-medium text-gray-500 shadow sm:flex dark:text-gray-400 dark:divide-gray-700"
+        class="mb-4 rounded-lg text-center text-sm text-gray-500 font-medium shadow sm:flex dark:text-gray-400 dark:divide-gray-700"
       >
         <li v-for="(tab, i) in TABS" :key="tab.key" class="w-full">
           <button
@@ -322,8 +322,8 @@ function nextPractice() {
               v-if="practiceStats.correct + practiceStats.wrong > 0"
               class="mb-6 flex justify-center gap-6 text-sm"
             >
-              <span class="font-bold text-green-600">写对 {{ practiceStats.correct }}</span>
-              <span class="font-bold text-red-600">没写对 {{ practiceStats.wrong }}</span>
+              <span class="text-green-600 font-bold">写对 {{ practiceStats.correct }}</span>
+              <span class="text-red-600 font-bold">没写对 {{ practiceStats.wrong }}</span>
             </div>
             <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">
               {{
@@ -336,13 +336,13 @@ function nextPractice() {
             </p>
             <div class="flex justify-center gap-3">
               <button
-                class="rounded-lg bg-blue-700 px-6 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800"
+                class="rounded-lg bg-blue-700 px-6 py-2.5 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800"
                 @click="startPractice"
               >
                 再来一轮
               </button>
               <button
-                class="rounded-lg bg-gray-200 px-6 py-2.5 text-sm font-medium text-gray-700 dark:bg-gray-700 hover:bg-gray-300 dark:text-gray-200"
+                class="rounded-lg bg-gray-200 px-6 py-2.5 text-sm text-gray-700 font-medium dark:bg-gray-700 hover:bg-gray-300 dark:text-gray-200"
                 @click="exitPractice"
               >
                 返回列表
@@ -379,7 +379,7 @@ function nextPractice() {
                 把下面这句翻译成英文：
               </p>
               <p
-                class="mb-6 text-xl font-bold text-gray-900 sm:text-2xl dark:text-white"
+                class="mb-6 text-xl text-gray-900 font-bold sm:text-2xl dark:text-white"
               >
                 {{ currentPractice.sentence }}
               </p>
@@ -398,7 +398,7 @@ function nextPractice() {
               >
                 <button
                   v-if="hintKeywords.length < allKeywords.length"
-                  class="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-700 dark:bg-amber-900/40 hover:bg-amber-200 dark:text-amber-300"
+                  class="rounded-full bg-amber-100 px-3 py-1.5 text-xs text-amber-700 font-bold dark:bg-amber-900/40 hover:bg-amber-200 dark:text-amber-300"
                   @click="showHint"
                 >
                   💡 提示关键词（{{ hintKeywords.length }}/{{
@@ -417,7 +417,7 @@ function nextPractice() {
               <!-- 对照答案 -->
               <div v-if="!revealed">
                 <button
-                  class="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700"
+                  class="w-full rounded-xl bg-blue-600 py-3 text-sm text-white font-bold hover:bg-blue-700"
                   @click="revealed = true"
                 >
                   对照答案
@@ -463,13 +463,13 @@ function nextPractice() {
                 <!-- 自评 -->
                 <div v-if="graded === null" class="grid grid-cols-2 gap-3">
                   <button
-                    class="border border-green-200 rounded-xl bg-green-50 py-3 font-bold text-green-700 dark:border-green-800 dark:bg-green-900/20 hover:bg-green-100 dark:text-green-300"
+                    class="border border-green-200 rounded-xl bg-green-50 py-3 text-green-700 font-bold dark:border-green-800 dark:bg-green-900/20 hover:bg-green-100 dark:text-green-300"
                     @click="gradePractice(true)"
                   >
                     ✓ 我写对了
                   </button>
                   <button
-                    class="border border-red-200 rounded-xl bg-red-50 py-3 font-bold text-red-700 dark:border-red-800 dark:bg-red-900/20 hover:bg-red-100 dark:text-red-300"
+                    class="border border-red-200 rounded-xl bg-red-50 py-3 text-red-700 font-bold dark:border-red-800 dark:bg-red-900/20 hover:bg-red-100 dark:text-red-300"
                     @click="gradePractice(false)"
                   >
                     ✗ 没写对
@@ -487,7 +487,7 @@ function nextPractice() {
                     }}
                   </p>
                   <button
-                    class="w-full rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700"
+                    class="w-full rounded-xl bg-blue-600 py-3 text-sm text-white font-bold hover:bg-blue-700"
                     @click="nextPractice"
                   >
                     {{
@@ -506,14 +506,14 @@ function nextPractice() {
         <div v-else>
           <div class="items-center justify-between lg:flex">
             <div class="mb-4 lg:mb-0">
-              <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+              <h3 class="mb-2 text-xl text-gray-900 font-bold dark:text-white">
                 100 句翻译练习
               </h3>
               <span
-                class="text-base font-normal text-gray-500 dark:text-gray-400"
+                class="text-base text-gray-500 font-normal dark:text-gray-400"
               >能够写出 error-free 的句子</span>
               <span
-                class="ml-4 text-sm font-medium text-green-600 dark:text-green-400"
+                class="ml-4 text-sm text-green-600 font-medium dark:text-green-400"
               >已掌握 {{ masteredCount }} / {{ totalSentences }}</span>
             </div>
             <div class="flex flex-wrap items-center gap-2">
@@ -545,7 +545,7 @@ function nextPractice() {
                 </option>
               </select>
               <button
-                class="rounded-lg bg-blue-700 px-5 py-2 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800"
+                class="rounded-lg bg-blue-700 px-5 py-2 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800"
                 @click="startPractice"
               >
                 开始练习

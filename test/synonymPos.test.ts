@@ -20,7 +20,15 @@ describe('synonymPosData (Datamuse rebuild)', () => {
     expect(synonymPosData[word]).toBe(pos)
   })
   it('only uses known part-of-speech values', () => {
-    const allowed = new Set(['n.', 'v.', 'adj.', 'adv.', 'interj.', 'pron.', 'prep.'])
+    const allowed = new Set([
+      'n.',
+      'v.',
+      'adj.',
+      'adv.',
+      'interj.',
+      'pron.',
+      'prep.',
+    ])
     for (const [word, pos] of Object.entries(synonymPosData))
       expect(allowed.has(pos), `${word}: ${pos}`).toBe(true)
   })

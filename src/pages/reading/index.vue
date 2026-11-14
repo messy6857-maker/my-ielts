@@ -53,23 +53,23 @@ function play(word) {
       <!-- 页签：阅读考点词 / 自测卡片 / 每日阅读 / 限时模考 -->
       <ReadingTabs />
       <div class="mb-4 lg:mb-0">
-        <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+        <h3 class="mb-2 text-xl text-gray-900 font-bold dark:text-white">
           阅读考点词
         </h3>
-        <span class="text-base font-normal text-gray-500 dark:text-gray-400">376 考点词同义替换</span>
+        <span class="text-base text-gray-500 font-normal dark:text-gray-400">376 考点词同义替换</span>
         <span
-          class="ml-4 text-sm font-medium text-green-600 dark:text-green-400"
+          class="ml-4 text-sm text-green-600 font-medium dark:text-green-400"
         >已掌握 {{ masteredCount }} / {{ totalWords }}</span>
       </div>
       <!-- Card header -->
       <template v-for="cat in filteredCats" :key="cat.title">
         <div class="mt-6 items-center justify-between lg:flex">
           <div class="mb-4 lg:mb-0">
-            <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+            <h3 class="mb-2 text-xl text-gray-900 font-bold dark:text-white">
               {{ cat.title }}
             </h3>
             <span
-              class="text-base font-normal text-gray-500 dark:text-gray-400"
+              class="text-base text-gray-500 font-normal dark:text-gray-400"
             >{{ cat.define }}</span>
           </div>
           <div class="items-center sm:flex">
@@ -111,7 +111,7 @@ function play(word) {
               class="min-w-[640px] w-full text-left text-sm text-gray-500 dark:text-gray-400"
             >
               <thead
-                class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"
+                class="bg-gray-50 text-xs text-gray-700 uppercase dark:bg-gray-700 dark:text-gray-400"
               >
                 <tr>
                   <th class="w-0 px-6 py-3">
@@ -153,7 +153,7 @@ function play(word) {
                   </td>
                   <th
                     scope="row"
-                    class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white"
+                    class="whitespace-nowrap px-6 py-4 text-gray-900 font-medium dark:text-white"
                   >
                     <a
                       class="hover:underline"

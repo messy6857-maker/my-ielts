@@ -23,5 +23,7 @@ export function newestAttemptDrafts(drafts: ExamDraft[]) {
     if (draft.attemptId && !unique.has(draft.attemptId))
       unique.set(draft.attemptId, draft)
   }
-  return [...unique.values()]
+  return [
+    ...unique.values(),
+  ]
 }

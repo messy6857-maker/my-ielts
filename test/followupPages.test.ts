@@ -1,12 +1,12 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { RouterView, createMemoryHistory, createRouter } from 'vue-router'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
-import { accountNotice, useAuth } from '../src/composables/useAuth'
+import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { setToken } from '../src/composables/syncClient'
-import { accountKey, readRecords } from '../src/utils/storage'
-import { readDraft, saveDraft } from '../src/utils/drafts'
+import { accountNotice, useAuth } from '../src/composables/useAuth'
 import { bandScore } from '../src/pages/mock/types'
+import { readDraft, saveDraft } from '../src/utils/drafts'
+import { accountKey, readRecords } from '../src/utils/storage'
 import { selectionInOneParagraph, splitSentences } from '../src/utils/text'
 
 const wrappers: any[] = []
@@ -25,7 +25,10 @@ beforeEach(() => {
   auth.currentUser.value = 'alice'
   setToken('token', 'alice')
   accountNotice.value = ''
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
   vi.stubGlobal(
     'SpeechSynthesisUtterance',
     class {
@@ -48,14 +51,22 @@ async function show(Page: any, path = '/exercise') {
     history: createMemoryHistory(),
     routes: [
       { path, component: Page },
-      { path: '/outside', component: { template: '<p>outside</p>' } },
+      {
+        path: '/outside',
+        component: { template: '<p>outside</p>' },
+      },
     ],
   })
   await router.push(path)
   await router.isReady()
-  const root = mount(defineComponent({ render: () => h(RouterView) }), {
+  const root = mount(defineComponent({
+    render: () => h(RouterView),
+  }), {
     attachTo: document.body,
-    global: { plugins: [router], stubs },
+    global: {
+      plugins: [router],
+      stubs,
+    },
   })
   wrappers.push(root)
   await flushPromises()
@@ -65,7 +76,12 @@ async function show(Page: any, path = '/exercise') {
     await flushPromises()
   }
   expect(state.loading).not.toBe(true)
-  return { root, router, w: root.findComponent(Page), state }
+  return {
+    root,
+    router,
+    w: root.findComponent(Page),
+    state,
+  }
 }
 it.each(['reading', 'listening'])(
   '%s mock keeps interrupted answers under their original identity and resumes them',
@@ -124,10 +140,10 @@ it.each(['task1', 'task2'])(
   '%s timed-out drafts can continue without resetting the original clock',
   async (task) => {
     const { TASK1_PROMPTS } = await import(
-      '../src/pages/writing/task1/prompts'
+      '../src/pages/writing/task1/prompts',
     )
     const { CAMBRIDGE_WRITING } = await import(
-      '../src/pages/writing/cambridge'
+      '../src/pages/writing/cambridge',
     )
     const prompt
       = task === 'task1'
@@ -260,10 +276,19 @@ it('does not attach a late AI grade to a different account', async () => {
         }),
     ),
   )
-  const router = createRouter({ history: createMemoryHistory(), routes: [] })
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [],
+  })
   const w = mount(Page, {
-    props: { task: 'task1', question: 'question', essay: 'word '.repeat(150) },
-    global: { plugins: [router] },
+    props: {
+      task: 'task1',
+      question: 'question',
+      essay: 'word '.repeat(150),
+    },
+    global: {
+      plugins: [router],
+    },
   })
   wrappers.push(w)
   const state = (w.vm as any).$.setupState
@@ -272,7 +297,13 @@ it('does not attach a late AI grade to a different account', async () => {
   setToken('bob-token', 'bob')
   await nextTick()
   const grade = {
-    scores: { ta: 6, cc: 6, lr: 6, gra: 6, overall: 6 },
+    scores: {
+      ta: 6,
+      cc: 6,
+      lr: 6,
+      gra: 6,
+      overall: 6,
+    },
     comments: { ta: 'a', cc: 'b', lr: 'c', gra: 'd' },
     corrections: [],
     suggestion: 's',
@@ -282,7 +313,15 @@ it('does not attach a late AI grade to a different account', async () => {
     status: 200,
     json: async () => ({
       ok: true,
-      data: { choices: [{ message: { content: JSON.stringify(grade) } }] },
+      data: {
+        choices: [
+          {
+            message: {
+              content: JSON.stringify(grade),
+            },
+          },
+        ],
+      },
     }),
   })
   await pending
@@ -319,7 +358,9 @@ it('corpus search keeps the original one-based source row number', async () => {
   const { state, w } = await show(Page)
   const target = state.curChapter.rows[10]
   const original = state.curChapter.rows.indexOf(target) + 1
-  state.keyword = String(Array.isArray(target[0]) ? target[0][0] : target[0])
+  state.keyword = String(Array.isArray(target[0])
+    ? target[0][0]
+    : target[0])
   await nextTick()
   const index = state.filteredRows.indexOf(target)
   expect(index).toBeGreaterThanOrEqual(0)
@@ -340,9 +381,13 @@ it('intensive listening ignores an older transcript import arriving last', async
   const oldRequest = state.loadTranscript()
   state.selectedTest = 'cam18-test2'
   await nextTick()
-  newDone({ cam18Test2ListeningTranscript: { part1: 'New transcript.' } })
+  newDone({
+    cam18Test2ListeningTranscript: { part1: 'New transcript.' },
+  })
   await flushPromises()
-  oldDone({ cam18Test1ListeningTranscript: { part1: 'Old transcript.' } })
+  oldDone({
+    cam18Test1ListeningTranscript: { part1: 'Old transcript.' },
+  })
   await oldRequest
   await nextTick()
   expect(state.transcript).toBe('New transcript.')
@@ -360,17 +405,29 @@ it('speech scoring becomes enabled at exactly ten words', async () => {
   )
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/', component: { template: '<p/>' } }],
+    routes: [
+      {
+        path: '/',
+        component: { template: '<p/>' },
+      },
+    ],
   })
   await router.push('/')
   const w = mount(Page, {
-    props: { question: 'question', transcript: 'word '.repeat(9) },
-    global: { plugins: [router] },
+    props: {
+      question: 'question',
+      transcript: 'word '.repeat(9),
+    },
+    global: {
+      plugins: [router],
+    },
   })
   wrappers.push(w)
   let button = w.findAll('button').find(b => b.text().includes('评分'))!
   expect(button.attributes('disabled')).toBeDefined()
-  await w.setProps({ transcript: 'word '.repeat(10) })
+  await w.setProps({
+    transcript: 'word '.repeat(10),
+  })
   button = w.findAll('button').find(b => b.text().includes('评分'))!
   expect(button.attributes('disabled')).toBeUndefined()
 })
@@ -518,7 +575,9 @@ it.each(['reading', 'listening'])(
 it('listening map-label set shows its options box and limits input to a single letter', async () => {
   const Page = (await import('../src/pages/mock/listening-test.vue')).default
   const session = await show(Page, '/mock/listening-test')
-  await session.router.push({ query: { test: 'cam20-test2' } })
+  await session.router.push({
+    query: { test: 'cam20-test2' },
+  })
   // 等切题真正完成：只看 loading 会漏掉 watcher 尚未触发的窗口，
   // 以 testPair.id 为准轮询。
   for (
@@ -548,7 +607,9 @@ it('listening map-label set shows its options box and limits input to a single l
 it('cam20-test3 reading shows its heading list', async () => {
   const Page = (await import('../src/pages/mock/reading-test.vue')).default
   const session = await show(Page, '/mock/reading-test')
-  await session.router.push({ query: { test: 'cam20-test3' } })
+  await session.router.push({
+    query: { test: 'cam20-test3' },
+  })
   // 等切题真正完成：只看 loading 会漏掉 watcher 尚未触发的窗口，
   // 以 testPair.id 为准轮询。
   for (

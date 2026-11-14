@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest'
 import { cam18Test2Reading } from '../src/pages/mock/cam18-test2-reading'
+import { cam20Test3Reading } from '../src/pages/mock/cam20-test3-reading'
 import { cam21Test2Reading } from '../src/pages/mock/cam21-test2-reading'
 import { cam21Test3Reading } from '../src/pages/mock/cam21-test3-reading'
-import { cam20Test3Reading } from '../src/pages/mock/cam20-test3-reading'
 
 const groups = [
   {

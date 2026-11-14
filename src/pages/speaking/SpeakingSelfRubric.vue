@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { accountKey, readValue, saveValue } from '../../utils/storage'
 import { useAuth } from '../../composables/useAuth'
+import { accountKey, readValue, saveValue } from '../../utils/storage'
 
-const props = defineProps<{ question: string; part?: string }>()
+const props = defineProps<{ question: string, part?: string }>()
 
 const { currentUser } = useAuth()
 
@@ -84,7 +84,9 @@ const notes = ref('')
 const savedMsg = ref('')
 
 function storageKey() {
-  const user = currentUser.value ? `u_${currentUser.value}` : 'guest'
+  const user = currentUser.value
+    ? `u_${currentUser.value}`
+    : 'guest'
   let h = 0
   const s = `${props.part || ''}|${props.question}`
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
@@ -94,7 +96,10 @@ function storageKey() {
 function load() {
   const raw = readValue<SelfRubricResult | null>(storageKey(), null)
   if (raw?.scores) {
-    scores.value = { ...scores.value, ...raw.scores }
+    scores.value = {
+      ...scores.value,
+      ...raw.scores,
+    }
     notes.value = raw.notes || ''
   }
   else {
@@ -136,7 +141,11 @@ function save() {
 }
 
 watch(
-  [currentUser, () => props.question, () => props.part],
+  [
+    currentUser,
+    () => props.question,
+    () => props.part,
+  ],
   load,
   { immediate: true },
 )
@@ -155,10 +164,10 @@ watch(
     <div class="space-y-3">
       <div v-for="c in CRITERIA" :key="c.key">
         <div class="mb-1 flex items-center justify-between gap-2">
-          <label class="text-xs font-medium text-gray-800 dark:text-gray-200">{{
+          <label class="text-xs text-gray-800 font-medium dark:text-gray-200">{{
             c.label
           }}</label>
-          <span class="text-sm font-bold text-blue-600 dark:text-blue-400">{{
+          <span class="text-sm text-blue-600 font-bold dark:text-blue-400">{{
             scores[c.key]
           }}</span>
         </div>
@@ -192,7 +201,7 @@ watch(
         综合约 {{ overall }}
       </p>
       <button
-        class="rounded-lg bg-gray-800 px-3 py-1.5 text-xs font-medium text-white dark:bg-gray-200 dark:text-gray-900"
+        class="rounded-lg bg-gray-800 px-3 py-1.5 text-xs text-white font-medium dark:bg-gray-200 dark:text-gray-900"
         @click="save"
       >
         保存自评

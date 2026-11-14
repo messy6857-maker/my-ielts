@@ -29,8 +29,9 @@ export function splitSentences(text: string): string[] {
       text[i] === '.'
       && /\d/.test(text[i - 1] ?? '')
       && /\d/.test(text[i + 1] ?? '')
-    )
+    ) {
       continue
+    }
     const word
       = text
         .slice(0, i)
@@ -69,7 +70,7 @@ export function highlightPieces(text: string, words: string[]): TextPiece[] {
       return
     const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     // 纯英文单词/词组才包词边界，避免 art 误中 part/start；中文不走此分支
-    const pattern = /^[A-Za-z]+(?: [A-Za-z]+)*$/.test(word)
+    const pattern = /^[A-Z]+(?: [A-Z]+)*$/i.test(word)
       ? new RegExp(`\\b${escaped}\\b`, 'gi')
       : new RegExp(escaped, 'gi')
     for (const match of text.matchAll(pattern)) {
@@ -100,9 +101,18 @@ export function highlightPieces(text: string, words: string[]): TextPiece[] {
     })
     cursor = match.end
   }
-  if (cursor < text.length)
-    result.push({ text: text.slice(cursor), highlighted: false, index: -1 })
-  return result.length ? result : [{ text, highlighted: false, index: -1 }]
+  if (cursor < text.length) {
+    result.push({
+      text: text.slice(cursor),
+      highlighted: false,
+      index: -1,
+    })
+  }
+  return result.length
+    ? result
+    : [
+        { text, highlighted: false, index: -1 },
+      ]
 }
 /** First complete JSON object, respecting quoted braces and escaped quotes. */
 export function extractJson(text: string): string {
@@ -225,7 +235,7 @@ const escapedSpeakers = [...transcriptSpeakers]
 const transcriptSpeakerPattern = new RegExp(
   `(?:^|\\s)((?:Speaker(?:\\s+\\d+)?(?:\\s*\\([^)]*\\))?|Student\\s+\\d+|${
     escapedSpeakers.join('|')
-     })):\\s+`,
+  })):\\s+`,
   'gi',
 )
 /** Only known speaker labels are removed from speech; all other text and punctuation survive. */
@@ -234,7 +244,7 @@ export function transcriptSentenceEntries(transcript: string) {
     .split('\n')
     .filter(line => line.trim())
     .flatMap((line) => {
-      const turns: Array<{ speaker: string; text: string }> = []
+      const turns: Array<{ speaker: string, text: string }> = []
       let speaker = ''
       let cursor = 0
       for (const match of line.matchAll(transcriptSpeakerPattern)) {
@@ -251,7 +261,9 @@ export function transcriptSentenceEntries(transcript: string) {
         splitSentences(turn.text).map(text => ({
           text,
           speaker: turn.speaker,
-          display: turn.speaker ? `${turn.speaker}: ${text}` : text,
+          display: turn.speaker
+            ? `${turn.speaker}: ${text}`
+            : text,
         })),
       )
     })

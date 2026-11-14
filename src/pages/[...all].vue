@@ -11,18 +11,18 @@ const errorImage = `${import.meta.env.BASE_URL}404.svg`
     </div>
     <div class="text-center xl:max-w-4xl">
       <h1
-        class="mb-3 text-2xl font-bold leading-tight text-gray-900 lg:text-5xl sm:text-4xl dark:text-white"
+        class="mb-3 text-2xl text-gray-900 font-bold leading-tight lg:text-5xl sm:text-4xl dark:text-white"
       >
         页面不存在
       </h1>
       <p
-        class="mb-5 text-base font-normal text-gray-500 md:text-lg dark:text-gray-400"
+        class="mb-5 text-base text-gray-500 font-normal md:text-lg dark:text-gray-400"
       >
         哎呀，这个链接好像走错了路，页面找不到了。
       </p>
       <router-link
         to="/"
-        class="mr-3 inline-flex items-center rounded-lg bg-primary-700 px-5 py-2.5 text-center text-sm font-medium text-white dark:bg-primary-600 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+        class="mr-3 inline-flex items-center rounded-lg bg-primary-700 px-5 py-2.5 text-center text-sm text-white font-medium dark:bg-primary-600 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
       >
         <svg
           class="mr-2 h-5 w-5 -ml-1"

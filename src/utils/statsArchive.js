@@ -5,9 +5,9 @@ function encode(id) {
 function decodeId(encoded) {
   return /^(?:[a-f\d]{4})+$/i.test(encoded || '')
     ? encoded
-      .match(/.{4}/g)
-      .map(x => String.fromCharCode(Number.parseInt(x, 16)))
-      .join('')
+        .match(/.{4}/g)
+        .map(x => String.fromCharCode(Number.parseInt(x, 16)))
+        .join('')
     : ''
 }
 function cmp(a, b) {
@@ -22,25 +22,32 @@ function bucketOf(id) {
 function tupleOf(e, id) {
   return [
     e.stamp[0],
-    e.stamp[1] === id ? null : e.stamp[1],
+    e.stamp[1] === id
+      ? null
+      : e.stamp[1],
     e.deleted
       ? null
       : Object.fromEntries(
-        Object.entries(e.value?.totals || {}).map(([ns, c]) => [
-          ns,
-          [
-            Number(c.known) || 0,
-            Number(c.vague) || 0,
-            Number(c.unknown) || 0,
-          ],
-        ]),
-      ),
+          Object.entries(e.value?.totals || {}).map(([ns, c]) => [
+            ns,
+            [
+              Number(c.known) || 0,
+              Number(c.vague) || 0,
+              Number(c.unknown) || 0,
+            ],
+          ]),
+        ),
   ]
 }
 function partOf(tuple, id) {
   return {
     __ielts: 2,
-    stamp: [tuple[0], tuple[1] === null ? id : tuple[1]],
+    stamp: [
+      tuple[0],
+      tuple[1] === null
+        ? id
+        : tuple[1],
+    ],
     ...(tuple[2] === null
       ? { deleted: true }
       : {
@@ -81,8 +88,18 @@ function mergeWriters(a = {}, b = {}) {
       if (!validTuple(t))
         continue
       const old = out[id]
-      const stamp = [t[0], t[1] === null ? id : t[1]]
-      if (!old || cmp(stamp, [old[0], old[1] === null ? id : old[1]]) > 0) {
+      const stamp = [
+        t[0],
+        t[1] === null
+          ? id
+          : t[1],
+      ]
+      if (!old || cmp(stamp, [
+        old[0],
+        old[1] === null
+          ? id
+          : old[1],
+      ]) > 0) {
         out[id] = t
       }
       else if (t[0] === 0 && old[0] === 0 && t[2] && old[2]) {
@@ -97,14 +114,20 @@ function mergeWriters(a = {}, b = {}) {
 }
 function compactStatsData(input, user, fold = true) {
   const out = { ...input }
-  const prefix = user ? `myielts_u_${user}_` : 'myielts_'
+  const prefix = user
+    ? `myielts_u_${user}_`
+    : 'myielts_'
   const archives = new Map()
   for (const [key, raw] of Object.entries(out)) {
     if (key.startsWith(`${prefix}stats_archive_v3__entry_`)) {
       try {
         const e = JSON.parse(raw)
-        if (!e.deleted)
-          archives.set(key, { e, writers: mergeWriters({}, e.value?.writers) })
+        if (!e.deleted) {
+          archives.set(key, {
+            e,
+            writers: mergeWriters({}, e.value?.writers),
+          })
+        }
       }
       catch {}
     }
@@ -128,10 +151,16 @@ function compactStatsData(input, user, fold = true) {
         if (!fold || (!e.deleted && Object.keys(e.value?.days || {}).length))
           continue
         bucket ||= {
-          e: { __ielts: 2, stamp: [0, 'stats-archive'], value: {} },
+          e: {
+            __ielts: 2,
+            stamp: [0, 'stats-archive'],
+            value: {},
+          },
           writers: Object.create(null),
         }
-        bucket.writers = mergeWriters(bucket.writers, { [id]: tupleOf(e, id) })
+        bucket.writers = mergeWriters(bucket.writers, {
+          [id]: tupleOf(e, id),
+        })
         if (cmp(e.stamp, bucket.e.stamp) > 0)
           bucket.e = { ...bucket.e, stamp: e.stamp }
         archives.set(archiveKey, bucket)
@@ -142,8 +171,12 @@ function compactStatsData(input, user, fold = true) {
       }
     }
   }
-  for (const [key, { e, writers }] of archives)
-    out[key] = JSON.stringify({ ...e, value: { writers } })
+  for (const [key, { e, writers }] of archives) {
+    out[key] = JSON.stringify({
+      ...e,
+      value: { writers },
+    })
+  }
   return out
 }
 function expandStatsData(input, user) {
@@ -170,4 +203,4 @@ function expandStatsData(input, user) {
   return out
 }
 
-export { bucketOf, partOf, mergeWriters, compactStatsData, expandStatsData }
+export { bucketOf, compactStatsData, expandStatsData, mergeWriters, partOf }

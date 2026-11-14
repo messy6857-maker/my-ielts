@@ -1,20 +1,20 @@
 <!-- 通用考点词自测卡片：听力 179 / 阅读 538 共用
      与词汇自测卡片（/vocabulary/flashcard）是独立入口、独立进度 -->
 <script setup lang="ts">
+import type { MistakeModule, ProgressModule } from '../composables/useStudyData'
 import { useAudioGroup } from '../composables/useAudioGroup'
-import { confirmDialog } from '../composables/useDialog'
-import { studyDay } from '../composables/useStudyData'
+import { planQueue, useDeckStore } from '../composables/useDeckStore'
 
+import { confirmDialog } from '../composables/useDialog'
+import { useGoBack } from '../composables/useGoBack'
 import { gradeSchedule } from '../composables/useSpacedRepetition'
 import { decrementAttempt, recordAttempt } from '../composables/useStats'
-import { planQueue, useDeckStore } from '../composables/useDeckStore'
+import { studyDay } from '../composables/useStudyData'
 import {
   formatClock,
   formatDuration,
   useStudyTimer,
 } from '../composables/useStudyTimer'
-import { useGoBack } from '../composables/useGoBack'
-import type { MistakeModule, ProgressModule } from '../composables/useStudyData'
 
 const props = defineProps<{
   /** 存储隔离命名空间，如 listening179 / reading538 */
@@ -93,7 +93,9 @@ const studying = ref<Card | null>(null)
 const lastGrade = ref<0 | 3 | 5 | null>(null)
 
 const current = computed(() =>
-  !studying.value ? (queue.value[0] ?? null) : null,
+  !studying.value
+    ? (queue.value[0] ?? null)
+    : null,
 )
 const remaining = computed(() => queue.value.length)
 
@@ -104,7 +106,12 @@ function playAudio(word?: string) {
 }
 
 function toCard(c: DeckCard, isNew: boolean): Card {
-  return { ...c, attempts: 0, isNew, counted: false }
+  return {
+    ...c,
+    attempts: 0,
+    isNew,
+    counted: false,
+  }
 }
 
 const gradeHistory = ref<GradeHistoryEntry[]>([])
@@ -189,7 +196,9 @@ function grade(g: 0 | 3 | 5) {
     })
     if (card.attempts < 3) {
       const insertAt
-        = g === 3 ? Math.min(5, queue.value.length) : queue.value.length
+        = g === 3
+          ? Math.min(5, queue.value.length)
+          : queue.value.length
       queue.value.splice(insertAt, 0, card)
     }
   }
@@ -335,7 +344,7 @@ onUnmounted(() => {
             ← {{ backLabel || '返回' }}
           </button>
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">
+            <h1 class="text-2xl text-gray-900 font-extrabold dark:text-white">
               {{ title }}
             </h1>
             <p
@@ -373,7 +382,7 @@ onUnmounted(() => {
         </p>
         <div class="flex items-center gap-2">
           <span
-            class="border border-blue-200 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-600 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
+            class="border border-blue-200 rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600 font-bold dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
             title="本次学习计时"
           >
             ⏱ {{ formatClock(timer.elapsed.value) }}
@@ -398,7 +407,7 @@ onUnmounted(() => {
               }"
             />
           </div>
-          <span class="text-xs font-bold text-orange-500">🔥 连续打卡 {{ checkinStreak }} 天</span>
+          <span class="text-xs text-orange-500 font-bold">🔥 连续打卡 {{ checkinStreak }} 天</span>
           <div class="flex gap-1">
             <span
               v-for="(d, i) in checkinWeekDots"
@@ -431,7 +440,7 @@ onUnmounted(() => {
           <div class="mb-1 text-xs text-gray-500">
             认识（自评次数）
           </div>
-          <div class="text-lg font-bold text-green-600">
+          <div class="text-lg text-green-600 font-bold">
             {{ stats.known }}
           </div>
         </div>
@@ -441,7 +450,7 @@ onUnmounted(() => {
           <div class="mb-1 text-xs text-gray-500">
             不认识（自评次数）
           </div>
-          <div class="text-lg font-bold text-red-600">
+          <div class="text-lg text-red-600 font-bold">
             {{ stats.unknown }}
           </div>
         </div>
@@ -451,7 +460,7 @@ onUnmounted(() => {
           <div class="mb-1 text-xs text-gray-500">
             模糊（自评次数）
           </div>
-          <div class="text-lg font-bold text-yellow-600">
+          <div class="text-lg text-yellow-600 font-bold">
             {{ stats.vague }}
           </div>
         </div>
@@ -469,9 +478,9 @@ onUnmounted(() => {
           v-if="initialTotal > 0"
           class="mb-6 flex justify-center gap-6 text-sm"
         >
-          <span class="font-bold text-green-600">认识 {{ finishStats.known }}</span>
-          <span class="font-bold text-red-600">不认识 {{ finishStats.unknown }}</span>
-          <span class="font-bold text-yellow-600">模糊 {{ finishStats.vague }}</span>
+          <span class="text-green-600 font-bold">认识 {{ finishStats.known }}</span>
+          <span class="text-red-600 font-bold">不认识 {{ finishStats.unknown }}</span>
+          <span class="text-yellow-600 font-bold">模糊 {{ finishStats.vague }}</span>
         </div>
         <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">
           {{
@@ -482,13 +491,13 @@ onUnmounted(() => {
         </p>
         <div class="flex justify-center gap-3">
           <button
-            class="rounded-lg bg-blue-700 px-6 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800"
+            class="rounded-lg bg-blue-700 px-6 py-2.5 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800"
             @click="restart"
           >
             再来一轮
           </button>
           <button
-            class="rounded-lg bg-gray-200 px-6 py-2.5 text-sm font-medium text-gray-700 dark:bg-gray-700 hover:bg-gray-300 dark:text-gray-200"
+            class="rounded-lg bg-gray-200 px-6 py-2.5 text-sm text-gray-700 font-medium dark:bg-gray-700 hover:bg-gray-300 dark:text-gray-200"
             @click="handleBack"
           >
             {{ backLabel || '返回' }}
@@ -516,7 +525,7 @@ onUnmounted(() => {
           </div>
           <div class="mb-2 flex items-center justify-center gap-3">
             <span
-              class="text-4xl font-black tracking-tight text-gray-900 sm:text-5xl dark:text-white"
+              class="text-4xl text-gray-900 font-black tracking-tight sm:text-5xl dark:text-white"
             >{{ current.word }}</span>
             <button
               class="p-2 text-gray-400 hover:text-blue-500"
@@ -532,19 +541,19 @@ onUnmounted(() => {
           </p>
           <div class="grid grid-cols-3 gap-3">
             <button
-              class="border border-red-200 rounded-xl bg-red-50 py-4 font-bold text-red-700 dark:border-red-800 dark:bg-red-900/20 hover:bg-red-100 dark:text-red-300"
+              class="border border-red-200 rounded-xl bg-red-50 py-4 text-red-700 font-bold dark:border-red-800 dark:bg-red-900/20 hover:bg-red-100 dark:text-red-300"
               @click="grade(0)"
             >
               不认识
             </button>
             <button
-              class="border border-yellow-200 rounded-xl bg-yellow-50 py-4 font-bold text-yellow-700 dark:border-yellow-800 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:text-yellow-300"
+              class="border border-yellow-200 rounded-xl bg-yellow-50 py-4 text-yellow-700 font-bold dark:border-yellow-800 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:text-yellow-300"
               @click="grade(3)"
             >
               模糊
             </button>
             <button
-              class="border border-green-200 rounded-xl bg-green-50 py-4 font-bold text-green-700 dark:border-green-800 dark:bg-green-900/20 hover:bg-green-100 dark:text-green-300"
+              class="border border-green-200 rounded-xl bg-green-50 py-4 text-green-700 font-bold dark:border-green-800 dark:bg-green-900/20 hover:bg-green-100 dark:text-green-300"
               @click="grade(5)"
             >
               认识
@@ -580,7 +589,7 @@ onUnmounted(() => {
             </span>
           </div>
           <div class="mb-4 flex items-center justify-center gap-3">
-            <span class="text-3xl font-black text-gray-900 dark:text-white">{{
+            <span class="text-3xl text-gray-900 font-black dark:text-white">{{
               studying.word
             }}</span>
             <button
@@ -594,11 +603,11 @@ onUnmounted(() => {
           <div class="mb-4 text-center">
             <span
               v-if="studying.pos"
-              class="mr-2 text-sm italic text-gray-400"
+              class="mr-2 text-sm text-gray-400 italic"
               style="font-family: times"
             >{{ studying.pos }}</span>
             <span
-              class="text-xl font-medium text-gray-800 dark:text-gray-200"
+              class="text-xl text-gray-800 font-medium dark:text-gray-200"
             >{{ studying.meaning }}</span>
           </div>
 
@@ -608,11 +617,11 @@ onUnmounted(() => {
             class="mb-6 border border-teal-200 rounded-xl bg-teal-50 p-4 dark:border-teal-800 dark:bg-teal-900/20"
           >
             <div
-              class="mb-2 text-sm font-bold text-teal-700 dark:text-teal-300"
+              class="mb-2 text-sm text-teal-700 font-bold dark:text-teal-300"
             >
               🔗 同义替换
             </div>
-            <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+            <p class="text-sm text-gray-700 leading-relaxed dark:text-gray-300">
               {{ studying.synonyms.join(' · ') }}
             </p>
           </div>
@@ -622,10 +631,10 @@ onUnmounted(() => {
             v-if="studying.remark"
             class="mb-6 border border-gray-200 rounded-xl bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
           >
-            <div class="mb-2 text-sm font-bold text-gray-500 dark:text-gray-400">
+            <div class="mb-2 text-sm text-gray-500 font-bold dark:text-gray-400">
               📝 备注
             </div>
-            <p class="text-sm leading-relaxed text-gray-700 dark:text-gray-300">
+            <p class="text-sm text-gray-700 leading-relaxed dark:text-gray-300">
               {{ studying.remark }}
             </p>
           </div>
@@ -633,13 +642,13 @@ onUnmounted(() => {
           <div class="flex gap-3">
             <button
               v-if="gradeHistory.length > 0"
-              class="flex-1 border border-gray-300 rounded-xl py-3 text-sm font-bold text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              class="flex-1 border border-gray-300 rounded-xl py-3 text-sm text-gray-600 font-bold dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               @click="goBackOne"
             >
               ↩ 返回上一个，重新测试
             </button>
             <button
-              class="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700"
+              class="flex-1 rounded-xl bg-blue-600 py-3 text-sm text-white font-bold hover:bg-blue-700"
               @click="next"
             >
               下一个
@@ -657,10 +666,10 @@ onUnmounted(() => {
         <div
           class="max-w-sm w-full rounded-2xl bg-white p-6 text-center shadow-xl dark:bg-gray-800"
         >
-          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">
+          <h3 class="mb-3 text-lg text-gray-900 font-bold dark:text-white">
             本次学习结束
           </h3>
-          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">
+          <p class="mb-2 text-3xl text-blue-600 font-black dark:text-blue-400">
             {{ formatDuration(sessionTotal) }}
           </p>
           <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">
@@ -688,13 +697,13 @@ onUnmounted(() => {
           </p>
           <div class="flex gap-3">
             <button
-              class="flex-1 border border-gray-300 rounded-xl py-2.5 text-sm font-bold text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              class="flex-1 border border-gray-300 rounded-xl py-2.5 text-sm text-gray-600 font-bold dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               @click="cancelExit"
             >
               继续学习
             </button>
             <button
-              class="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+              class="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm text-white font-bold hover:bg-blue-700"
               @click="confirmExit"
             >
               退出

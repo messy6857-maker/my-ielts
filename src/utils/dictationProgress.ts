@@ -32,7 +32,9 @@ export function readDictationProgress(
     storageKey(user),
     {},
   )
-  return raw && typeof raw === 'object' ? raw : {}
+  return raw && typeof raw === 'object'
+    ? raw
+    : {}
 }
 
 export function writeDictationProgress(
@@ -72,7 +74,9 @@ export function saveDictationPartProgress(
   const previous = all[key]?.updatedAt
   all[key] = {
     ...progress,
-    updatedAt: Math.max(Date.now(), Number.isFinite(previous) ? previous + 1 : 0),
+    updatedAt: Math.max(Date.now(), Number.isFinite(previous)
+      ? previous + 1
+      : 0),
   }
   return writeDictationProgress(user, all)
 }
@@ -89,6 +93,8 @@ export function summarizeDictationPart(progress: DictationPartProgress): {
   return {
     attempted,
     perfect,
-    accuracy: stats.length ? latestAccuracy / stats.length : 0,
+    accuracy: stats.length
+      ? latestAccuracy / stats.length
+      : 0,
   }
 }

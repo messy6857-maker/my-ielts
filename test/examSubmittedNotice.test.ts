@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { defineComponent, ref } from 'vue'
 import { useAuth } from '../src/composables/useAuth'
 import { useExamRecovery } from '../src/composables/useExamRecovery'
@@ -223,7 +223,9 @@ it('退役态点交卷不再静默：返回 null 且给出退役提示，不记�
   const base = draftKey.split('__session_')[0]
   localStorage.setItem(
     `${base}__completed_${encodeURIComponent(attemptId)}`,
-    JSON.stringify({ completedAt: Date.now() }),
+    JSON.stringify({
+      completedAt: Date.now(),
+    }),
   )
   const result = recovery.submitResult({
     id: 'cam21-test3',

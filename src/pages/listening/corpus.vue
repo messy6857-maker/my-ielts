@@ -1,14 +1,16 @@
 <script setup>
 import { RouterLink } from 'vue-router'
-import { useAudioGroup } from '../../composables/useAudioGroup'
-
 import { resolveAudioUrl } from '../../composables/useAudio'
+
+import { useAudioGroup } from '../../composables/useAudioGroup'
 import chapterData from './spelling_convention'
 
 const managedAudio = useAudioGroup()
 
 function play(word) {
-  const value = Array.isArray(word) ? word[0] : word
+  const value = Array.isArray(word)
+    ? word[0]
+    : word
   managedAudio.play(resolveAudioUrl(`179_audios/${value}.mp3`), value)
 }
 
@@ -42,7 +44,9 @@ const filteredRows = computed(() => {
     return rows
   return rows.filter(row =>
     row.some(cell =>
-      String(Array.isArray(cell) ? cell.join(', ') : cell)
+      String(Array.isArray(cell)
+        ? cell.join(', ')
+        : cell)
         .toLowerCase()
         .includes(kw),
     ),
@@ -54,14 +58,14 @@ const filteredRows = computed(() => {
   <!-- Card header -->
   <div class="mt-6 items-center justify-between lg:flex">
     <div class="mb-4 lg:mb-0">
-      <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+      <h3 class="mb-2 text-xl text-gray-900 font-bold dark:text-white">
         听力真题语料库
       </h3>
-      <span class="text-base font-normal text-gray-500 dark:text-gray-400">包括各种词性、特殊训练</span>
+      <span class="text-base text-gray-500 font-normal dark:text-gray-400">包括各种词性、特殊训练</span>
       <div class="mt-3">
         <RouterLink
           to="/listening/corpus-flashcard"
-          class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white font-medium hover:bg-blue-700"
         >
           🃏 进入自测卡片
         </RouterLink>
@@ -114,11 +118,11 @@ const filteredRows = computed(() => {
     <template v-if="chapter in chapterData">
       <div class="mb-4 mt-6 items-center justify-between lg:flex">
         <div class="mb-4 lg:mb-0">
-          <h3 class="mb-2 font-bold text-gray-900 dark:text-white">
+          <h3 class="mb-2 text-gray-900 font-bold dark:text-white">
             {{ curChapter.title }}
           </h3>
           <span
-            class="text-base font-normal text-gray-500 dark:text-gray-400"
+            class="text-base text-gray-500 font-normal dark:text-gray-400"
           >{{ curChapter.desc }}</span>
           <p
             v-if="keyword.trim()"
@@ -133,7 +137,7 @@ const filteredRows = computed(() => {
           class="min-w-[640px] w-full text-left text-sm text-gray-500 dark:text-gray-400"
         >
           <thead
-            class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"
+            class="bg-gray-50 text-xs text-gray-700 uppercase dark:bg-gray-700 dark:text-gray-400"
           >
             <tr>
               <th class="w-0 px-6 py-3">
@@ -171,7 +175,7 @@ const filteredRows = computed(() => {
                 />
               </td>
               <th
-                class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white"
+                class="whitespace-nowrap px-6 py-4 text-gray-900 font-medium dark:text-white"
               >
                 <a
                   class="hover:underline"
@@ -181,7 +185,7 @@ const filteredRows = computed(() => {
                 >{{ row[0].join(', ') }}</a>
               </th>
               <td
-                class="whitespace-nowrap px-6 py-4 font-medium text-gray-900 dark:text-white"
+                class="whitespace-nowrap px-6 py-4 text-gray-900 font-medium dark:text-white"
               >
                 {{ row[1] }}
               </td>

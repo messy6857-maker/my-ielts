@@ -1,9 +1,9 @@
-import { compactStatsData } from '../utils/statsArchive'
-import { mergeEntry } from '../utils/entryMerge'
-import { compactDeletionData, pruneCollectionData } from '../utils/retention'
-import { migrateStudy } from '../utils/migrateStudy'
-import { pruneArchives } from '../utils/archives'
 import { SYNC_API_BASE } from '../sync-config'
+import { pruneArchives } from '../utils/archives'
+import { mergeEntry } from '../utils/entryMerge'
+import { migrateStudy } from '../utils/migrateStudy'
+import { compactDeletionData, pruneCollectionData } from '../utils/retention'
+import { compactStatsData } from '../utils/statsArchive'
 import {
   accountKey,
   batchStorage,
@@ -124,16 +124,20 @@ export interface ApiResult {
   studyProgressEntries?: boolean
 }
 /** 服务端 rejected 原因三类：未知/跨账号 base、非字符串原始值、decode 失败。 */
-export type RejectedReason =
-  | 'unknown-base'
-  | 'non-string'
-  | 'decode-failed'
-  | 'entry-too-large'
-export type RejectedEntry = string | { key: string; reason?: string }
+export type RejectedReason
+  = | 'unknown-base'
+    | 'non-string'
+    | 'decode-failed'
+    | 'entry-too-large'
+export type RejectedEntry = string | { key: string, reason?: string }
 /** 归一化 rejected 为纯 key 列表（兼容 string[] 旧形状与对象新形状）。 */
 export function rejectedKeysOf(rejected?: RejectedEntry[]): string[] {
   return (rejected ?? []).flatMap(e =>
-    typeof e === 'string' ? [e] : e && typeof e.key === 'string' ? [e.key] : [],
+    typeof e === 'string'
+      ? [e]
+      : e && typeof e.key === 'string'
+        ? [e.key]
+        : [],
   )
 }
 /** 从一次 rejected 响应中取出 key → 原因（无原因的条目不进表）。 */
@@ -150,8 +154,9 @@ export function rejectedReasonsOf(
         || e.reason === 'non-string'
         || e.reason === 'decode-failed'
         || e.reason === 'entry-too-large')
-    )
+    ) {
       out[e.key] = e.reason
+    }
   }
   return out
 }
@@ -185,14 +190,21 @@ export function getQuarantineEntries(owner: string | null): QuarantineEntry[] {
     if (!Array.isArray(v))
       return []
     return v.flatMap((item): QuarantineEntry[] => {
-      if (typeof item === 'string')
-        return [{ key: item, stamp: null, at: 0 }]
+      if (typeof item === 'string') {
+        return [
+          { key: item, stamp: null, at: 0 },
+        ]
+      }
       if (item && typeof item.k === 'string') {
         return [
           {
             key: item.k,
-            stamp: typeof item.s === 'string' ? item.s : null,
-            at: typeof item.t === 'number' ? item.t : 0,
+            stamp: typeof item.s === 'string'
+              ? item.s
+              : null,
+            at: typeof item.t === 'number'
+              ? item.t
+              : 0,
           },
         ]
       }
@@ -203,8 +215,12 @@ export function getQuarantineEntries(owner: string | null): QuarantineEntry[] {
         return [
           {
             key: item.key,
-            stamp: typeof item.stamp === 'string' ? item.stamp : null,
-            at: typeof item.at === 'number' ? item.at : 0,
+            stamp: typeof item.stamp === 'string'
+              ? item.stamp
+              : null,
+            at: typeof item.at === 'number'
+              ? item.at
+              : 0,
           },
         ]
       }
@@ -240,9 +256,16 @@ export function quarantineKeys(owner: string, keys: string[]) {
   const byKey = new Map(
     getQuarantineEntries(owner).map(e => [e.key, e] as const),
   )
-  for (const key of keys)
-    byKey.set(key, { key, stamp: snapshotOf(key), at: Date.now() })
-  writeQuarantineEntries(owner, [...byKey.values()])
+  for (const key of keys) {
+    byKey.set(key, {
+      key,
+      stamp: snapshotOf(key),
+      at: Date.now(),
+    })
+  }
+  writeQuarantineEntries(owner, [
+    ...byKey.values(),
+  ])
 }
 const REJECTED_REASON_KEY = 'myielts_sync_rejected_reasons'
 function rejectedReasonKey(owner: string) {
@@ -309,8 +332,9 @@ function reopenSupportedEntries(owner: string, reply: ApiResult) {
     if (!base || getRejectedReason(owner, key) !== 'unknown-base')
       return false
     if (reply.studyExtensions && (base === 'dictation_progress_v1'
-      || base === 'archive_retention_writing_v3' || /^aigrade_v2_/i.test(base)))
+      || base === 'archive_retention_writing_v3' || /^aigrade_v2_/i.test(base))) {
       return true
+    }
     return reply.studyProgressEntries === true
       && /^(?:listening179_done_v1|study_daily_goal_v1)__entry_/.test(base)
   })
@@ -332,7 +356,9 @@ function storeRejectedReasons(
     localStorage.setItem(
       rejectedReasonKey(owner),
       JSON.stringify({
-        ...(prev && typeof prev === 'object' ? prev : {}),
+        ...(prev && typeof prev === 'object'
+          ? prev
+          : {}),
         ...reasons,
       }),
     )
@@ -387,15 +413,21 @@ async function api(
   body?: unknown,
   username?: string | null,
 ): Promise<ApiResult> {
-  const token = username ? getToken(username) : null
+  const token = username
+    ? getToken(username)
+    : null
   if (username && !token)
     return { ok: false, status: 401, message: '账号会话已变化，请重新登录' }
   const controller = new AbortController()
-  const bodyText = body === undefined ? undefined : JSON.stringify(body)
+  const bodyText = body === undefined
+    ? undefined
+    : JSON.stringify(body)
   const timeout = setTimeout(
     () => controller.abort(),
     syncTimeoutMs(
-      bodyText === undefined ? 0 : new TextEncoder().encode(bodyText).length,
+      bodyText === undefined
+        ? 0
+        : new TextEncoder().encode(bodyText).length,
     ),
   )
   try {
@@ -406,7 +438,9 @@ async function api(
         ...(path.split('?')[0] === '/sync'
           ? { 'X-IELTS-Compact': '1', 'X-IELTS-Deletes': '1' }
           : {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(token
+          ? { Authorization: `Bearer ${token}` }
+          : {}),
       },
       body: bodyText,
       signal: controller.signal,
@@ -479,7 +513,9 @@ export function apiLogin(username: string, password: string) {
 export async function apiPull(username = getTokenOwner() ?? '') {
   for (let attempt = 0; attempt < 3; attempt++) {
     let result = await api('/sync', 'GET', undefined, username)
-    const all: Record<string, string> = { ...(result.data || {}) }
+    const all: Record<string, string> = {
+      ...(result.data || {}),
+    }
     const cursors = new Set<string>()
     let restart = false
     while (result.ok && result.nextCursor) {
@@ -527,7 +563,9 @@ export async function apiPull(username = getTokenOwner() ?? '') {
     return result.ok
       ? {
           ...result,
-          data: result.data === null && !Object.keys(all).length ? null : all,
+          data: result.data === null && !Object.keys(all).length
+            ? null
+            : all,
         }
       : result
   }
@@ -631,13 +669,18 @@ export function apiPush(
       const reply = await api(
         '/sync',
         'PUT',
-        { protocolVersion: 2, data: Object.fromEntries(entries) },
+        {
+          protocolVersion: 2,
+          data: Object.fromEntries(entries),
+        },
         username,
       )
       if (reply.status === 413 && entries.length > 1) {
         const middle = Math.ceil(entries.length / 2)
         const left = await send(entries.slice(0, middle))
-        return left.ok ? send(entries.slice(middle)) : left
+        return left.ok
+          ? send(entries.slice(middle))
+          : left
       }
       if (sessionOwnerChanged(username))
         return { ok: false, status: 401, message: '账号会话已变化，未应用旧账号响应' }
@@ -677,7 +720,10 @@ export function apiPush(
     const reply = await send(batch)
     if (!reply.ok)
       return reply
-    return { ...reply, ...result }
+    return {
+      ...reply,
+      ...result,
+    }
   })
   pushQueue = task.then(
     () => {},
@@ -731,8 +777,9 @@ export function collectSyncData(username: string): Record<string, string> {
       ].includes(base)
       || base.endsWith('_daily_new_v1')
       || base.startsWith('study_time_v1_')
-    )
+    ) {
       continue
+    }
     const raw = localStorage.getItem(key)
     if (raw === null)
       continue
@@ -774,13 +821,18 @@ export function collectSyncData(username: string): Record<string, string> {
         if (
           !(key in pruned)
           && localStorage.getItem(key) === originals.get(key)
-        )
+        ) {
           removeStoredValue(key)
+        }
       }
     }
   })
-  if (!durable)
-    return { ...result, ...saved }
+  if (!durable) {
+    return {
+      ...result,
+      ...saved,
+    }
+  }
 
   return pruned
 }
@@ -806,7 +858,9 @@ export function applySyncData(data: Record<string, string>, username: string) {
           continue
         }
         const previousRaw = localStorage.getItem(key)
-        const previous = previousRaw ? envelope(previousRaw) : undefined
+        const previous = previousRaw
+          ? envelope(previousRaw)
+          : undefined
         const merged = mergeEntry(base, previous, incoming)
         if (JSON.stringify(merged) === JSON.stringify(previous))
           continue

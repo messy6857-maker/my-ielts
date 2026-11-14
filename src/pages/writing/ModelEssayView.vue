@@ -16,10 +16,10 @@ const essay = computed(() => getModelEssay(props.promptId))
   >
     <summary class="cursor-pointer text-sm font-bold dark:text-white">
       📖 查看范文
-      <span class="ml-1 text-xs font-normal text-gray-400">{{ essay.wordCount }} 词</span>
+      <span class="ml-1 text-xs text-gray-400 font-normal">{{ essay.wordCount }} 词</span>
     </summary>
     <div
-      class="mt-4 whitespace-pre-wrap text-sm leading-7 text-gray-800 dark:text-gray-200"
+      class="mt-4 whitespace-pre-wrap text-sm text-gray-800 leading-7 dark:text-gray-200"
     >
       {{ essay.essay }}
     </div>

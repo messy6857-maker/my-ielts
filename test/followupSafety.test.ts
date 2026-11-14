@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { effectScope } from 'vue'
-import { pruneArchives } from '../src/utils/archives'
-import { getAttempts, recordAttempt } from '../src/composables/useStats'
+import { applySyncData, setToken } from '../src/composables/syncClient'
 import {
   accountNotice,
   finishGuestMigration,
@@ -9,10 +8,14 @@ import {
   onBeforeLogout,
   useAuth,
 } from '../src/composables/useAuth'
-import { useSync } from '../src/composables/useSync'
-import { useProgress } from '../src/composables/useStudyData'
 import { useRecordMap } from '../src/composables/useRecordData'
-import { applySyncData, setToken } from '../src/composables/syncClient'
+import { getAttempts, recordAttempt } from '../src/composables/useStats'
+import { useProgress } from '../src/composables/useStudyData'
+import { legacyTimerSeconds } from '../src/composables/useStudyTimer'
+import { useSync } from '../src/composables/useSync'
+import { pruneArchives } from '../src/utils/archives'
+import { studyBackup } from '../src/utils/backup'
+import { compactStatsParts, migrateStudy } from '../src/utils/migrateStudy'
 import {
   accountKey,
   entryKey,
@@ -24,9 +27,6 @@ import {
   storageFailures,
   writerId,
 } from '../src/utils/storage'
-import { compactStatsParts, migrateStudy } from '../src/utils/migrateStudy'
-import { studyBackup } from '../src/utils/backup'
-import { legacyTimerSeconds } from '../src/composables/useStudyTimer'
 
 const auth = useAuth()
 beforeEach(() => {
@@ -108,7 +108,13 @@ it('retention writes deletion envelopes and rejects stale cloud and legacy daily
   saveRecord(
     'daily_parts_v2',
     'vocabulary|2026-1-1|legacy',
-    { ns: 'vocabulary', date: '2026-1-1', count: 8, word: null, epoch: '' },
+    {
+      ns: 'vocabulary',
+      date: '2026-1-1',
+      count: 8,
+      word: null,
+      epoch: '',
+    },
     'alice',
   )
   const old = localStorage.getItem(key)!
@@ -165,8 +171,14 @@ it('persists pruning of inactive statistics parts without changing all-time tota
     'stats_parts_v2',
     'retired-writer',
     {
-      totals: { vocabulary: { known: 7, vague: 0, unknown: 1 } },
-      days: { '2026-1-1': { vocabulary: { known: 7, vague: 0, unknown: 1 } } },
+      totals: {
+        vocabulary: { known: 7, vague: 0, unknown: 1 },
+      },
+      days: {
+        '2026-1-1': {
+          vocabulary: { known: 7, vague: 0, unknown: 1 },
+        },
+      },
     },
     'alice',
   )
@@ -214,13 +226,13 @@ it('coalesces repeated logout clicks into one push and one pre-logout flush', as
     vi.fn((url: string, init: any) =>
       init.method === 'GET'
         ? Promise.resolve({
-          ok: true,
-          status: 200,
-          json: async () => ({ ok: true, protocolVersion: 2, data: null }),
-        })
+            ok: true,
+            status: 200,
+            json: async () => ({ ok: true, protocolVersion: 2, data: null }),
+          })
         : new Promise((resolve) => {
-          deliver = resolve
-        }),
+            deliver = resolve
+          }),
     ),
   )
   const flush = vi.fn()
@@ -303,9 +315,13 @@ it('uses the latest same-word schedule while preserving both writers attempt tot
         __ielts: 2,
         stamp: [stamp, 'other'],
         value: {
-          totals: { vocabulary: { known: 1, vague: 0, unknown: 0 } },
+          totals: {
+            vocabulary: { known: 1, vague: 0, unknown: 0 },
+          },
           days: {
-            '2026-10-27': { vocabulary: { known: 1, vague: 0, unknown: 0 } },
+            '2026-10-27': {
+              vocabulary: { known: 1, vague: 0, unknown: 0 },
+            },
           },
         },
       }),
@@ -330,7 +346,9 @@ it('a newer remote envelope cannot move an AI retention watermark backwards', ()
       [accountKey('archive_retention_writing_v3', 'alice')]: JSON.stringify({
         __ielts: 2,
         stamp: [Date.now() + 100000, 'remote'],
-        value: { cutoff: [0, 'legacy', ''] },
+        value: {
+          cutoff: [0, 'legacy', ''],
+        },
       }),
     },
     'alice',

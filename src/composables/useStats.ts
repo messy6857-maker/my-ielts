@@ -1,6 +1,6 @@
 import { dateTime, mergeLegacy } from '../utils/legacyMerge'
-import { bucketOf, partOf } from '../utils/statsArchive'
 import { compactStatsParts } from '../utils/migrateStudy'
+import { bucketOf, partOf } from '../utils/statsArchive'
 
 // 学习数据统计：自测卡片每次自评按日累计，供统计仪表盘使用
 // 注意：此前没有按日记录自评历史，本功能上线后才开始累计；
@@ -47,7 +47,9 @@ export function todayStr(offset = 0): string {
 export function dateLabel(offset: number): string {
   const d = new Date()
   d.setDate(d.getDate() - offset)
-  return offset === 0 ? '今天' : `${d.getMonth() + 1}/${d.getDate()}`
+  return offset === 0
+    ? '今天'
+    : `${d.getMonth() + 1}/${d.getDate()}`
 }
 interface StatsPart {
   totals: Record<string, AttemptCount>
@@ -56,16 +58,24 @@ interface StatsPart {
 function archivedPart(id: string, user: string | null) {
   const bucket = readRecord<any>('stats_archive_v3', bucketOf(id), user)
   const tuple = bucket?.writers?.[id]
-  return tuple ? partOf(tuple, id) : null
+  return tuple
+    ? partOf(tuple, id)
+    : null
 }
 function loadPart(): StatsPart {
   const user = useAuth().currentUser.value
   readRecord<StatsPart>('stats_parts_v2', writerId(), user) // Import any legacy table before reading its version.
   const archived = archivedPart(writerId(), user) as any
   const raw = localStorage.getItem(entryKey('stats_parts_v2', writerId(), user))
-  const active = raw ? envelope(raw) : undefined
-  const latest = active && (!archived || compareStamp(active, archived) >= 0) ? active : archived
-  return latest && !latest.deleted ? latest.value as StatsPart : { totals: {}, days: {} }
+  const active = raw
+    ? envelope(raw)
+    : undefined
+  const latest = active && (!archived || compareStamp(active, archived) >= 0)
+    ? active
+    : archived
+  return latest && !latest.deleted
+    ? latest.value as StatsPart
+    : { totals: {}, days: {} }
 }
 function prune(part: StatsPart) {
   const cutoff = new Date()
@@ -83,7 +93,11 @@ function changeAttempt(
   date: string,
 ) {
   const part = loadPart()
-  const field = grade === 5 ? 'known' : grade === 3 ? 'vague' : 'unknown'
+  const field = grade === 5
+    ? 'known'
+    : grade === 3
+      ? 'vague'
+      : 'unknown'
   const total = (part.totals[module] ??= emptyCount())
   total[field] = Math.max(0, total[field] + delta)
   const count = ((part.days[date] ??= {})[module] ??= emptyCount())
@@ -121,7 +135,11 @@ export function getAttempts(): AttemptRecord {
     if (Object.keys(part.totals).length) {
       saveEnvelope(
         key,
-        { __ielts: 2, stamp: [0, 'legacy'], value: part },
+        {
+          __ielts: 2,
+          stamp: [0, 'legacy'],
+          value: part,
+        },
         'remote',
       )
     }
@@ -131,8 +149,9 @@ export function getAttempts(): AttemptRecord {
   const totals: Record<string, AttemptCount> = {}
   const recent: Record<string, AttemptCount> = {}
   const writers = new Map<string, any>()
-  for (const bucket of Object.values(readRecords<any>('stats_archive_v3', user)))
+  for (const bucket of Object.values(readRecords<any>('stats_archive_v3', user))) {
     for (const [id, tuple] of Object.entries(bucket.writers || {})) writers.set(id, partOf(tuple, id))
+  }
 
   // Compare envelopes so a newer active revision (including an undo) replaces its archive baseline.
   readRecords<StatsPart>('stats_parts_v2', user)
@@ -186,7 +205,9 @@ export function sumCount(c: AttemptCount): number {
 /** 认识率：认识次数 / 全部自评次数；无数据返回 null（不编造） */
 export function knownRate(c: AttemptCount): number | null {
   const total = sumCount(c)
-  return total > 0 ? Math.round((c.known / total) * 100) : null
+  return total > 0
+    ? Math.round((c.known / total) * 100)
+    : null
 }
 export function mergeCounts(list: AttemptCount[]): AttemptCount {
   const out = emptyCount()

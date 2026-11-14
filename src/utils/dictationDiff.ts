@@ -125,7 +125,9 @@ export function normalizeDictationToken(token: string): string {
     const [ip, fp = ''] = s.split('.')
     const frac = fp.replace(/0+$/, '')
     const intPart = String(Number(ip))
-    return frac ? `${intPart}.${frac}` : intPart
+    return frac
+      ? `${intPart}.${frac}`
+      : intPart
   }
   // Keep ordinal suffixes and leading zeros. They distinguish ordinals
   // from cardinals and preserve codes such as postcodes and phone numbers.
@@ -151,7 +153,7 @@ export function diffDictation(expectedText: string, actualText: string): {
   const actual = tokenizeDictation(actualText)
   const n = expected.length
   const m = actual.length
-  const dp: number[][] = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0))
+  const dp: number[][] = Array.from({ length: n + 1 }, () => Array.from<number>({ length: m + 1 }).fill(0))
   for (let i = 1; i <= n; i++) {
     for (let j = 1; j <= m; j++) {
       if (tokensEqual(expected[i - 1], actual[j - 1]))
@@ -160,7 +162,7 @@ export function diffDictation(expectedText: string, actualText: string): {
         dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1])
     }
   }
-  const matched: Array<{ ei: number; aj: number }> = []
+  const matched: Array<{ ei: number, aj: number }> = []
   let i = n
   let j = m
   while (i > 0 && j > 0) {

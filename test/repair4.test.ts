@@ -1,12 +1,7 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import {
-  accountNotice,
-  accountNotices,
-  useAuth,
-} from '../src/composables/useAuth'
 import {
   apiPull,
   apiPush,
@@ -15,18 +10,10 @@ import {
   setToken,
 } from '../src/composables/syncClient'
 import {
-  accountKey,
-  entryKey,
-  readRecord,
-  saveEnvelope,
-  saveRecord,
-  storageFailures,
-} from '../src/utils/storage'
-import { compactDeletionData, deletedTarget } from '../src/utils/retention'
-import { examSessionId } from '../src/utils/examDrafts'
-import { mergeLegacy } from '../src/utils/legacyMerge'
-import { transcriptSentenceEntries } from '../src/utils/text'
-import { analyzeEssay } from '../src/pages/writing/task1/grader'
+  accountNotice,
+  accountNotices,
+  useAuth,
+} from '../src/composables/useAuth'
 import {
   studyDay,
   useMistakes,
@@ -36,6 +23,19 @@ import * as details from '../src/composables/useVocabularyDetails'
 import * as dictionary from '../src/composables/useWordInfo'
 import { cam20Test3ListeningTranscript } from '../src/pages/mock/cam20-test3-listening-transcript'
 import { cam21Test3ListeningTranscript } from '../src/pages/mock/cam21-test3-listening-transcript'
+import { analyzeEssay } from '../src/pages/writing/task1/grader'
+import { examSessionId } from '../src/utils/examDrafts'
+import { mergeLegacy } from '../src/utils/legacyMerge'
+import { compactDeletionData, deletedTarget } from '../src/utils/retention'
+import {
+  accountKey,
+  entryKey,
+  readRecord,
+  saveEnvelope,
+  saveRecord,
+  storageFailures,
+} from '../src/utils/storage'
+import { transcriptSentenceEntries } from '../src/utils/text'
 
 const auth = useAuth()
 const wrappers: any[] = []
@@ -48,7 +48,10 @@ beforeEach(() => {
   setToken('local-test', 'alice')
   accountNotice.value = ''
   accountNotices.value = []
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
   vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {})
@@ -62,7 +65,9 @@ afterEach(() => {
 async function page(Page: any) {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/', component: Page }],
+    routes: [
+      { path: '/', component: Page },
+    ],
   })
   await router.push('/')
   await router.isReady()
@@ -98,7 +103,9 @@ function raw(value: any, stamp = 10, deleted = false) {
   return JSON.stringify({
     __ielts: 2,
     stamp: [stamp, 'writer'],
-    ...(deleted ? { deleted: true } : { value }),
+    ...(deleted
+      ? { deleted: true }
+      : { value }),
   })
 }
 function seedExam(kind: string, session = 'other', attempt = 'shared') {
@@ -131,7 +138,9 @@ it.each(['reading', 'listening'])(
     s.startTest()
     s.answers.Q1 = 'latest before retirement'
     const marker = `${prefix}__completed_shared`
-    localStorage.setItem(marker, JSON.stringify({ completedAt: Date.now() }))
+    localStorage.setItem(marker, JSON.stringify({
+      completedAt: Date.now(),
+    }))
     window.dispatchEvent(new StorageEvent('storage', { key: marker }))
     await nextTick()
     expect(s.recovery.retired.value).toBe(true)
@@ -164,7 +173,9 @@ it('retired answers can be safely kept before leaving, without forcing a new att
   s.startTest()
   localStorage.setItem(
     `${prefix}__completed_shared`,
-    JSON.stringify({ completedAt: Date.now() }),
+    JSON.stringify({
+      completedAt: Date.now(),
+    }),
   )
   s.answers.Q1 = 'keep and leave'
   s.recovery.saveFlush()
@@ -248,12 +259,16 @@ it('opening the word page does not physically reseed an archived deletion', asyn
   const id = `${chapter}|1`
   const key = entryKey('vocabulary_spell_v2', id, 'alice')
   applySyncData(
-    compactDeletionData({ [key]: raw(null, 20, true) }, 'alice'),
+    compactDeletionData({
+      [key]: raw(null, 20, true),
+    }, 'alice'),
     'alice',
   )
   localStorage.setItem(
     accountKey('vocabulary_spell_v1', 'alice'),
-    JSON.stringify({ [chapter]: { 1: 'old answer' } }),
+    JSON.stringify({
+      [chapter]: { 1: 'old answer' },
+    }),
   )
   const Page = (await import('../src/pages/vocabulary/index.vue')).default
   const { s } = await page(Page)
@@ -271,19 +286,20 @@ it('actual answers override an existing stale progress row without an input even
   )
   saveRecord('vocabulary_spell_v2', `${chapter}|1`, 'atmosphere', 'alice')
   expect(
-    useProgress().modules.value.find(m => m.module === `spelling:${chapter}`)
-      ?.done,
+    useProgress().modules.value.find(m => m.module === `spelling:${chapter}`)?.done,
   ).toBe(1)
   saveRecord('vocabulary_spell_v2', `${chapter}|1`, undefined, 'alice')
   expect(
-    useProgress().modules.value.find(m => m.module === `spelling:${chapter}`)
-      ?.done,
+    useProgress().modules.value.find(m => m.module === `spelling:${chapter}`)?.done,
   ).toBe(0)
 })
 it('blank alternatives are removed and no untimed legacy answer is silently selected as newest', () => {
   const merged = mergeLegacy(
     'vocabulary_spell_v2',
-    { text: '', alternatives: ['', '  ', 'colour'] },
+    {
+      text: '',
+      alternatives: ['', '  ', 'colour'],
+    },
     'color',
   )
   expect(merged.alternatives).toEqual(['color', 'colour'])
@@ -347,7 +363,8 @@ it('a general inline colon never consumes Australia or assigns it as a speaker',
     entries
       .map(e => e.text)
       .join(' ')
-      .match(/\bAustralia\b/g)?.length,
+      .match(/\bAustralia\b/g)
+      ?.length,
   ).toBe(text.match(/\bAustralia\b/g)?.length)
   expect(
     transcriptSentenceEntries(
@@ -372,7 +389,9 @@ it.each([
 })
 it('history watermarks retire plain-id deletion indexes using the same fallback identity', () => {
   const key = entryKey('task1_essays_v1', 'plain-id', 'alice')
-  const compact = compactDeletionData({ [key]: raw(null, 10, true) }, 'alice')
+  const compact = compactDeletionData({
+    [key]: raw(null, 10, true),
+  }, 'alice')
   const marker = accountKey('collection_retention_v3', 'alice')
   const data = {
     ...compact,
@@ -387,9 +406,14 @@ it('history watermarks retire plain-id deletion indexes using the same fallback 
 })
 it('a newer live record removes its superseded deletion barrier', () => {
   const key = entryKey('progress_v1', 'item', 'alice')
-  const compact = compactDeletionData({ [key]: raw(null, 10, true) }, 'alice')
+  const compact = compactDeletionData({
+    [key]: raw(null, 10, true),
+  }, 'alice')
   const result = compactDeletionData(
-    { ...compact, [key]: raw({ done: 1, total: 2 }, 20) },
+    {
+      ...compact,
+      [key]: raw({ done: 1, total: 2 }, 20),
+    },
     'alice',
   )
   expect(result[key]).toBeDefined()
@@ -461,7 +485,9 @@ it('late detail loading replaces a pending failure hint once without increasing 
     m => m.key === `flashcard:${id}`,
   )!
   expect(before.hint).toBeTruthy()
-  finish({ [id]: { example: 'Independent late example.', extra: '' } })
+  finish({
+    [id]: { example: 'Independent late example.', extra: '' },
+  })
   await flushPromises()
   const after = useMistakes().mistakes.value.find(
     m => m.key === `flashcard:${id}`,
@@ -493,7 +519,13 @@ it('a fresh capability probe blocks an old backend before any new-format PUT', a
   vi.stubGlobal('fetch', fetch)
   const key = entryKey('deletion_archive_v3', '00', 'alice')
   const result = await apiPush(
-    { [key]: raw({ entries: { 'progress_v1|old': [10, 'writer'] } }) },
+    {
+      [key]: raw({
+        entries: {
+          'progress_v1|old': [10, 'writer'],
+        },
+      }),
+    },
     'alice',
   )
   expect(result.status).toBe(426)

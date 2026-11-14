@@ -1,22 +1,22 @@
 <script setup lang="ts">
+import type { VocabularyChapter } from './loadVocabulary'
+import { resolveAudioUrl } from '../../composables/useAudio'
+
+import { useAudioGroup } from '../../composables/useAudioGroup'
+import {
+  readChapterPreference,
+  writeChapterPreference,
+} from '../../utils/chapterPreference'
 import {
   accountKey,
   readValue,
   saveValue,
   subscribeStorage,
 } from '../../utils/storage'
-import { useAudioGroup } from '../../composables/useAudioGroup'
-
-import { resolveAudioUrl } from '../../composables/useAudio'
-import {
-  readChapterPreference,
-  writeChapterPreference,
-} from '../../utils/chapterPreference'
 import {
   listVocabularyChapters,
   loadVocabularyChapter,
 } from './loadVocabulary'
-import type { VocabularyChapter } from './loadVocabulary'
 
 const managedAudio = useAudioGroup()
 
@@ -76,8 +76,9 @@ const offCase = subscribeStorage((key, source) => {
   if (
     source === 'remote'
     && (!key || key === accountKey('typing_ignore_case_v2', caseOwner.value))
-  )
+  ) {
     loadCasePreference()
+  }
 })
 onUnmounted(offCase)
 watch(
@@ -206,7 +207,9 @@ function handleInput(e: Event) {
     }
   }
   accuracy.value
-    = input.length > 0 ? Math.round((correctChars / input.length) * 100) : 100
+    = input.length > 0
+      ? Math.round((correctChars / input.length) * 100)
+      : 100
 
   // Calculate WPM (Words Per Minute), 整章累计：已完成词字符 + 当前输入
   // Standard: 1 word = 5 characters
@@ -282,7 +285,7 @@ onUnmounted(() => {
       <!-- Header -->
       <div class="mb-8 flex items-center justify-between">
         <div>
-          <h1 class="text-3xl font-extrabold text-gray-900 dark:text-white">
+          <h1 class="text-3xl text-gray-900 font-extrabold dark:text-white">
             单词打字练习
           </h1>
           <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
@@ -312,7 +315,7 @@ onUnmounted(() => {
         <div
           class="border border-gray-200 rounded-xl bg-white p-4 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800"
         >
-          <div class="mb-1 text-xs tracking-wider uppercase text-gray-500">
+          <div class="mb-1 text-xs text-gray-500 tracking-wider uppercase">
             准确率
           </div>
           <div
@@ -325,17 +328,17 @@ onUnmounted(() => {
         <div
           class="border border-gray-200 rounded-xl bg-white p-4 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800"
         >
-          <div class="mb-1 text-xs tracking-wider uppercase text-gray-500">
+          <div class="mb-1 text-xs text-gray-500 tracking-wider uppercase">
             WPM (速度)
           </div>
-          <div class="text-2xl font-bold text-blue-500">
+          <div class="text-2xl text-blue-500 font-bold">
             {{ wpm }}
           </div>
         </div>
         <div
           class="border border-gray-200 rounded-xl bg-white p-4 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800"
         >
-          <div class="mb-1 text-xs tracking-wider uppercase text-gray-500">
+          <div class="mb-1 text-xs text-gray-500 tracking-wider uppercase">
             进度
           </div>
           <div class="text-2xl font-bold dark:text-white">
@@ -395,18 +398,18 @@ onUnmounted(() => {
           class="w-full border-t border-gray-100 pt-6 text-center dark:border-gray-700"
         >
           <div
-            class="mb-2 text-xl font-medium text-gray-800 dark:text-gray-200"
+            class="mb-2 text-xl text-gray-800 font-medium dark:text-gray-200"
           >
             <span
               style="font-style: italic; font-family: times"
-              class="mr-2 text-sm font-normal tracking-wide text-gray-400"
+              class="mr-2 text-sm text-gray-400 font-normal tracking-wide"
             >
               {{ currentWordData?.pos }}
             </span>
             {{ currentWordData?.meaning }}
           </div>
           <p
-            class="mx-auto max-w-xl text-sm italic text-gray-500 sm:text-base dark:text-gray-400"
+            class="mx-auto max-w-xl text-sm text-gray-500 italic sm:text-base dark:text-gray-400"
           >
             {{ currentWordData?.example }}
           </p>
@@ -432,7 +435,7 @@ onUnmounted(() => {
           太棒了！恭喜完成本章练习 🎉
         </h2>
         <button
-          class="mt-4 rounded-full bg-white px-6 py-2 font-bold text-blue-600 transition-colors hover:bg-blue-50"
+          class="mt-4 rounded-full bg-white px-6 py-2 text-blue-600 font-bold transition-colors hover:bg-blue-50"
           @click="reset"
         >
           再练一次

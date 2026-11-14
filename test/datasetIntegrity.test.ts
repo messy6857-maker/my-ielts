@@ -1,7 +1,7 @@
+import type { MockQuestion } from '../src/pages/mock/types'
 import { expect, it } from 'vitest'
 import { loadMockTest, mockTestList } from '../src/pages/mock/registry'
 import { bandScore, multiSelectScore } from '../src/pages/mock/types'
-import type { MockQuestion } from '../src/pages/mock/types'
 
 const kinds = [
   'multiple-choice',
@@ -125,8 +125,14 @@ it('the four formerly duplicated-blank prompts expose exactly one blank each', a
   const a = await loadMockTest('cam20-test3')
   const b = await loadMockTest('cam18-test3')
   for (const [pair, ids] of [
-    [a, ['Q5', 'Q9', 'Q10']],
-    [b, ['Q32']],
+    [
+      a,
+      ['Q5', 'Q9', 'Q10'],
+    ],
+    [
+      b,
+      ['Q32'],
+    ],
   ] as const) {
     for (const id of ids) {
       const q = pair.listening.parts

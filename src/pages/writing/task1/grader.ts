@@ -36,7 +36,7 @@ export interface GradeResult {
   stats: EssayStats
 }
 
-const CRITERION_META: Record<CriterionKey, { label: string; labelCn: string }>
+const CRITERION_META: Record<CriterionKey, { label: string, labelCn: string }>
   = {
     ta: { label: 'Task Achievement', labelCn: '任务完成度' },
     cc: { label: 'Coherence & Cohesion', labelCn: '连贯与衔接' },
@@ -65,7 +65,11 @@ function splitParagraphs(text: string): string[] {
     .split(/\n/)
     .map(l => l.trim())
     .filter(l => l.length > 0)
-  return lines.length > 1 ? lines : [text.trim()]
+  return lines.length > 1
+    ? lines
+    : [
+        text.trim(),
+      ]
 }
 
 function countMatches(text: string, patterns: RegExp[]): number {
@@ -501,10 +505,22 @@ const MEASURE_WORDS = new Set([
 ])
 // Work/serve/act followed by an indefinite role is an as-complement.
 const AS_ROLE_VERBS = new Set([
-  'act', 'acted', 'acting', 'acts',
-  'serve', 'served', 'serves', 'serving',
-  'volunteer', 'volunteered', 'volunteering', 'volunteers',
-  'work', 'worked', 'working', 'works',
+  'act',
+  'acted',
+  'acting',
+  'acts',
+  'serve',
+  'served',
+  'serves',
+  'serving',
+  'volunteer',
+  'volunteered',
+  'volunteering',
+  'volunteers',
+  'work',
+  'worked',
+  'working',
+  'works',
 ])
 const COORDINATOR_DETERMINERS = new Set([
   'a',
@@ -546,15 +562,17 @@ function hasTrueSubordinateClause(sentence: string): boolean {
       allowSubjectRelative
       && idx + 1 < tokens.length
       && isFiniteVerbToken(tokens[idx + 1])
-    )
+    ) {
       return true
+    }
     for (let off = 1; off <= 12; off++) {
       const vi = idx + off
       if (
         vi >= tokens.length
         || [',', ';', ':'].includes(tokens[vi])
-      )
+      ) {
         return false
+      }
       if (asPhrase && ['and', 'but', 'or'].includes(tokens[vi])) {
         if (asPhrase === 'role')
           return false
@@ -582,14 +600,16 @@ function hasTrueSubordinateClause(sentence: string): boolean {
         if (sawDet && sawVerb)
           continue
         let h = vi - 1
-        if (h >= 2 && tokens[h - 1] === 'of')
+        if (h >= 2 && tokens[h - 1] === 'of') {
           h -= 2
+        }
         else if (
           h >= 3
           && COORDINATOR_DETERMINERS.has(tokens[h - 1])
           && tokens[h - 2] === 'of'
-        )
+        ) {
           h -= 3
+        }
         if (MEASURE_WORDS.has(tokens[h]))
           return false
         continue
@@ -600,8 +620,9 @@ function hasTrueSubordinateClause(sentence: string): boolean {
       if (
         PREPOSITIONS.has(between[0])
         || (between.length > 0 && NON_VERB_PRECEDING.has(between.at(-1)!))
-      )
+      ) {
         continue
+      }
       // 现在时动词作谓语时，主语须在它前面（between 非空即已满足）；
       // 若谓语是现在时且紧贴标记（如 that rise），那是无主语结构，不算
       if (PRESENT_VERBS.includes(tokens[vi]) && between.length === 0)
@@ -633,11 +654,16 @@ function hasTrueSubordinateClause(sentence: string): boolean {
       if (i + 1 < tokens.length && PREPOSITIONS.has(tokens[i + 1]))
         continue
       const head
-        = tokens[i + 1 + (['a', 'an', 'the'].includes(tokens[i + 1]) ? 1 : 0)]
+        = tokens[i + 1 + (['a', 'an', 'the'].includes(tokens[i + 1])
+          ? 1
+          : 0)]
       const measure = MEASURE_WORDS.has(head)
       const role = AS_ROLE_VERBS.has(tokens[i - 1]) && ['a', 'an'].includes(tokens[i + 1])
-      if (clauseAfter(i, false, role ? 'role' : measure ? 'measure' : null))
+      if (clauseAfter(i, false, role
+        ? 'role'
+        : measure ? 'measure' : null)) {
         return true
+      }
     }
   }
   return false
@@ -655,8 +681,9 @@ function hasCommaClause(sentence: string): boolean {
       && right.trim().split(/\s+/).length >= 3
       && hasFiniteVerb(left)
       && hasFiniteVerb(right)
-    )
+    ) {
       return true
+    }
   }
   return false
 }
@@ -692,8 +719,8 @@ export function analyzeEssay(text: string): EssayStats {
   const dataRefs
     = (text.match(/\d[\d,.]*\s*(%|percent|million|billion|thousand)/gi) || [])
       .length
-    + (text.match(/\b\d+\s*(in \d{4}|from \d{4}|to \d{4}|by \d{4})/gi) || [])
-      .length
+      + (text.match(/\b\d+\s*(in \d{4}|from \d{4}|to \d{4}|by \d{4})/gi) || [])
+        .length
 
   // 对比手法：比较级 / compared to / while / whereas 等
   const comparisons = uniqueMatches(text, COMPARISON_MARKERS).length
@@ -711,7 +738,9 @@ export function analyzeEssay(text: string): EssayStats {
       complexCount++
   }
 
-  const avgLen = sentences.length > 0 ? words.length / sentences.length : 0
+  const avgLen = sentences.length > 0
+    ? words.length / sentences.length
+    : 0
 
   return {
     // 注意：words 是空白切分词数（显示/清单/历史/规则打分共用）；

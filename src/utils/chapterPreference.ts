@@ -13,7 +13,9 @@ export function readChapterPreference(
   const scoped = localStorage.getItem(accountKey(base, user))
   const legacy = localStorage.getItem(base)
   const value = scoped ?? legacy
-  return chapters.includes(value ?? '') ? value! : fallback
+  return chapters.includes(value ?? '')
+    ? value!
+    : fallback
 }
 
 /** Persist a chapter preference under the account-scoped key. */

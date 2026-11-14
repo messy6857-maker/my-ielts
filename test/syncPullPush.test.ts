@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { setToken } from '../src/composables/syncClient'
 import { useAuth } from '../src/composables/useAuth'
 import { useSync } from '../src/composables/useSync'
-import { setToken } from '../src/composables/syncClient'
 
 const auth = useAuth()
 const fetchMock = vi.fn()
@@ -60,7 +60,11 @@ it('same-user token rotation mid-upload does not interrupt the push (M8)', async
       if (puts === 1)
         setToken('token-rotated', 'alice') // 同用户换 token，继续传
     }
-    return { ok: true, status: 200, json: async () => ({ ok: true, protocolVersion: 2, data: {} }) }
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, protocolVersion: 2, data: {} }),
+    }
   })
   const result = await apiPush(data, 'alice')
   expect(result.ok).toBe(true)
@@ -80,7 +84,11 @@ it('switching to another user mid-upload stops the push (M8)', async () => {
       if (puts === 1)
         setToken('bob-token', 'bob') // 切到另一账号，必须中断
     }
-    return { ok: true, status: 200, json: async () => ({ ok: true, protocolVersion: 2, data: {} }) }
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ ok: true, protocolVersion: 2, data: {} }),
+    }
   })
   const result = await apiPush(data, 'alice')
   expect(result.ok).toBe(false)

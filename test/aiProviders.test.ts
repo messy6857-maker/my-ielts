@@ -1,18 +1,18 @@
+import type { AISettings } from '../src/composables/useAISettings'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   AI_PROVIDERS,
-  MODEL_STRENGTH_LABELS,
   getAISettings,
   getModelOption,
   getProviderForBaseUrl,
   getProviderIdForBaseUrl,
+  MODEL_STRENGTH_LABELS,
   modelSupportsReasoningEffort,
   saveAISettings,
   switchProviderSettings,
 } from '../src/composables/useAISettings'
-import type { AISettings } from '../src/composables/useAISettings'
 
-describe('AI 服务商预设', () => {
+describe('aI 服务商预设', () => {
   it('三个预设地址都能被识别（忽略尾斜杠与大小写）', () => {
     expect(getProviderForBaseUrl('https://api-cdn.thehive.ai/api/v3')?.id).toBe('hive')
     expect(getProviderForBaseUrl('https://api.openai.com/v1/')?.id).toBe('openai')
@@ -31,10 +31,10 @@ describe('AI 服务商预设', () => {
       }
     }
   })
-  it('Hive 默认模型仍在列表里（老用户设置不丢）', () => {
+  it('hive 默认模型仍在列表里（老用户设置不丢）', () => {
     expect(getModelOption('hive', 'deepseek-ai/deepseek-v4.1-flash-1017')?.strength).toBe('balanced')
   })
-  it('OpenAI 与 DeepSeek 官方的模型 ID 按官方文档取', () => {
+  it('openAI 与 DeepSeek 官方的模型 ID 按官方文档取', () => {
     expect(getModelOption('openai', 'gpt-6.1-sol')?.strength).toBe('strong')
     expect(getModelOption('openai', 'gpt-6-astra')?.strength).toBe('flagship')
     expect(getModelOption('openai', 'gpt-6.1-terra')?.strength).toBe('balanced')
@@ -49,11 +49,11 @@ describe('AI 服务商预设', () => {
 })
 
 describe('推理强度（reasoning_effort）适用范围', () => {
-  it('DeepSeek 全系支持', () => {
+  it('deepSeek 全系支持', () => {
     expect(modelSupportsReasoningEffort('deepseek', 'deepseek-flash')).toBe(true)
     expect(modelSupportsReasoningEffort('deepseek', 'deepseek-v4-pro')).toBe(true)
   })
-  it('OpenAI 推理模型支持（o 系列、GPT-5/6），老款不支持', () => {
+  it('openAI 推理模型支持（o 系列、GPT-5/6），老款不支持', () => {
     expect(modelSupportsReasoningEffort('openai', 'gpt-6.1-sol')).toBe(true)
     expect(modelSupportsReasoningEffort('openai', 'gpt-6-astra')).toBe(true)
     expect(modelSupportsReasoningEffort('openai', 'gpt-6.1-terra')).toBe(true)
@@ -63,7 +63,7 @@ describe('推理强度（reasoning_effort）适用范围', () => {
     expect(modelSupportsReasoningEffort('openai', 'gpt-4o')).toBe(false)
     expect(modelSupportsReasoningEffort('openai', 'gpt-4o-mini')).toBe(false)
   })
-  it('Hive 不支持', () => {
+  it('hive 不支持', () => {
     expect(modelSupportsReasoningEffort('hive', 'deepseek-ai/deepseek-v4.1-flash-1017')).toBe(false)
   })
 })

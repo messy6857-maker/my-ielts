@@ -1,26 +1,26 @@
+import type { MockQuestion } from '../src/pages/mock/types'
+import type { Envelope } from '../src/utils/storage'
 import { beforeEach, describe, expect, it } from 'vitest'
-import {
-  formatMockCorrectAnswer,
-  hasWrittenMockMistakes,
-  markMockMistakesWritten,
-  mockReviewMatches,
-} from '../src/utils/mockMistakes'
-import { diffDictation, tokenizeDictation } from '../src/utils/dictationDiff'
-import {
-  readDictationProgress,
-  saveDictationPartProgress,
-} from '../src/utils/dictationProgress'
 import {
   emptyVocabularyShell,
   getCachedChapter,
   listVocabularyChapters,
   loadVocabularyChapter,
 } from '../src/pages/vocabulary/loadVocabulary'
+import { diffDictation, tokenizeDictation } from '../src/utils/dictationDiff'
+import {
+  readDictationProgress,
+  saveDictationPartProgress,
+} from '../src/utils/dictationProgress'
 import { mergeEntry } from '../src/utils/entryMerge'
-import type { Envelope } from '../src/utils/storage'
+import {
+  formatMockCorrectAnswer,
+  hasWrittenMockMistakes,
+  markMockMistakesWritten,
+  mockReviewMatches,
+} from '../src/utils/mockMistakes'
 import { isStudyKey } from '../src/utils/storage'
 import { listUnfinishedMocks } from '../src/utils/todayTasks'
-import type { MockQuestion } from '../src/pages/mock/types'
 
 const KEY = 'mock_mistakes_written_v1'
 
@@ -28,7 +28,7 @@ beforeEach(() => {
   localStorage.removeItem(KEY)
 })
 
-describe('A-1 错题写入幂等标记', () => {
+describe('a-1 错题写入幂等标记', () => {
   it('未标记时为 false，标记后为 true，不同 attempt 互不影响', () => {
     expect(hasWrittenMockMistakes('a1')).toBe(false)
     markMockMistakesWritten('a1')
@@ -54,7 +54,7 @@ describe('A-1 错题写入幂等标记', () => {
   it('标记列表不再按条数截断，55 条全保留', () => {
     for (let i = 0; i < 55; i++)
       markMockMistakesWritten(`id-${i}`)
-    const list = JSON.parse(localStorage.getItem(KEY)!) as { id: string; at: number }[]
+    const list = JSON.parse(localStorage.getItem(KEY)!) as { id: string, at: number }[]
     expect(list.length).toBe(55)
     expect(hasWrittenMockMistakes('id-0')).toBe(true)
     expect(hasWrittenMockMistakes('id-54')).toBe(true)
@@ -62,15 +62,17 @@ describe('A-1 错题写入幂等标记', () => {
 
   it('超过 90 天的标记被淘汰', () => {
     const old = Date.now() - 91 * 24 * 3600 * 1000
-    localStorage.setItem(KEY, JSON.stringify([{ id: 'old-1', at: old }]))
+    localStorage.setItem(KEY, JSON.stringify([
+      { id: 'old-1', at: old },
+    ]))
     expect(hasWrittenMockMistakes('old-1')).toBe(false)
     markMockMistakesWritten('new-1')
-    const list = JSON.parse(localStorage.getItem(KEY)!) as { id: string; at: number }[]
+    const list = JSON.parse(localStorage.getItem(KEY)!) as { id: string, at: number }[]
     expect(list.map(e => e.id)).toEqual(['new-1'])
   })
 })
 
-describe('A-2 TFNG 正确答案显示', () => {
+describe('a-2 TFNG 正确答案显示', () => {
   const tfng = (answer: number): MockQuestion => ({
     id: 'q1',
     type: 'tfng',
@@ -86,7 +88,7 @@ describe('A-2 TFNG 正确答案显示', () => {
   })
 })
 
-describe('A-3 多选题复习必须全对才清除', () => {
+describe('a-3 多选题复习必须全对才清除', () => {
   const title = 'A. xxx；C. yyy'
 
   it('只答对一个分选项不通过', () => {
@@ -112,7 +114,7 @@ describe('A-3 多选题复习必须全对才清除', () => {
   })
 })
 
-describe('A-5 听写数字等价写法', () => {
+describe('a-5 听写数字等价写法', () => {
   it('千分位分隔符不切分数字', () => {
     expect(tokenizeDictation('1,800')).toEqual(['1800'])
     expect(tokenizeDictation('1,800,000')).toEqual(['1800000'])
@@ -132,7 +134,7 @@ describe('A-5 听写数字等价写法', () => {
   })
 })
 
-describe('A-6 听写弯引号缩写', () => {
+describe('a-6 听写弯引号缩写', () => {
   it('弯引号与直引号、无引号都判为同一词', () => {
     expect(tokenizeDictation('don’t')).toEqual(['dont'])
     expect(tokenizeDictation('don\'t')).toEqual(['dont'])
@@ -141,7 +143,7 @@ describe('A-6 听写弯引号缩写', () => {
   })
 })
 
-describe('A-9 听写数字归一化补齐（部分）', () => {
+describe('a-9 听写数字归一化补齐（部分）', () => {
   it('连字符复合数字', () => {
     expect(tokenizeDictation('fifty-one')).toEqual(['51'])
     expect(diffDictation('fifty-one people', '51 people').perfect).toBe(true)
@@ -157,7 +159,7 @@ describe('A-9 听写数字归一化补齐（部分）', () => {
   })
 })
 
-describe('A-7 今日任务排除已退役副本', () => {
+describe('a-7 今日任务排除已退役副本', () => {
   function fakeStorage(entries: Record<string, string>): Storage {
     const store: Record<string, string> = { ...entries }
     const fake: Record<string, unknown> = {
@@ -187,7 +189,9 @@ describe('A-7 今日任务排除已退役副本', () => {
     version: 1,
     kind: 'listening',
     testId,
-    ...(attemptId ? { attemptId } : {}),
+    ...(attemptId
+      ? { attemptId }
+      : {}),
     submitted: false,
     updatedAt: 1000,
   })
@@ -210,7 +214,7 @@ describe('A-7 今日任务排除已退役副本', () => {
   })
 })
 
-describe('C-03 自评索引不再同步（仅本机）', () => {
+describe('c-03 自评索引不再同步（仅本机）', () => {
   it('索引 key 不是 study key：不同步、不随登录迁移', () => {
     expect(isStudyKey('myielts_speaking_self_rubric_index_v1')).toBe(false)
     expect(isStudyKey('myielts_u_alice_speaking_self_rubric_index_v1')).toBe(false)
@@ -219,7 +223,7 @@ describe('C-03 自评索引不再同步（仅本机）', () => {
   })
 })
 
-describe('C-02 听写进度同步按 part 合并', () => {
+describe('c-02 听写进度同步按 part 合并', () => {
   const env = (stamp: number, writer: string, value: unknown): Envelope => ({
     __ielts: 2,
     stamp: [stamp, writer],
@@ -234,8 +238,12 @@ describe('C-02 听写进度同步按 part 合并', () => {
   it('两设备各练不同 part：合并后两 part 都在', () => {
     const merged = mergeEntry(
       'dictation_progress_v1',
-      env(100, 'a', { 'cam21-test1:part1': part(3, 100) }),
-      env(200, 'b', { 'cam21-test1:part2': part(0, 200) }),
+      env(100, 'a', {
+        'cam21-test1:part1': part(3, 100),
+      }),
+      env(200, 'b', {
+        'cam21-test1:part2': part(0, 200),
+      }),
     )
     const value = merged.value as Record<string, { cursor: number }>
     expect(value['cam21-test1:part1'].cursor).toBe(3)
@@ -245,20 +253,28 @@ describe('C-02 听写进度同步按 part 合并', () => {
   it('同 part 取 updatedAt 更大者（不受信封戳顺序影响）', () => {
     const merged = mergeEntry(
       'dictation_progress_v1',
-      env(300, 'a', { 'cam21-test1:part1': part(9, 300) }),
-      env(200, 'b', { 'cam21-test1:part1': part(1, 200) }),
+      env(300, 'a', {
+        'cam21-test1:part1': part(9, 300),
+      }),
+      env(200, 'b', {
+        'cam21-test1:part1': part(1, 200),
+      }),
     )
     expect((merged.value as Record<string, { cursor: number }>)['cam21-test1:part1'].cursor).toBe(9)
     const merged2 = mergeEntry(
       'dictation_progress_v1',
-      env(100, 'a', { 'cam21-test1:part1': part(1, 100) }),
-      env(200, 'b', { 'cam21-test1:part1': part(5, 200) }),
+      env(100, 'a', {
+        'cam21-test1:part1': part(1, 100),
+      }),
+      env(200, 'b', {
+        'cam21-test1:part1': part(5, 200),
+      }),
     )
     expect((merged2.value as Record<string, { cursor: number }>)['cam21-test1:part1'].cursor).toBe(5)
   })
 })
 
-describe('B-5 词汇分章加载器', () => {
+describe('b-5 词汇分章加载器', () => {
   it('22 章目录', () => {
     expect(listVocabularyChapters()).toHaveLength(22)
   })
@@ -284,7 +300,7 @@ describe('B-5 词汇分章加载器', () => {
   })
 })
 
-describe('A-8 听写进度多页签不互相覆盖', () => {
+describe('a-8 听写进度多页签不互相覆盖', () => {
   it('后保存的 part 不丢掉先保存的其他 part', () => {
     localStorage.clear()
     // 页签 B 先保存 part2
@@ -296,7 +312,14 @@ describe('A-8 听写进度多页签不互相覆盖', () => {
     // 页签 A 持旧快照保存 part1：重读合并后 part2 必须还在
     expect(saveDictationPartProgress(null, 'cam21-test1', 'part1', {
       cursor: 3,
-      sentences: { 0: { attempts: 1, perfect: 1, lastAccuracy: 1, lastAt: 1 } },
+      sentences: {
+        0: {
+          attempts: 1,
+          perfect: 1,
+          lastAccuracy: 1,
+          lastAt: 1,
+        },
+      },
       updatedAt: 0,
     })).toBe(true)
     const all = readDictationProgress(null)

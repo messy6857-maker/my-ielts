@@ -1,13 +1,22 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import { setToken } from '../src/composables/syncClient'
 import {
   hasPendingGuestMigration,
   useAuth,
 } from '../src/composables/useAuth'
-import { setToken } from '../src/composables/syncClient'
+import {
+  studyDay,
+  useMistakes,
+} from '../src/composables/useStudyData'
 import { useSync } from '../src/composables/useSync'
+import { analyzeEssay } from '../src/pages/writing/task1/grader'
+import {
+  emergencyWritingDrafts,
+  saveDraft,
+} from '../src/utils/drafts'
 import {
   accountKey,
   entryKey,
@@ -16,15 +25,6 @@ import {
   saveRecord,
   storageFailures,
 } from '../src/utils/storage'
-import {
-  studyDay,
-  useMistakes,
-} from '../src/composables/useStudyData'
-import { analyzeEssay } from '../src/pages/writing/task1/grader'
-import {
-  emergencyWritingDrafts,
-  saveDraft,
-} from '../src/utils/drafts'
 
 const auth = useAuth()
 const wrappers: any[] = []
@@ -35,7 +35,10 @@ beforeEach(() => {
   auth.currentUser.value = null
   auth.currentUser.value = 'alice'
   setToken('local-test', 'alice')
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
   vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {})
@@ -49,7 +52,9 @@ afterEach(() => {
 async function page(Page: any) {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/', component: Page }],
+    routes: [
+      { path: '/', component: Page },
+    ],
   })
   await router.push('/')
   await router.isReady()
@@ -287,7 +292,10 @@ it('unmarked divergence objects are treated as needing selection and backfilled'
   saveEnvelope(entryKey('vocabulary_spell_v2', `${chapter}|1`, 'alice'), {
     __ielts: 2,
     stamp: [0, 'legacy'],
-    value: { text: 'aple', alternatives: ['aple', 'apple'] },
+    value: {
+      text: 'aple',
+      alternatives: ['aple', 'apple'],
+    },
   })
   const Page = (await import('../src/pages/vocabulary/index.vue')).default
   const { s, w } = await page(Page)
@@ -303,7 +311,7 @@ it('unmarked divergence objects are treated as needing selection and backfilled'
 
 it('bare writing drafts are restored even when an emergency draft wins display', async () => {
   const { TASK1_PROMPTS } = await import(
-    '../src/pages/writing/task1/prompts'
+    '../src/pages/writing/task1/prompts',
   )
   const promptId = TASK1_PROMPTS[0].id
   const bareKey = 'myielts_u_alice_task1_draft_v1'
@@ -322,7 +330,7 @@ it('bare writing drafts are restored even when an emergency draft wins display',
 
 it('emergency drafts keep priority while bare drafts still migrate on save', async () => {
   const { TASK1_PROMPTS } = await import(
-    '../src/pages/writing/task1/prompts'
+    '../src/pages/writing/task1/prompts',
   )
   const promptId = TASK1_PROMPTS[0].id
   const bareKey = 'myielts_u_alice_task1_draft_v1'

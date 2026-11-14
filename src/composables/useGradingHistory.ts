@@ -1,6 +1,6 @@
-import { accountPrefix, envelope } from '~/utils/storage'
-import { isValidSpeakingGrade, repairSavedGrade } from '~/composables/useAISettings'
 import type { AIGradeResult, AISpeakingResult } from '~/composables/useAISettings'
+import { isValidSpeakingGrade, repairSavedGrade } from '~/composables/useAISettings'
+import { accountPrefix, envelope } from '~/utils/storage'
 
 export interface GradingRecord {
   /** localStorage 完整 key（展开态的唯一标识） */
@@ -32,11 +32,15 @@ function parseWriting(value: unknown): AIGradeResult | null {
   const c1 = clone(value)
   // key 里不存 task：先按 task1 修（只影响 tr→ta 的老字段归一），
   // 不通过再按 task2 试一次；克隆后试，避免第一次的原地修正污染第二次。
-  const r1 = c1 ? repairSavedGrade(c1 as AIGradeResult, 'task1') : null
+  const r1 = c1
+    ? repairSavedGrade(c1 as AIGradeResult, 'task1')
+    : null
   if (r1)
     return r1
   const c2 = clone(value)
-  return c2 ? repairSavedGrade(c2 as AIGradeResult, 'task2') : null
+  return c2
+    ? repairSavedGrade(c2 as AIGradeResult, 'task2')
+    : null
 }
 
 /**
@@ -90,7 +94,14 @@ export function getGradingRecords(user: string | null): GradingRecord[] {
           : null
       if (!result)
         continue
-      out.push({ key, kind, version, part, date: env.stamp[0] || 0, result })
+      out.push({
+        key,
+        kind,
+        version,
+        part,
+        date: env.stamp[0] || 0,
+        result,
+      })
     }
     catch {
       continue

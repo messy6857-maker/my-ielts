@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { useAuth } from '../src/composables/useAuth'
 import {
   DAILY_STUDY_GOAL,
   DEFAULT_DAILY_STUDY_GOAL_MINUTES,
@@ -9,7 +10,6 @@ import {
   sumDeviceTimerRecords,
   useDailyStudyGoal,
 } from '../src/composables/useStudyTimer'
-import { useAuth } from '../src/composables/useAuth'
 
 const auth = useAuth()
 

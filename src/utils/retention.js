@@ -1,9 +1,9 @@
 function decodeId(encoded) {
   return /^(?:[a-f\d]{4})+$/i.test(encoded || '')
     ? encoded
-      .match(/.{4}/g)
-      .map(x => String.fromCharCode(Number.parseInt(x, 16)))
-      .join('')
+        .match(/.{4}/g)
+        .map(x => String.fromCharCode(Number.parseInt(x, 16)))
+        .join('')
     : ''
 }
 function dayNumber(date) {
@@ -19,7 +19,9 @@ function historyIdentity(id) {
     : /^\d{13}(?:-|$)/.test(id)
       ? Number(id.slice(0, 13))
       : Number.NaN
-  return Number.isFinite(ms) ? `${String(ms).padStart(16, '0')}:${id}` : null
+  return Number.isFinite(ms)
+    ? `${String(ms).padStart(16, '0')}:${id}`
+    : null
 }
 function collectionIdentity(id, stamp) {
   return (
@@ -28,20 +30,28 @@ function collectionIdentity(id, stamp) {
 }
 function pruneCollectionData(input, user, now = Date.now()) {
   const out = { ...input }
-  const prefix = user ? `myielts_u_${user}_` : 'myielts_'
+  const prefix = user
+    ? `myielts_u_${user}_`
+    : 'myielts_'
   const marker = `${prefix}collection_retention_v3`
   const parse = (raw) => {
     try {
       const v = JSON.parse(raw)
       return v?.__ielts === 2
         ? v
-        : { __ielts: 2, stamp: [0, 'legacy'], value: v }
+        : {
+            __ielts: 2,
+            stamp: [0, 'legacy'],
+            value: v,
+          }
     }
     catch {
       return null
     }
   }
-  const cuts = { ...(parse(out[marker])?.value || {}) }
+  const cuts = {
+    ...(parse(out[marker])?.value || {}),
+  }
   const today = Math.floor((now + 8 * 3600000) / 86400000)
   const histories = {
     mock_history_v1: 100,
@@ -67,7 +77,8 @@ function pruneCollectionData(input, user, now = Date.now()) {
       const candidate = entries[limit * 2].id
       const oldestLive = entries
         .filter(x => !x.e.deleted && (!cuts[base] || x.id > cuts[base]))
-        .at(-1)?.id
+        .at(-1)
+        ?.id
       const safe
         = !oldestLive || candidate < oldestLive
           ? candidate
@@ -105,7 +116,7 @@ function pruneCollectionData(input, user, now = Date.now()) {
     if (keep) {
       const date
         = id.match(/(?:^|[|:])(\d{4}-\d{1,2}-\d{1,2})(?:$|[|:])/)?.[1]
-        || e.value?.date
+          || e.value?.date
       if (dayNumber(date) < today - (keep - 1)) {
         delete out[key]
         continue
@@ -117,7 +128,10 @@ function pruneCollectionData(input, user, now = Date.now()) {
           ([date]) => !(dayNumber(date) < today - 13),
         ),
       )
-      out[key] = JSON.stringify({ ...e, value: { ...e.value, days } })
+      out[key] = JSON.stringify({
+        ...e,
+        value: { ...e.value, days },
+      })
     }
   }
   const old = parse(out[marker])
@@ -142,7 +156,9 @@ function encodeDeletedId(id) {
   return out
 }
 function deletedTarget(key, user) {
-  const prefix = user ? `myielts_u_${user}_` : 'myielts_'
+  const prefix = user
+    ? `myielts_u_${user}_`
+    : 'myielts_'
   if (!key.startsWith(prefix))
     return null
   const [base, encoded] = key.slice(prefix.length).split('__entry_')
@@ -170,15 +186,17 @@ function mergeDeletionEntries(a = {}, b = {}) {
         || !Number.isSafeInteger(stamp[0])
         || stamp[0] < 0
         || typeof stamp[1] !== 'string'
-      )
+      ) {
         continue
+      }
       const old = out[target]
       if (
         !old
         || stamp[0] > old[0]
         || (stamp[0] === old[0] && stamp[1] > old[1])
-      )
+      ) {
         out[target] = stamp
+      }
     }
   }
   return out
@@ -201,8 +219,9 @@ function expiredDeletionTarget(target, cuts, now, stamp) {
     if (
       dayNumber(date)
       < Math.floor((now + 8 * 3600000) / 86400000) - (keep - 1)
-    )
+    ) {
       return true
+    }
   }
   const identity = collectionIdentity(id, stamp)
   return !!identity && typeof cuts[base] === 'string' && identity <= cuts[base]
@@ -210,12 +229,14 @@ function expiredDeletionTarget(target, cuts, now, stamp) {
 function compactDeletionData(input, user, fold = true, now = Date.now()) {
   const out = { ...input }
   const buckets = new Map()
-  const prefix = user ? `myielts_u_${user}_` : 'myielts_'
+  const prefix = user
+    ? `myielts_u_${user}_`
+    : 'myielts_'
   let cuts = {}
   try {
     cuts
       = JSON.parse(out[`${prefix}collection_retention_v3`] || 'null')?.value
-      || {}
+        || {}
   }
   catch {}
   for (const [key, raw] of Object.entries(out)) {
@@ -264,7 +285,10 @@ function compactDeletionData(input, user, fold = true, now = Date.now()) {
       if (!fold || !e.deleted)
         continue
       bucket ||= {
-        e: { __ielts: 2, stamp: [0, 'deletion-archive'] },
+        e: {
+          __ielts: 2,
+          stamp: [0, 'deletion-archive'],
+        },
         entries: Object.create(null),
       }
       bucket.entries = mergeDeletionEntries(bucket.entries, {
@@ -273,23 +297,32 @@ function compactDeletionData(input, user, fold = true, now = Date.now()) {
       if (
         e.stamp[0] > bucket.e.stamp[0]
         || (e.stamp[0] === bucket.e.stamp[0] && e.stamp[1] > bucket.e.stamp[1])
-      )
+      ) {
         bucket.e = { ...bucket.e, stamp: e.stamp }
+      }
       buckets.set(target.key, bucket)
       delete out[key]
     }
     catch {}
   }
   for (const [key, { e, entries }] of buckets) {
-    if (Object.keys(entries).length)
-      out[key] = JSON.stringify({ ...e, value: { entries } })
-    else delete out[key]
+    if (Object.keys(entries).length) {
+      out[key] = JSON.stringify({
+        ...e,
+        value: { entries },
+      })
+    }
+    else {
+      delete out[key]
+    }
   }
   return out
 }
 function expandDeletionData(input, user) {
   const out = { ...input }
-  const prefix = user ? `myielts_u_${user}_` : 'myielts_'
+  const prefix = user
+    ? `myielts_u_${user}_`
+    : 'myielts_'
   for (const [key, raw] of Object.entries(input)) {
     if (key.startsWith(`${prefix}deletion_archive_v3__entry_`)) {
       try {
@@ -323,9 +356,9 @@ function expandDeletionData(input, user) {
 }
 
 export {
-  pruneCollectionData,
-  deletedTarget,
-  mergeDeletionEntries,
   compactDeletionData,
+  deletedTarget,
   expandDeletionData,
+  mergeDeletionEntries,
+  pruneCollectionData,
 }

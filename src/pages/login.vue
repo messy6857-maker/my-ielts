@@ -52,7 +52,7 @@ async function onSubmit() {
         class="border border-gray-200 rounded-lg bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-8"
       >
         <h3
-          class="mb-1 text-center text-xl font-bold text-gray-900 dark:text-white"
+          class="mb-1 text-center text-xl text-gray-900 font-bold dark:text-white"
         >
           My IELTS™
         </h3>
@@ -103,7 +103,7 @@ async function onSubmit() {
           <div class="mb-4">
             <label
               for="login-username"
-              class="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
+              class="mb-2 block text-sm text-gray-900 font-medium dark:text-white"
             >用户名</label>
             <input
               id="login-username"
@@ -119,7 +119,7 @@ async function onSubmit() {
           <div class="mb-4">
             <label
               for="login-password"
-              class="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
+              class="mb-2 block text-sm text-gray-900 font-medium dark:text-white"
             >密码</label>
             <input
               id="login-password"
@@ -134,7 +134,7 @@ async function onSubmit() {
           <div v-if="mode === 'register'" class="mb-4">
             <label
               for="login-confirm-password"
-              class="mb-2 block text-sm font-medium text-gray-900 dark:text-white"
+              class="mb-2 block text-sm text-gray-900 font-medium dark:text-white"
             >确认密码</label>
             <input
               id="login-confirm-password"
@@ -160,7 +160,7 @@ async function onSubmit() {
           <button
             type="submit"
             :disabled="loading"
-            class="w-full rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800 disabled:opacity-60 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+            class="w-full rounded-lg bg-blue-700 px-5 py-2.5 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800 disabled:opacity-60 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
           >
             {{
               loading ? '请稍候…' : mode === 'login' ? '登 录' : '注册并登录'

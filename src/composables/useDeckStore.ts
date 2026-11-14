@@ -1,7 +1,7 @@
-import { effectScope } from 'vue'
-import { useRecordMap } from './useRecordData'
-import { useDailyStore } from './useDailyStore'
 import type { WordSchedule } from './useSpacedRepetition'
+import { effectScope } from 'vue'
+import { useDailyStore } from './useDailyStore'
+import { useRecordMap } from './useRecordData'
 
 const cache = new Map<string, ReturnType<typeof createDeck>>()
 function createDeck(ns: string) {
@@ -69,7 +69,10 @@ export function planQueue<T extends DeckItem>(
     const sb = getSchedule(b.id)!
     return sb.lapses - sa.lapses || sa.dueAt - sb.dueAt
   })
-  const reviews = [...due, ...learned].slice(0, Math.max(0, goal) * 3)
+  const reviews = [
+    ...due,
+    ...learned,
+  ].slice(0, Math.max(0, goal) * 3)
   return {
     reviews,
     dueCount: Math.min(due.length, reviews.length),

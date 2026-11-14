@@ -151,7 +151,7 @@ async function onManualSync() {
                   <i class="mr-1 inline-block" :class="m.icon" /> {{ m.label }}
                   <span
                     v-if="m.link === '/mistakes' && mistakeCount > 0"
-                    class="ml-1 rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white"
+                    class="ml-1 rounded-full bg-red-600 px-1.5 py-0.5 text-xs text-white font-bold"
                   >{{ mistakeCount }}</span>
                 </router-link>
               </li>
@@ -212,7 +212,7 @@ async function onManualSync() {
           <router-link
             v-else
             to="/login"
-            class="mr-1 rounded-lg bg-blue-700 px-3 py-2 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-700"
+            class="mr-1 rounded-lg bg-blue-700 px-3 py-2 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800 dark:hover:bg-blue-700"
           >
             登录
           </router-link>
@@ -282,7 +282,7 @@ async function onManualSync() {
             <i class="mr-1 inline-block" :class="m.icon" /> {{ m.label }}
             <span
               v-if="m.link === '/mistakes' && mistakeCount > 0"
-              class="ml-1 rounded-full bg-red-600 px-1.5 py-0.5 text-xs font-bold text-white"
+              class="ml-1 rounded-full bg-red-600 px-1.5 py-0.5 text-xs text-white font-bold"
             >{{ mistakeCount }}</span>
           </router-link>
         </li>

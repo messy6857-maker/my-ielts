@@ -11,22 +11,35 @@ export function mergeLegacy(base: string, a: any, b: any): any {
     const values = (value: any): string[] =>
       typeof value === 'string'
         ? value.trim()
-          ? [value.trim()]
+          ? [
+              value.trim(),
+            ]
           : []
         : Array.isArray(value?.alternatives)
           ? value.alternatives
-            .filter((v: unknown) => typeof v === 'string' && v.trim())
-            .map((v: string) => v.trim())
+              .filter((v: unknown) => typeof v === 'string' && v.trim())
+              .map((v: string) => v.trim())
           : []
-    const alternatives = [...new Set([...values(a), ...values(b)])].sort()
+    const alternatives = [
+      ...new Set([
+        ...values(a),
+        ...values(b),
+      ]),
+    ].sort()
     return alternatives.length <= 1
       ? (alternatives[0] ?? '')
       : { text: alternatives[0], alternatives, requiresSelection: true }
   }
-  if (base === 'deletion_archive_v3')
-    return { entries: mergeDeletionEntries(a.entries, b.entries) }
-  if (base === 'stats_archive_v3')
-    return { writers: mergeWriters(a.writers, b.writers) }
+  if (base === 'deletion_archive_v3') {
+    return {
+      entries: mergeDeletionEntries(a.entries, b.entries),
+    }
+  }
+  if (base === 'stats_archive_v3') {
+    return {
+      writers: mergeWriters(a.writers, b.writers),
+    }
+  }
   if (base === 'migration-mistake' || base === 'mistake_parts_v2') {
     return {
       ...a,
@@ -82,28 +95,43 @@ export function mergeLegacy(base: string, a: any, b: any): any {
           ? a
           : b
   }
-  if (base === 'timer_sessions_v2')
-    return a.legacySeconds > b.legacySeconds ? a : b
+  if (base === 'timer_sessions_v2') {
+    return a.legacySeconds > b.legacySeconds
+      ? a
+      : b
+  }
   if (base === 'flashcard_checkin_v1') {
     return [
       ...new Set([
-        ...(Array.isArray(a) ? a : []),
-        ...(Array.isArray(b) ? b : []),
+        ...(Array.isArray(a)
+          ? a
+          : []),
+        ...(Array.isArray(b)
+          ? b
+          : []),
       ]),
     ]
   }
   if (base === 'mistakes_v1') {
     const merged = new Map<string, any>()
     for (const item of [
-      ...(Array.isArray(a) ? a : []),
-      ...(Array.isArray(b) ? b : []),
+      ...(Array.isArray(a)
+        ? a
+        : []),
+      ...(Array.isArray(b)
+        ? b
+        : []),
     ]) {
       if (item?.key) {
         const old = merged.get(item.key)
-        merged.set(item.key, !old || item.count > old.count ? item : old)
+        merged.set(item.key, !old || item.count > old.count
+          ? item
+          : old)
       }
     }
-    return [...merged.values()]
+    return [
+      ...merged.values(),
+    ]
   }
   if (base === 'stats_attempts_v1') {
     const result = structuredClone(a)
@@ -137,21 +165,37 @@ export function mergeLegacy(base: string, a: any, b: any): any {
   }
   if (Array.isArray(a) && Array.isArray(b)) {
     return [
-      ...new Map([...a, ...b].map(x => [JSON.stringify(x), x])).values(),
+      ...new Map([
+        ...a,
+        ...b,
+      ].map(x => [
+        JSON.stringify(x),
+        x,
+      ])).values(),
     ]
   }
   if (typeof a === 'object' && typeof b === 'object') {
     const as
       = a.updatedAt
-      ?? a.createdAt
-      ?? (a.dueAt !== undefined ? a.dueAt - a.interval * 86400000 : 0)
+        ?? a.createdAt
+        ?? (a.dueAt !== undefined
+          ? a.dueAt - a.interval * 86400000
+          : 0)
     const bs
       = b.updatedAt
-      ?? b.createdAt
-      ?? (b.dueAt !== undefined ? b.dueAt - b.interval * 86400000 : 0)
-    if (as || bs)
-      return bs > as ? b : a
-    return { ...a, ...b }
+        ?? b.createdAt
+        ?? (b.dueAt !== undefined
+          ? b.dueAt - b.interval * 86400000
+          : 0)
+    if (as || bs) {
+      return bs > as
+        ? b
+        : a
+    }
+    return {
+      ...a,
+      ...b,
+    }
   }
   return a
 }
@@ -159,9 +203,9 @@ export function dateTime(value: string): number {
   const match = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value)
   return match
     ? new Date(
-      Number(match[1]),
-      Number(match[2]) - 1,
-      Number(match[3]),
-    ).getTime()
+        Number(match[1]),
+        Number(match[2]) - 1,
+        Number(match[3]),
+      ).getTime()
     : Number.NaN
 }

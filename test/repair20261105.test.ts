@@ -1,21 +1,21 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { h, nextTick } from 'vue'
-import { RouterView, createMemoryHistory, createRouter } from 'vue-router'
 import routes from 'virtual:generated-pages'
-import { useAuth } from '../src/composables/useAuth'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { h, nextTick } from 'vue'
+import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { collectSyncData, setToken } from '../src/composables/syncClient'
+import { useAuth } from '../src/composables/useAuth'
 import { useMistakes } from '../src/composables/useStudyData'
-import { accountKey, envelope, readValue, saveValue, storageFailures } from '../src/utils/storage'
-import { saveAiArchive } from '../src/utils/archives'
-import { studyBackup } from '../src/utils/backup'
-import { summarizeDictationPart } from '../src/utils/dictationProgress'
-import { diffDictation } from '../src/utils/dictationDiff'
-import { mockReviewMatches } from '../src/utils/mockMistakes'
-import { listWritingDraftSummaries } from '../src/utils/todayTasks'
-import * as timings from '../src/pages/listening/timings/loadTimings'
 import oldTimings from '../src/pages/listening/timings/cam18-test1.json'
 import newTimings from '../src/pages/listening/timings/cam21-test2.json'
+import * as timings from '../src/pages/listening/timings/loadTimings'
+import { saveAiArchive } from '../src/utils/archives'
+import { studyBackup } from '../src/utils/backup'
+import { diffDictation } from '../src/utils/dictationDiff'
+import { summarizeDictationPart } from '../src/utils/dictationProgress'
+import { mockReviewMatches } from '../src/utils/mockMistakes'
+import { accountKey, envelope, readValue, saveValue, storageFailures } from '../src/utils/storage'
+import { listWritingDraftSummaries } from '../src/utils/todayTasks'
 
 const auth = useAuth()
 const wrappers: ReturnType<typeof mount>[] = []
@@ -25,7 +25,10 @@ beforeEach(() => {
   storageFailures.value = []
   auth.currentUser.value = 'alice'
   setToken('audit-not-a-real-token', 'alice')
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
   vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {})
@@ -52,19 +55,38 @@ async function until(ok: () => boolean) {
   throw new Error('fixture not ready')
 }
 async function page(Page: any, props: Record<string, any> = {}) {
-  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/', component: Page }] })
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/', component: Page },
+    ],
+  })
   await router.push('/')
   const w = mount(Page, {
     props,
-    global: { plugins: [router], stubs: { TextHighlights: true, RouterLink: true, TaskChart: true } },
+    global: {
+      plugins: [router],
+      stubs: { TextHighlights: true, RouterLink: true, TaskChart: true },
+    },
   })
   wrappers.push(w)
   await flushPromises()
   return { s: (w.vm as any).$.setupState, w, router }
 }
 const grade = {
-  scores: { ta: 6, cc: 6, lr: 6, gra: 6, overall: 6 },
-  comments: { ta: 'ta', cc: 'cc', lr: 'lr', gra: 'gra' },
+  scores: {
+    ta: 6,
+    cc: 6,
+    lr: 6,
+    gra: 6,
+    overall: 6,
+  },
+  comments: {
+    ta: 'ta',
+    cc: 'cc',
+    lr: 'lr',
+    gra: 'gra',
+  },
   corrections: [],
   suggestion: 'example',
 }
@@ -73,7 +95,9 @@ it('a server advertising the new fields reopens only unsupported-format quaranti
   const { apiPull, getQuarantinedKeys, handleRejectedKeys } = await import('../src/composables/syncClient')
   const key = accountKey('dictation_progress_v1', 'alice')
   const invalid = accountKey('aigrade_v2_bad', 'alice')
-  saveValue(key, { 'cam18-test1:part1': { cursor: 1, sentences: {}, updatedAt: 10 } })
+  saveValue(key, {
+    'cam18-test1:part1': { cursor: 1, sentences: {}, updatedAt: 10 },
+  })
   saveValue(invalid, grade)
   handleRejectedKeys('alice', {
     ok: true,
@@ -84,7 +108,14 @@ it('a server advertising the new fields reopens only unsupported-format quaranti
   })
   expect(collectSyncData('alice')[key]).toBeUndefined()
   vi.stubGlobal('fetch', vi.fn(async () => ({
-    ok: true, status: 200, json: async () => ({ ok: true, protocolVersion: 2, data: null, studyExtensions: true }),
+    ok: true,
+    status: 200,
+    json: async () => ({
+      ok: true,
+      protocolVersion: 2,
+      data: null,
+      studyExtensions: true,
+    }),
   })))
   expect((await apiPull('alice')).ok).toBe(true)
   expect(getQuarantinedKeys('alice')).toEqual([invalid])
@@ -118,10 +149,19 @@ it('opening a legacy AI result works even when a new archive cannot be written',
   expect(w.text()).toContain('6')
 })
 it('home writing draft links target the real writing route and exact draft', async () => {
-  for (const task of ['task1', 'task2'])
-    localStorage.setItem(accountKey(`${task}_draft_v1`, 'alice'), JSON.stringify({ promptId: 'p1', text: 'a draft', secondsLeft: 200, updatedAt: 100 }))
+  for (const task of ['task1', 'task2']) {
+    localStorage.setItem(accountKey(`${task}_draft_v1`, 'alice'), JSON.stringify({
+      promptId: 'p1',
+      text: 'a draft',
+      secondsLeft: 200,
+      updatedAt: 100,
+    }))
+  }
 
-  const router = createRouter({ history: createMemoryHistory(), routes })
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes,
+  })
   const summaries = listWritingDraftSummaries('alice')
   expect(summaries).toHaveLength(2)
   for (const draft of summaries) {
@@ -129,13 +169,17 @@ it('home writing draft links target the real writing route and exact draft', asy
     expect(resolved.matched.some(record => record.path === '/writing')).toBe(true)
     expect(resolved.query.prompt).toBe('p1')
     expect(resolved.query.draft).toBe(`${draft.task}_draft_v1`)
-    expect(resolved.query.tab).toBe(draft.task === 'task1' ? 'essay-small' : 'essay-big')
+    expect(resolved.query.tab).toBe(draft.task === 'task1'
+      ? 'essay-small'
+      : 'essay-big')
   }
 })
 it('a stale timing fetch cannot replace a different real 33-sentence part', async () => {
   const a = defer<any>()
   const b = defer<any>()
-  vi.spyOn(timings, 'loadTestTimings').mockImplementation(id => id === 'cam18-test1' ? a.promise : b.promise)
+  vi.spyOn(timings, 'loadTestTimings').mockImplementation(id => id === 'cam18-test1'
+    ? a.promise
+    : b.promise)
   const P = (await import('../src/pages/listening/intensive.vue')).default
   const { s } = await page(P)
   s.selectedTest = 'cam21-test2'
@@ -173,7 +217,15 @@ it('multi-choice review requires exactly the correct options', () => {
   expect(mockReviewMatches('A. Go by train；C. Book ahead', 'Book ahead / go by train')).toBe(true)
 })
 it('multi-choice review with many option groups stays fast (M9)', () => {
-  const title = ['A. Alpha', 'B. Bravo', 'C. Charlie', 'D. Delta', 'E. Echo', 'F. Foxtrot', 'G. Golf'].join('；')
+  const title = [
+    'A. Alpha',
+    'B. Bravo',
+    'C. Charlie',
+    'D. Delta',
+    'E. Echo',
+    'F. Foxtrot',
+    'G. Golf',
+  ].join('；')
   const start = Date.now()
   expect(mockReviewMatches(title, 'Golf, Alpha, Bravo, Charlie, Delta, Echo, Foxtrot')).toBe(true)
   expect(mockReviewMatches(title, 'Alpha, Bravo, Charlie, Delta, Echo, Foxtrot, Wrong')).toBe(false)
@@ -220,8 +272,18 @@ it('dictation summary averages the latest score per sentence', () => {
     cursor: 0,
     updatedAt: 10,
     sentences: {
-      0: { attempts: 5, perfect: 1, lastAccuracy: 1, lastAt: 10 },
-      1: { attempts: 1, perfect: 0, lastAccuracy: 0, lastAt: 10 },
+      0: {
+        attempts: 5,
+        perfect: 1,
+        lastAccuracy: 1,
+        lastAt: 10,
+      },
+      1: {
+        attempts: 1,
+        perfect: 0,
+        lastAccuracy: 0,
+        lastAt: 10,
+      },
     },
   })
   expect(s).toEqual({ attempted: 6, perfect: 1, accuracy: 0.5 })
@@ -241,8 +303,12 @@ it('an old typing callback cannot write a mistake or progress into the next acco
   await until(() => !s.chapterLoading && !!s.currentWord)
   const word = s.currentWord
   const m = useMistakes()
-  s.handleInput({ target: { value: '#' } })
-  s.handleInput({ target: { value: word } })
+  s.handleInput({
+    target: { value: '#' },
+  })
+  s.handleInput({
+    target: { value: word },
+  })
   auth.currentUser.value = 'bob'
   await new Promise(resolve => setTimeout(resolve, 230))
   expect(m.mistakes.value.some(x => x.key === `typing:${word}`)).toBe(false)
@@ -253,10 +319,24 @@ it('same-day account switch clears private answers but keeps public answers', as
     title: owner,
     passage: 'sample',
     notes: [],
-    questions: [{ q: `${owner} question`, options: ['one', 'two'], answer: owner === 'alice' ? 0 : 1 }],
+    questions: [
+      {
+        q: `${owner} question`,
+        options: ['one', 'two'],
+        answer: owner === 'alice'
+          ? 0
+          : 1,
+      },
+    ],
   })
   vi.stubGlobal('fetch', vi.fn(async (_url: string, options: any) => ({
-    ok: true, json: async () => ({ ok: true, reading: reading(options.headers.Authorization.endsWith('bob') ? 'bob' : 'alice') }),
+    ok: true,
+    json: async () => ({
+      ok: true,
+      reading: reading(options.headers.Authorization.endsWith('bob')
+        ? 'bob'
+        : 'alice'),
+    }),
   })))
   const P = (await import('../src/pages/reading/daily.vue')).default
   const { s, w } = await page(P)
@@ -273,9 +353,13 @@ it('same-day account switch clears private answers but keeps public answers', as
   expect(s.answers[publicKey]).toBe(0)
   expect(w.text()).toContain('bob question')
 })
-it('P2 local speaking self-rubric result is intentionally excluded from normal backup', () => {
+it('p2 local speaking self-rubric result is intentionally excluded from normal backup', () => {
   const key = accountKey('speaking_self_rubric_v1_audit', 'alice')
-  saveValue(key, { scores: { fluency: 6 }, notes: 'my local note', savedAt: 1 })
+  saveValue(key, {
+    scores: { fluency: 6 },
+    notes: 'my local note',
+    savedAt: 1,
+  })
   expect(readValue(key, null)).toBeTruthy()
   expect(JSON.stringify(studyBackup('alice'))).not.toContain(key)
 })
@@ -298,14 +382,18 @@ it.each(['reading', 'listening'])('%s mock protects memory answers on failed sav
     return setter.call(this, k, v)
   })
   s.answers.q1 = 'this answer has not reached disk'
-  await router.push({ query: { test: 'cam21-test2' } })
+  await router.push({
+    query: { test: 'cam21-test2' },
+  })
   await until(() => !s.loading && s.testId === 'cam21-test1')
   expect(s.started).toBe(true)
   expect(s.answers.q1).toBe('this answer has not reached disk')
   expect(localStorage.getItem(key)).toBe(durable)
   expect(storageFailures.value).toContain(key)
   quota.mockRestore()
-  await router.push({ query: { test: 'cam21-test2' } })
+  await router.push({
+    query: { test: 'cam21-test2' },
+  })
   await until(() => !s.loading && s.testId === 'cam21-test2')
   expect(s.answers).toEqual({})
   expect(JSON.parse(localStorage.getItem(key)!).answers.q1).toBe('this answer has not reached disk')
@@ -318,10 +406,17 @@ it('speaking keeps the active recording when a topic change is cancelled', async
     stop() {}
   }
   vi.stubGlobal('MediaRecorder', FakeRecorder)
-  const track = { stop: vi.fn() }
+  const track = {
+    stop: vi.fn(),
+  }
   const savedMediaDevices = Object.getOwnPropertyDescriptor(navigator, 'mediaDevices')
   Object.defineProperty(navigator, 'mediaDevices', {
-    configurable: true, value: { getUserMedia: vi.fn(async () => ({ getTracks: () => [track] })) },
+    configurable: true,
+    value: {
+      getUserMedia: vi.fn(async () => ({
+        getTracks: () => [track],
+      })),
+    },
   })
   try {
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
@@ -455,8 +550,22 @@ it('the old AI watermark cannot erase a preexisting v2 archive, including after 
   const marker = accountKey('archive_retention_v2', 'alice')
   const { saveEnvelope } = await import('../src/utils/storage')
   const { previewStudyBackup, restoreStudyBackup } = await import('../src/utils/backup')
-  saveEnvelope(key, { __ielts: 2, stamp: [5, 'test'], value: grade })
-  saveEnvelope(marker, { __ielts: 2, stamp: [60, 'test'], value: { cutoff: [50, 'test', accountKey('aigrade_v1_legacy', 'alice')] } })
+  saveEnvelope(key, {
+    __ielts: 2,
+    stamp: [5, 'test'],
+    value: grade,
+  })
+  saveEnvelope(marker, {
+    __ielts: 2,
+    stamp: [60, 'test'],
+    value: {
+      cutoff: [
+        50,
+        'test',
+        accountKey('aigrade_v1_legacy', 'alice'),
+      ],
+    },
+  })
   expect(collectSyncData('alice')[key]).toBeDefined()
   const preview = previewStudyBackup(JSON.stringify(studyBackup('alice')))
   restoreStudyBackup(preview, 'bob')
@@ -469,7 +578,11 @@ it('partial mock mistake writes retry only unsaved questions and stay with their
   const records = useMistakes()
   const save = useMockMistakeSave()
   const entries = ['q1', 'q2'].map(key => ({
-    module: 'mock_reading' as const, key, title: key, detail: '', hint: '',
+    module: 'mock_reading' as const,
+    key,
+    title: key,
+    detail: '',
+    hint: '',
   }))
   const setter = Storage.prototype.setItem
   const quota = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, k, v) {
@@ -497,16 +610,30 @@ it('the home draft link restores the specific writing version through the writin
   const { TASK1_PROMPTS } = await import('../src/pages/writing/task1/prompts')
   const [target, other] = TASK1_PROMPTS
   const prefix = accountKey('task1_draft_v1', 'alice')
-  for (const [p, text, time] of [[target, 'selected version', 10], [other, 'more recent version', 20]] as const) {
+  for (const [p, text, time] of [
+    [target, 'selected version', 10],
+    [other, 'more recent version', 20],
+  ] as const) {
     localStorage.setItem(`${prefix}__prompt_${p.id}__session_test`, JSON.stringify({
-      promptId: p.id, text, secondsLeft: 400, updatedAt: time,
+      promptId: p.id,
+      text,
+      secondsLeft: 400,
+      updatedAt: time,
     }))
   }
-  const router = createRouter({ history: createMemoryHistory(), routes })
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes,
+  })
   const selected = listWritingDraftSummaries('alice').find(d => d.promptId === target.id)!
   await router.push(selected.path)
-  const w = mount({ render: () => h(RouterView) }, {
-    global: { plugins: [router], stubs: { TaskChart: true } },
+  const w = mount({
+    render: () => h(RouterView),
+  }, {
+    global: {
+      plugins: [router],
+      stubs: { TaskChart: true },
+    },
   })
   wrappers.push(w)
   await until(() => w.findAll('textarea').some(t => t.element.value === 'selected version'))
@@ -519,11 +646,22 @@ it('an ordinary route leave blocks if current exam answers cannot be saved', asy
     history: createMemoryHistory(),
     routes: [
       { path: '/exam', component: P },
-      { path: '/outside', component: { render: () => h('div', 'outside') } },
+      {
+        path: '/outside',
+        component: {
+          render: () => h('div', 'outside'),
+        },
+      },
     ],
   })
   await router.push('/exam')
-  const w = mount({ render: () => h(RouterView) }, { global: { plugins: [router] } })
+  const w = mount({
+    render: () => h(RouterView),
+  }, {
+    global: {
+      plugins: [router],
+    },
+  })
   wrappers.push(w)
   const s = (w.findComponent(P).vm as any).$.setupState
   await until(() => !s.loading && !!s.testPair)
@@ -549,8 +687,22 @@ it('restoring a different account’s backup does not import its global AI delet
   const { previewStudyBackup, restoreStudyBackup } = await import('../src/utils/backup')
   const target = accountKey('aigrade_v2_bob', 'bob')
   const source = accountKey('archive_retention_writing_v3', 'alice')
-  saveEnvelope(target, { __ielts: 2, stamp: [5, 'test'], value: grade })
-  saveEnvelope(source, { __ielts: 2, stamp: [60, 'test'], value: { cutoff: [50, 'test', accountKey('aigrade_v2_removed', 'alice')] } })
+  saveEnvelope(target, {
+    __ielts: 2,
+    stamp: [5, 'test'],
+    value: grade,
+  })
+  saveEnvelope(source, {
+    __ielts: 2,
+    stamp: [60, 'test'],
+    value: {
+      cutoff: [
+        50,
+        'test',
+        accountKey('aigrade_v2_removed', 'alice'),
+      ],
+    },
+  })
   restoreStudyBackup(previewStudyBackup(JSON.stringify(studyBackup('alice'))), 'bob')
   expect(collectSyncData('bob')[target]).toBeDefined()
   expect(localStorage.getItem(accountKey('archive_retention_writing_v3', 'bob'))).toBeNull()
@@ -569,7 +721,9 @@ it('a failed typing chapter switch keeps the previous chapter on screen', async 
   expect(s.words.length).toBeGreaterThan(0)
   expect(s.currentWord).toBe(firstWord)
   expect(w.get('input[autocapitalize=off]').attributes('disabled')).toBeDefined()
-  s.handleInput({ target: { value: firstWord } })
+  s.handleInput({
+    target: { value: firstWord },
+  })
   expect(s.startTime).toBeNull()
   await s.loadSelectedChapter()
   expect(w.get('input[autocapitalize=off]').attributes('disabled')).toBeUndefined()
@@ -580,7 +734,11 @@ it('a failed mock mistake save survives a new save instance and retries', async 
   const { hasWrittenMockMistakes } = await import('../src/utils/mockMistakes')
   const records = useMistakes()
   const entries = ['q1', 'q2'].map(key => ({
-    module: 'mock_reading' as const, key, title: key, detail: '', hint: '',
+    module: 'mock_reading' as const,
+    key,
+    title: key,
+    detail: '',
+    hint: '',
   }))
   const setter = Storage.prototype.setItem
   const quota = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, k, v) {
@@ -613,10 +771,14 @@ it('a dictation answer survives the current sentence dropping out of the pool', 
   // 模拟定时重试后当前句被标为 skip：把它从听写池里拿掉。
   const idx = s.currentDictationIdx
   const originalTimings = s.partTimings
-  s.partTimings = s.partTimings.map((t: any, i: number) => (i === idx ? [t[0], t[1], 'skip'] : t))
+  s.partTimings = s.partTimings.map((t: any, i: number) => (i === idx
+    ? [t[0], t[1], 'skip']
+    : t))
   await until(() => s.dictationChecked === false)
   expect(s.currentDictationIdx).not.toBe(idx)
-  expect(s.displacedDrafts).toEqual([[idx, 'some typed answer']])
+  expect(s.displacedDrafts).toEqual([
+    [idx, 'some typed answer'],
+  ])
   expect(s.dictationInput).toBe('')
   s.checkDictation()
   expect(s.dictationChecked).toBe(false)

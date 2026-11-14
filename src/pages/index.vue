@@ -2,13 +2,13 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
+import { useWordSchedule } from '../composables/useSpacedRepetition'
 import {
-  MISTAKE_MODULE_LABEL,
   formatDate,
+  MISTAKE_MODULE_LABEL,
   useMistakes,
   useProgress,
 } from '../composables/useStudyData'
-import { useWordSchedule } from '../composables/useSpacedRepetition'
 import {
   formatDuration,
   useStudyTimer,
@@ -65,7 +65,9 @@ onUnmounted(() => {
 })
 
 function percent(done: number, total: number) {
-  return total > 0 ? Math.round((done / total) * 100) : 0
+  return total > 0
+    ? Math.round((done / total) * 100)
+    : 0
 }
 
 const menus = reactive([
@@ -141,11 +143,11 @@ const menus = reactive([
         <h1
           class="mb-16 text-center text-4xl text-gray-900 sm:text-6xl dark:text-white"
         >
-          坚持练习，稳步提升 <span class="font-bold text-#f00">IELTS</span>
+          坚持练习，稳步提升 <span class="text-#f00 font-bold">IELTS</span>
         </h1>
         <div class="mb-8 max-w-screen-md lg:mb-16">
           <h2
-            class="mb-4 text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white"
+            class="mb-4 text-4xl text-gray-900 font-extrabold tracking-tight dark:text-white"
           >
             我的 IELTS 备考中心
           </h2>
@@ -159,9 +161,9 @@ const menus = reactive([
           class="mb-12 border border-blue-200 rounded-xl bg-blue-50/60 p-5 dark:border-blue-900/40 dark:bg-blue-950/20 sm:p-6"
         >
           <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+            <h3 class="text-xl text-gray-900 font-bold dark:text-white">
               今日任务
-              <span class="ml-2 align-middle text-sm font-normal text-gray-400">
+              <span class="ml-2 align-middle text-sm text-gray-400 font-normal">
                 {{ currentUser ? `账号：${currentUser}` : '游客模式' }}
               </span>
             </h3>
@@ -183,7 +185,7 @@ const menus = reactive([
               <p class="text-xs text-gray-500 dark:text-gray-400">
                 今日到期复习
               </p>
-              <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+              <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
                 {{ today.dueWordCount }}
               </p>
               <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
@@ -194,7 +196,7 @@ const menus = reactive([
               <p class="text-xs text-gray-500 dark:text-gray-400">
                 今日学习时长
               </p>
-              <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+              <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
                 {{ formatDuration(today.studySeconds) }}
               </p>
               <p class="mt-1 text-xs text-gray-500">
@@ -208,7 +210,7 @@ const menus = reactive([
               <p class="text-xs text-gray-500 dark:text-gray-400">
                 错题本
               </p>
-              <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+              <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
                 {{ mistakeCount }}
               </p>
               <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
@@ -219,7 +221,7 @@ const menus = reactive([
               <p class="text-xs text-gray-500 dark:text-gray-400">
                 待继续
               </p>
-              <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+              <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
                 {{ today.unfinishedMocks.length + today.writingDrafts.length }}
               </p>
               <p class="mt-1 text-xs text-gray-500">
@@ -236,7 +238,7 @@ const menus = reactive([
           </div>
           <div v-else class="text-sm space-y-3">
             <div v-if="today.recentMistakes.length">
-              <p class="mb-1 font-medium text-gray-800 dark:text-gray-200">
+              <p class="mb-1 text-gray-800 font-medium dark:text-gray-200">
                 最近错题
               </p>
               <ul class="space-y-1">
@@ -253,7 +255,7 @@ const menus = reactive([
               </ul>
             </div>
             <div v-if="today.unfinishedMocks.length">
-              <p class="mb-1 font-medium text-gray-800 dark:text-gray-200">
+              <p class="mb-1 text-gray-800 font-medium dark:text-gray-200">
                 未完成模考
               </p>
               <div class="flex flex-wrap gap-2">
@@ -261,7 +263,7 @@ const menus = reactive([
                   v-for="m in today.unfinishedMocks"
                   :key="`${m.kind}:${m.testId}`"
                   :to="m.path"
-                  class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                  class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white font-medium hover:bg-blue-700"
                 >
                   继续 {{ m.label }}（{{ m.kind === 'listening' ? '听力' : '阅读' }}）
                   <span v-if="m.updatedAt"> · {{ formatDate(m.updatedAt) }}</span>
@@ -269,7 +271,7 @@ const menus = reactive([
               </div>
             </div>
             <div v-if="today.writingDrafts.length">
-              <p class="mb-1 font-medium text-gray-800 dark:text-gray-200">
+              <p class="mb-1 text-gray-800 font-medium dark:text-gray-200">
                 写作草稿
               </p>
               <div class="flex flex-wrap gap-2">
@@ -295,16 +297,16 @@ const menus = reactive([
           class="mb-12 border border-gray-200 rounded-xl bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-900"
         >
           <div class="mb-4 flex items-center justify-between">
-            <h3 class="text-xl font-bold text-gray-900 dark:text-white">
+            <h3 class="text-xl text-gray-900 font-bold dark:text-white">
               学习进度
-              <span class="ml-2 align-middle text-sm font-normal text-gray-400">
+              <span class="ml-2 align-middle text-sm text-gray-400 font-normal">
                 {{ currentUser ? `当前账号：${currentUser}` : "游客模式" }}
               </span>
             </h3>
             <RouterLink
               v-if="mistakeCount > 0"
               to="/mistakes"
-              class="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700"
+              class="rounded-lg bg-red-600 px-4 py-2 text-sm text-white font-medium hover:bg-red-700"
             >
               错词本（{{ mistakeCount }}）→
             </RouterLink>
@@ -312,7 +314,7 @@ const menus = reactive([
           <div class="grid gap-4 lg:grid-cols-3 md:grid-cols-2">
             <div v-for="m in modules" :key="m.module">
               <div class="mb-1 flex items-center justify-between text-sm">
-                <span class="font-medium text-gray-700 dark:text-gray-300">{{
+                <span class="text-gray-700 font-medium dark:text-gray-300">{{
                   m.label
                 }}</span>
                 <span class="text-gray-500 dark:text-gray-400">{{ m.done }} / {{ m.total }}</span>

@@ -1,6 +1,5 @@
 import { studyBaseOf } from '../utils/storage'
 import {
-  SYNC_PENDING_KEY,
   apiPull,
   apiPush,
   applySyncData,
@@ -11,6 +10,7 @@ import {
   handleRejectedKeys,
   rejectedKeysOf,
   setAuthPendingPush,
+  SYNC_PENDING_KEY,
   syncEnabled,
   unquarantineKeys,
 } from './syncClient'
@@ -54,7 +54,7 @@ export const useSync = createGlobalState(() => {
   function dismissRejectedNotice() {
     rejectedNotice.value = ''
   }
-  function failure(result: { status: number; message?: string }) {
+  function failure(result: { status: number, message?: string }) {
     authFailed.value = result.status === 401
     backendOutdated.value = result.status === 426
     status.value = 'error'
@@ -75,7 +75,9 @@ export const useSync = createGlobalState(() => {
       return false
     if (inFlight) {
       await inFlight
-      return pending(owner) ? pushNow(force) : true
+      return pending(owner)
+        ? pushNow(force)
+        : true
     }
     if (!force && (authFailed.value || backendOutdated.value))
       return false
@@ -147,8 +149,9 @@ export const useSync = createGlobalState(() => {
         && !timer
         && !authFailed.value
         && !backendOutdated.value
-      )
+      ) {
         schedulePush()
+      }
     }
   }
   async function pullNow(): Promise<boolean> {
@@ -162,8 +165,9 @@ export const useSync = createGlobalState(() => {
       sequence !== requestSequence
       || currentUser.value !== owner
       || getToken(owner) !== token
-    )
+    ) {
       return false
+    }
     if (!result.ok) {
       failure(result)
       return false
@@ -177,7 +181,9 @@ export const useSync = createGlobalState(() => {
     lastNotifiedSyncError = ''
     errorMsg.value = ''
     lastSyncAt.value = Date.now()
-    status.value = pending(owner) ? 'idle' : 'ok'
+    status.value = pending(owner)
+      ? 'idle'
+      : 'ok'
     // 拉取成功且本机有 pending 推送时调度一次补推：426/401 恢复后 pending
     // 数据不再等下一次本地写或 pagehide 才补推；无 pending 时不额外推。
     if (pending(owner))
@@ -191,8 +197,9 @@ export const useSync = createGlobalState(() => {
       || !owner
       || !getToken(owner)
       || (key && !studyBaseOf(key, owner))
-    )
+    ) {
       return
+    }
     generation++
     localStorage.setItem(pendingKey(owner), '1')
     if (authFailed.value || backendOutdated.value || timer)

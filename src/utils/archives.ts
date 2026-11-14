@@ -1,3 +1,4 @@
+import type { Envelope } from './storage'
 import {
   accountKey,
   batchStorage,
@@ -7,7 +8,6 @@ import {
   saveValue,
   studyBaseOf,
 } from './storage'
-import type { Envelope } from './storage'
 
 export type ArchiveCutoff = [number, string, string]
 const legacyMarker = 'archive_retention_v2'
@@ -49,7 +49,13 @@ export function pruneArchives(
       if (!base || !/^aigrade_v2_/i.test(base) || !raw)
         return []
       try {
-        return [{ key, raw, value: envelope(raw) }]
+        return [
+          {
+            key,
+            raw,
+            value: envelope(raw),
+          },
+        ]
       }
       catch {
         return []
@@ -69,7 +75,9 @@ export function pruneArchives(
   }
   batchStorage(() => {
     const durable = cutoff && cutoff !== validPrevious
-      ? (saveValue(accountKey(writingMarker, user), { cutoff }) ? cutoff : validPrevious)
+      ? (saveValue(accountKey(writingMarker, user), { cutoff })
+          ? cutoff
+          : validPrevious)
       : validPrevious
     for (const item of entries) {
       if (pastCutoff(item.key, item.value, durable))

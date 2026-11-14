@@ -61,7 +61,9 @@ export async function loadWordInfoWithFallback(words: string[]) {
   const letters = [
     ...new Set(
       words.map(w =>
-        /^[a-z]/i.test(w.trim()) ? w.trim()[0].toLowerCase() : 'other',
+        /^[a-z]/i.test(w.trim())
+          ? w.trim()[0].toLowerCase()
+          : 'other',
       ),
     ),
   ]

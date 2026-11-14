@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import PageBookmark from '../src/components/PageBookmark.vue'
 import {
@@ -71,7 +71,7 @@ describe('页面位置书签（多个）', () => {
     expect(list).toHaveLength(1)
     expect(list[0].y).toBe(1200)
   })
-  it('M1：有锚点/无锚点混用时同一位置不重复加', () => {
+  it('m1：有锚点/无锚点混用时同一位置不重复加', () => {
     expect(addPageBookmark('/reading/daily', 1200)).not.toBeNull()
     expect(addPageBookmark('/reading/daily', 1200, { article: 'news-0', paragraph: 0, offset: 30 })).toBeNull()
     expect(getPageBookmarks('/reading/daily')).toHaveLength(1)
@@ -80,7 +80,7 @@ describe('页面位置书签（多个）', () => {
     expect(addPageBookmark('/vocabulary', 800)).toBeNull()
     expect(getPageBookmarks('/vocabulary')).toHaveLength(1)
   })
-  it('L2：锚点段落找不到了回退到记录时的 y，而不是不跳', () => {
+  it('l2：锚点段落找不到了回退到记录时的 y，而不是不跳', () => {
     const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
     addPageBookmark('/reading/daily', 1200, { article: 'news-0', paragraph: 0, offset: 30 })
     const id = getPageBookmarks('/reading/daily')[0].id
@@ -89,8 +89,13 @@ describe('页面位置书签（多个）', () => {
     expect(scrollTo).toHaveBeenCalledWith({ top: 1200, behavior: 'instant' })
     scrollTo.mockRestore()
   })
-  it('L3：resolveBookmarkY 段落在时按当前布局算，找不到时回退到记录时的 y', () => {
-    const item = { id: 'x', y: 1200, createdAt: 0, anchor: { article: 'news-0', paragraph: 0, offset: 30 } }
+  it('l3：resolveBookmarkY 段落在时按当前布局算，找不到时回退到记录时的 y', () => {
+    const item = {
+      id: 'x',
+      y: 1200,
+      createdAt: 0,
+      anchor: { article: 'news-0', paragraph: 0, offset: 30 },
+    }
     expect(resolveBookmarkY(item)).toBe(1200)
     const passage = document.createElement('div')
     passage.className = 'passage-text'
@@ -100,7 +105,17 @@ describe('页面位置书签（多个）', () => {
     document.body.appendChild(passage)
     const previous = Object.getOwnPropertyDescriptor(window, 'scrollY')
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 500 })
-    vi.spyOn(p, 'getBoundingClientRect').mockReturnValue({ top: 200, bottom: 240, height: 40, left: 0, right: 100, width: 100, x: 0, y: 200, toJSON: () => ({}) } as DOMRect)
+    vi.spyOn(p, 'getBoundingClientRect').mockReturnValue({
+      top: 200,
+      bottom: 240,
+      height: 40,
+      left: 0,
+      right: 100,
+      width: 100,
+      x: 0,
+      y: 200,
+      toJSON: () => ({}),
+    } as DOMRect)
     try {
       // 500 + 200 + min(30, 40) - 90 = 640
       expect(resolveBookmarkY(item)).toBe(640)
@@ -111,7 +126,7 @@ describe('页面位置书签（多个）', () => {
         Object.defineProperty(window, 'scrollY', previous)
     }
   })
-  it('L3：列表按锚点当前布局位置排序，而不是记录时的旧 y', () => {
+  it('l3：列表按锚点当前布局位置排序，而不是记录时的旧 y', () => {
     const passage = document.createElement('div')
     passage.className = 'passage-text'
     passage.setAttribute('data-article', 'news-0')
@@ -122,8 +137,28 @@ describe('页面位置书签（多个）', () => {
     document.body.appendChild(passage)
     const previous = Object.getOwnPropertyDescriptor(window, 'scrollY')
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 })
-    vi.spyOn(p0, 'getBoundingClientRect').mockReturnValue({ top: 100, bottom: 140, height: 40, left: 0, right: 100, width: 100, x: 0, y: 100, toJSON: () => ({}) } as DOMRect)
-    vi.spyOn(p1, 'getBoundingClientRect').mockReturnValue({ top: 300, bottom: 340, height: 40, left: 0, right: 100, width: 100, x: 0, y: 300, toJSON: () => ({}) } as DOMRect)
+    vi.spyOn(p0, 'getBoundingClientRect').mockReturnValue({
+      top: 100,
+      bottom: 140,
+      height: 40,
+      left: 0,
+      right: 100,
+      width: 100,
+      x: 0,
+      y: 100,
+      toJSON: () => ({}),
+    } as DOMRect)
+    vi.spyOn(p1, 'getBoundingClientRect').mockReturnValue({
+      top: 300,
+      bottom: 340,
+      height: 40,
+      left: 0,
+      right: 100,
+      width: 100,
+      x: 0,
+      y: 300,
+      toJSON: () => ({}),
+    } as DOMRect)
     try {
       // A 记录时 y=1000（段落 0），B 记录时 y=500（段落 1）；当前布局下 A 在 40，B 在 220
       addPageBookmark('/reading/daily', 1000, { article: 'news-0', paragraph: 0, offset: 30 })
@@ -142,11 +177,18 @@ describe('「＋ 书签」按钮（文章未加载时禁用，L1）', () => {
   async function mountBookmark(props: Record<string, unknown> = {}) {
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: [{ path: '/', component: PageBookmark }],
+      routes: [
+        { path: '/', component: PageBookmark },
+      ],
     })
     await router.push('/')
     await router.isReady()
-    return mount(PageBookmark, { props, global: { plugins: [router] } })
+    return mount(PageBookmark, {
+      props,
+      global: {
+        plugins: [router],
+      },
+    })
   }
 
   it('addDisabled 时按钮禁用', async () => {
@@ -166,11 +208,17 @@ describe('回到顶部按钮（与书签同一列右下角）', () => {
   async function mountBookmark() {
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: [{ path: '/', component: PageBookmark }],
+      routes: [
+        { path: '/', component: PageBookmark },
+      ],
     })
     await router.push('/')
     await router.isReady()
-    const w = mount(PageBookmark, { global: { plugins: [router] } })
+    const w = mount(PageBookmark, {
+      global: {
+        plugins: [router],
+      },
+    })
     return w
   }
   function setScrollY(y: number) {
@@ -265,7 +313,7 @@ describe('零高度段落跳转（Item 8）', () => {
   })
 
   /** 按给定的 rect（top/height）搭一个 .passage-text，段落按 :scope > p 取 */
-  function passageWithRects(rects: Array<{ top: number; height: number }>) {
+  function passageWithRects(rects: Array<{ top: number, height: number }>) {
     const passage = document.createElement('div')
     passage.className = 'passage-text'
     passage.setAttribute('data-article', 'news-0')
@@ -279,7 +327,17 @@ describe('零高度段落跳转（Item 8）', () => {
     Object.defineProperty(window, 'scrollY', { configurable: true, value: 0 })
     ps.forEach((p, i) => {
       const { top, height } = rects[i]
-      vi.spyOn(p, 'getBoundingClientRect').mockReturnValue({ top, bottom: top + height, height, left: 0, right: 100, width: 100, x: 0, y: top, toJSON: () => ({}) } as DOMRect)
+      vi.spyOn(p, 'getBoundingClientRect').mockReturnValue({
+        top,
+        bottom: top + height,
+        height,
+        left: 0,
+        right: 100,
+        width: 100,
+        x: 0,
+        y: top,
+        toJSON: () => ({}),
+      } as DOMRect)
     })
     return {
       cleanup() {
@@ -292,9 +350,18 @@ describe('零高度段落跳转（Item 8）', () => {
 
   it('锚点段落零高度（不渲染，rect 全 0）时跳到后面第一个有高度的段落，而不是回页顶', () => {
     // 段 0 高 100（top 0），段 1 不渲染（top 0、高 0），段 2 高 100（top 120）；书签锚在段 1
-    const { cleanup } = passageWithRects([{ top: 0, height: 100 }, { top: 0, height: 0 }, { top: 120, height: 100 }])
+    const { cleanup } = passageWithRects([
+      { top: 0, height: 100 },
+      { top: 0, height: 0 },
+      { top: 120, height: 100 },
+    ])
     try {
-      const item = { id: 'x', y: 50, createdAt: 0, anchor: { article: 'news-0', paragraph: 1, offset: 30 } }
+      const item = {
+        id: 'x',
+        y: 50,
+        createdAt: 0,
+        anchor: { article: 'news-0', paragraph: 1, offset: 30 },
+      }
       // 旧算法按段 1 算：0+0+min(30,0)-90 钳到 0（回页顶，错）；新算法用段 2：120-90=30
       expect(resolveBookmarkY(item)).toBe(30)
       const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
@@ -311,9 +378,18 @@ describe('零高度段落跳转（Item 8）', () => {
 
   it('锚点段落零高度且后面没有有高度段落时往前找', () => {
     // 段 0 高 100（top 0），段 1 高 0（top 100），段 2 不渲染（top 0、高 0）；书签锚在段 2
-    const { cleanup } = passageWithRects([{ top: 0, height: 100 }, { top: 100, height: 0 }, { top: 0, height: 0 }])
+    const { cleanup } = passageWithRects([
+      { top: 0, height: 100 },
+      { top: 100, height: 0 },
+      { top: 0, height: 0 },
+    ])
     try {
-      const item = { id: 'x', y: 50, createdAt: 0, anchor: { article: 'news-0', paragraph: 2, offset: 0 } }
+      const item = {
+        id: 'x',
+        y: 50,
+        createdAt: 0,
+        anchor: { article: 'news-0', paragraph: 2, offset: 0 },
+      }
       // 往后没有，往前找到段 0，top 0，减 90 钳到 0
       expect(resolveBookmarkY(item)).toBe(0)
     }
@@ -323,9 +399,18 @@ describe('零高度段落跳转（Item 8）', () => {
   })
 
   it('有高度的段落仍按原段落加 offset 算', () => {
-    const { cleanup } = passageWithRects([{ top: 0, height: 100 }, { top: 100, height: 80 }, { top: 180, height: 100 }])
+    const { cleanup } = passageWithRects([
+      { top: 0, height: 100 },
+      { top: 100, height: 80 },
+      { top: 180, height: 100 },
+    ])
     try {
-      const item = { id: 'x', y: 50, createdAt: 0, anchor: { article: 'news-0', paragraph: 1, offset: 30 } }
+      const item = {
+        id: 'x',
+        y: 50,
+        createdAt: 0,
+        anchor: { article: 'news-0', paragraph: 1, offset: 30 },
+      }
       // 段 1 top 100，offset 30，100+30-90=40
       expect(resolveBookmarkY(item)).toBe(40)
     }
@@ -339,11 +424,18 @@ describe('删最后一个旧书签的提示（Item 7）', () => {
   async function mountBookmark(props: Record<string, unknown> = {}) {
     const router = createRouter({
       history: createMemoryHistory(),
-      routes: [{ path: '/reading/daily', component: PageBookmark }],
+      routes: [
+        { path: '/reading/daily', component: PageBookmark },
+      ],
     })
     await router.push('/reading/daily')
     await router.isReady()
-    return mount(PageBookmark, { props, global: { plugins: [router] } })
+    return mount(PageBookmark, {
+      props,
+      global: {
+        plugins: [router],
+      },
+    })
   }
 
   it('删最后一个旧书签时给一句提示并回到当前日期的书签', async () => {

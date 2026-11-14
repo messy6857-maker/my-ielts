@@ -1,12 +1,12 @@
 <script setup lang="ts">
+import type { AttemptCount, AttemptRecord } from '../composables/useStats'
 import { onSyncApplied } from '../composables/syncClient'
+import { useGoBack } from '../composables/useGoBack'
 import { getMockHistory } from '../composables/useMockHistory'
-import { formatDuration, useStudyTimer } from '../composables/useStudyTimer'
 import {
   useCheckin,
   useWordSchedule,
 } from '../composables/useSpacedRepetition'
-import { useGoBack } from '../composables/useGoBack'
 import {
   attemptModuleLabel,
   dateLabel,
@@ -16,7 +16,7 @@ import {
   sumCount,
   todayStr,
 } from '../composables/useStats'
-import type { AttemptCount, AttemptRecord } from '../composables/useStats'
+import { formatDuration, useStudyTimer } from '../composables/useStudyTimer'
 
 const { goBack } = useGoBack('/')
 const { modules } = useProgress()
@@ -41,7 +41,9 @@ const offSync = onSyncApplied(load)
 onUnmounted(offSync)
 
 function percent(done: number, total: number) {
-  return total > 0 ? Math.round((done / total) * 100) : 0
+  return total > 0
+    ? Math.round((done / total) * 100)
+    : 0
 }
 
 const progressShown = computed(() =>
@@ -54,10 +56,14 @@ const attemptModules = computed(() => {
   for (const day of Object.values(attempts.value)) {
     for (const [ns, c] of Object.entries(day)) {
       const prev = map.get(ns)
-      map.set(ns, prev ? mergeCounts([prev, c]) : { ...c })
+      map.set(ns, prev
+        ? mergeCounts([prev, c])
+        : { ...c })
     }
   }
-  return [...map.entries()]
+  return [
+    ...map.entries(),
+  ]
     .map(([ns, c]) => ({
       ns,
       label: attemptModuleLabel(ns),
@@ -85,7 +91,11 @@ const dailyAttempts = computed(() => {
     const key = todayStr(offset)
     const dayRec = attempts.value[key] || {}
     const total = Object.values(dayRec).reduce((s, c) => s + sumCount(c), 0)
-    days.push({ key, label: dateLabel(offset), total })
+    days.push({
+      key,
+      label: dateLabel(offset),
+      total,
+    })
   }
   return days
 })
@@ -116,7 +126,9 @@ function mockStats(kind: 'listening' | 'reading') {
       : null
   return {
     count: list.length,
-    accuracy: total > 0 ? Math.round((score / total) * 100) : null,
+    accuracy: total > 0
+      ? Math.round((score / total) * 100)
+      : null,
     band,
     latest: list[0] || null,
   }
@@ -130,7 +142,9 @@ const mockTrend = computed(() => {
     .slice(-12)
   return list.map(m => ({
     ...m,
-    accuracy: m.total > 0 ? Math.round((m.score / m.total) * 100) : 0,
+    accuracy: m.total > 0
+      ? Math.round((m.score / m.total) * 100)
+      : 0,
     shortDate: `${new Date(m.date).getMonth() + 1}/${new Date(m.date).getDate()}`,
   }))
 })
@@ -169,7 +183,7 @@ const last14Checkin = computed(() => {
       >
         ← 返回
       </button>
-      <h1 class="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
+      <h1 class="mb-2 text-2xl text-gray-900 font-bold dark:text-white">
         📊 学习数据统计
       </h1>
       <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">
@@ -185,7 +199,7 @@ const last14Checkin = computed(() => {
           <p class="text-sm text-gray-500 dark:text-gray-400">
             今日学习时长
           </p>
-          <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+          <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
             {{ formatDuration(timer.dailySeconds.value) }}
           </p>
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -203,7 +217,7 @@ const last14Checkin = computed(() => {
           <p class="text-sm text-gray-500 dark:text-gray-400">
             连续打卡
           </p>
-          <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+          <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
             {{ streak }} 天
           </p>
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -216,7 +230,7 @@ const last14Checkin = computed(() => {
           <p class="text-sm text-gray-500 dark:text-gray-400">
             错词本
           </p>
-          <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+          <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
             {{ mistakeTotal }} 个
           </p>
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -234,7 +248,7 @@ const last14Checkin = computed(() => {
           <p class="text-sm text-gray-500 dark:text-gray-400">
             模考次数
           </p>
-          <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
+          <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
             {{ mockHistory.length }} 次
           </p>
           <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -247,13 +261,13 @@ const last14Checkin = computed(() => {
       <section
         class="mb-6 border border-gray-200 rounded-xl bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
       >
-        <h2 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">
+        <h2 class="mb-4 text-lg text-gray-900 font-bold dark:text-white">
           各模块进度
         </h2>
         <div v-if="progressShown.length" class="grid gap-4 md:grid-cols-2">
           <div v-for="m in progressShown" :key="m.module">
             <div class="mb-1 flex items-center justify-between text-sm">
-              <span class="font-medium text-gray-700 dark:text-gray-300">{{
+              <span class="text-gray-700 font-medium dark:text-gray-300">{{
                 m.label
               }}</span>
               <span class="text-gray-500 dark:text-gray-400">{{ m.done }} / {{ m.total }}（{{
@@ -277,7 +291,7 @@ const last14Checkin = computed(() => {
       <section
         class="mb-6 border border-gray-200 rounded-xl bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
       >
-        <h2 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">
+        <h2 class="mb-4 text-lg text-gray-900 font-bold dark:text-white">
           自测正确率
         </h2>
         <p class="mb-4 text-xs text-gray-500 dark:text-gray-400">
@@ -291,7 +305,7 @@ const last14Checkin = computed(() => {
             class="flex items-center gap-3 text-sm"
           >
             <span
-              class="w-24 shrink-0 font-medium text-gray-700 dark:text-gray-300"
+              class="w-24 shrink-0 text-gray-700 font-medium dark:text-gray-300"
             >{{ m.label }}</span>
             <div class="h-2.5 flex-1 rounded-full bg-gray-200 dark:bg-gray-700">
               <div
@@ -317,7 +331,7 @@ const last14Checkin = computed(() => {
         <p v-else class="mb-6 text-sm text-gray-500 dark:text-gray-400">
           还没有自评记录，做一轮自测卡片后这里就会开始累计。
         </p>
-        <h3 class="mb-3 text-sm font-bold text-gray-900 dark:text-white">
+        <h3 class="mb-3 text-sm text-gray-900 font-bold dark:text-white">
           最近 14 天每天自评次数
         </h3>
         <div class="flex items-end gap-1.5">
@@ -346,12 +360,12 @@ const last14Checkin = computed(() => {
         <section
           class="border border-gray-200 rounded-xl bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
         >
-          <h2 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">
+          <h2 class="mb-4 text-lg text-gray-900 font-bold dark:text-white">
             词汇掌握（SM-2 现状）
           </h2>
           <div class="grid grid-cols-2 gap-4 text-center">
             <div>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">
+              <p class="text-2xl text-gray-900 font-bold dark:text-white">
                 {{ vocabStats.learned }}
               </p>
               <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -359,7 +373,7 @@ const last14Checkin = computed(() => {
               </p>
             </div>
             <div>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">
+              <p class="text-2xl text-gray-900 font-bold dark:text-white">
                 {{ vocabStats.due }}
               </p>
               <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -367,7 +381,7 @@ const last14Checkin = computed(() => {
               </p>
             </div>
             <div>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">
+              <p class="text-2xl text-gray-900 font-bold dark:text-white">
                 {{ vocabStats.stable }}
               </p>
               <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -375,7 +389,7 @@ const last14Checkin = computed(() => {
               </p>
             </div>
             <div>
-              <p class="text-2xl font-bold text-gray-900 dark:text-white">
+              <p class="text-2xl text-gray-900 font-bold dark:text-white">
                 {{ vocabStats.lapses }}
               </p>
               <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -388,7 +402,7 @@ const last14Checkin = computed(() => {
         <section
           class="border border-gray-200 rounded-xl bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
         >
-          <h2 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">
+          <h2 class="mb-4 text-lg text-gray-900 font-bold dark:text-white">
             模考成绩
           </h2>
           <div class="text-sm space-y-3">
@@ -448,7 +462,7 @@ const last14Checkin = computed(() => {
         <section
           class="border border-gray-200 rounded-xl bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
         >
-          <h2 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">
+          <h2 class="mb-4 text-lg text-gray-900 font-bold dark:text-white">
             错得最多的词
           </h2>
           <ul v-if="topMistakes.length" class="text-sm space-y-2">
@@ -479,7 +493,7 @@ const last14Checkin = computed(() => {
         <section
           class="border border-gray-200 rounded-xl bg-white p-6 dark:border-gray-700 dark:bg-gray-800"
         >
-          <h2 class="mb-4 text-lg font-bold text-gray-900 dark:text-white">
+          <h2 class="mb-4 text-lg text-gray-900 font-bold dark:text-white">
             打卡（最近 14 天）
           </h2>
           <div class="flex flex-wrap gap-2">

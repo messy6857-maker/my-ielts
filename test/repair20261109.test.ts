@@ -1,19 +1,29 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { useAuth } from '../src/composables/useAuth'
 import { apiPull, collectSyncData, getQuarantinedKeys, handleRejectedKeys, setToken } from '../src/composables/syncClient'
-import { useMockMistakeSave } from '../src/composables/useMockMistakeSave'
-import { hasWrittenMockMistakes } from '../src/utils/mockMistakes'
-import { useMistakes } from '../src/composables/useStudyData'
-import { accountKey, entryKey, saveValue } from '../src/utils/storage'
-import { addPageBookmark, getPageBookmarks, reloadPageBookmarks } from '../src/composables/usePageBookmark'
 import * as ai from '../src/composables/useAISettings'
+import { useAuth } from '../src/composables/useAuth'
+import { useMockMistakeSave } from '../src/composables/useMockMistakeSave'
+import { addPageBookmark, getPageBookmarks, reloadPageBookmarks } from '../src/composables/usePageBookmark'
+import { useMistakes } from '../src/composables/useStudyData'
+import { hasWrittenMockMistakes } from '../src/utils/mockMistakes'
+import { accountKey, entryKey, saveValue } from '../src/utils/storage'
 
 const auth = useAuth()
 const wrappers: ReturnType<typeof mount>[] = []
-const rect = { left: 50, top: 60, right: 100, bottom: 100, width: 50, height: 40, x: 50, y: 60, toJSON: () => ({}) }
+const rect = {
+  left: 50,
+  top: 60,
+  right: 100,
+  bottom: 100,
+  width: 50,
+  height: 40,
+  x: 50,
+  y: 60,
+  toJSON: () => ({}),
+}
 function deferred<T>() {
   let complete!: (v: T) => void
   const promise = new Promise<T>((resolve) => {
@@ -22,9 +32,20 @@ function deferred<T>() {
   return { promise, resolve: complete }
 }
 async function page(Page: any, path = '/') {
-  const router = createRouter({ history: createMemoryHistory(), routes: [{ path, component: Page }] })
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path, component: Page },
+    ],
+  })
   await router.push(path)
-  const w = mount(Page, { attachTo: document.body, global: { plugins: [router], stubs: { RouterLink: true } } })
+  const w = mount(Page, {
+    attachTo: document.body,
+    global: {
+      plugins: [router],
+      stubs: { RouterLink: true },
+    },
+  })
   wrappers.push(w)
   await flushPromises()
   return { w, s: (w.vm as any).$.setupState }
@@ -35,7 +56,11 @@ beforeEach(() => {
   auth.currentUser.value = null
   auth.currentUser.value = 'alice'
   setToken('audit-only', 'alice')
-  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ok: true, data: null }) })))
+  vi.stubGlobal('fetch', vi.fn(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ ok: true, data: null }),
+  })))
 })
 afterEach(() => {
   wrappers.splice(0).forEach(w => w.unmount())
@@ -43,13 +68,23 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 function entries(key: string) {
-  return [{ module: 'mock_reading' as const, key, title: key, detail: '', hint: '' }]
+  return [
+    {
+      module: 'mock_reading' as const,
+      key,
+      title: key,
+      detail: '',
+      hint: '',
+    },
+  ]
 }
 
 it('retries both failed mock submissions, including one saved in the old single slot', () => {
   const records = useMistakes()
   localStorage.setItem(accountKey('mock_mistake_pending_v1', 'alice'), JSON.stringify({
-    owner: 'alice', attemptId: 'older', entries: entries('first'),
+    owner: 'alice',
+    attemptId: 'older',
+    entries: entries('first'),
   }))
   const set = Storage.prototype.setItem
   const blocked = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key, value) {
@@ -68,14 +103,20 @@ it('retries both failed mock submissions, including one saved in the old single 
   auth.currentUser.value = 'alice'
   // M2：只调一次 retry 就断言——调两次会掩盖“一次只修好一个”的 bug
   reentered.retry()
-  expect(records.mistakes.value.map(({ key, count }) => [key, count]).sort()).toEqual([['first', 1], ['second', 1]])
+  expect(records.mistakes.value.map(({ key, count }) => [key, count]).sort()).toEqual([
+    ['first', 1],
+    ['second', 1],
+  ])
   expect(reentered.failed.value).toBe(false)
   expect(localStorage.getItem(accountKey('mock_mistake_pending_v1', 'alice'))).toBeNull()
   // M2：v2 新槽也要删干净，不只断言旧槽
   expect(localStorage.getItem(entryKey('mock_mistake_pending_v2', 'newer', 'alice'))).toBeNull()
   // 第二次重试应为 no-op，不重复计
   reentered.retry()
-  expect(records.mistakes.value.map(({ key, count }) => [key, count]).sort()).toEqual([['first', 1], ['second', 1]])
+  expect(records.mistakes.value.map(({ key, count }) => [key, count]).sort()).toEqual([
+    ['first', 1],
+    ['second', 1],
+  ])
 })
 
 it('keeps a pending task in memory when its own save fails, and retries it after storage recovers', () => {
@@ -94,7 +135,9 @@ it('keeps a pending task in memory when its own save fails, and retries it after
   expect(localStorage.getItem(entryKey('mock_mistake_pending_v2', 'mem', 'alice'))).toBeNull()
   blocked.mockRestore()
   saver.retry()
-  expect(records.mistakes.value.map(({ key, count }) => [key, count])).toEqual([['mem-first', 1]])
+  expect(records.mistakes.value.map(({ key, count }) => [key, count])).toEqual([
+    ['mem-first', 1],
+  ])
   expect(saver.failed.value).toBe(false)
   expect(localStorage.getItem(entryKey('mock_mistake_pending_v2', 'mem', 'alice'))).toBeNull()
 })
@@ -110,11 +153,17 @@ it('merges new entries when the same attempt is saved twice (L5)', () => {
   const saver = useMockMistakeSave()
   saver.save('dup', entries('first'))
   // 第二次 save 同一 attempt，带一个新题；first 已在 remainder 里，不重复加
-  saver.save('dup', [...entries('first'), ...entries('second')])
+  saver.save('dup', [
+    ...entries('first'),
+    ...entries('second'),
+  ])
   expect(saver.failed.value).toBe(true)
   blocked.mockRestore()
   saver.retry()
-  expect(records.mistakes.value.map(({ key, count }) => [key, count]).sort()).toEqual([['first', 1], ['second', 1]])
+  expect(records.mistakes.value.map(({ key, count }) => [key, count]).sort()).toEqual([
+    ['first', 1],
+    ['second', 1],
+  ])
   expect(saver.failed.value).toBe(false)
 })
 
@@ -141,12 +190,17 @@ it('recovers a pending task whose storage key does not match its attemptId (L9)'
   // key 是 attempt-A，里面的 attemptId 却是 attempt-B（存储损坏/手工篡改）
   const wrongKey = entryKey('mock_mistake_pending_v2', 'attempt-A', 'alice')
   localStorage.setItem(wrongKey, JSON.stringify({
-    owner: 'alice', attemptId: 'attempt-B', entries: entries('recovered'), createdAt: Date.now(),
+    owner: 'alice',
+    attemptId: 'attempt-B',
+    entries: entries('recovered'),
+    createdAt: Date.now(),
   }))
   const saver = useMockMistakeSave()
   expect(saver.failed.value).toBe(true)
   saver.retry()
-  expect(records.mistakes.value.map(({ key, count }) => [key, count])).toEqual([['recovered', 1]])
+  expect(records.mistakes.value.map(({ key, count }) => [key, count])).toEqual([
+    ['recovered', 1],
+  ])
   expect(saver.failed.value).toBe(false)
   // 错 key 已删，对 key 也已清理
   expect(localStorage.getItem(wrongKey)).toBeNull()
@@ -167,8 +221,18 @@ it('resumes new-table quarantines only when their own capability is advertised',
       { key: invalid, reason: 'decode-failed' },
     ],
   })
-  const result = { ok: true, data: null, protocolVersion: 2, studyExtensions: true, studyProgressEntries: false }
-  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ...result }) })))
+  const result = {
+    ok: true,
+    data: null,
+    protocolVersion: 2,
+    studyExtensions: true,
+    studyProgressEntries: false,
+  }
+  vi.stubGlobal('fetch', vi.fn(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ ...result }),
+  })))
   await apiPull('alice')
   expect(getQuarantinedKeys('alice').sort()).toEqual([row, goal, invalid].sort())
   result.studyProgressEntries = true
@@ -210,11 +274,15 @@ it('uses the standard caret method and closes the translation on a date change',
     value: () => ({ offsetNode: node, offset: 2 }),
   })
   const range = document.createRange()
-  Object.defineProperty(range, 'getBoundingClientRect', { value: () => rect })
+  Object.defineProperty(range, 'getBoundingClientRect', {
+    value: () => rect,
+  })
   vi.spyOn(document, 'createRange').mockReturnValue(range)
   try {
     expect(s.wordAtPoint(60, 70)?.word).toBe('sample')
-    await s.openWordPopup('sample', [{ word: 'sample', meaning: '样本', pos: 'n.' }], rect)
+    await s.openWordPopup('sample', [
+      { word: 'sample', meaning: '样本', pos: 'n.' },
+    ], rect)
     expect(w.get('[role=dialog]').text()).toContain('样本')
     s.selectedDate = s.dates[1]
     await nextTick()
@@ -234,14 +302,19 @@ it('wordAtPoint falls back to caretRangeFromPoint when the caret node is not tex
   // Firefox 点在元素边界时 caretPositionFromPoint 可能返回非文本节点
   Object.defineProperty(document, 'caretPositionFromPoint', {
     configurable: true,
-    value: () => ({ offsetNode: document.createElement('div'), offset: 0 }),
+    value: () => ({
+      offsetNode: document.createElement('div'),
+      offset: 0,
+    }),
   })
   Object.defineProperty(document, 'caretRangeFromPoint', {
     configurable: true,
     value: () => caretRange,
   })
   const wordRange = document.createRange()
-  Object.defineProperty(wordRange, 'getBoundingClientRect', { value: () => rect })
+  Object.defineProperty(wordRange, 'getBoundingClientRect', {
+    value: () => rect,
+  })
   vi.spyOn(document, 'createRange').mockReturnValue(wordRange)
   try {
     expect(s.wordAtPoint(60, 70)?.word).toBe('sample')
@@ -324,8 +397,15 @@ it('does not lose entries when another tab saves the same attempt concurrently (
     const value = get.call(this, key)
     if (key === pendingKey) {
       reads++
-      if (reads >= 2)
-        return JSON.stringify({ ...stored, entries: [...stored.entries, ...entries('b')] })
+      if (reads >= 2) {
+        return JSON.stringify({
+          ...stored,
+          entries: [
+            ...stored.entries,
+            ...entries('b'),
+          ],
+        })
+      }
     }
     return value
   })
@@ -339,7 +419,11 @@ it('does not lose entries when another tab saves the same attempt concurrently (
   expect(final.entries.map((e: any) => e.key).sort()).toEqual(['a', 'b', 'c'])
   blocked.mockRestore()
   saver.retry()
-  expect(records.mistakes.value.map(({ key, count }) => [key, count]).sort()).toEqual([['a', 1], ['b', 1], ['c', 1]])
+  expect(records.mistakes.value.map(({ key, count }) => [key, count]).sort()).toEqual([
+    ['a', 1],
+    ['b', 1],
+    ['c', 1],
+  ])
   expect(saver.failed.value).toBe(false)
 })
 
@@ -369,7 +453,9 @@ it('still records later entries after an empty save (Item 4)', () => {
   expect(localStorage.getItem(entryKey('mock_mistake_pending_v2', 'empty-then-real', 'alice'))).not.toBeNull()
   blocked.mockRestore()
   saver.retry()
-  expect(records.mistakes.value.map(({ key, count }) => [key, count])).toEqual([['real', 1]])
+  expect(records.mistakes.value.map(({ key, count }) => [key, count])).toEqual([
+    ['real', 1],
+  ])
   expect(saver.failed.value).toBe(false)
 })
 

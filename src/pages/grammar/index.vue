@@ -38,7 +38,7 @@ async function onHandoutClick(event: MouseEvent) {
       <div class="mb-4">
         视频配套讲义：
         <a
-          class="truncate text-sm font-normal text-primary-700 dark:text-primary-500 hover:underline"
+          class="truncate text-sm text-primary-700 font-normal dark:text-primary-500 hover:underline"
           :href="handoutUrl"
           :download="handoutName"
           @click="onHandoutClick"

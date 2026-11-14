@@ -15,7 +15,12 @@ const COLORS = [
 // ---------- bar ----------
 const BAR_W = 560
 const BAR_H = 260
-const BAR_PAD = { top: 16, right: 16, bottom: 44, left: 44 }
+const BAR_PAD = {
+  top: 16,
+  right: 16,
+  bottom: 44,
+  left: 44,
+}
 function barGeom() {
   const data = props.prompt.barData || []
   const max = Math.max(...data.map(d => d.value), 1)
@@ -40,13 +45,20 @@ function barGeom() {
 // ---------- line ----------
 const LINE_W = 560
 const LINE_H = 260
-const LINE_PAD = { top: 16, right: 16, bottom: 36, left: 48 }
+const LINE_PAD = {
+  top: 16,
+  right: 16,
+  bottom: 36,
+  left: 48,
+}
 function lineGeom() {
   const { lineData = [], series = [] } = props.prompt
   const max = Math.max(...lineData.flatMap(d => d.values), 1)
   const iw = LINE_W - LINE_PAD.left - LINE_PAD.right
   const ih = LINE_H - LINE_PAD.top - LINE_PAD.bottom
-  const stepX = lineData.length > 1 ? iw / (lineData.length - 1) : 0
+  const stepX = lineData.length > 1
+    ? iw / (lineData.length - 1)
+    : 0
   return series.map((name, si) => ({
     name,
     color: COLORS[si % COLORS.length],
@@ -58,21 +70,25 @@ function lineGeom() {
     })),
   }))
 }
-function linePath(points: { x: number; y: number }[]): string {
+function linePath(points: { x: number, y: number }[]): string {
   return points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+    .map((p, i) => `${i === 0
+      ? 'M'
+      : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`)
     .join(' ')
 }
 
 // ---------- pie ----------
-function pieSlices(data: { label: string; value: number }[]) {
+function pieSlices(data: { label: string, value: number }[]) {
   const total = data.reduce((s, d) => s + d.value, 0) || 1
   let acc = 0
   return data.map((d, i) => {
     const start = (acc / total) * Math.PI * 2 - Math.PI / 2
     acc += d.value
     const end = (acc / total) * Math.PI * 2 - Math.PI / 2
-    const large = end - start > Math.PI ? 1 : 0
+    const large = end - start > Math.PI
+      ? 1
+      : 0
     const r = 70
     const cx = 90
     const cy = 90
@@ -217,7 +233,7 @@ function pieSlices(data: { label: string; value: number }[]) {
         :key="pie.title"
         class="text-center"
       >
-        <div class="mb-1 text-sm font-bold text-gray-700">
+        <div class="mb-1 text-sm text-gray-700 font-bold">
           {{ pie.title }}
         </div>
         <svg viewBox="0 0 180 180" class="mx-auto w-44">
@@ -253,7 +269,7 @@ function pieSlices(data: { label: string; value: number }[]) {
             <th
               v-for="h in prompt.tableHead || []"
               :key="h"
-              class="px-3 py-2 text-left font-bold text-gray-700"
+              class="px-3 py-2 text-left text-gray-700 font-bold"
             >
               {{ h }}
             </th>
@@ -286,7 +302,7 @@ function pieSlices(data: { label: string; value: number }[]) {
         class="flex gap-3 text-sm text-gray-700"
       >
         <span
-          class="h-6 w-6 flex shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-700"
+          class="h-6 w-6 flex shrink-0 items-center justify-center rounded-full bg-blue-100 text-xs text-blue-700 font-bold"
         >{{ i + 1 }}</span>
         <span class="pt-0.5">{{ step }}</span>
       </li>
@@ -297,7 +313,7 @@ function pieSlices(data: { label: string; value: number }[]) {
       <p class="mb-1 text-xs text-gray-400">
         本题为文字版地图题
       </p>
-      <p class="text-sm leading-7 text-gray-700">
+      <p class="text-sm text-gray-700 leading-7">
         {{ prompt.description }}
       </p>
     </div>

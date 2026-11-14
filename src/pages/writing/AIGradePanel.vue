@@ -1,16 +1,16 @@
 <script setup lang="ts">
+import type { AIGradeResult } from '~/composables/useAISettings'
+import type { DiffToken } from '~/composables/useWordDiff'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { onSyncApplied } from '~/composables/syncClient'
 import {
   gradeEssayWithAI,
   hasAISettings,
   repairSavedGrade,
 } from '~/composables/useAISettings'
-import type { AIGradeResult } from '~/composables/useAISettings'
 import { readJson, useAuth } from '~/composables/useAuth'
-import { saveAiArchive } from '~/utils/archives'
-import { onSyncApplied } from '~/composables/syncClient'
 import { diffWords } from '~/composables/useWordDiff'
-import type { DiffToken } from '~/composables/useWordDiff'
+import { saveAiArchive } from '~/utils/archives'
 
 const props = defineProps<{
   task: 'task1' | 'task2'
@@ -49,14 +49,18 @@ function hashKey(s: string): string {
   return `${(a >>> 0).toString(36)}${(b >>> 0).toString(36)}`
 }
 function legacyStorageKey(): string {
-  const user = currentUser.value ? `u_${currentUser.value}` : 'guest'
+  const user = currentUser.value
+    ? `u_${currentUser.value}`
+    : 'guest'
   const s = `${props.task}|${props.question}|${props.essay}`
   let h = 0
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
   return `myielts_${user}_aigrade_v1_${h.toString(36)}`
 }
 function storageKey(): string {
-  const user = currentUser.value ? `u_${currentUser.value}` : 'guest'
+  const user = currentUser.value
+    ? `u_${currentUser.value}`
+    : 'guest'
   const s = `${props.task}|${props.question}|${props.essay}`
   return `myielts_${user}_aigrade_v2_${hashKey(s)}`
 }
@@ -89,8 +93,18 @@ onMounted(() => {
 
 const criterionLabels: Record<'ta' | 'cc' | 'lr' | 'gra', string>
   = props.task === 'task1'
-    ? { ta: '任务完成', cc: '连贯衔接', lr: '词汇资源', gra: '语法' }
-    : { ta: '任务回应', cc: '连贯衔接', lr: '词汇资源', gra: '语法' }
+    ? {
+        ta: '任务完成',
+        cc: '连贯衔接',
+        lr: '词汇资源',
+        gra: '语法',
+      }
+    : {
+        ta: '任务回应',
+        cc: '连贯衔接',
+        lr: '词汇资源',
+        gra: '语法',
+      }
 
 let requestId = 0
 let controller: AbortController | null = null
@@ -139,15 +153,19 @@ async function runAIGrade() {
       sequence !== requestId
       || owner !== currentUser.value
       || key !== storageKey()
-    )
+    ) {
       return
+    }
     aiResult.value = value
     if (!saveAiArchive(key, value, owner))
       aiError.value = '评分已显示，但存档未能保存，请导出备份并清理空间'
   }
   catch (e) {
-    if (sequence === requestId)
-      aiError.value = e instanceof Error ? e.message : '批改失败，请重试'
+    if (sequence === requestId) {
+      aiError.value = e instanceof Error
+        ? e.message
+        : '批改失败，请重试'
+    }
   }
   finally {
     if (sequence === requestId) {
@@ -158,7 +176,12 @@ async function runAIGrade() {
   }
 }
 watch(
-  [currentUser, () => props.task, () => props.question, () => props.essay],
+  [
+    currentUser,
+    () => props.task,
+    () => props.question,
+    () => props.essay,
+  ],
   () => {
     invalidate()
     aiResult.value = null
@@ -187,7 +210,9 @@ function scoreColor(s: number) {
 
 // 分数渲染兜底：字符串分数（如 "6.5"）没有 toFixed，非法值显示 — 而不是抛错
 function fmtScore(s: unknown): string {
-  return typeof s === 'number' && Number.isFinite(s) ? s.toFixed(1) : '—'
+  return typeof s === 'number' && Number.isFinite(s)
+    ? s.toFixed(1)
+    : '—'
 }
 
 // 改写全文与原文的单词级 diff，用于颜色标注改动处
@@ -217,7 +242,9 @@ const rewrittenParagraphs = computed(() => {
 const visibleParagraphs = computed(() =>
   rewrittenParagraphs.value
     .map(para =>
-      showDiff.value ? para : para.filter(t => t.type !== 'del'),
+      showDiff.value
+        ? para
+        : para.filter(t => t.type !== 'del'),
     )
     .filter(p => p.length > 0),
 )
@@ -241,7 +268,7 @@ function tokenClass(t: DiffToken): string {
     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
       <h4 class="text-sm font-bold dark:text-white">
         🤖 AI 批改
-        <span class="text-xs font-normal text-gray-400">（四项官方标准）</span>
+        <span class="text-xs text-gray-400 font-normal">（四项官方标准）</span>
       </h4>
       <div class="flex items-center gap-3">
         <span v-if="!canUseAI" class="text-gray-400" title="locked">🔒</span>
@@ -254,7 +281,7 @@ function tokenClass(t: DiffToken): string {
             先去设置 API →
           </router-link>
           <button
-            class="rounded-lg bg-purple-700 px-4 py-2 text-sm font-bold text-white dark:bg-purple-600 hover:bg-purple-800 disabled:opacity-50"
+            class="rounded-lg bg-purple-700 px-4 py-2 text-sm text-white font-bold dark:bg-purple-600 hover:bg-purple-800 disabled:opacity-50"
             :disabled="aiLoading"
             @click="runAIGrade"
           >
@@ -268,14 +295,14 @@ function tokenClass(t: DiffToken): string {
       {{ aiError }}
       <button
         v-if="aiError.includes('登录已过期')"
-        class="ml-2 rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+        class="ml-2 rounded-lg bg-blue-600 px-3 py-1 text-xs text-white font-medium hover:bg-blue-700"
         @click="goRelogin"
       >
         去登录
       </button>
       <button
         v-else-if="aiError.includes('API Key')"
-        class="ml-2 rounded-lg bg-blue-600 px-3 py-1 text-xs font-medium text-white hover:bg-blue-700"
+        class="ml-2 rounded-lg bg-blue-600 px-3 py-1 text-xs text-white font-medium hover:bg-blue-700"
         @click="$router.push('/settings')"
       >
         去设置
@@ -329,7 +356,7 @@ function tokenClass(t: DiffToken): string {
           <div class="mb-1 text-sm font-bold dark:text-white">
             {{ label }}
           </div>
-          <p class="text-sm leading-6 text-gray-600 dark:text-gray-300">
+          <p class="text-sm text-gray-600 leading-6 dark:text-gray-300">
             {{ aiResult.comments?.[key] ?? '' }}
           </p>
         </div>
@@ -346,11 +373,11 @@ function tokenClass(t: DiffToken): string {
             class="border border-blue-100 rounded-lg bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-900/10"
           >
             <div
-              class="mb-1 text-xs font-bold text-blue-700 dark:text-blue-300"
+              class="mb-1 text-xs text-blue-700 font-bold dark:text-blue-300"
             >
               {{ label }} · {{ fmtScore(aiResult.scores[key]) }}分
             </div>
-            <p class="text-sm leading-6 text-gray-700 dark:text-gray-200">
+            <p class="text-sm text-gray-700 leading-6 dark:text-gray-200">
               {{ aiResult.advice?.[key] ?? '' }}
             </p>
           </div>
@@ -370,7 +397,7 @@ function tokenClass(t: DiffToken): string {
             <p class="text-gray-500 line-through dark:text-gray-400">
               {{ c.original }}
             </p>
-            <p class="mt-1 font-medium text-green-700 dark:text-green-400">
+            <p class="mt-1 text-green-700 font-medium dark:text-green-400">
               {{ c.fixed }}
             </p>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -424,7 +451,7 @@ function tokenClass(t: DiffToken): string {
 
     <p
       v-else-if="!aiLoading && !aiError"
-      class="text-xs leading-5 text-gray-400"
+      class="text-xs text-gray-400 leading-5"
     >
       <template v-if="canUseAI">
         AI

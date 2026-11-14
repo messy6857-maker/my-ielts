@@ -44,7 +44,9 @@ export function parseExtra(extra: string | undefined | null): ExtraEntry[] {
       if (m) {
         entries.push({
           word: m[1].trim(),
-          pos: m[2] ? `${m[2]}.` : '',
+          pos: m[2]
+            ? `${m[2]}.`
+            : '',
           // 去掉释义开头的标点残留（如 "，有磁性的"）
           meaning: m[3].trim().replace(/^[，。；、\s]+/, ''),
         })

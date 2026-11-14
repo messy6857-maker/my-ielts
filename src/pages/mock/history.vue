@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import type { MockRecord } from '~/composables/useMockHistory'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { clearMockHistory, getMockHistory } from '~/composables/useMockHistory'
 import { onSyncApplied } from '~/composables/syncClient'
 import { useAuth } from '~/composables/useAuth'
 import { confirmDialog } from '~/composables/useDialog'
-import type { MockRecord } from '~/composables/useMockHistory'
+import { clearMockHistory, getMockHistory } from '~/composables/useMockHistory'
 
 const records = ref<MockRecord[]>([])
 const { currentUser } = useAuth()
@@ -43,7 +43,7 @@ async function handleClear() {
 <template>
   <div class="mx-auto max-w-4xl px-4 py-8">
     <div class="mb-6 flex items-center justify-between">
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+      <h2 class="text-2xl text-gray-900 font-bold dark:text-white">
         📊 模考记录
       </h2>
       <button
@@ -69,7 +69,7 @@ async function handleClear() {
         class="flex items-center justify-between border border-gray-200 rounded-xl bg-white px-5 py-4 dark:border-gray-700 dark:bg-gray-800"
       >
         <div>
-          <div class="font-medium text-gray-900 dark:text-white">
+          <div class="text-gray-900 font-medium dark:text-white">
             {{ r.label }} · {{ r.kind === 'listening' ? '🎧 听力' : '📖 阅读' }}
           </div>
           <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -77,9 +77,9 @@ async function handleClear() {
           </div>
         </div>
         <div class="text-right">
-          <div class="text-lg font-bold text-gray-900 dark:text-white">
+          <div class="text-lg text-gray-900 font-bold dark:text-white">
             {{ r.score
-            }}<span class="text-sm font-normal text-gray-500">/{{ r.total }}</span>
+            }}<span class="text-sm text-gray-500 font-normal">/{{ r.total }}</span>
           </div>
           <div class="text-sm text-purple-600 dark:text-purple-400">
             {{ r.band.toFixed(1) }} 分

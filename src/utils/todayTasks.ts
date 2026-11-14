@@ -1,7 +1,7 @@
-import type { MistakeItem } from '../composables/useStudyData'
 import type { WordSchedule } from '../composables/useSpacedRepetition'
-import { mockTestList } from '../pages/mock/registry'
+import type { MistakeItem } from '../composables/useStudyData'
 import type { WritingDraft } from './drafts'
+import { mockTestList } from '../pages/mock/registry'
 import { listDrafts } from './drafts'
 import { accountPrefix } from './storage'
 
@@ -17,7 +17,7 @@ export interface TodayTasksSnapshot {
   dueWordCount: number
   recentMistakes: MistakeItem[]
   unfinishedMocks: UnfinishedMock[]
-  writingDrafts: Array<WritingDraft & { task: 'task1' | 'task2'; path: string }>
+  writingDrafts: Array<WritingDraft & { task: 'task1' | 'task2', path: string }>
   studySeconds: number
   isEmpty: boolean
 }
@@ -105,17 +105,21 @@ export function listUnfinishedMocks(
       /* ignore malformed */
     }
   }
-  return [...best.values()].sort((a, b) => b.updatedAt - a.updatedAt)
+  return [
+    ...best.values(),
+  ].sort((a, b) => b.updatedAt - a.updatedAt)
 }
 
 export function listWritingDraftSummaries(owner: string | null) {
-  const items: Array<WritingDraft & { task: 'task1' | 'task2'; path: string }>
+  const items: Array<WritingDraft & { task: 'task1' | 'task2', path: string }>
     = []
   for (const task of ['task1', 'task2'] as const) {
     for (const d of listDrafts(task, owner)) {
       if (!d.text?.trim())
         continue
-      const tab = task === 'task1' ? 'essay-small' : 'essay-big'
+      const tab = task === 'task1'
+        ? 'essay-small'
+        : 'essay-big'
       const version = d.versionId?.slice(accountPrefix(owner).length)
       const query = new URLSearchParams({ tab, prompt: d.promptId })
       if (version)

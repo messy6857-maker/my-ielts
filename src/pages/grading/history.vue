@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from 'vue'
-import { getGradingRecords } from '~/composables/useGradingHistory'
+import type { AIGradeResult, AISpeakingResult } from '~/composables/useAISettings'
 import type { GradingRecord } from '~/composables/useGradingHistory'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { onSyncApplied } from '~/composables/syncClient'
 import { useAuth } from '~/composables/useAuth'
-import type { AIGradeResult, AISpeakingResult } from '~/composables/useAISettings'
+import { getGradingRecords } from '~/composables/useGradingHistory'
 
 const records = ref<GradingRecord[]>([])
 const expandedKey = ref<string | null>(null)
@@ -27,16 +27,22 @@ watch(currentUser, load)
 onUnmounted(offSync)
 
 function writingResult(r: GradingRecord): AIGradeResult | null {
-  return r.kind === 'writing' ? (r.result as AIGradeResult) : null
+  return r.kind === 'writing'
+    ? (r.result as AIGradeResult)
+    : null
 }
 
 function speakingResult(r: GradingRecord): AISpeakingResult | null {
-  return r.kind === 'speaking' ? (r.result as AISpeakingResult) : null
+  return r.kind === 'speaking'
+    ? (r.result as AISpeakingResult)
+    : null
 }
 
 function overall(r: GradingRecord): number | null {
   const s = r.result.scores as { overall?: unknown }
-  return typeof s.overall === 'number' && Number.isFinite(s.overall) ? s.overall : null
+  return typeof s.overall === 'number' && Number.isFinite(s.overall)
+    ? s.overall
+    : null
 }
 
 function formatDate(ms: number): string {
@@ -48,7 +54,9 @@ function formatDate(ms: number): string {
 }
 
 function fmtScore(s: unknown): string {
-  return typeof s === 'number' && Number.isFinite(s) ? s.toFixed(1) : '—'
+  return typeof s === 'number' && Number.isFinite(s)
+    ? s.toFixed(1)
+    : '—'
 }
 
 function scoreColor(s: number | null): string {
@@ -64,7 +72,9 @@ function scoreColor(s: number | null): string {
 }
 
 function toggle(key: string) {
-  expandedKey.value = expandedKey.value === key ? null : key
+  expandedKey.value = expandedKey.value === key
+    ? null
+    : key
 }
 
 // 写作四项标签：存档 key 里不存 Task 1/2，TA 项统一用中性名「任务回应」
@@ -84,7 +94,9 @@ function partLabel(part?: string): string {
   if (!part || part === 'na')
     return ''
   const n = part.replace(/^part/i, '')
-  return /^[123]$/.test(n) ? `Part ${n}` : part
+  return /^[123]$/.test(n)
+    ? `Part ${n}`
+    : part
 }
 
 function rewrittenParagraphs(text: string): string[] {
@@ -95,7 +107,7 @@ function rewrittenParagraphs(text: string): string[] {
 <template>
   <div class="mx-auto max-w-4xl px-4 py-8">
     <div class="mb-6 flex items-center justify-between">
-      <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+      <h2 class="text-2xl text-gray-900 font-bold dark:text-white">
         📝 批改记录
       </h2>
     </div>
@@ -130,10 +142,10 @@ function rewrittenParagraphs(text: string): string[] {
           @click="toggle(r.key)"
         >
           <div>
-            <div class="font-medium text-gray-900 dark:text-white">
+            <div class="text-gray-900 font-medium dark:text-white">
               {{ r.kind === 'writing' ? '✍️ 写作批改' : '🎙 口语评分' }}
               <span v-if="r.kind === 'speaking' && partLabel(r.part)"> · {{ partLabel(r.part) }}</span>
-              <span v-if="r.kind === 'writing' && r.version === 'v1'" class="ml-1 text-xs font-normal text-gray-400">（旧版）</span>
+              <span v-if="r.kind === 'writing' && r.version === 'v1'" class="ml-1 text-xs text-gray-400 font-normal">（旧版）</span>
             </div>
             <div class="mt-1 text-sm text-gray-500 dark:text-gray-400">
               {{ formatDate(r.date) }}
@@ -173,7 +185,7 @@ function rewrittenParagraphs(text: string): string[] {
                 <div class="mb-1 text-sm font-bold dark:text-white">
                   {{ label }}
                 </div>
-                <p class="text-sm leading-6 text-gray-600 dark:text-gray-300">
+                <p class="text-sm text-gray-600 leading-6 dark:text-gray-300">
                   {{ writingResult(r)!.comments?.[key] ?? '' }}
                 </p>
               </div>
@@ -188,10 +200,10 @@ function rewrittenParagraphs(text: string): string[] {
                   :key="key"
                   class="border border-blue-100 rounded-lg bg-blue-50/50 p-3 dark:border-blue-900/40 dark:bg-blue-900/10"
                 >
-                  <div class="mb-1 text-xs font-bold text-blue-700 dark:text-blue-300">
+                  <div class="mb-1 text-xs text-blue-700 font-bold dark:text-blue-300">
                     {{ label }} · {{ fmtScore(writingResult(r)!.scores[key]) }}分
                   </div>
-                  <p class="text-sm leading-6 text-gray-700 dark:text-gray-200">
+                  <p class="text-sm text-gray-700 leading-6 dark:text-gray-200">
                     {{ writingResult(r)!.advice?.[key] ?? '' }}
                   </p>
                 </div>
@@ -210,7 +222,7 @@ function rewrittenParagraphs(text: string): string[] {
                   <p class="text-gray-500 line-through dark:text-gray-400">
                     {{ c.original }}
                   </p>
-                  <p class="mt-1 font-medium text-green-700 dark:text-green-400">
+                  <p class="mt-1 text-green-700 font-medium dark:text-green-400">
                     {{ c.fixed }}
                   </p>
                   <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -258,7 +270,7 @@ function rewrittenParagraphs(text: string): string[] {
                 <div class="text-xs font-bold dark:text-white">
                   {{ label }}
                 </div>
-                <p class="text-xs leading-5 text-gray-600 dark:text-gray-300">
+                <p class="text-xs text-gray-600 leading-5 dark:text-gray-300">
                   {{ speakingResult(r)!.comments?.[key] ?? '' }}
                 </p>
               </div>

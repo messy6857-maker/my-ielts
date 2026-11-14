@@ -1,15 +1,23 @@
 <script setup lang="ts">
+import type { MockTestPair } from './registry'
+import type { MockQuestion } from './types'
 import { useRoute, useRouter } from 'vue-router'
+
+import ListeningTabs from '~/components/ListeningTabs.vue'
+import { resolveMediaUrl } from '~/composables/useAudio'
+import { confirmDialog } from '~/composables/useDialog'
+import { useGoBack } from '~/composables/useGoBack'
+import { useMockMistakeSave } from '~/composables/useMockMistakeSave'
+import { useStudyTimer } from '~/composables/useStudyTimer'
+import { collectMockMistakeEntries } from '~/utils/mockMistakes'
 import { useExamClock } from '../../composables/useExamClock'
 import { useExamRecovery } from '../../composables/useExamRecovery'
-
 import {
   loadMockTest,
   loadMockTranscript,
   mockTestList,
   withTranscripts,
 } from './registry'
-import type { MockTestPair } from './registry'
 import {
   countCorrect,
   formatCountdown,
@@ -22,14 +30,6 @@ import {
   toggleMultiSelectValue,
   totalScorePoints,
 } from './types'
-import type { MockQuestion } from './types'
-import { resolveMediaUrl } from '~/composables/useAudio'
-import { useGoBack } from '~/composables/useGoBack'
-import { useStudyTimer } from '~/composables/useStudyTimer'
-import { confirmDialog } from '~/composables/useDialog'
-import { collectMockMistakeEntries } from '~/utils/mockMistakes'
-import { useMockMistakeSave } from '~/composables/useMockMistakeSave'
-import ListeningTabs from '~/components/ListeningTabs.vue'
 
 const partImageFailed = ref<Record<number, boolean>>({})
 
@@ -99,7 +99,9 @@ function retryMedia() {
     | HTMLAudioElement
     | HTMLAudioElement[]
     | null
-  const el = Array.isArray(els) ? els[activePart.value] : els
+  const el = Array.isArray(els)
+    ? els[activePart.value]
+    : els
   el?.load()
 }
 
@@ -134,7 +136,9 @@ async function loadTest() {
     if (testId.value === active)
       return
     if (recovery.blocked.value || !recovery.saveFlush()) {
-      await router.replace({ query: { ...route.query, test: active } })
+      await router.replace({
+        query: { ...route.query, test: active },
+      })
       return
     }
   }
@@ -144,7 +148,9 @@ async function loadTest() {
   // 非法 test id（如手写 URL / 过期书签）不再静默 fallback：把 URL 参数规范化为默认套题，
   // 与实际加载内容一致，书签也被修复；replace 不产生多余历史记录，随后 watcher 以新 id 重载
   if (!mockTestList.some(t => t.id === testId.value)) {
-    router.replace({ query: { ...route.query, test: 'cam21-test1' } })
+    router.replace({
+      query: { ...route.query, test: 'cam21-test1' },
+    })
     return
   }
   const seq = ++loadSeq
@@ -161,8 +167,11 @@ async function loadTest() {
     if (recovery.blocked.value) {
       // 加载途中被阻断：不应用新套题，把 URL 换回进行中的套题
       const active = recovery.activeTestId()
-      if (active && testId.value !== active)
-        router.replace({ query: { ...route.query, test: active } })
+      if (active && testId.value !== active) {
+        router.replace({
+          query: { ...route.query, test: active },
+        })
+      }
       return
     }
     partImageFailed.value = {}
@@ -260,8 +269,9 @@ async function discardDraftAndStart() {
       '放弃所选的这一次作答并重新开始？同一 attempt 的副本将退役，其他独立作答不受影响。',
       { danger: true, confirmText: '放弃并重新开始' },
     ))
-  )
+  ) {
     return
+  }
   if (recovery.clear())
     startTest()
 }
@@ -323,7 +333,7 @@ function toggleZoom() {
 
 let pinchBase = 0
 let pinchScale = 1
-let panBase: { x: number; y: number } | null = null
+let panBase: { x: number, y: number } | null = null
 
 function onZoomTouchStart(e: TouchEvent) {
   if (e.touches.length === 2) {
@@ -371,7 +381,9 @@ function onZoomTouchEnd(e: TouchEvent) {
 
 function onZoomWheel(e: WheelEvent) {
   e.preventDefault()
-  adjustZoom(e.deltaY < 0 ? 0.25 : -0.25)
+  adjustZoom(e.deltaY < 0
+    ? 0.25
+    : -0.25)
 }
 
 const allQuestions = computed<MockQuestion[]>(
@@ -427,7 +439,9 @@ function toggleMultiSelect(qid: string, idx: number) {
   // 多选题最多选该题答案个数（Choose TWO 即 2 个），多出的拒绝加入，防止全选刷分
   const q = allQuestions.value.find(q => q.id === qid)
   const max
-    = q && Array.isArray(q.answer) ? q.answer.length : Number.POSITIVE_INFINITY
+    = q && Array.isArray(q.answer)
+      ? q.answer.length
+      : Number.POSITIVE_INFINITY
   answers.value[qid] = toggleMultiSelectValue(
     answers.value[qid] ?? '',
     idx,
@@ -452,7 +466,10 @@ async function onTestChange(e: Event) {
       return
   }
 
-  router.push({ path: '/mock/listening-test', query: { test: target } })
+  router.push({
+    path: '/mock/listening-test',
+    query: { test: target },
+  })
 }
 
 function questionStatus(
@@ -486,8 +503,9 @@ watch([submitted, testPair], ([done, pair]) => {
     && pair
     && !pair.listening.parts.some(p => p.transcript)
     && !transcriptLoading.value
-  )
+  ) {
     fetchTranscript()
+  }
 })
 async function fetchTranscript() {
   // 交卷后录音脚本双路加载去重：watch 与 submit() 末尾可能并发各拉一次，
@@ -638,7 +656,7 @@ async function submit() {
         题目加载失败，可能是网络抖动
       </p>
       <button
-        class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white hover:bg-blue-700"
+        class="rounded-lg bg-blue-600 px-6 py-2 text-white font-bold hover:bg-blue-700"
         @click="loadTest"
       >
         🔄 重新加载
@@ -660,7 +678,7 @@ async function submit() {
         <p class="mb-4 text-5xl">
           🎧
         </p>
-        <h2 class="mb-2 text-2xl font-bold text-gray-900 dark:text-white">
+        <h2 class="mb-2 text-2xl text-gray-900 font-bold dark:text-white">
           {{ test.title }}
         </h2>
         <p class="mb-2 text-gray-500 dark:text-gray-400">
@@ -684,7 +702,7 @@ async function submit() {
           </select>
         </div>
         <button
-          class="rounded-xl bg-blue-600 px-10 py-3 text-lg font-bold text-white hover:bg-blue-700"
+          class="rounded-xl bg-blue-600 px-10 py-3 text-lg text-white font-bold hover:bg-blue-700"
           @click="startTest"
         >
           {{
@@ -784,7 +802,7 @@ async function submit() {
       <div v-else :inert="recovery.blocked.value ? true : undefined">
         <div class="mb-6 flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <h2 class="text-2xl font-bold text-gray-900 dark:text-white">
+            <h2 class="text-2xl text-gray-900 font-bold dark:text-white">
               🎧 {{ test.title }}
             </h2>
             <select
@@ -813,7 +831,7 @@ async function submit() {
               v-if="!submitted"
               :disabled="recovery.retired.value"
               :title="recovery.retired.value ? '退役态下交卷不可用，请用上方横幅按钮处理' : undefined"
-              class="rounded-lg bg-blue-600 px-6 py-2 font-bold text-white disabled:cursor-not-allowed hover:bg-blue-700 disabled:opacity-50"
+              class="rounded-lg bg-blue-600 px-6 py-2 text-white font-bold disabled:cursor-not-allowed hover:bg-blue-700 disabled:opacity-50"
               @click="submit"
             >
               交卷
@@ -825,7 +843,7 @@ async function submit() {
           v-if="submitted"
           class="mb-8 border border-gray-200 rounded-2xl bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800"
         >
-          <p class="mb-2 text-5xl font-black text-blue-600 dark:text-blue-400">
+          <p class="mb-2 text-5xl text-blue-600 font-black dark:text-blue-400">
             {{ band.toFixed(1) }}
           </p>
           <p class="text-gray-600 dark:text-gray-400">
@@ -865,7 +883,7 @@ async function submit() {
           <article
             class="mb-6 border border-gray-200 rounded-2xl bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"
           >
-            <h3 class="mb-4 text-xl font-bold text-gray-900 dark:text-white">
+            <h3 class="mb-4 text-xl text-gray-900 font-bold dark:text-white">
               {{ p.title }}
             </h3>
             <!-- 交卷后音频不销毁：保留当前 Part 播放器，可边听边对脚本；
@@ -917,7 +935,7 @@ async function submit() {
                 </p>
                 <button
                   v-if="!partImageFailed[pi]"
-                  class="mt-2 w-full rounded-lg bg-gray-100 py-2 text-sm font-bold text-gray-700 dark:bg-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-600"
+                  class="mt-2 w-full rounded-lg bg-gray-100 py-2 text-sm text-gray-700 font-bold dark:bg-gray-700 hover:bg-gray-200 dark:text-gray-200 dark:hover:bg-gray-600"
                   @click="openZoom(resolveMediaUrl(p.image))"
                 >
                   🔍 点击放大查看
@@ -941,7 +959,7 @@ async function submit() {
                   "
                 >
                   <p
-                    class="mb-3 text-sm font-medium text-gray-800 dark:text-gray-200"
+                    class="mb-3 text-sm text-gray-800 font-medium dark:text-gray-200"
                   >
                     <span
                       class="mr-2 rounded bg-gray-100 px-2 py-0.5 text-xs font-bold dark:bg-gray-700"
@@ -1071,7 +1089,7 @@ async function submit() {
                   >
                     <span
                       v-if="questionStatus(q) === 'partial'"
-                      class="font-bold text-amber-700"
+                      class="text-amber-700 font-bold"
                     >部分正确（{{
                       multiSelectScore(q, answers[q.id] ?? "")
                     }}
@@ -1127,14 +1145,14 @@ async function submit() {
     <div class="flex items-center justify-between gap-2 p-3">
       <div class="flex items-center gap-2">
         <button
-          class="h-9 w-9 rounded-full bg-white/15 text-xl font-bold text-white active:bg-white/30"
+          class="h-9 w-9 rounded-full bg-white/15 text-xl text-white font-bold active:bg-white/30"
           @click="adjustZoom(-0.5)"
         >
           −
         </button>
         <span class="w-14 text-center text-sm text-white/80">{{ Math.round(zoomScale * 100) }}%</span>
         <button
-          class="h-9 w-9 rounded-full bg-white/15 text-xl font-bold text-white active:bg-white/30"
+          class="h-9 w-9 rounded-full bg-white/15 text-xl text-white font-bold active:bg-white/30"
           @click="adjustZoom(0.5)"
         >
           ＋

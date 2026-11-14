@@ -1,4 +1,13 @@
 <script setup lang="ts">
+import type { WritingDraft } from '../../../utils/drafts'
+import type { CambridgeWritingTask } from '../cambridge'
+import type { GradeResult } from './grader'
+import type { Task1Prompt } from './prompts'
+import { onSyncApplied } from '../../../composables/syncClient'
+import { resolveMediaUrl } from '../../../composables/useAudio'
+import { onBeforeLogout, useAuth } from '../../../composables/useAuth'
+import { alertDialog, confirmDialog } from '../../../composables/useDialog'
+import { usePersistentBool } from '../../../composables/usePersistentBool'
 import {
   deleteDraft,
   emergencyWritingDrafts,
@@ -7,27 +16,18 @@ import {
   readOwnDraft,
   saveDraft,
 } from '../../../utils/drafts'
-import type { WritingDraft } from '../../../utils/drafts'
-import { usePersistentBool } from '../../../composables/usePersistentBool'
-import { CAMBRIDGE_WRITING } from '../cambridge'
-import type { CambridgeWritingTask } from '../cambridge'
-import AIGradePanel from '../AIGradePanel.vue'
-import ModelEssayView from '../ModelEssayView.vue'
-import { resolveMediaUrl } from '../../../composables/useAudio'
-import { onBeforeLogout, useAuth } from '../../../composables/useAuth'
-import { alertDialog, confirmDialog } from '../../../composables/useDialog'
 
 import { accountPrefix, readRecords, saveRecord } from '../../../utils/storage'
-import { onSyncApplied } from '../../../composables/syncClient'
-import TaskChart from './TaskChart.vue'
-import type { Task1Prompt } from './prompts'
-import { TASK1_INSTRUCTION, TASK1_PROMPTS } from './prompts'
-import type { GradeResult } from './grader'
+import AIGradePanel from '../AIGradePanel.vue'
+import { CAMBRIDGE_WRITING } from '../cambridge'
+import ModelEssayView from '../ModelEssayView.vue'
 import { CRITERION_GUIDE, gradeTask1 } from './grader'
+import { TASK1_INSTRUCTION, TASK1_PROMPTS } from './prompts'
+import TaskChart from './TaskChart.vue'
 
 type AnyPrompt = Task1Prompt | CambridgeWritingTask
 // 同页退出/换号时立即切到当前账号的历史与草稿，不再把旧账号内容带进游客写入
-const props = defineProps<{ resumeSelection?: { prompt: string; draft: string } }>()
+const props = defineProps<{ resumeSelection?: { prompt: string, draft: string } }>()
 
 const CAM_TASK1 = CAMBRIDGE_WRITING.filter(q => q.task === 1)
 
@@ -35,13 +35,19 @@ function isCam(p: AnyPrompt): p is CambridgeWritingTask {
   return (p as CambridgeWritingTask).task !== undefined
 }
 function badgeOf(p: AnyPrompt): string {
-  return isCam(p) ? '剑桥真题' : p.typeCn
+  return isCam(p)
+    ? '剑桥真题'
+    : p.typeCn
 }
 function titleOf(p: AnyPrompt): string {
-  return isCam(p) ? p.promptEn : p.title
+  return isCam(p)
+    ? p.promptEn
+    : p.title
 }
 function titleCnOf(p: AnyPrompt): string {
-  return isCam(p) ? `${p.book} ${p.testLabel} · ${p.promptCn}` : p.titleCn
+  return isCam(p)
+    ? `${p.book} ${p.testLabel} · ${p.promptCn}`
+    : p.titleCn
 }
 function findPrompt(id: string): AnyPrompt | null {
   return (
@@ -57,7 +63,7 @@ interface SavedEssay {
   promptTitleCn: string
   text: string
   overall: number
-  criteria: { key: string; score: number }[]
+  criteria: { key: string, score: number }[]
   wordCount: number
   secondsUsed: number
   timed?: boolean
@@ -152,11 +158,11 @@ function saveDraftNow(): boolean {
     return true
   const ok = essayText.value.trim()
     ? saveDraft('task1', draftOwner, {
-      promptId: prompt.value.id,
-      text: essayText.value,
-      secondsLeft: secondsLeft.value,
-      overtime: overtime.value,
-    })
+        promptId: prompt.value.id,
+        text: essayText.value,
+        secondsLeft: secondsLeft.value,
+        overtime: overtime.value,
+      })
     : (deleteDraft('task1', draftOwner, prompt.value.id), true)
   if (ok)
     emergencyDrafts.delete(draftOwner)
@@ -222,7 +228,9 @@ function restoreDraft(useRequested = false) {
     const version = requested && accountPrefix(draftOwner) + requested.draft
     const stored = readDraft('task1', draftOwner, requested?.prompt, version)
     resumeError.value = !!requested && !stored
-    const d = requested ? stored : emergencyDrafts.get(draftOwner) ?? stored
+    const d = requested
+      ? stored
+      : emergencyDrafts.get(draftOwner) ?? stored
     if (d) {
       const p = findPrompt(d.promptId)
       if (d.text && p) {
@@ -409,7 +417,9 @@ function doSubmitEssay() {
   secondsTimed.value = timerStarted.value
   result.value = gradeTask1(essayText.value)
   resultPrompt.value = prompt.value
-  resultQuestion.value = prompt.value ? titleOf(prompt.value) : ''
+  resultQuestion.value = prompt.value
+    ? titleOf(prompt.value)
+    : ''
   if (!saveDraftNow())
     return
   view.value = 'result'
@@ -438,7 +448,9 @@ function doSubmitEssay() {
 function reviewEssay(e: SavedEssay) {
   const p = findPrompt(e.promptId)
   resultPrompt.value = p
-  resultQuestion.value = p ? titleOf(p) : e.promptTitleCn
+  resultQuestion.value = p
+    ? titleOf(p)
+    : e.promptTitleCn
   essayText.value = e.text
   result.value = gradeTask1(e.text)
   secondsUsed.value = e.secondsUsed
@@ -513,7 +525,7 @@ function resumeDraft(promptId: string, versionId?: string) {
           @click="showGuide = !showGuide"
         >
           <span class="font-bold dark:text-white">📏 雅思小作文四项评分标准
-            <span class="text-xs font-normal text-gray-400">（了解规则才能拿分）</span></span>
+            <span class="text-xs text-gray-400 font-normal">（了解规则才能拿分）</span></span>
           <span class="text-gray-400">{{ showGuide ? "▲" : "▼" }}</span>
         </button>
         <div v-if="showGuide" class="grid gap-4 px-5 pb-5 md:grid-cols-2">
@@ -540,7 +552,7 @@ function resumeDraft(promptId: string, versionId?: string) {
       <!-- 选题 -->
       <h3 class="mb-3 text-lg font-bold dark:text-white">
         📚 剑桥真题
-        <span class="text-sm font-normal text-gray-400">（剑18–剑21，共 16 题）</span>
+        <span class="text-sm text-gray-400 font-normal">（剑18–剑21，共 16 题）</span>
       </h3>
       <div class="grid mb-8 gap-4 lg:grid-cols-3 md:grid-cols-2">
         <div
@@ -549,13 +561,13 @@ function resumeDraft(promptId: string, versionId?: string) {
           class="flex flex-col border border-gray-200 rounded-xl bg-white p-5 dark:border-gray-700 dark:bg-gray-800"
         >
           <span
-            class="mb-2 w-fit rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+            class="mb-2 w-fit rounded-full bg-blue-100 px-2.5 py-0.5 text-xs text-blue-700 font-bold dark:bg-blue-900/40 dark:text-blue-300"
           >{{ p.book }} {{ p.testLabel }}</span>
           <div class="mb-3 flex-1 text-sm font-medium dark:text-white">
             {{ p.promptCn }}
           </div>
           <button
-            class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800"
+            class="rounded-lg bg-blue-700 px-4 py-2 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800"
             @click="startWrite(p)"
           >
             开始写作
@@ -573,13 +585,13 @@ function resumeDraft(promptId: string, versionId?: string) {
           class="flex flex-col border border-gray-200 rounded-xl bg-white p-5 dark:border-gray-700 dark:bg-gray-800"
         >
           <span
-            class="mb-2 w-fit rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+            class="mb-2 w-fit rounded-full bg-blue-100 px-2.5 py-0.5 text-xs text-blue-700 font-bold dark:bg-blue-900/40 dark:text-blue-300"
           >{{ p.typeCn }}</span>
           <div class="mb-3 flex-1 text-sm font-medium dark:text-white">
             {{ p.titleCn }}
           </div>
           <button
-            class="rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800"
+            class="rounded-lg bg-blue-700 px-4 py-2 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800"
             @click="startWrite(p)"
           >
             开始写作
@@ -590,7 +602,7 @@ function resumeDraft(promptId: string, versionId?: string) {
       <!-- 历史 -->
       <h3 class="mb-3 text-lg font-bold dark:text-white">
         我的作文
-        <span class="text-sm font-normal text-gray-400">（按账号保存）</span>
+        <span class="text-sm text-gray-400 font-normal">（按账号保存）</span>
       </h3>
       <div
         v-if="history.length === 0"
@@ -650,7 +662,7 @@ function resumeDraft(promptId: string, versionId?: string) {
         >
           <div class="mb-1 flex items-center gap-2">
             <span
-              class="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-bold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+              class="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs text-blue-700 font-bold dark:bg-blue-900/40 dark:text-blue-300"
             >{{ badgeOf(prompt) }}</span>
             <span class="text-xs text-gray-400">{{ TASK1_INSTRUCTION }}</span>
           </div>
@@ -755,12 +767,12 @@ function resumeDraft(promptId: string, versionId?: string) {
             rows="18"
             :disabled="timeUp && !overtime"
             placeholder="在这里写你的小作文（英文，至少 150 词）…&#10;&#10;建议结构：&#10;第1段：改写题目引言&#10;第2段：Overview 概述主要趋势&#10;第3-4段：细节 + 数据支撑"
-            class="mb-4 block w-full border border-gray-300 rounded-xl bg-white p-4 text-sm leading-7 text-gray-900 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500"
+            class="mb-4 block w-full border border-gray-300 rounded-xl bg-white p-4 text-sm text-gray-900 leading-7 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500"
           />
 
           <div class="flex gap-3">
             <button
-              class="flex-1 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white dark:bg-blue-600 hover:bg-blue-800"
+              class="flex-1 rounded-xl bg-blue-700 px-5 py-3 text-white font-bold dark:bg-blue-600 hover:bg-blue-800"
               @click="submitEssay"
             >
               提交批改
@@ -906,7 +918,7 @@ function resumeDraft(promptId: string, versionId?: string) {
           📝 我的原文
         </summary>
         <div
-          class="mt-3 whitespace-pre-wrap text-sm leading-7 text-gray-700 dark:text-gray-300"
+          class="mt-3 whitespace-pre-wrap text-sm text-gray-700 leading-7 dark:text-gray-300"
         >
           {{ essayText }}
         </div>
@@ -930,7 +942,7 @@ function resumeDraft(promptId: string, versionId?: string) {
         </button>
         <button
           v-if="resultPrompt"
-          class="flex-1 rounded-xl bg-blue-700 px-5 py-3 text-sm font-bold text-white dark:bg-blue-600 hover:bg-blue-800"
+          class="flex-1 rounded-xl bg-blue-700 px-5 py-3 text-sm text-white font-bold dark:bg-blue-600 hover:bg-blue-800"
           @click="startWrite(resultPrompt)"
         >
           再写一篇

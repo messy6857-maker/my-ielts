@@ -32,10 +32,16 @@ function normalizeItem(raw: unknown): PageBookmarkItem | null {
     && Number.isInteger(anchor.paragraph) && anchor.paragraph >= 0
     && Number.isFinite(anchor.offset)
   return {
-    ...(validAnchor ? { anchor } : {}),
-    id: typeof o.id === 'string' && o.id ? o.id : `bm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    ...(validAnchor
+      ? { anchor }
+      : {}),
+    id: typeof o.id === 'string' && o.id
+      ? o.id
+      : `bm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     y: Math.round(o.y),
-    createdAt: typeof o.createdAt === 'number' ? o.createdAt : 0,
+    createdAt: typeof o.createdAt === 'number'
+      ? o.createdAt
+      : 0,
   }
 }
 
@@ -86,7 +92,9 @@ export function reloadPageBookmarks(): void {
 
 /** 该页的书签，按位置从上到下排（锚点书签按当前布局下的位置排） */
 export function getPageBookmarks(path: string): PageBookmarkItem[] {
-  return [...(pageBookmarksState.value[path] ?? [])].sort((a, b) => resolveBookmarkY(a) - resolveBookmarkY(b))
+  return [
+    ...(pageBookmarksState.value[path] ?? []),
+  ].sort((a, b) => resolveBookmarkY(a) - resolveBookmarkY(b))
 }
 /** 锚点书签在当前布局下的滚动位置（与 jumpToPageBookmark 同公式）；解析不到时用记录时的 y */
 export function resolveBookmarkY(item: PageBookmarkItem): number {
@@ -95,10 +103,12 @@ export function resolveBookmarkY(item: PageBookmarkItem): number {
   return anchorTop(item.anchor) ?? item.y
 }
 
-/** 锚点在当前布局下的滚动位置；文章或段落不存在返回 undefined，调用方回退到记录时的 y。
+/**
+ * 锚点在当前布局下的滚动位置；文章或段落不存在返回 undefined，调用方回退到记录时的 y。
  * Item 8：零高度段落（空段落/内容被折叠）本身没高度、位置是两段边界，按它算会落错地方——
  * 往后找第一个有高度的段落，找不到再往前找；offset 只对原段落有效，换段落后按段首算。
- * 都没有有高度的段落时按原段落位置算（与原来一致）。 */
+ * 都没有有高度的段落时按原段落位置算（与原来一致）。
+ */
 function anchorTop(anchor: BookmarkAnchor): number | undefined {
   const { article, paragraph, offset } = anchor
   const passage = Array.from(document.querySelectorAll<HTMLElement>('.passage-text[data-article]'))
@@ -125,11 +135,13 @@ function anchorTop(anchor: BookmarkAnchor): number | undefined {
   return Math.max(0, window.scrollY + rect.top - 90)
 }
 
-/** 登录时把本设备游客的书签迁到账号名下（Item 6/L11）。
+/**
+ * 登录时把本设备游客的书签迁到账号名下（Item 6/L11）。
  * 游客书签按 [日期, 设备 id] 分 scope，登录后 scope 变成 [日期, 账号]，旧书签就看不见了。
  * 找到所有 scope 第二项是该设备 id 的 daily 书签，按日期合并进对应的账号 scope（按位置去重，与 M1 同规则），
  * 再删掉游客 scope。localStorage 是设备级的，这里的游客书签只可能是本设备的，放心迁。
- * 没有游客书签时什么都不做。 */
+ * 没有游客书签时什么都不做。
+ */
 export function migrateGuestPageBookmarks(guestId: string, username: string): void {
   if (!guestId || !username || guestId === username)
     return
@@ -156,8 +168,8 @@ export function migrateGuestPageBookmarks(guestId: string, username: string): vo
       const dup = merged.some(b => (
         item.anchor && b.anchor
           ? b.anchor.article === item.anchor.article
-            && b.anchor.paragraph === item.anchor.paragraph
-            && Math.abs(b.anchor.offset - item.anchor.offset) <= DEDUP_PX
+          && b.anchor.paragraph === item.anchor.paragraph
+          && Math.abs(b.anchor.offset - item.anchor.offset) <= DEDUP_PX
           : Math.abs(b.y - item.y) <= DEDUP_PX
       ))
       if (!dup)
@@ -202,15 +214,21 @@ export function addPageBookmark(path: string, y: number, anchor?: BookmarkAnchor
         && Math.abs(b.anchor.offset - anchor.offset) <= DEDUP_PX
     }
     return Math.abs(b.y - rounded) <= DEDUP_PX
-  }))
+  })) {
     return null
+  }
   const item: PageBookmarkItem = {
     id: `bm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     y: rounded,
     createdAt: Date.now(),
-    ...(anchor ? { anchor } : {}),
+    ...(anchor
+      ? { anchor }
+      : {}),
   }
-  const next = { ...pageBookmarksState.value, [path]: [...existing, item] }
+  const next = {
+    ...pageBookmarksState.value,
+    [path]: [...existing, item],
+  }
   pageBookmarksState.value = next
   persistBookmarks(next)
   return item
@@ -239,6 +257,9 @@ export function jumpToPageBookmark(path: string, id: string): boolean {
     // Item 8：零高度段落由 anchorTop 跳到最近的有高度段落，不直接按零高度位置算。
     top = anchorTop(item.anchor) ?? item.y
   }
-  window.scrollTo({ top: Math.max(0, top), behavior: 'instant' })
+  window.scrollTo({
+    top: Math.max(0, top),
+    behavior: 'instant',
+  })
   return true
 }
