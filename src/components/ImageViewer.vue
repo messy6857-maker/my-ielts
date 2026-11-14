@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 
-const props = defineProps<{ src: string; disabled?: boolean }>()
+const props = defineProps<{ src: string; disabled?: boolean; alt?: string }>()
 const emit = defineEmits<{ (event: 'close'): void }>()
 const scale = ref(1)
 const failed = ref(false)
@@ -53,7 +53,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
           v-if="!failed"
           :key="imageVersion"
           :src="src"
-          alt="放大后的题目图片"
+          :alt="alt || '放大后的题目图片'"
           class="mx-auto max-w-none"
           :style="{ width: `${scale * 100}%` }"
           @error="failed = true"

@@ -1,7 +1,7 @@
 <svg
            xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
           version="1.1" width="100%" style="visibility: visible;" viewBox="0 0 1552 5255"
-        ><style>text{fill:#fff;font-family:system-ui,sans-serif}</style>
+        ><style>text{font-family:system-ui,sans-serif}g[fill="black"] text{fill:#fff}g[fill="#ff0000"] text{fill:#ff6b6b}</style>
           <defs id="kity_defs_7">
             <linearGradient id="kity_linearGradient_17" x1="0" y1="0" x2="0" y2="1">
               <stop id="kity_stop_18" offset="0" stop-color="rgb(255, 255, 255)" />

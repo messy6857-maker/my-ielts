@@ -85,6 +85,8 @@ const USERS_KEY = 'myielts_users_v1'
 const SESSION_KEY = 'myielts_session_v1'
 // 服务器托管账号在本地用户表中的标记（仅用于会话恢复，不做本地密码校验）
 const SERVER_MARKER_HASH = 'server-managed'
+// 新注册密码至少 8 位；登录仍接受旧的 4 位密码，老账号不受影响
+export const MIN_NEW_PASSWORD_LENGTH = 8
 const beforeLogout = new Set<() => unknown | Promise<unknown>>()
 export function onBeforeLogout(cb: () => unknown | Promise<unknown>) {
   beforeLogout.add(cb)
@@ -260,8 +262,8 @@ export const useAuth = createGlobalState(() => {
         message: '用户名需为 2-20 位字母、数字、下划线或中文',
       }
     }
-    if (password.length < 4)
-      return { ok: false, message: '密码至少 4 位' }
+    if (password.length < MIN_NEW_PASSWORD_LENGTH)
+      return { ok: false, message: `密码至少 ${MIN_NEW_PASSWORD_LENGTH} 位` }
     let r: Awaited<ReturnType<typeof apiRegister>>
     try {
       r = await apiRegister(username, password)
@@ -321,7 +323,12 @@ export const useAuth = createGlobalState(() => {
     username = r.username || username
     setToken(r.token, username)
     ensureServerMarker(username)
-    localStorage.setItem(guestMigrationKey(username), '1')
+    try {
+      localStorage.setItem(guestMigrationKey(username), '1')
+    }
+    catch {
+      // 存储不可用时跳过游客迁移标记，下面的 storageFailures 检查会给出提示
+    }
     // 先把游客数据迁进账号 key：迁移后的数据计入"本机数据"，参与下面的冲突判断
     // （以前是本机没数据→直接用云端，游客数据就此静默丢失）
     // 拉取云端数据并与本地合并
@@ -377,8 +384,8 @@ export const useAuth = createGlobalState(() => {
         message: '用户名需为 2-20 位字母、数字、下划线或中文',
       }
     }
-    if (password.length < 4)
-      return { ok: false, message: '密码至少 4 位' }
+    if (password.length < MIN_NEW_PASSWORD_LENGTH)
+      return { ok: false, message: `密码至少 ${MIN_NEW_PASSWORD_LENGTH} 位` }
     const users = readUsers()
     if (users[username])
       return { ok: false, message: '用户名已存在，换一个吧' }
@@ -554,6 +561,18 @@ export const useAuth = createGlobalState(() => {
     loggingOut.value = false
     return { pushOk }
   }
+  // 共享会话（记住我）里的用户名；没有共享会话时返回 undefined（本页可能是仅本页签的会话）
+  function sharedSessionUser(): string | null | undefined {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY)
+      if (!raw)
+        return undefined
+      return (JSON.parse(raw) as { username?: string }).username ?? null
+    }
+    catch {
+      return undefined
+    }
+  }
   if (typeof window !== 'undefined') {
     window.addEventListener('storage', (event) => {
       if (
@@ -562,7 +581,14 @@ export const useAuth = createGlobalState(() => {
         && event.key !== null
       )
         return
-      if (currentUser.value && getTokenOwner() !== currentUser.value) {
+      // 纯本地模式没有 token：只看共享会话是否换成了别的账号，
+      // 否则另一页签任何登录/登出都会把本页踢回游客。
+      const otherOwner = syncEnabled ? getTokenOwner() : sharedSessionUser()
+      if (
+        currentUser.value
+        && otherOwner !== currentUser.value
+        && (syncEnabled || otherOwner !== undefined)
+      ) {
         // 先写横幅、再置空身份：置空会同步触发模考的 owner watcher，
         // 进行中的模考会把横幅换成更具体的“已暂停”提示；无模考时
         // 本条跨页签提示保留。本页随后被 App.vue 的 watch 踢回首页。

@@ -57,37 +57,177 @@ export interface ListeningMockTest {
   timeLimit: number
 }
 
-/** 雅思听力/阅读分数换算；total 为卷面满分（默认 40），各档阈值按 total/40 等比缩放并向上取整，38 分卷全对可到 9.0 */
-export function bandScore(correct: number, total = 40): number {
+/** 换算表：[40 分卷最低正确数, band]，从高到低；低于最后一档为 2.5 */
+type BandTable = ReadonlyArray<readonly [number, number]>
+
+/** 听力（学术/培训通用），按 IELTS/IDP 公布的换算表 */
+export const LISTENING_BAND_TABLE: BandTable = [
+  [39, 9.0],
+  [37, 8.5],
+  [35, 8.0],
+  [32, 7.5],
+  [30, 7.0],
+  [26, 6.5],
+  [23, 6.0],
+  [18, 5.5],
+  [16, 5.0],
+  [13, 4.5],
+  [11, 4.0],
+  [8, 3.5],
+  [6, 3.0],
+]
+
+/** 学术类阅读，按常用公布换算表（band 5/6/7/8 分别需 15/23/30/35） */
+export const ACADEMIC_READING_BAND_TABLE: BandTable = [
+  [39, 9.0],
+  [37, 8.5],
+  [35, 8.0],
+  [33, 7.5],
+  [30, 7.0],
+  [27, 6.5],
+  [23, 6.0],
+  [19, 5.5],
+  [15, 5.0],
+  [13, 4.5],
+  [10, 4.0],
+  [8, 3.5],
+  [6, 3.0],
+]
+
+/** 分数换算；total 为卷面满分（默认 40），各档阈值按 total/40 等比缩放并向上取整，38 分卷全对可到 9.0。默认用听力表。 */
+export function bandScore(
+  correct: number,
+  total = 40,
+  table: BandTable = LISTENING_BAND_TABLE,
+): number {
   const t = total > 0 ? total : 40
   const at = (base: number) => Math.ceil((base / 40) * t)
-  if (correct >= at(39))
-    return 9.0
-  if (correct >= at(37))
-    return 8.5
-  if (correct >= at(35))
-    return 8.0
-  if (correct >= at(33))
-    return 7.5
-  if (correct >= at(30))
-    return 7.0
-  if (correct >= at(27))
-    return 6.5
-  if (correct >= at(23))
-    return 6.0
-  if (correct >= at(20))
-    return 5.5
-  if (correct >= at(16))
-    return 5.0
-  if (correct >= at(13))
-    return 4.5
-  if (correct >= at(10))
-    return 4.0
-  if (correct >= at(8))
-    return 3.5
-  if (correct >= at(6))
-    return 3.0
+  for (const [base, band] of table) {
+    if (correct >= at(base))
+      return band
+  }
   return 2.5
+}
+
+export function listeningBandScore(correct: number, total = 40): number {
+  return bandScore(correct, total, LISTENING_BAND_TABLE)
+}
+
+export function readingBandScore(correct: number, total = 40): number {
+  return bandScore(correct, total, ACADEMIC_READING_BAND_TABLE)
+}
+
+const UK_US_WORDS: Record<string, string> = {
+  jewellery: 'jewelry',
+  programme: 'program',
+  programmes: 'programs',
+  grey: 'gray',
+  aluminium: 'aluminum',
+  defence: 'defense',
+  offence: 'offense',
+  licence: 'license',
+  pyjamas: 'pajamas',
+  plough: 'plow',
+  aeroplane: 'airplane',
+  aeroplanes: 'airplanes',
+  enrol: 'enroll',
+  enrolment: 'enrollment',
+  fulfil: 'fulfill',
+  skilful: 'skillful',
+  tyre: 'tire',
+  tyres: 'tires',
+  catalogue: 'catalog',
+  dialogue: 'dialog',
+  analogue: 'analog',
+  analyse: 'analyze',
+  analysed: 'analyzed',
+  analysing: 'analyzing',
+  paralyse: 'paralyze',
+  practise: 'practice',
+  practised: 'practiced',
+  practising: 'practicing',
+}
+const OUR_KEEP = new Set(['our', 'four', 'hour', 'pour', 'tour', 'your', 'flour', 'sour', 'dour', 'devour', 'contour', 'detour'])
+const ISE_KEEP = new Set([
+  'advise', 'advertise', 'arise', 'comprise', 'compromise', 'concise', 'demise', 'despise', 'devise', 'disguise',
+  'enterprise', 'exercise', 'expertise', 'franchise', 'improvise', 'merchandise', 'noise', 'otherwise', 'paradise',
+  'praise', 'precise', 'premise', 'promise', 'raise', 'revise', 'rise', 'supervise', 'surprise', 'televise', 'wise',
+  'cruise', 'bruise', 'poise', 'guise', 'excise', 'treatise', 'reprise', 'chemise', 'sunrise', 'moonrise',
+  'likewise', 'clockwise', 'anticlockwise', 'incise', 'circumcise', 'apprise',
+])
+const LL_STEMS = new Set([
+  'travel', 'cancel', 'model', 'label', 'level', 'fuel', 'signal', 'total', 'channel', 'dial', 'equal', 'marvel',
+  'quarrel', 'tunnel', 'counsel', 'jewel', 'panel', 'shovel', 'rival', 'pedal', 'refuel', 'snorkel', 'kennel',
+])
+const MONTHS = 'january|february|march|april|may|june|july|august|september|october|november|december'
+
+/** 英美拼写归一（只在比较时用，标准答案与用户答案做同样处理） */
+function spellingKey(word: string): string {
+  if (UK_US_WORDS[word])
+    return UK_US_WORDS[word]
+  // colour/colours/coloured → color…
+  const our = word.match(/^([a-z]+)our(s|ed|ing|ite|ites|able|less|ful|er|ers)?$/)
+  if (our && !OUR_KEEP.has(`${our[1]}our`))
+    return `${our[1]}or${our[2] ?? ''}`
+  // organisation → organization; organise/organised/organising → organize…
+  if (/isations?$/.test(word))
+    return word.replace(/isation(s?)$/, 'ization$1')
+  const ise = word.match(/^([a-z]{2,})is(e|es|ed|ing)$/)
+  if (ise && !ISE_KEEP.has(`${ise[1]}ise`))
+    return `${ise[1]}iz${ise[2]}`
+  // centre/metre/theatre → center…
+  const tre = word.match(/^([a-z]{2,})tre(s?)$/)
+  if (tre)
+    return `${tre[1]}ter${tre[2]}`
+  // travelled/cancelling/modeller → traveled…（只限常见词，避免把 installed 之类的错拼放过）
+  const ll = word.match(/^([a-z]+)ll(ed|ing|er|ers)$/)
+  if (ll && LL_STEMS.has(`${ll[1]}l`))
+    return `${ll[1]}l${ll[2]}`
+  return word
+}
+
+/**
+ * 填空答案归一：忽略大小写、多余空格、句末标点、货币符号、千分位逗号、
+ * 连字符、英美拼写差异，日期“April 24”与“24 April”等价。
+ */
+export function normalizeBlankAnswer(text: string): string {
+  let s = text
+    .normalize('NFKC')
+    .toLowerCase()
+    .replace(/[‘’]/g, '\'')
+    .replace(/[‐-―]/g, '-')
+    .replace(/[£$€¥]/g, '')
+    .replace(/(\d),(?=\d{3}(?!\d))/g, '$1')
+    // 连字符当空格（part-time = part time），数字之间的保留（如 9-5）
+    .replace(/-/g, (m, i: number, str: string) =>
+      /\d/.test(str[i - 1] ?? '') && /\d/.test(str[i + 1] ?? '') ? m : ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\s*[.,;:!?]+$/, '')
+  // 日期：24th April = 24 April = April 24（序数后缀只在带月份时忽略，3rd floor ≠ 3 floor）
+  if (new RegExp(`\\b(?:${MONTHS})\\b`).test(s)) {
+    s = s
+      .replace(/\b(\d{1,2})(?:st|nd|rd|th)\b/g, '$1')
+      .replace(/\b(\d{1,2}) of (?=[a-z])/g, '$1 ')
+      .replace(new RegExp(`^(${MONTHS}) (\\d{1,2})$`), '$2 $1')
+  }
+  s = s
+    .split(' ')
+    .map(spellingKey)
+    .join(' ')
+  // 数字与单位之间的空格可有可无：1000 kg = 1000kg
+  return s.replace(/(\d) (?=[a-z%])/g, '$1')
+}
+
+function blankMatches(expected: string, user: string): boolean {
+  const a = normalizeBlankAnswer(expected)
+  const b = normalizeBlankAnswer(user)
+  if (!b)
+    return false
+  if (a === b)
+    return true
+  // 邮编/编号类（含数字）：空格不影响，DW30 7YZ = DW307YZ
+  return /\d/.test(a) && a.replace(/ /g, '') === b.replace(/ /g, '')
 }
 
 /** 配对/标注题选项框是否在本题渲染：同一 Part 内连续且选项内容相同的
@@ -107,13 +247,12 @@ export function showOptionsBox(questions: MockQuestion[], index: number): boolea
   return JSON.stringify(prev.options) !== JSON.stringify(q.options)
 }
 
-/** 判分：填空题忽略大小写和首尾空格；多选题用户答案为逗号分隔的下标 */
+/** 判分：填空题按 normalizeBlankAnswer 归一后比较；多选题用户答案为逗号分隔的下标 */
 export function isCorrect(q: MockQuestion, userAnswer: string): boolean {
   if (q.type === 'fill-blank') {
     // 支持多答案：answer 可以是字符串或字符串数组
     const answers = Array.isArray(q.answer) ? q.answer : [q.answer]
-    const user = userAnswer.trim().toLowerCase()
-    return answers.some(a => user === String(a).trim().toLowerCase())
+    return answers.some(a => blankMatches(String(a), userAnswer))
   }
   if (q.type === 'map-label') {
     // 地图标注：字母不区分大小写

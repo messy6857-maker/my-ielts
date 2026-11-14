@@ -1,8 +1,13 @@
 <script setup lang="ts">
+import ImageViewer from '../../components/ImageViewer.vue'
 import { isDark } from '../../composables/dark'
 import { downloadMediaFile, resolveMediaUrl } from '../../composables/useAudio'
 
 const assetBase = import.meta.env.BASE_URL
+const mapUrl = computed(() => `${assetBase}grammar/map-${isDark.value ? 'dark' : 'light'}.svg`)
+// 放大查看用深色版：查看器是黑底，浅色版的深色文字在黑底上看不见
+const viewerUrl = `${assetBase}grammar/map-dark.svg`
+const viewerOpen = ref(false)
 const handoutPath = 'grammar/雅思基础语法配套课程讲义.pdf'
 const handoutName = '雅思基础语法配套课程讲义.pdf'
 const handoutUrl = resolveMediaUrl(handoutPath)
@@ -44,13 +49,34 @@ async function onHandoutClick(event: MouseEvent) {
         思维导图
       </h3>
       <div class="mb-4">
-        <p>听完课跟着老师画的，使用的百度脑图</p>
-        <img
-          :src="`${assetBase}grammar/map-${isDark ? 'dark' : 'light'}.svg`"
-          alt="雅思基础语法思维导图"
-          class="w-full"
-          loading="lazy"
+        <p>
+          听完课跟着老师画的，使用的百度脑图。图比较大，点击图片可以放大查看，或
+          <a
+            class="text-primary-700 dark:text-primary-500 hover:underline"
+            :href="mapUrl"
+            target="_blank"
+            rel="noopener"
+          >在新标签页打开</a>。
+        </p>
+        <button
+          type="button"
+          class="block w-full cursor-zoom-in"
+          aria-label="放大查看雅思基础语法思维导图"
+          @click="viewerOpen = true"
         >
+          <img
+            :src="mapUrl"
+            alt="雅思基础语法思维导图"
+            class="w-full"
+            loading="lazy"
+          >
+        </button>
+        <ImageViewer
+          v-if="viewerOpen"
+          :src="viewerUrl"
+          alt="雅思基础语法思维导图（放大）"
+          @close="viewerOpen = false"
+        />
       </div>
     </div>
   </div>

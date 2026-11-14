@@ -11,9 +11,9 @@ import {
 } from './registry'
 import type { MockTestPair } from './registry'
 import {
-  bandScore,
   countCorrect,
   formatCountdown,
+  listeningBandScore,
   mapLabelPlaceholder,
   mockQuestionStatus,
   multiSelectScore,
@@ -370,7 +370,7 @@ const correctCount = computed(() =>
   countCorrect(allQuestions.value, answers.value, submitted.value),
 )
 
-const band = computed(() => bandScore(correctCount.value, scoredTotal.value))
+const band = computed(() => listeningBandScore(correctCount.value, scoredTotal.value))
 
 function setAnswer(qid: string, val: string) {
   if (recovery.mismatch())
@@ -502,7 +502,7 @@ async function submit() {
     kind: 'listening',
     score,
     total,
-    band: bandScore(score, total),
+    band: listeningBandScore(score, total),
   })
   if (!result)
     return

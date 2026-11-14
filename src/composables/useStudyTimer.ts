@@ -134,6 +134,10 @@ export function useStudyTimer() {
   let autoPaused = false
   let interval: ReturnType<typeof setInterval> | undefined
   let ticks = 0
+  // 上次 load 的结果：计时中每秒只在内存里累加，不再每秒扫描整个 localStorage
+  let loadedTotal = 0
+  let loadedAt = 0
+  let loadedDay = ''
   function migrate(user: string | null) {
     const base = nsKey('study_time_v1', user)
     for (const oldKey of Object.keys(localStorage).filter((k) => {
@@ -207,6 +211,22 @@ export function useStudyTimer() {
       total += Math.floor((end - start) / 1000)
     }
     dailySeconds.value = total
+    loadedTotal = total
+    loadedAt = Date.now()
+    loadedDay = date
+  }
+  function tick() {
+    elapsed.value = Math.floor((Date.now() - startAt) / 1000)
+    if (++ticks % 10 === 0) {
+      persist()
+    }
+    else if (studyDay() !== loadedDay) {
+      load(owner)
+    }
+    else {
+      dailySeconds.value
+        = loadedTotal + Math.floor((Date.now() - loadedAt) / 1000)
+    }
   }
   function persist(end = Date.now()) {
     let cursor = startAt
@@ -239,12 +259,7 @@ export function useStudyTimer() {
     elapsed.value = 0
     running.value = true
     ticks = 0
-    interval = setInterval(() => {
-      load(owner)
-      elapsed.value = Math.floor((Date.now() - startAt) / 1000)
-      if (++ticks % 10 === 0)
-        persist()
-    }, 1000)
+    interval = setInterval(tick, 1000)
   }
   function pause() {
     if (!running.value)
@@ -269,9 +284,24 @@ export function useStudyTimer() {
         start()
     }
   }
+  function pageHide() {
+    if (running.value) {
+      pause()
+      autoPaused = true
+    }
+  }
+  // 从往返缓存（bfcache）恢复页面时，接着计时
+  function pageShow(event: PageTransitionEvent) {
+    if (event.persisted && document.visibilityState === 'visible' && autoPaused) {
+      autoPaused = false
+      if (owner === currentUser.value)
+        start()
+    }
+  }
   const offLogout = onBeforeLogout(pause)
   document.addEventListener('visibilitychange', visibility)
-  window.addEventListener('pagehide', pause)
+  window.addEventListener('pagehide', pageHide)
+  window.addEventListener('pageshow', pageShow)
   watch(
     currentUser,
     () => {
@@ -300,7 +330,8 @@ export function useStudyTimer() {
     offLogout()
     offStorage()
     document.removeEventListener('visibilitychange', visibility)
-    window.removeEventListener('pagehide', pause)
+    window.removeEventListener('pagehide', pageHide)
+    window.removeEventListener('pageshow', pageShow)
   }
   if (getCurrentInstance())
     onUnmounted(dispose)

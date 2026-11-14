@@ -21,11 +21,22 @@ export function resolveAudioUrl(path: string): string {
  * Download a media-site file as a Blob so the `download` attribute works
  * cross-origin. On fetch failure, open the absolute URL in a new tab.
  */
+/** 是否运行在安卓 App（Capacitor 原生壳）里；原生壳会注入全局 Capacitor */
+export function isNativeApp(): boolean {
+  const cap = (globalThis as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
+  return !!cap?.isNativePlatform?.()
+}
+
 export async function downloadMediaFile(
   path: string,
   filename: string,
 ): Promise<void> {
   const url = resolveMediaUrl(path)
+  // 安卓 WebView 不处理 blob: 下载链接（点了没反应），直接交给系统浏览器打开
+  if (isNativeApp()) {
+    window.open(url, '_blank', 'noopener,noreferrer')
+    return
+  }
   try {
     const response = await fetch(url)
     if (!response.ok)

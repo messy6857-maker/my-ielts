@@ -9,13 +9,13 @@ import TextHighlights from '../../components/TextHighlights.vue'
 import { loadMockTest, mockTestList } from './registry'
 import type { MockTestPair } from './registry'
 import {
-  bandScore,
   countCorrect,
   formatCountdown,
   isRomanLabel,
   mapLabelPlaceholder,
   mockQuestionStatus,
   multiSelectScore,
+  readingBandScore,
   restoreTimeLeft,
   showOptionsBox,
   toggleMultiSelectValue,
@@ -241,7 +241,7 @@ const correctCount = computed(() =>
   countCorrect(allQuestions.value, answers.value, submitted.value),
 )
 
-const band = computed(() => bandScore(correctCount.value, scoredTotal.value))
+const band = computed(() => readingBandScore(correctCount.value, scoredTotal.value))
 
 function setAnswer(qid: string, val: string) {
   if (recovery.mismatch())
@@ -384,7 +384,7 @@ function submit() {
     kind: 'reading',
     score,
     total,
-    band: bandScore(score, total),
+    band: readingBandScore(score, total),
   })
   if (!result)
     return
