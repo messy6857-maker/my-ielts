@@ -1,0 +1,1 @@
+import{I as e}from"./useAuth-CFgKiFp4.js";function t(t,n,r,i=n[0]??``){let a=localStorage.getItem(e(t,r)),o=localStorage.getItem(t),s=a??o;return n.includes(s??``)?s:i}function n(t,n,r){try{localStorage.setItem(e(t,r),n)}catch{}}export{n,t};

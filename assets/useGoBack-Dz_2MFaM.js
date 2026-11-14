@@ -1,0 +1,1 @@
+import{o as e}from"./vue-router-Chx5ZBej.js";function t(t=`/`){let n=e();function r(){let e=n.options.history.state.back;typeof e==`string`&&e.startsWith(`/`)&&!e.startsWith(`//`)?n.back():n.push(t)}return{goBack:r}}export{t};

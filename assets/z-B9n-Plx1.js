@@ -1,0 +1,1 @@
+var e={ex:[],exFrom:``,syn:[]},t={ex:[`Her zeal for helping others seems really sincere.`,`In his zeal to get his work finished on time, he made a lot of mistakes.`],exFrom:``,syn:[]},n={zoologist:e,zeal:t};export{n as default,t as zeal,e as zoologist};

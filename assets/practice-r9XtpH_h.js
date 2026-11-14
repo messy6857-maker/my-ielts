@@ -1,0 +1,1 @@
+import{C as e,E as t,d as n,k as r,o as i,p as a}from"./runtime-core.esm-bundler-CI-XPz3W.js";import{o}from"./vue-router-Chx5ZBej.js";var s=a({__name:`practice`,setup(a){return o().replace(`/listening/179practice`),(a,o)=>{let s=t(`RouterLink`);return e(),i(s,{to:`/listening/179practice`},{default:r(()=>[...o[0]||=[n(` 打开听力179练习 `,-1)]]),_:1})}}});export{s as default};
