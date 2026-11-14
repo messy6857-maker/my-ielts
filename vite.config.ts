@@ -1,4 +1,4 @@
-/// <reference types="vitest" />
+/// <reference types="vitest/config" />
 
 import path from 'node:path'
 import { defineConfig } from 'vite'
@@ -7,7 +7,6 @@ import Pages from 'vite-plugin-pages'
 import Components from 'unplugin-vue-components/vite'
 import AutoImport from 'unplugin-auto-import/vite'
 import UnoCSS from 'unocss/vite'
-import VueMacros from 'unplugin-vue-macros/vite'
 
 export default defineConfig({
   base: '',
@@ -21,18 +20,8 @@ export default defineConfig({
     },
   },
   plugins: [
-    VueMacros({
-      defineOptions: false,
-      defineModels: false,
-      plugins: {
-        vue: Vue({
-          script: {
-            propsDestructure: true,
-            defineModel: true,
-          },
-        }),
-      },
-    }),
+    // Vue 3.5 自带 defineModel、props 解构和 defineOptions，不再需要 Vue Macros
+    Vue(),
 
     // https://github.com/hannoeru/vite-plugin-pages
     Pages({ extensions: ['vue'] }),

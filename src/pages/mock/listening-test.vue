@@ -32,7 +32,6 @@ import { useMockMistakeSave } from '~/composables/useMockMistakeSave'
 import ListeningTabs from '~/components/ListeningTabs.vue'
 
 const partImageFailed = ref<Record<number, boolean>>({})
-const mediaRoot = ref<HTMLElement | null>(null)
 
 const { goBack } = useGoBack('/listening')
 const studyTimer = useStudyTimer()
@@ -601,7 +600,7 @@ async function submit() {
   >
     重试保存成绩
   </button>
-  <div ref="mediaRoot" class="mx-auto max-w-5xl px-4 pt-6 2xl:px-0">
+  <div class="mx-auto max-w-5xl px-4 pt-6 2xl:px-0">
     <p
       v-if="recovery.error.value"
       :inert="recovery.blocked.value ? true : undefined"
