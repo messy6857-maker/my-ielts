@@ -387,12 +387,12 @@ function retryArchive() {
 }
 function submitEssay() {
   if (wordCount.value < 50) {
-    void alertDialog('词数太少（<50），先多写一点再批改吧')
+    alertDialog('词数太少（<50），先多写一点再批改吧')
     return
   }
   // 词数足够时同步提交；不足 150 词先弹站内确认框，确定后再提交
   if (wordCount.value < 150) {
-    void confirmDialog(`只有 ${wordCount.value} 词，不足 150 会被扣分，确定提交批改吗？`, { confirmText: '提交' })
+    confirmDialog(`只有 ${wordCount.value} 词，不足 150 会被扣分，确定提交批改吗？`, { confirmText: '提交' })
       .then((ok) => {
         if (ok)
           doSubmitEssay()
