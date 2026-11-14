@@ -221,3 +221,36 @@ it('speech AI grading is disabled below ten words', async () => {
   expect(button!.attributes('disabled')).toBeDefined()
   expect(w.text()).toContain('10')
 })
+it.each(['reading', 'listening'])(
+  '%s mock leave route uses the in-app dialog when it is mounted',
+  async (kind) => {
+    const { registerDialogHost, dialogQueue, settleDialog } = await import('../src/composables/useDialog')
+    const off = registerDialogHost()
+    try {
+      const Page
+        = kind === 'reading'
+          ? (await import('../src/pages/mock/reading-test.vue')).default
+          : (await import('../src/pages/mock/listening-test.vue')).default
+      const router = await routerFor(Page, `/mock/${kind}-test`)
+      const w = wrappers.at(-1).findComponent(Page)
+      const state = (w.vm as any).$.setupState
+      state.started = true
+      const confirm = vi.spyOn(window, 'confirm')
+      const stay = router.push('/outside')
+      await flushPromises()
+      expect(dialogQueue.value).toHaveLength(1)
+      settleDialog(dialogQueue.value[0].id, false)
+      await stay
+      expect(router.currentRoute.value.path).toBe(`/mock/${kind}-test`)
+      const leave = router.push('/outside')
+      await flushPromises()
+      settleDialog(dialogQueue.value[0].id, true)
+      await leave
+      expect(router.currentRoute.value.path).toBe('/outside')
+      expect(confirm).not.toHaveBeenCalled()
+    }
+    finally {
+      off()
+    }
+  },
+)
