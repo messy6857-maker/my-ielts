@@ -10,3 +10,6 @@ Vite 4 → 8, @vitejs/plugin-vue 4 → 6, Vitest 0.31 → 5, Vue 3.3 → 3.5, vu
 unplugin-auto-import / unplugin-vue-components / vite-plugin-pages to current, jsdom 22 → 31, @vueuse/core 10 → 15.
 Vue Macros was removed: the project only used features now built into Vue 3.5 (defineOptions, defineModel,
 props destructure). vue-router stays on 4.x; ESLint is upgraded separately.
+ESLint 8 → 10 with the flat config in `eslint.config.mjs` (@antfu/eslint-config 10, UnoCSS ordering via its
+`unocss` option); `.eslintignore` and the `eslintConfig` block in package.json were replaced by the config's `ignores`.
+Existing regex style/performance hints from eslint-plugin-regexp stay as warnings rather than rewriting tested patterns.
