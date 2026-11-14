@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { defineComponent, h } from 'vue'
 import TextHighlights from '../src/components/TextHighlights.vue'
 import { extractJson, highlightPieces, splitSentences } from '../src/utils/text'
 import { resolveMediaUrl } from '../src/composables/useAudio'
-import { defineComponent, h } from 'vue'
 
 describe('text parsing and presentation', () => {
   it.each([

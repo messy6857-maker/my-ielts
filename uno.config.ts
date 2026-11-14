@@ -3,6 +3,7 @@ import {
   presetAttributify,
   presetIcons,
   presetUno,
+  transformerDirectives,
 } from 'unocss'
 
 export default defineConfig({
@@ -41,4 +42,6 @@ export default defineConfig({
       },
     }),
   ],
+  // 让 <style> 里的 @apply 生效（如单词打字页输入框的聚焦高亮）
+  transformers: [transformerDirectives()],
 })
