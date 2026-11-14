@@ -4,7 +4,7 @@ on:
   push:
     branches: ['chore/**']
 permissions:
-  contents: read
+  contents: write
 jobs:
   lab:
     runs-on: ubuntu-latest
@@ -15,6 +15,7 @@ jobs:
           node-version: 24
       - run: npm install -g pnpm@8.6.10
       - name: Package info
+        if: ${{ !contains(github.event.head_commit.message, '[skip-info]') }}
         run: |
           for p in vite @vitejs/plugin-vue vitest @vitest/coverage-v8 vite-plugin-pages unplugin-auto-import unplugin-vue-components unplugin-vue-macros @vue-macros/volar unocss @unocss/reset @unocss/eslint-config @unocss/eslint-plugin vue vue-router @vueuse/core vue-tsc typescript @vue/test-utils jsdom @types/node eslint @antfu/eslint-config taze lint-staged; do
             echo "=== $p"
@@ -34,10 +35,11 @@ jobs:
       - name: build
         run: pnpm build 2>&1 | tee build.log
         continue-on-error: true
-      - uses: actions/upload-artifact@v4
-        with:
-          name: lab
-          path: |
-            pnpm-lock.yaml
-            package-info.txt
-            *.log
+      - name: Commit regenerated lockfile and type declarations
+        run: |
+          git config user.name "deps-lab"
+          git config user.email "deps-lab@users.noreply.github.com"
+          git add pnpm-lock.yaml auto-imports.d.ts components.d.ts
+          if git diff --cached --quiet; then echo "nothing to commit"; exit 0; fi
+          git commit -m "deps-lab: regenerate lockfile and type declarations"
+          git push origin HEAD:${GITHUB_REF_NAME}
