@@ -6,26 +6,51 @@ import { confirmLeaveRecording, isRecorderBusy, useRecorder } from '../src/compo
 
 function speakingGrade(overrides: Record<string, unknown> = {}) {
   return {
-    scores: { fluency: 6.0, lexical: 6.0, grammar: 6.0, overall: 6.0 },
+    scores: {
+      fluency: 6.0,
+      lexical: 6.0,
+      grammar: 6.0,
+      overall: 6.0,
+    },
     comments: { fluency: 'a', lexical: 'b', grammar: 'c' },
     suggestion: 'keep going',
     ...overrides,
   }
 }
 
-it('S3: speaking grades must be half-step, consistent, and carry a suggestion', () => {
+it('s3: speaking grades must be half-step, consistent, and carry a suggestion', () => {
   expect(isValidSpeakingGrade(speakingGrade())).toBe(true)
   expect(isValidSpeakingGrade(speakingGrade({
-    scores: { fluency: 6.3, lexical: 6.0, grammar: 6.0, overall: 6.0 },
+    scores: {
+      fluency: 6.3,
+      lexical: 6.0,
+      grammar: 6.0,
+      overall: 6.0,
+    },
   }))).toBe(false)
   expect(isValidSpeakingGrade(speakingGrade({
-    scores: { fluency: 5.0, lexical: 5.0, grammar: 5.0, overall: 7.0 },
+    scores: {
+      fluency: 5.0,
+      lexical: 5.0,
+      grammar: 5.0,
+      overall: 7.0,
+    },
   }))).toBe(false)
   expect(isValidSpeakingGrade(speakingGrade({
-    scores: { fluency: 6.0, lexical: 6.0, grammar: 6.0, overall: 7.0 },
+    scores: {
+      fluency: 6.0,
+      lexical: 6.0,
+      grammar: 6.0,
+      overall: 7.0,
+    },
   }))).toBe(false)
   expect(isValidSpeakingGrade(speakingGrade({
-    scores: { fluency: 6.0, lexical: 6.0, grammar: 6.0, overall: 6.5 },
+    scores: {
+      fluency: 6.0,
+      lexical: 6.0,
+      grammar: 6.0,
+      overall: 6.5,
+    },
   }))).toBe(true)
   const noSuggestion: Record<string, unknown> = speakingGrade()
   delete noSuggestion.suggestion
@@ -33,24 +58,24 @@ it('S3: speaking grades must be half-step, consistent, and carry a suggestion', 
   expect(isValidSpeakingGrade(speakingGrade({ suggestion: '  ' }))).toBe(false)
 })
 
-it('S1: Part2 done stage explains missing transcripts and missing playback', () => {
+it('s1: Part2 done stage explains missing transcripts and missing playback', () => {
   const src = readFileSync('src/pages/speaking/PartTwoPractice.vue', 'utf8')
   expect(src).toContain('未识别出语音内容')
   expect(src).toContain('当前浏览器不支持语音转写（请用 Chrome/Edge），AI')
   expect(src).toContain('本次没有录音可回放')
 })
 
-it('S2: speaking prompt and panel state the fluency-from-text limit', () => {
+it('s2: speaking prompt and panel state the fluency-from-text limit', () => {
   expect(readFileSync('src/composables/useAISettings.ts', 'utf8')).toContain('丢弃 um/uh 等填充词')
   expect(readFileSync('src/pages/speaking/AIGradeSpeaking.vue', 'utf8')).toContain('流利度也只按文字稿估算')
 })
 
-it('S5: speaking tab falls back to part1 on an invalid stored value', () => {
+it('s5: speaking tab falls back to part1 on an invalid stored value', () => {
   const src = readFileSync('src/pages/speaking/index.vue', 'utf8')
   expect(src).toContain('[\'part1\', \'part2\', \'part3\'].includes(tab.value)')
 })
 
-it('S6: tab/topic/card guards confirm before discarding a recording', () => {
+it('s6: tab/topic/card guards confirm before discarding a recording', () => {
   const src = readFileSync('src/pages/speaking/index.vue', 'utf8')
   expect(src).toContain('confirmLeaveRecording')
   expect(src).toContain('switchTab')
@@ -76,7 +101,9 @@ class FakeRecorder {
 
   start() {}
   stop() {
-    this.ondataavailable?.({ data: new Blob(['recording']) })
+    this.ondataavailable?.({
+      data: new Blob(['recording']),
+    })
     this.onstop?.()
   }
 }
@@ -95,7 +122,9 @@ class FakeEmptyRecorder {
 
   start() {}
   stop() {
-    this.ondataavailable?.({ data: new Blob([]) })
+    this.ondataavailable?.({
+      data: new Blob([]),
+    })
     this.onstop?.()
   }
 }
@@ -112,7 +141,9 @@ beforeEach(() => {
   vi.stubGlobal('MediaRecorder', FakeRecorder)
   Object.defineProperty(navigator, 'mediaDevices', {
     configurable: true,
-    value: { getUserMedia: vi.fn() },
+    value: {
+      getUserMedia: vi.fn(),
+    },
   })
   URL.createObjectURL = vi.fn().mockReturnValue('blob:recording')
   URL.revokeObjectURL = vi.fn()
@@ -125,9 +156,13 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-it('S4: an account change clears the previous identity recording and transcript', async () => {
+it('s4: an account change clears the previous identity recording and transcript', async () => {
   vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue({
-    getTracks: () => [{ stop: vi.fn() }],
+    getTracks: () => [
+      {
+        stop: vi.fn(),
+      },
+    ],
   } as any)
   const r = make()
   await r.start()
@@ -139,9 +174,13 @@ it('S4: an account change clears the previous identity recording and transcript'
   expect(r.transcript.value).toBe('')
 })
 
-it('S6: isRecorderBusy tracks recording and clears after the blob lands', async () => {
+it('s6: isRecorderBusy tracks recording and clears after the blob lands', async () => {
   vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue({
-    getTracks: () => [{ stop: vi.fn() }],
+    getTracks: () => [
+      {
+        stop: vi.fn(),
+      },
+    ],
   } as any)
   const r = make()
   expect(isRecorderBusy()).toBe(false)
@@ -152,10 +191,14 @@ it('S6: isRecorderBusy tracks recording and clears after the blob lands', async 
   expect(isRecorderBusy()).toBe(false)
 })
 
-it('S7: empty blob claims a retained recording only when one exists', async () => {
+it('s7: empty blob claims a retained recording only when one exists', async () => {
   vi.stubGlobal('MediaRecorder', FakeEmptyRecorder)
   vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue({
-    getTracks: () => [{ stop: vi.fn() }],
+    getTracks: () => [
+      {
+        stop: vi.fn(),
+      },
+    ],
   } as any)
   const fresh = make()
   await fresh.start()
@@ -173,7 +216,7 @@ it('S7: empty blob claims a retained recording only when one exists', async () =
   expect(kept.transcript.value).toBe('old text')
 })
 
-it('S7: start failures split by error kind and by previous-recording existence', async () => {
+it('s7: start failures split by error kind and by previous-recording existence', async () => {
   const rejectWith = (name: string) => {
     const e = new Error('failed')
     e.name = name

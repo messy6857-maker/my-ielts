@@ -1,5 +1,4 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { useAuth } from '../src/composables/useAuth'
 import {
   apiPush,
   applySyncData,
@@ -12,6 +11,7 @@ import {
   setToken,
   syncTimeoutMs,
 } from '../src/composables/syncClient'
+import { useAuth } from '../src/composables/useAuth'
 import {
   entryKey,
   envelope,
@@ -52,7 +52,10 @@ describe('rejected 兼容与隔离', () => {
     ).toEqual(['a', 'b', 'c'])
   })
   it('handleRejectedKeys 隔离两种形状并记录原因，失败推送不隔离', () => {
-    expect(handleRejectedKeys('alice', { ok: true, rejected: ['k1'] })).toBe(true)
+    expect(handleRejectedKeys('alice', {
+      ok: true,
+      rejected: ['k1'],
+    })).toBe(true)
     expect(getQuarantinedKeys('alice')).toEqual(['k1'])
     expect(getRejectedReason('alice', 'k1')).toBeNull()
     expect(
@@ -67,7 +70,10 @@ describe('rejected 兼容与隔离', () => {
     expect(getQuarantinedKeys('alice')).toEqual(['k1', 'k2', 'k3'])
     expect(getRejectedReason('alice', 'k2')).toBe('decode-failed')
     expect(getRejectedReason('alice', 'k3')).toBe('unknown-base')
-    expect(handleRejectedKeys('alice', { ok: false, rejected: ['k4'] })).toBe(false)
+    expect(handleRejectedKeys('alice', {
+      ok: false,
+      rejected: ['k4'],
+    })).toBe(false)
     expect(getQuarantinedKeys('alice')).not.toContain('k4')
   })
   it('隔离键跳过上传，本地重写后自动解封', () => {
@@ -89,7 +95,9 @@ describe('stamp-0 legacy 种子键合并', () => {
       __ielts: 2,
       stamp: [0, 'legacy'],
       value: {
-        totals: { vocabulary: { known: 3, vague: 0, unknown: 0 } },
+        totals: {
+          vocabulary: { known: 3, vague: 0, unknown: 0 },
+        },
         days: {},
       },
     }, 'local')
@@ -98,7 +106,9 @@ describe('stamp-0 legacy 种子键合并', () => {
         __ielts: 2,
         stamp: [0, 'legacy'],
         value: {
-          totals: { vocabulary: { known: 5, vague: 2, unknown: 0 } },
+          totals: {
+            vocabulary: { known: 5, vague: 2, unknown: 0 },
+          },
           days: {},
         },
       }),
@@ -138,7 +148,12 @@ describe('apiPush 探针与退出推送', () => {
       return {
         ok: true,
         status: 200,
-        json: async () => ({ ok: true, protocolVersion: 2, data: {}, rejected: [] }),
+        json: async () => ({
+          ok: true,
+          protocolVersion: 2,
+          data: {},
+          rejected: [],
+        }),
       }
     })
   }
@@ -197,7 +212,10 @@ describe('拼写 alternatives 上传不降级', () => {
     saveEnvelope(key, {
       __ielts: 2,
       stamp: [100, 'writer-a'],
-      value: { text: 'criticise', alternatives: ['criticise', 'criticize'] },
+      value: {
+        text: 'criticise',
+        alternatives: ['criticise', 'criticize'],
+      },
     }, 'local')
     const payload = collectSyncData('alice')[key]
     expect(payload).toBeDefined()

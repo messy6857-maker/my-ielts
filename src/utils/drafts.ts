@@ -51,17 +51,20 @@ export function listDrafts(
       if (
         !distinct.has(identity)
         || (value.stateAt ?? value.editedAt ?? 0)
-          > (distinct.get(identity)?.stateAt
-            ?? distinct.get(identity)?.editedAt
-            ?? 0)
-      )
+        > (distinct.get(identity)?.stateAt
+          ?? distinct.get(identity)?.editedAt
+          ?? 0)
+      ) {
         distinct.set(identity, value)
+      }
     }
     catch {
       /* Keep malformed originals for backup. */
     }
   }
-  return [...distinct.values()].sort(
+  return [
+    ...distinct.values(),
+  ].sort(
     (a, b) => (b.stateAt ?? b.editedAt ?? 0) - (a.stateAt ?? a.editedAt ?? 0),
   )
 }
@@ -89,7 +92,9 @@ export function readOwnDraft(
   const target = key(task, owner, promptId)
   try {
     const d = JSON.parse(localStorage.getItem(target) || 'null')
-    return d ? { ...d, versionId: target } : null
+    return d
+      ? { ...d, versionId: target }
+      : null
   }
   catch {
     return null
@@ -104,15 +109,22 @@ export function saveDraft(
   try {
     const previous = origins.get(target)
     const editedAt
-      = previous?.text === draft.text ? (previous.editedAt ?? 0) : Date.now()
+      = previous?.text === draft.text
+        ? (previous.editedAt ?? 0)
+        : Date.now()
     const sameState
       = previous?.text === draft.text
-      && previous?.secondsLeft === draft.secondsLeft
-      && !!previous?.overtime === !!draft.overtime
+        && previous?.secondsLeft === draft.secondsLeft
+        && !!previous?.overtime === !!draft.overtime
     const stateAt = sameState
       ? (previous.stateAt ?? previous.editedAt ?? 0)
       : Math.max(Date.now(), (previous?.stateAt ?? 0) + 1)
-    const value = { ...draft, editedAt, stateAt, updatedAt: Date.now() }
+    const value = {
+      ...draft,
+      editedAt,
+      stateAt,
+      updatedAt: Date.now(),
+    }
     localStorage.setItem(target, JSON.stringify(value))
     if (previous?.versionId && !previous.versionId.includes('__session_')) {
       const source = previous.versionId
@@ -123,8 +135,9 @@ export function saveDraft(
           && old.text === previous.text
           && old.secondsLeft === previous.secondsLeft
           && !!old.overtime === !!previous.overtime
-        )
+        ) {
           localStorage.removeItem(source)
+        }
       }
       catch {
         /* Keep sources that cannot be validated. */
@@ -153,7 +166,9 @@ export function deleteDraft(
     own,
     old,
     `${old}__prompt_${encodeURIComponent(promptId)}`,
-    ...(expected?.versionId ? [expected.versionId] : []),
+    ...(expected?.versionId
+      ? [expected.versionId]
+      : []),
   ])
   for (const k of candidates) {
     if (k !== old && !k.startsWith(`${old}__prompt_`))
@@ -167,8 +182,9 @@ export function deleteDraft(
             && d.secondsLeft === expected.secondsLeft
             && !!d.overtime === !!expected.overtime
             && (d.stateAt ?? 0) === (expected.stateAt ?? 0)))
-      )
+      ) {
         localStorage.removeItem(k)
+      }
     }
     catch {
       /* Preserve invalid drafts. */

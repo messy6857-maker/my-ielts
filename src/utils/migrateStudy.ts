@@ -19,7 +19,9 @@ function seed(base: string, id: string, value: unknown, owner: string | null) {
   const raw = localStorage.getItem(key)
   let old: any = null
   try {
-    old = raw ? JSON.parse(raw) : null
+    old = raw
+      ? JSON.parse(raw)
+      : null
   }
   catch {
     return
@@ -41,15 +43,21 @@ function seed(base: string, id: string, value: unknown, owner: string | null) {
           ),
         }
       : mergeLegacy(
-        base === 'mistake_parts_v2' ? 'migration-mistake' : base,
-        old.value,
-        value,
-      )
+          base === 'mistake_parts_v2'
+            ? 'migration-mistake'
+            : base,
+          old.value,
+          value,
+        )
     : value
   if (!old || JSON.stringify(old.value) !== JSON.stringify(merged)) {
     saveEnvelope(
       key,
-      { __ielts: 2, stamp: [0, 'legacy'], value: merged },
+      {
+        __ielts: 2,
+        stamp: [0, 'legacy'],
+        value: merged,
+      },
       'remote',
     )
   }
@@ -79,7 +87,9 @@ export function migrateStudy(owner: string | null) {
             `${item.key}|legacy`,
             {
               ...item,
-              module: item.key.startsWith('corpus:') ? 'corpus' : item.module,
+              module: item.key.startsWith('corpus:')
+                ? 'corpus'
+                : item.module,
               epoch: '',
               days: {},
             },
@@ -88,10 +98,17 @@ export function migrateStudy(owner: string | null) {
         }
       }
     }
-    for (const ns of ['vocabulary', 'listening179', 'reading538', 'corpus']) {
+    for (const ns of [
+      'vocabulary',
+      'listening179',
+      'reading538',
+      'corpus',
+    ]) {
       const old = readValue<any>(
         accountKey(
-          ns === 'vocabulary' ? 'flashcard_daily_new_v1' : `${ns}_daily_new_v1`,
+          ns === 'vocabulary'
+            ? 'flashcard_daily_new_v1'
+            : `${ns}_daily_new_v1`,
           owner,
         ),
         null,
@@ -156,8 +173,9 @@ export function migrateStudy(owner: string | null) {
       if (
         key !== base
         && !(timerBase && /^study_time_v1_[a-z\d-]+$/i.test(timerBase))
-      )
+      ) {
         continue
+      }
       const old = readValue<any>(key, null)
       if (old?.date && Number.isFinite(old.seconds)) {
         seed(
@@ -188,7 +206,7 @@ function yearDay(date: string) {
     year: String(year),
     day: Math.round(
       (Date.UTC(year, d.getMonth(), d.getDate()) - Date.UTC(year, 0, 1))
-        / 86400000,
+      / 86400000,
     ),
   }
 }
@@ -211,7 +229,11 @@ export function migrateCheckins(owner: string | null) {
       archived
         = saveEnvelope(
           key,
-          { __ielts: 2, stamp: [0, 'legacy'], value },
+          {
+            __ielts: 2,
+            stamp: [0, 'legacy'],
+            value,
+          },
           'remote',
         ) && archived
     }

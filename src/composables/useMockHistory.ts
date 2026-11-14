@@ -1,5 +1,5 @@
-import { accountPrefix, clearRecords, readRecords, saveRecord } from '../utils/storage'
 import { listeningBandScore, readingBandScore } from '../pages/mock/types'
+import { accountPrefix, clearRecords, readRecords, saveRecord } from '../utils/storage'
 import { useAuth } from './useAuth'
 
 export interface MockRecord {
@@ -30,11 +30,17 @@ export function getMockHistory(): MockRecord[] {
   return Object.values(
     readRecords<MockRecord>('mock_history_v1', owner()),
   )
-    .map(r => ({ ...r, band: currentBand(r) }))
+    .map(r => ({
+      ...r,
+      band: currentBand(r),
+    }))
     .sort((a, b) => b.date.localeCompare(a.date))
 }
 export function saveMockRecord(r: Omit<MockRecord, 'date'>) {
-  const record = { ...r, date: new Date().toISOString() }
+  const record = {
+    ...r,
+    date: new Date().toISOString(),
+  }
   const saved = saveRecord(
     'mock_history_v1',
     `${r.kind}:${r.id}:${record.date}:${crypto.randomUUID()}`,

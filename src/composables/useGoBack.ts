@@ -8,9 +8,12 @@ export function useGoBack(fallback = '/') {
       typeof back === 'string'
       && back.startsWith('/')
       && !back.startsWith('//')
-    )
+    ) {
       router.back()
-    else router.push(fallback)
+    }
+    else {
+      router.push(fallback)
+    }
   }
   return { goBack }
 }

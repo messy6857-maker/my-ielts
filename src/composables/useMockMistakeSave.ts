@@ -1,9 +1,9 @@
+import type { collectMockMistakeEntries } from '../utils/mockMistakes'
 import { computed, ref } from 'vue'
 import {
   hasWrittenMockMistakes,
   markMockMistakesWritten,
 } from '../utils/mockMistakes'
-import type { collectMockMistakeEntries } from '../utils/mockMistakes'
 import { accountKey, batchStorage, entryKey, subscribeStorage } from '../utils/storage'
 import { useAuth } from './useAuth'
 import { useMistakes } from './useStudyData'
@@ -13,8 +13,10 @@ interface Pending {
   owner: string | null
   attemptId: string
   entries: Entries
-  /** 创建时间（毫秒）。L7：pending 超过 90 天不再重试（与错题去重、写过标记的 90 天窗口对齐），
-   * 否则标记过期后重试会把已记过的题再计一次。旧版任务没有该字段，视为未过期。 */
+  /**
+   * 创建时间（毫秒）。L7：pending 超过 90 天不再重试（与错题去重、写过标记的 90 天窗口对齐），
+   * 否则标记过期后重试会把已记过的题再计一次。旧版任务没有该字段，视为未过期。
+   */
   createdAt?: number
 }
 
@@ -44,8 +46,9 @@ function readTask(key: string, owner: string | null): Pending | null {
     if (value?.owner === owner && typeof value.attemptId === 'string'
       && value.attemptId && Array.isArray(value.entries)
       && value.entries.every(entry => entry && typeof entry.key === 'string'
-        && typeof entry.module === 'string' && typeof entry.title === 'string'))
+        && typeof entry.module === 'string' && typeof entry.title === 'string')) {
       return value
+    }
   }
   catch {}
   return null
@@ -144,9 +147,11 @@ function pruneExpiredPending(owner: string | null): void {
   }
 }
 
-/** 写 pending 任务。Item 5：setItem 失败（常是存储满了）时，先清掉该账号已过期的 pending 任务腾地方，
+/**
+ * 写 pending 任务。Item 5：setItem 失败（常是存储满了）时，先清掉该账号已过期的 pending 任务腾地方，
  * 再重试一次；还写不进去才返回 false，由调用方留内存兜底（本页签可见、跨页签不可见）。
- * 清过期任务再重试，让内存兜底只在存储真的满到清无可清时才发生，而不是一失败就只剩内存。 */
+ * 清过期任务再重试，让内存兜底只在存储真的满到清无可清时才发生，而不是一失败就只剩内存。
+ */
 function writePendingTask(key: string, task: Pending, owner: string | null): boolean {
   try {
     localStorage.setItem(key, JSON.stringify(task))
@@ -169,7 +174,9 @@ export function useMockMistakeSave() {
   const { addMistake } = useMistakes()
   const failed = computed(() => {
     void revision.value
-    return [...readPending(currentUser.value).values()]
+    return [
+      ...readPending(currentUser.value).values(),
+    ]
       .some(task => !hasWrittenMockMistakes(task.attemptId))
   })
 
@@ -217,7 +224,12 @@ export function useMockMistakeSave() {
     // 写之前重读一次最新落盘状态再合并，把竞态窗口收到重读与落盘之间这一步；
     // 即便仍有极窄窗口撞上，addMistake 的 recordedAttempts 去重也能保证不重复计。
     const latest = readPending(owner).get(attemptId)
-      ?? { owner, attemptId, entries: [], createdAt: Date.now() }
+      ?? {
+        owner,
+        attemptId,
+        entries: [],
+        createdAt: Date.now(),
+      }
     const seen = new Set(latest.entries.map(e => e.key))
     const merged = [...latest.entries]
     let mergedNew = false

@@ -1,3 +1,4 @@
+import type { MockQuestion } from '../src/pages/mock/types'
 import { expect, it } from 'vitest'
 import {
   countCorrect,
@@ -7,13 +8,39 @@ import {
   toggleMultiSelectValue,
   totalScorePoints,
 } from '../src/pages/mock/types'
-import type { MockQuestion } from '../src/pages/mock/types'
 
-const mc: MockQuestion = { id: 'Q1', type: 'multiple-choice', question: 'x', options: ['a', 'b'], answer: 1 }
-const ms: MockQuestion = { id: 'Q2', type: 'multi-select', question: 'Choose TWO', options: ['a', 'b', 'c'], answer: [0, 2] }
-const roman: MockQuestion = { id: 'Q14', type: 'map-label', question: 'Section A', answer: 'vii' }
-const letter: MockQuestion = { id: 'Q15', type: 'map-label', question: 'School', answer: 'G' }
-const letterI: MockQuestion = { id: 'Q12', type: 'map-label', question: 'helping at concerts', answer: 'I' }
+const mc: MockQuestion = {
+  id: 'Q1',
+  type: 'multiple-choice',
+  question: 'x',
+  options: ['a', 'b'],
+  answer: 1,
+}
+const ms: MockQuestion = {
+  id: 'Q2',
+  type: 'multi-select',
+  question: 'Choose TWO',
+  options: ['a', 'b', 'c'],
+  answer: [0, 2],
+}
+const roman: MockQuestion = {
+  id: 'Q14',
+  type: 'map-label',
+  question: 'Section A',
+  answer: 'vii',
+}
+const letter: MockQuestion = {
+  id: 'Q15',
+  type: 'map-label',
+  question: 'School',
+  answer: 'G',
+}
+const letterI: MockQuestion = {
+  id: 'Q12',
+  type: 'map-label',
+  question: 'helping at concerts',
+  answer: 'I',
+}
 
 it('totalScorePoints counts multi-select by answer count', () => {
   expect(totalScorePoints([mc, ms])).toBe(3)

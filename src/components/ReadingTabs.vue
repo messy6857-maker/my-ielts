@@ -32,7 +32,7 @@ function go(tab: (typeof TABS)[number]) {
 
 <template>
   <ul
-    class="mb-4 rounded-lg text-center text-sm font-medium text-gray-500 shadow sm:flex dark:text-gray-400 dark:divide-gray-700"
+    class="mb-4 rounded-lg text-center text-sm text-gray-500 font-medium shadow sm:flex dark:text-gray-400 dark:divide-gray-700"
   >
     <li v-for="(tab, i) in TABS" :key="tab.key" class="w-full">
       <button

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, expect, it } from 'vitest'
-import { accountKey } from '../src/utils/storage'
 import {
   readChapterPreference,
   writeChapterPreference,
 } from '../src/utils/chapterPreference'
+import { accountKey } from '../src/utils/storage'
 
 const CHAPTERS = ['01_自然地理', '02_植物研究', '03_动物保护']
 const BASE = 'vocabulary_chapter'

@@ -1,5 +1,13 @@
 <!-- eslint-disable eslint-comments/no-unlimited-disable -->
 <script setup>
+import { resolveAudioUrl } from '../../composables/useAudio'
+import { useAudioGroup } from '../../composables/useAudioGroup'
+import { loadVocabularyDetails } from '../../composables/useVocabularyDetails'
+
+import {
+  readChapterPreference,
+  writeChapterPreference,
+} from '../../utils/chapterPreference'
 import {
   deletionEnvelope,
   entryKey,
@@ -9,14 +17,6 @@ import {
   saveRecord,
   subscribeStorage,
 } from '../../utils/storage'
-import { loadVocabularyDetails } from '../../composables/useVocabularyDetails'
-import { useAudioGroup } from '../../composables/useAudioGroup'
-
-import { resolveAudioUrl } from '../../composables/useAudio'
-import {
-  readChapterPreference,
-  writeChapterPreference,
-} from '../../utils/chapterPreference'
 import {
   emptyVocabularyShell,
   listVocabularyChapters,
@@ -51,7 +51,12 @@ const isOnlyShowErrors = ref(false)
 const isFinishTraining = ref(false)
 const isShowSource = ref(storedSwitches?.source ?? false)
 watch(
-  [isTrainingModel, isShowMeaning, isAutoPlayWordAudio, isShowSource],
+  [
+    isTrainingModel,
+    isShowMeaning,
+    isAutoPlayWordAudio,
+    isShowSource,
+  ],
   () => {
     try {
       localStorage.setItem(SWITCHES_KEY, JSON.stringify({
@@ -141,7 +146,11 @@ function readSpellMap() {
       ) {
         saveEnvelope(
           key,
-          { __ielts: 2, stamp: [0, 'legacy'], value },
+          {
+            __ielts: 2,
+            stamp: [0, 'legacy'],
+            value,
+          },
           'remote',
         )
       }
@@ -182,9 +191,9 @@ function onSpellInput(event, item) {
   item.spellValue = event.target.value
   item.spellError
     = !!item.spellValue.trim()
-    && !item.word
-      .map(v => v.toLowerCase().trim())
-      .includes(item.spellValue.toLowerCase().trim())
+      && !item.word
+        .map(v => v.toLowerCase().trim())
+        .includes(item.spellValue.toLowerCase().trim())
   saveSpellMap(item)
   trainingStats.value = calcStats()
   syncProgress()
@@ -321,8 +330,9 @@ function onAudioKeydown(ev) {
       || t.tagName === 'SELECT'
       || t.tagName === 'BUTTON'
       || t.isContentEditable)
-  )
+  ) {
     return
+  }
   if (!['ArrowLeft', 'ArrowRight', ' '].includes(ev.key))
     return
   ev.preventDefault()
@@ -432,11 +442,11 @@ function syncProgress() {
 function getInputStyleClass(item) {
   const cls = {
     error:
-      'ml-4 bg-red-50 border border-red-500 text-red-900 placeholder-red-700 text-sm rounded-lg focus:ring-red-500 dark:bg-gray-700 focus:border-red-500 inline-block p-2.5 dark:text-red-500 dark:placeholder-red-500 dark:border-red-500',
+      'ml-4 inline-block border border-red-500 rounded-lg bg-red-50 p-2.5 text-sm text-red-900 dark:border-red-500 focus:border-red-500 dark:bg-gray-700 dark:text-red-500 focus:ring-red-500 placeholder-red-700 dark:placeholder-red-500',
     normal:
       'ml-4 inline-block border border-gray-300 rounded-lg bg-gray-50 p-2.5 text-sm text-gray-900 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500 dark:focus:border-blue-500 dark:focus:ring-blue-500 dark:placeholder-gray-400',
     success:
-      'ml-4 bg-green-50 border border-green-500 text-green-900 dark:text-green-400 placeholder-green-700 dark:placeholder-green-500 text-sm rounded-lg focus:ring-green-500 focus:border-green-500 inline-block p-2.5 dark:bg-gray-700 dark:border-green-500',
+      'ml-4 inline-block border border-green-500 rounded-lg bg-green-50 p-2.5 text-sm text-green-900 dark:border-green-500 focus:border-green-500 dark:bg-gray-700 dark:text-green-400 focus:ring-green-500 placeholder-green-700 dark:placeholder-green-500',
   }
   if (isFinishTraining.value) {
     if (item.spellError)
@@ -483,10 +493,10 @@ function copyAllError() {
       <!-- Card header -->
       <div class="items-center justify-between lg:flex">
         <div class="mb-4 lg:mb-0">
-          <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+          <h3 class="mb-2 text-xl text-gray-900 font-bold dark:text-white">
             雅思词汇真经
           </h3>
-          <span class="text-base font-normal text-gray-500 dark:text-gray-400">涵盖雅思必备核心词，逻辑词群记忆法</span>
+          <span class="text-base text-gray-500 font-normal dark:text-gray-400">涵盖雅思必备核心词，逻辑词群记忆法</span>
         </div>
         <div class="w-full lg:w-auto">
           <!-- 小屏换行，避免「自测卡片」与开关叠在一起 -->
@@ -534,12 +544,12 @@ function copyAllError() {
                 class="peer relative h-6 w-11 shrink-0 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:border-gray-300 dark:border-gray-600 after:rounded-full after:bg-white dark:bg-gray-700 peer-checked:bg-blue-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-focus:ring-blue-800 rtl:peer-checked:after:-translate-x-full"
               />
               <span
-                class="ms-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-300"
+                class="ms-3 whitespace-nowrap text-sm text-gray-900 font-medium dark:text-gray-300"
               >练习模式</span>
             </label>
             <router-link
               to="/vocabulary/flashcard"
-              class="inline-flex shrink-0 items-center rounded-lg bg-amber-500 px-3 py-2 text-sm font-medium text-white hover:bg-amber-600 sm:px-4 focus:outline-none focus:ring-4 focus:ring-amber-300"
+              class="inline-flex shrink-0 items-center rounded-lg bg-amber-500 px-3 py-2 text-sm text-white font-medium hover:bg-amber-600 sm:px-4 focus:outline-none focus:ring-4 focus:ring-amber-300"
             >
               自测卡片
             </router-link>
@@ -556,7 +566,7 @@ function copyAllError() {
                 class="peer relative h-6 w-11 shrink-0 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:border-gray-300 dark:border-gray-600 after:rounded-full after:bg-white dark:bg-gray-700 peer-checked:bg-blue-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-focus:ring-blue-800 rtl:peer-checked:after:-translate-x-full"
               />
               <span
-                class="ms-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-300"
+                class="ms-3 whitespace-nowrap text-sm text-gray-900 font-medium dark:text-gray-300"
               >释义</span>
             </label>
             <label
@@ -572,7 +582,7 @@ function copyAllError() {
                 class="peer relative h-6 w-11 shrink-0 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:border-gray-300 dark:border-gray-600 after:rounded-full after:bg-white dark:bg-gray-700 peer-checked:bg-blue-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-focus:ring-blue-800 rtl:peer-checked:after:-translate-x-full"
               />
               <span
-                class="ms-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-300"
+                class="ms-3 whitespace-nowrap text-sm text-gray-900 font-medium dark:text-gray-300"
               >原词</span>
             </label>
             <label
@@ -588,7 +598,7 @@ function copyAllError() {
                 class="peer relative h-6 w-11 shrink-0 rounded-full bg-gray-200 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:border-gray-300 dark:border-gray-600 after:rounded-full after:bg-white dark:bg-gray-700 peer-checked:bg-blue-600 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-focus:ring-blue-800 rtl:peer-checked:after:-translate-x-full"
               />
               <span
-                class="ms-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-300"
+                class="ms-3 whitespace-nowrap text-sm text-gray-900 font-medium dark:text-gray-300"
               >自动播放</span>
             </label>
           </div>
@@ -605,37 +615,37 @@ function copyAllError() {
                 <thead class="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th
-                      class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white"
+                      class="p-4 text-left text-xs text-gray-500 font-medium tracking-wider dark:text-white"
                     >
                       #
                     </th>
                     <th
-                      class="p-4 text-xs font-medium tracking-wider text-gray-500 dark:text-white"
+                      class="p-4 text-xs text-gray-500 font-medium tracking-wider dark:text-white"
                     >
                       <br>
                     </th>
                     <th
-                      class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white"
+                      class="p-4 text-left text-xs text-gray-500 font-medium tracking-wider dark:text-white"
                     >
                       词
                     </th>
                     <th
-                      class="w-0 text-left text-xs font-medium text-gray-500 dark:text-white"
+                      class="w-0 text-left text-xs text-gray-500 font-medium dark:text-white"
                     >
                       词性
                     </th>
                     <th
-                      class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white"
+                      class="p-4 text-left text-xs text-gray-500 font-medium tracking-wider dark:text-white"
                     >
                       词义
                     </th>
                     <th
-                      class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white"
+                      class="p-4 text-left text-xs text-gray-500 font-medium tracking-wider dark:text-white"
                     >
                       例句
                     </th>
                     <th
-                      class="p-4 text-left text-xs font-medium tracking-wider text-gray-500 dark:text-white"
+                      class="p-4 text-left text-xs text-gray-500 font-medium tracking-wider dark:text-white"
                     >
                       拓展
                     </th>
@@ -645,7 +655,7 @@ function copyAllError() {
                   <tr class="bg-hex-f3f3f3">
                     <td
                       colspan="7"
-                      class="px-4 py-6 text-sm font-normal text-gray-900 dark:bg-gray-500 dark:text-white"
+                      class="px-4 py-6 text-sm text-gray-900 font-normal dark:bg-gray-500 dark:text-white"
                     >
                       <div class="flex flex-row">
                         <div class="flex flex-1 items-center">
@@ -826,21 +836,21 @@ function copyAllError() {
         <div v-if="isTrainingModel" class="flex-shrink-0">
           <button
             type="button"
-            class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+            class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
             @click="isFinishTraining = true"
           >
             完成练习
           </button>
           <button
             type="button"
-            class="ml-2 rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+            class="ml-2 rounded-lg bg-blue-700 px-5 py-2.5 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
             @click="isOnlyShowErrors = !isOnlyShowErrors"
           >
             {{ isOnlyShowErrors ? "展示所有" : "仅展示错词" }}
           </button>
           <button
             type="button"
-            class="ml-2 rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+            class="ml-2 rounded-lg bg-blue-700 px-5 py-2.5 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
             @click="copyAllError"
           >
             拷贝错词

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { useStudyTimer } from '../src/composables/useStudyTimer'
 import { useAuth } from '../src/composables/useAuth'
+import { useStudyTimer } from '../src/composables/useStudyTimer'
 
 const timers: ReturnType<typeof useStudyTimer>[] = []
 function make() {

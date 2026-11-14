@@ -1,9 +1,15 @@
+import type { MockQuestion } from '~/pages/mock/types'
 import { describe, expect, it } from 'vitest'
 import { showOptionsBox } from '~/pages/mock/types'
-import type { MockQuestion } from '~/pages/mock/types'
 
 function q(id: string, type: MockQuestion['type'], options?: string[]): MockQuestion {
-  return { id, type, question: id, options, answer: 0 }
+  return {
+    id,
+    type,
+    question: id,
+    options,
+    answer: 0,
+  }
 }
 
 describe('showOptionsBox（选项框按题组只渲染一次）', () => {
@@ -34,7 +40,10 @@ describe('showOptionsBox（选项框按题组只渲染一次）', () => {
   })
 
   it('非 map-label、无选项、越界一律不出框', () => {
-    const qs = [q('Q1', 'multiple-choice', ['A', 'B']), q('Q2', 'map-label')]
+    const qs = [
+      q('Q1', 'multiple-choice', ['A', 'B']),
+      q('Q2', 'map-label'),
+    ]
     expect(showOptionsBox(qs, 0)).toBe(false)
     expect(showOptionsBox(qs, 1)).toBe(false)
     expect(showOptionsBox(qs, 2)).toBe(false)

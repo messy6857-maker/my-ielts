@@ -1,15 +1,15 @@
 // Audit-only reproductions: passing assertions describe current defects/limitations.
 import { readFileSync } from 'node:fs'
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { accountNotice, useAuth } from '../src/composables/useAuth'
 import { setToken } from '../src/composables/syncClient'
-import { storageFailures } from '../src/utils/storage'
-import * as registry from '../src/pages/mock/registry'
-import { useSync } from '../src/composables/useSync'
+import { accountNotice, useAuth } from '../src/composables/useAuth'
 import { useStudyTimer } from '../src/composables/useStudyTimer'
+import { useSync } from '../src/composables/useSync'
+import * as registry from '../src/pages/mock/registry'
+import { storageFailures } from '../src/utils/storage'
 
 const auth = useAuth()
 const wrappers: any[] = []
@@ -19,7 +19,10 @@ beforeEach(() => {
   auth.currentUser.value = 'alice'
   setToken('audit-only-token', 'alice')
   accountNotice.value = ''
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
   vi.stubGlobal(
     'SpeechSynthesisUtterance',
     class {
@@ -39,7 +42,9 @@ afterEach(() => {
 async function page(Page: any) {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/', component: Page }],
+    routes: [
+      { path: '/', component: Page },
+    ],
   })
   await router.push('/')
   await router.isReady()
@@ -73,7 +78,9 @@ it('paper changes reset listening media and hint state', async () => {
   s.partImageFailed[1] = true
   s.mediaErrors[1] = 'old paper failed'
   s.mapLabelHints.Q11 = 'old hint'
-  await router.replace({ query: { test: 'cam20-test4' } })
+  await router.replace({
+    query: { test: 'cam20-test4' },
+  })
   await flushPromises()
   await ready(s)
   expect(s.testPair.id).toBe('cam20-test4')
@@ -167,7 +174,13 @@ it('reading highlights keep escaped text safe', async () => {
   const text = '<img src=x onerror=alert(1)> alpha & beta'
   // 包一层 div：新版 test-utils 的 text() 会逐个文本节点去掉首尾空格，这里比较原始文本
   const w = mount(defineComponent({
-    render: () => h('div', [h(Component, { text, words: ['alpha'], marking: true })]),
+    render: () => h('div', [
+      h(Component, {
+        text,
+        words: ['alpha'],
+        marking: true,
+      }),
+    ]),
   }))
   wrappers.push(w)
   expect(w.element.textContent).toBe(text)

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { onUnmounted } from 'vue'
+import { hasAISettings } from '~/composables/useAISettings'
+import { formatRecordingClock, useRecorder } from '~/composables/useRecorder'
 import AIGradeSpeaking from './AIGradeSpeaking.vue'
 import SpeakingSelfRubric from './SpeakingSelfRubric.vue'
-import { formatRecordingClock, useRecorder } from '~/composables/useRecorder'
-import { hasAISettings } from '~/composables/useAISettings'
 
 defineProps<{ question: string }>()
 
@@ -38,7 +38,7 @@ onUnmounted(() => {
   <div class="mt-2">
     <div class="flex flex-wrap items-center gap-2">
       <button
-        class="rounded-full px-3 py-1.5 text-xs font-bold text-white transition"
+        class="rounded-full px-3 py-1.5 text-xs text-white font-bold transition"
         :class="
           isRecording
             ? 'bg-red-600 hover:bg-red-700'
@@ -103,7 +103,7 @@ onUnmounted(() => {
       v-if="transcript || (audioUrl && !isRecording && !processing)"
       class="mt-2 rounded-lg bg-gray-50 p-3 text-xs leading-5 dark:bg-gray-700/50"
     >
-      <div class="mb-1 font-bold text-gray-500 dark:text-gray-400">
+      <div class="mb-1 text-gray-500 font-bold dark:text-gray-400">
         📝 语音转写
       </div>
       <p v-if="transcript" class="text-gray-700 dark:text-gray-200">

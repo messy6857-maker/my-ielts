@@ -1,13 +1,16 @@
 <script setup lang="ts">
-import { useAudioGroup } from '../../composables/useAudioGroup'
-import { confirmDialog } from '../../composables/useDialog'
+import type { WordInfo } from '../../composables/useWordInfo'
+import type { VocabularyChapter } from './loadVocabulary'
 
-import { studyDay } from '../../composables/useStudyData'
+import type { MnemonicHint } from './mnemonics'
 
 import { resolveAudioUrl } from '../../composables/useAudio'
+import { useAudioGroup } from '../../composables/useAudioGroup'
+import { planQueue } from '../../composables/useDeckStore'
+import { confirmDialog } from '../../composables/useDialog'
 import { gradeSchedule } from '../../composables/useSpacedRepetition'
 import { decrementAttempt, recordAttempt } from '../../composables/useStats'
-import { planQueue } from '../../composables/useDeckStore'
+import { studyDay } from '../../composables/useStudyData'
 import {
   formatClock,
   formatDuration,
@@ -15,20 +18,17 @@ import {
 } from '../../composables/useStudyTimer'
 import { loadVocabularyDetails } from '../../composables/useVocabularyDetails'
 import { loadWordInfoWithFallback } from '../../composables/useWordInfo'
-import type { WordInfo } from '../../composables/useWordInfo'
 import {
   readChapterPreference,
   writeChapterPreference,
 } from '../../utils/chapterPreference'
 import { parseExtra } from './extraParser'
-import type { MnemonicHint } from './mnemonics'
 import {
   getCachedChapter,
   listVocabularyChapters,
   loadAllVocabulary,
   loadVocabularyChapter,
 } from './loadVocabulary'
-import type { VocabularyChapter } from './loadVocabulary'
 import { WORD_CHAPTER_INDEX } from './vocabularyMeta'
 
 // 注：synonymPos / synonymMeanings / mnemonics / wordPhonetics 均二次懒加载，
@@ -75,7 +75,12 @@ watch(() => route.query.review, (review) => {
 // 复选框切换时回写 URL，刷新/后退保留模式（与上面 watcher 互不循环：
 // 回写后 query 触发的赋值与当前值相同，不会再次触发）
 watch(crossChapter, (value) => {
-  router.replace({ query: { ...route.query, review: value ? 'due' : undefined } })
+  router.replace({
+    query: {
+      ...route.query,
+      review: value ? 'due' : undefined,
+    },
+  })
 })
 const showExitModal = ref(false)
 // 页面级累计：每次退出弹窗的 pause() 段秒数累加，弹窗显示进页总时长
@@ -122,7 +127,9 @@ const wordInfo = ref<WordInfo | null>(null)
 let wordLoadSequence = 0
 
 const current = computed(() =>
-  !studying.value ? (queue.value[0] ?? null) : null,
+  !studying.value
+    ? (queue.value[0] ?? null)
+    : null,
 )
 const remaining = computed(() => queue.value.length)
 const mnemonicFn = ref<
@@ -132,7 +139,7 @@ const mnemonicFn = ref<
     example?: string,
   ) => MnemonicHint | null)
   | null
-    >(null)
+>(null)
 let mnemonicPromise: Promise<typeof mnemonicFn.value> | null = null
 function ensureMnemonic() {
   if (!mnemonicPromise) {
@@ -153,25 +160,27 @@ ensureMnemonic()
 const studyMnemonic = computed(() =>
   studying.value && mnemonicFn.value
     ? mnemonicFn.value(
-      studying.value.word,
-      studying.value.meaning,
-      studying.value.example,
-    )
+        studying.value.word,
+        studying.value.meaning,
+        studying.value.example,
+      )
     : null,
 )
 // 自评前的例句巧记提示
 const preMnemonic = computed(() =>
   current.value && mnemonicFn.value
     ? mnemonicFn.value(
-      current.value.word,
-      current.value.meaning,
-      current.value.example,
-    )
+        current.value.word,
+        current.value.meaning,
+        current.value.example,
+      )
     : null,
 )
 // 学习面板：该词的拓展词汇（跟原词放在一起展示）
 const studyExtras = computed(() =>
-  studying.value ? parseExtra(studying.value.extra) : [],
+  studying.value
+    ? parseExtra(studying.value.extra)
+    : [],
 )
 // 拓展词汇配色：循环使用，方便区分不同的词
 const extraColors = [
@@ -336,9 +345,9 @@ function playAudio(word?: string, chapter?: string) {
     return
   const origin
     = chapter
-    ?? current.value?.chapter
-    ?? studying.value?.chapter
-    ?? category.value
+      ?? current.value?.chapter
+      ?? studying.value?.chapter
+      ?? category.value
   audio = managedAudio.play(
     resolveAudioUrl(`vocabulary/audio/${origin}/${w}.mp3`),
     w,
@@ -393,12 +402,12 @@ function buildQueue() {
   const chapter = vocabulary.value[category.value]
   let all = crossChapter.value
     ? Object.values(vocabulary.value)
-      .flatMap(c => c.words.flat())
-      .filter(
-        w =>
-          (scheduleStore.get(w.id)?.dueAt ?? Number.POSITIVE_INFINITY)
+        .flatMap(c => c.words.flat())
+        .filter(
+          w =>
+            (scheduleStore.get(w.id)?.dueAt ?? Number.POSITIVE_INFINITY)
             <= Date.now(),
-      )
+        )
     : chapter
       ? chapter.words.flat()
       : []
@@ -413,11 +422,14 @@ function buildQueue() {
       if (
         !prev
         || (scheduleStore.get(w.id)?.dueAt ?? Number.POSITIVE_INFINITY)
-          < (scheduleStore.get(prev.id)?.dueAt ?? Number.POSITIVE_INFINITY)
-      )
+        < (scheduleStore.get(prev.id)?.dueAt ?? Number.POSITIVE_INFINITY)
+      ) {
         byWord.set(key, w)
+      }
     }
-    all = [...byWord.values()]
+    all = [
+      ...byWord.values(),
+    ]
   }
   // 复习配额 = 3 × 每日新词目标（1:3）：到期优先，不足时从已学词里补；新词按今日剩余名额取
   const plan = planQueue(
@@ -481,7 +493,10 @@ function grade(g: 0 | 3 | 5) {
     countedNew,
     aliasSchedules: wordAliasIds(card)
       .filter(id => id !== card.id)
-      .map(id => ({ id, previous: scheduleStore.get(id) })),
+      .map(id => ({
+        id,
+        previous: scheduleStore.get(id),
+      })),
     date: studyDay(),
   })
   // 更新间隔重复调度
@@ -514,7 +529,9 @@ function grade(g: 0 | 3 | 5) {
     // 本轮内复现：不认识放队尾，模糊插到后面第 5 个（最多复现 3 次）
     if (card.attempts < 3) {
       const insertAt
-        = g === 3 ? Math.min(5, queue.value.length) : queue.value.length
+        = g === 3
+          ? Math.min(5, queue.value.length)
+          : queue.value.length
       queue.value.splice(insertAt, 0, card)
     }
   }
@@ -559,8 +576,9 @@ function goBackOne() {
     if (
       JSON.stringify(scheduleStore.get(alias.id))
       !== JSON.stringify(postSchedule)
-    )
+    ) {
       continue
+    }
     if (alias.previous)
       scheduleStore.set(alias.id, alias.previous)
     else scheduleStore.remove(alias.id)
@@ -874,7 +892,7 @@ onUnmounted(() => {
             ← 返回
           </button>
           <div>
-            <h1 class="text-2xl font-extrabold text-gray-900 dark:text-white">
+            <h1 class="text-2xl text-gray-900 font-extrabold dark:text-white">
               单词自测
             </h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -918,7 +936,7 @@ onUnmounted(() => {
         </p>
         <div class="flex items-center gap-2">
           <span
-            class="border border-blue-200 rounded-full bg-blue-50 px-2 py-0.5 text-xs font-bold text-blue-600 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
+            class="border border-blue-200 rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600 font-bold dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300"
             title="本次学习计时"
           >
             ⏱ {{ formatClock(timer.elapsed.value) }}
@@ -943,7 +961,7 @@ onUnmounted(() => {
               }"
             />
           </div>
-          <span class="text-xs font-bold text-orange-500">🔥 连续打卡 {{ checkinStreak }} 天</span>
+          <span class="text-xs text-orange-500 font-bold">🔥 连续打卡 {{ checkinStreak }} 天</span>
           <div class="flex gap-1">
             <span
               v-for="(d, i) in checkinWeekDots"
@@ -976,7 +994,7 @@ onUnmounted(() => {
           <div class="mb-1 text-xs text-gray-500">
             认识（自评次数）
           </div>
-          <div class="text-lg font-bold text-green-600">
+          <div class="text-lg text-green-600 font-bold">
             {{ stats.known }}
           </div>
         </div>
@@ -986,7 +1004,7 @@ onUnmounted(() => {
           <div class="mb-1 text-xs text-gray-500">
             不认识（自评次数）
           </div>
-          <div class="text-lg font-bold text-red-600">
+          <div class="text-lg text-red-600 font-bold">
             {{ stats.unknown }}
           </div>
         </div>
@@ -996,7 +1014,7 @@ onUnmounted(() => {
           <div class="mb-1 text-xs text-gray-500">
             模糊（自评次数）
           </div>
-          <div class="text-lg font-bold text-yellow-600">
+          <div class="text-lg text-yellow-600 font-bold">
             {{ stats.vague }}
           </div>
         </div>
@@ -1014,9 +1032,9 @@ onUnmounted(() => {
           v-if="initialTotal > 0"
           class="mb-6 flex justify-center gap-6 text-sm"
         >
-          <span class="font-bold text-green-600">认识 {{ finishStats.known }}</span>
-          <span class="font-bold text-red-600">不认识 {{ finishStats.unknown }}</span>
-          <span class="font-bold text-yellow-600">模糊 {{ finishStats.vague }}</span>
+          <span class="text-green-600 font-bold">认识 {{ finishStats.known }}</span>
+          <span class="text-red-600 font-bold">不认识 {{ finishStats.unknown }}</span>
+          <span class="text-yellow-600 font-bold">模糊 {{ finishStats.vague }}</span>
         </div>
         <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">
           {{
@@ -1027,13 +1045,13 @@ onUnmounted(() => {
         </p>
         <div class="flex justify-center gap-3">
           <button
-            class="rounded-lg bg-blue-700 px-6 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800"
+            class="rounded-lg bg-blue-700 px-6 py-2.5 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800"
             @click="restart"
           >
             再来一轮
           </button>
           <button
-            class="rounded-lg bg-gray-200 px-6 py-2.5 text-sm font-medium text-gray-700 dark:bg-gray-700 hover:bg-gray-300 dark:text-gray-200"
+            class="rounded-lg bg-gray-200 px-6 py-2.5 text-sm text-gray-700 font-medium dark:bg-gray-700 hover:bg-gray-300 dark:text-gray-200"
             @click="handleBack"
           >
             返回词表
@@ -1061,7 +1079,7 @@ onUnmounted(() => {
           </div>
           <div class="mb-2 flex items-center justify-center gap-3">
             <span
-              class="text-4xl font-black tracking-tight text-gray-900 sm:text-5xl dark:text-white"
+              class="text-4xl text-gray-900 font-black tracking-tight sm:text-5xl dark:text-white"
             >{{ current.word }}</span>
             <button
               class="p-2 text-gray-400 hover:text-blue-500"
@@ -1091,7 +1109,7 @@ onUnmounted(() => {
             class="my-5 border border-sky-200 rounded-xl bg-sky-50 p-4 text-left dark:border-sky-800 dark:bg-sky-900/20"
           >
             <button
-              class="mb-2 w-full flex items-center gap-1 text-sm font-bold text-sky-700 dark:text-sky-300"
+              class="mb-2 w-full flex items-center gap-1 text-sm text-sky-700 font-bold dark:text-sky-300"
               @click="showPreMnemonic = !showPreMnemonic"
             >
               💡 例句巧记
@@ -1103,7 +1121,7 @@ onUnmounted(() => {
               <!-- 拆词：先只给词块，答案（词义）点一下才显示 -->
               <template v-if="preMnemonic && preMnemonic.kind === 'parts'">
                 <p
-                  class="mb-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+                  class="mb-2 text-sm text-gray-700 leading-relaxed dark:text-gray-300"
                 >
                   🧠 拆词：{{
                     (preMnemonic.parts ?? [])
@@ -1117,14 +1135,14 @@ onUnmounted(() => {
                   >
                     点击显示答案
                   </button>
-                  <span v-else class="font-bold text-sky-700 dark:text-sky-300">
+                  <span v-else class="text-sky-700 font-bold dark:text-sky-300">
                     → 也就是「{{ current.meaning }}」
                   </span>
                 </p>
               </template>
               <p
                 v-else-if="preMnemonic"
-                class="mb-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300"
+                class="mb-2 text-sm text-gray-700 leading-relaxed dark:text-gray-300"
               >
                 🧠 {{ preMnemonic.body }}
               </p>
@@ -1132,18 +1150,18 @@ onUnmounted(() => {
                 <p
                   v-for="(ex, i) in wordInfo.examples.slice(0, 2)"
                   :key="i"
-                  class="mb-1 text-sm leading-relaxed italic text-gray-600 dark:text-gray-400"
+                  class="mb-1 text-sm text-gray-600 leading-relaxed italic dark:text-gray-400"
                 >
                   🔗 “{{ ex }}”
                   <span
                     v-if="wordInfo.word !== current.word.toLowerCase()"
-                    class="text-xs not-italic text-gray-400"
+                    class="text-xs text-gray-400 not-italic"
                   >（{{ wordInfo.word }} 的例句）</span>
                 </p>
               </div>
               <p
                 v-else-if="current.example"
-                class="text-sm leading-relaxed italic text-gray-600 dark:text-gray-400"
+                class="text-sm text-gray-600 leading-relaxed italic dark:text-gray-400"
               >
                 🔗 “{{ current.example }}”
               </p>
@@ -1170,7 +1188,7 @@ onUnmounted(() => {
                     </button>
                     <span
                       v-if="synonymPos(syn)"
-                      class="ml-1 italic text-gray-500 dark:text-gray-400"
+                      class="ml-1 text-gray-500 italic dark:text-gray-400"
                       style="font-family: times"
                     >{{ synonymPos(syn) }}</span>
                     <span
@@ -1191,19 +1209,19 @@ onUnmounted(() => {
           </p>
           <div class="grid grid-cols-3 gap-3">
             <button
-              class="border border-red-200 rounded-xl bg-red-50 py-4 font-bold text-red-700 dark:border-red-800 dark:bg-red-900/20 hover:bg-red-100 dark:text-red-300"
+              class="border border-red-200 rounded-xl bg-red-50 py-4 text-red-700 font-bold dark:border-red-800 dark:bg-red-900/20 hover:bg-red-100 dark:text-red-300"
               @click="grade(0)"
             >
               不认识
             </button>
             <button
-              class="border border-yellow-200 rounded-xl bg-yellow-50 py-4 font-bold text-yellow-700 dark:border-yellow-800 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:text-yellow-300"
+              class="border border-yellow-200 rounded-xl bg-yellow-50 py-4 text-yellow-700 font-bold dark:border-yellow-800 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:text-yellow-300"
               @click="grade(3)"
             >
               模糊
             </button>
             <button
-              class="border border-green-200 rounded-xl bg-green-50 py-4 font-bold text-green-700 dark:border-green-800 dark:bg-green-900/20 hover:bg-green-100 dark:text-green-300"
+              class="border border-green-200 rounded-xl bg-green-50 py-4 text-green-700 font-bold dark:border-green-800 dark:bg-green-900/20 hover:bg-green-100 dark:text-green-300"
               @click="grade(5)"
             >
               认识
@@ -1239,7 +1257,7 @@ onUnmounted(() => {
             </span>
           </div>
           <div class="mb-4 flex items-center justify-center gap-3">
-            <span class="text-3xl font-black text-gray-900 dark:text-white">{{
+            <span class="text-3xl text-gray-900 font-black dark:text-white">{{
               studying.word
             }}</span>
             <button
@@ -1259,16 +1277,16 @@ onUnmounted(() => {
           </p>
           <div class="mb-4 text-center">
             <span
-              class="mr-2 text-sm italic text-gray-400"
+              class="mr-2 text-sm text-gray-400 italic"
               style="font-family: times"
             >{{ studying.pos }}</span>
             <span
-              class="text-xl font-medium text-gray-800 dark:text-gray-200"
+              class="text-xl text-gray-800 font-medium dark:text-gray-200"
             >{{ studying.meaning }}</span>
           </div>
           <p
             v-if="studying.example"
-            class="mb-6 text-center text-sm italic text-gray-500 dark:text-gray-400"
+            class="mb-6 text-center text-sm text-gray-500 italic dark:text-gray-400"
           >
             {{ studying.example }}
           </p>
@@ -1281,19 +1299,19 @@ onUnmounted(() => {
             "
             class="mb-6 border border-sky-200 rounded-xl bg-sky-50 p-4 text-left dark:border-sky-800 dark:bg-sky-900/20"
           >
-            <div class="mb-2 text-sm font-bold text-sky-700 dark:text-sky-300">
+            <div class="mb-2 text-sm text-sky-700 font-bold dark:text-sky-300">
               🔗 例句扩展
             </div>
             <div v-if="wordInfo.examples.length > 0">
               <p
                 v-for="(ex, i) in wordInfo.examples.slice(0, 2)"
                 :key="i"
-                class="mb-1 text-sm leading-relaxed italic text-gray-600 dark:text-gray-400"
+                class="mb-1 text-sm text-gray-600 leading-relaxed italic dark:text-gray-400"
               >
                 “{{ ex }}”
                 <span
                   v-if="wordInfo.word !== studying.word.toLowerCase()"
-                  class="text-xs not-italic text-gray-400"
+                  class="text-xs text-gray-400 not-italic"
                 >（{{ wordInfo.word }} 的例句）</span>
               </p>
             </div>
@@ -1320,7 +1338,7 @@ onUnmounted(() => {
                   </button>
                   <span
                     v-if="synonymPos(syn)"
-                    class="ml-1 italic text-gray-500 dark:text-gray-400"
+                    class="ml-1 text-gray-500 italic dark:text-gray-400"
                     style="font-family: times"
                   >{{ synonymPos(syn) }}</span>
                   <span
@@ -1341,10 +1359,10 @@ onUnmounted(() => {
             class="mb-6 border border-teal-200 rounded-xl bg-teal-50 p-4 dark:border-teal-800 dark:bg-teal-900/20"
           >
             <div
-              class="mb-2 text-sm font-bold text-teal-700 dark:text-teal-300"
+              class="mb-2 text-sm text-teal-700 font-bold dark:text-teal-300"
             >
               📚 拓展词汇
-              <span class="font-normal text-teal-500">（{{ studyExtras.length }} 个可学）</span>
+              <span class="text-teal-500 font-normal">（{{ studyExtras.length }} 个可学）</span>
             </div>
             <ul class="space-y-3">
               <li
@@ -1365,7 +1383,7 @@ onUnmounted(() => {
                 </button>
                 <span
                   v-if="ex.pos"
-                  class="ml-1 text-sm italic text-gray-500 dark:text-gray-400"
+                  class="ml-1 text-sm text-gray-500 italic dark:text-gray-400"
                   style="font-family: times"
                 >{{ ex.pos }}</span>
                 <span
@@ -1381,14 +1399,14 @@ onUnmounted(() => {
             class="mb-6 border border-amber-200 rounded-xl bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20"
           >
             <button
-              class="flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-300"
+              class="flex items-center gap-2 text-sm text-amber-700 font-bold dark:text-amber-300"
               @click="showMnemonic = !showMnemonic"
             >
               <i class="i-carbon-idea block" />
               {{ studyMnemonic ? studyMnemonic.title : "巧记提示" }}
               <span
                 v-if="studyLapses >= 2"
-                class="text-xs font-normal text-amber-500"
+                class="text-xs text-amber-500 font-normal"
               >（这个词你已记错 {{ studyLapses }} 次）</span>
             </button>
             <div
@@ -1438,13 +1456,13 @@ onUnmounted(() => {
           <div class="flex gap-3">
             <button
               v-if="gradeHistory.length > 0"
-              class="flex-1 border border-gray-300 rounded-xl py-3 text-sm font-bold text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              class="flex-1 border border-gray-300 rounded-xl py-3 text-sm text-gray-600 font-bold dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               @click="goBackOne"
             >
               ↩ 返回上一个，重新测试
             </button>
             <button
-              class="flex-1 rounded-xl bg-blue-600 py-3 text-sm font-bold text-white hover:bg-blue-700"
+              class="flex-1 rounded-xl bg-blue-600 py-3 text-sm text-white font-bold hover:bg-blue-700"
               @click="next"
             >
               下一个
@@ -1462,10 +1480,10 @@ onUnmounted(() => {
         <div
           class="max-w-sm w-full rounded-2xl bg-white p-6 text-center shadow-xl dark:bg-gray-800"
         >
-          <h3 class="mb-3 text-lg font-bold text-gray-900 dark:text-white">
+          <h3 class="mb-3 text-lg text-gray-900 font-bold dark:text-white">
             本次学习结束
           </h3>
-          <p class="mb-2 text-3xl font-black text-blue-600 dark:text-blue-400">
+          <p class="mb-2 text-3xl text-blue-600 font-black dark:text-blue-400">
             {{ formatDuration(sessionTotal) }}
           </p>
           <p class="mb-1 text-sm text-gray-500 dark:text-gray-400">
@@ -1493,13 +1511,13 @@ onUnmounted(() => {
           </p>
           <div class="flex gap-3">
             <button
-              class="flex-1 border border-gray-300 rounded-xl py-2.5 text-sm font-bold text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              class="flex-1 border border-gray-300 rounded-xl py-2.5 text-sm text-gray-600 font-bold dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               @click="cancelExit"
             >
               继续学习
             </button>
             <button
-              class="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+              class="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm text-white font-bold hover:bg-blue-700"
               @click="confirmExit"
             >
               退出

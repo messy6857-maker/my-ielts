@@ -1,15 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
 import type { Ref } from 'vue'
-import PartTwoPractice from './PartTwoPractice.vue'
-import QuestionRecorder from './QuestionRecorder.vue'
-import { PART1_TOPICS } from './part1'
-import { PART2_CARDS } from './part2'
 import type { Part2Card } from './part2'
-import { PART3_TOPICS } from './part3'
-import { confirmLeaveRecording, isRecorderBusy } from '~/composables/useRecorder'
+import { computed, ref } from 'vue'
 import { hasAISettings } from '~/composables/useAISettings'
 import { useAuth } from '~/composables/useAuth'
+import { confirmLeaveRecording, isRecorderBusy } from '~/composables/useRecorder'
+import { PART1_TOPICS } from './part1'
+import { PART2_CARDS } from './part2'
+import { PART3_TOPICS } from './part3'
+import PartTwoPractice from './PartTwoPractice.vue'
+import QuestionRecorder from './QuestionRecorder.vue'
 
 const { currentUser } = useAuth()
 onBeforeRouteLeave(confirmLeaveRecording)
@@ -45,7 +45,9 @@ const p1Filtered = computed(() => {
 function toggleP1(id: string) {
   if (p1Expanded.value !== null && !confirmLeaveRecording())
     return
-  p1Expanded.value = p1Expanded.value === id ? null : id
+  p1Expanded.value = p1Expanded.value === id
+    ? null
+    : id
 }
 
 // Part 2
@@ -81,7 +83,9 @@ const p3Filtered = computed(() => {
 function toggleP3(id: string) {
   if (p3Expanded.value !== null && !confirmLeaveRecording())
     return
-  p3Expanded.value = p3Expanded.value === id ? null : id
+  p3Expanded.value = p3Expanded.value === id
+    ? null
+    : id
 }
 
 function tabBtn(t: Tab) {
@@ -116,7 +120,7 @@ function tabBtn(t: Tab) {
       </p>
       <router-link
         to="/settings"
-        class="mt-2 inline-block text-sm font-medium text-blue-700 underline dark:text-blue-300"
+        class="mt-2 inline-block text-sm text-blue-700 font-medium underline dark:text-blue-300"
       >
         去设置配置 AI →
       </router-link>
@@ -172,7 +176,7 @@ function tabBtn(t: Tab) {
             @click="toggleP1(t.id)"
           >
             <span class="text-sm font-bold dark:text-white">{{ t.topic }}
-              <span class="font-normal text-gray-400">{{
+              <span class="text-gray-400 font-normal">{{
                 t.topicCn
               }}</span></span>
             <span class="text-gray-400">{{
@@ -266,7 +270,7 @@ function tabBtn(t: Tab) {
             @click="toggleP3(t.id)"
           >
             <span class="text-sm font-bold dark:text-white">{{ t.topic }}
-              <span class="font-normal text-gray-400">{{
+              <span class="text-gray-400 font-normal">{{
                 t.topicCn
               }}</span></span>
             <span class="text-gray-400">{{

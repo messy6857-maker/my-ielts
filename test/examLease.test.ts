@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { afterEach, beforeEach, expect, it } from 'vitest'
 import { defineComponent, ref } from 'vue'
 import { useAuth } from '../src/composables/useAuth'
 import { useExamRecovery } from '../src/composables/useExamRecovery'

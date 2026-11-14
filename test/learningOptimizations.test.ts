@@ -1,29 +1,29 @@
+import type { MistakeItem } from '../src/composables/useStudyData'
+import type { MockQuestion } from '../src/pages/mock/types'
 import { beforeEach, describe, expect, it } from 'vitest'
+import { useAuth } from '../src/composables/useAuth'
 import { gradeSchedule } from '../src/composables/useSpacedRepetition'
 import { useMistakes } from '../src/composables/useStudyData'
-import { useAuth } from '../src/composables/useAuth'
+import {
+  prefersOriginalAudio,
+  shouldUseTtsFallback,
+} from '../src/pages/listening/timings/loadTimings'
+import { diffDictation, tokenizeDictation } from '../src/utils/dictationDiff'
 import {
   buildMockMistakeEntry,
   collectMockMistakeEntries,
   decodeMockMistakeMeta,
 } from '../src/utils/mockMistakes'
-import { diffDictation, tokenizeDictation } from '../src/utils/dictationDiff'
-import {
-  prefersOriginalAudio,
-  shouldUseTtsFallback,
-} from '../src/pages/listening/timings/loadTimings'
 import {
   buildTodayTasks,
   countDueSchedules,
   listUnfinishedMocks,
   pickRecentMistakes,
 } from '../src/utils/todayTasks'
-import type { MistakeItem } from '../src/composables/useStudyData'
-import type { MockQuestion } from '../src/pages/mock/types'
 
 const DAY = 86_400_000
 
-describe('SM-2 gradeSchedule', () => {
+describe('sM-2 gradeSchedule', () => {
   const now = 1_700_000_000_000
 
   it('认识：拉长间隔并推迟 dueAt', () => {
@@ -143,7 +143,9 @@ describe('模考错题入库', () => {
       testId: 'cam19-test1',
       label: '剑19 Test 1',
       answers: { a: 'yes', b: 'maybe' },
-      parts: [{ part: 'passage1', questions: qs }],
+      parts: [
+        { part: 'passage1', questions: qs },
+      ],
     })
     expect(entries).toHaveLength(1)
     expect(entries[0].key).toContain('b')

@@ -107,7 +107,7 @@ export function deinflect(word: string): string[] {
   }
   // 双写辅音还原：stopped -> stopp -> stop
   const undoubled = (stem: string) => {
-    if (/([bcdfghjklmnpqrstvwxz])\1$/.test(stem))
+    if (/([bcdfghj-np-tvwxz])\1$/.test(stem))
       push(stem.slice(0, -1))
   }
   if (word.endsWith('ies') && word.length > 4)
@@ -135,8 +135,10 @@ export function deinflect(word: string): string[] {
   return out
 }
 
-/** 查词库释义：首次调用懒加载全部 22 章（约 612K）建索引并缓存；查不到返回 null。
- *  先精确匹配，再试去词形还原（复数/过去式/进行时等）。 */
+/**
+ * 查词库释义：首次调用懒加载全部 22 章（约 612K）建索引并缓存；查不到返回 null。
+ *  先精确匹配，再试去词形还原（复数/过去式/进行时等）。
+ */
 export async function lookupVocabularyMeaning(
   word: string,
 ): Promise<VocabularyMeaning | null> {

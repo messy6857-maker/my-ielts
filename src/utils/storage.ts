@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import { deletedTarget } from './retention'
 import { mergeLegacy } from './legacyMerge'
+import { deletedTarget } from './retention'
 
 export interface Envelope<T = unknown> {
   __ielts: 2
@@ -95,7 +95,11 @@ export const arrayBases = [
   'task1_essays_v1',
   'task2_essays_v1',
 ]
-export const collectionBases = [...mapBases, ...setBases, ...arrayBases]
+export const collectionBases = [
+  ...mapBases,
+  ...setBases,
+  ...arrayBases,
+]
 const scalarBases = [
   'typing_ignore_case_v2',
   'flashcard_daily_goal_v1',
@@ -132,23 +136,33 @@ export function isStudyBase(base: string): boolean {
     && ((suffix !== undefined
       && collectionBases.includes(table)
       && /^(?:[a-f\d]{4})+$/i.test(suffix))
-      || (suffix === undefined
-        && [...collectionBases, ...scalarBases, ...legacyBases].includes(base))
+    || (suffix === undefined
+      && [
+        ...collectionBases,
+        ...scalarBases,
+        ...legacyBases,
+      ].includes(base))
       || /^study_time_v1_[a-z\d-]+$/i.test(base)
       || /^aigrade_(?:speaking_)?v1_(?:[a-z\d]+_)?-?[a-z\d]+$/i.test(base)
       || /^aigrade_v2_[a-z\d]+$/i.test(base))
   )
 }
 export function accountPrefix(user: string | null) {
-  return user ? `myielts_u_${user}_` : 'myielts_'
+  return user
+    ? `myielts_u_${user}_`
+    : 'myielts_'
 }
 export function accountKey(base: string, user: string | null) {
   return accountPrefix(user) + base
 }
 export function studyBaseOf(key: string, user: string | null) {
   const prefix = accountPrefix(user)
-  const base = key.startsWith(prefix) ? key.slice(prefix.length) : ''
-  return isStudyBase(base) ? base : null
+  const base = key.startsWith(prefix)
+    ? key.slice(prefix.length)
+    : ''
+  return isStudyBase(base)
+    ? base
+    : null
 }
 export function isStudyKey(key: string) {
   if (studyBaseOf(key, null))
@@ -171,9 +185,9 @@ export function encodeId(id: string) {
 export function decodeId(id: string) {
   return /^(?:[a-f\d]{4})+$/i.test(id)
     ? id
-      .match(/.{4}/g)!
-      .map(x => String.fromCharCode(Number.parseInt(x, 16)))
-      .join('')
+        .match(/.{4}/g)!
+        .map(x => String.fromCharCode(Number.parseInt(x, 16)))
+        .join('')
     : null
 }
 export function isEnvelope(value: unknown): value is Envelope {
@@ -194,7 +208,11 @@ export function envelope(raw: string): Envelope {
   const value: unknown = JSON.parse(raw)
   return isEnvelope(value)
     ? value
-    : { __ielts: 2, stamp: [0, 'legacy'], value }
+    : {
+        __ielts: 2,
+        stamp: [0, 'legacy'],
+        value,
+      }
 }
 export function readValue<T>(key: string, fallback: T): T {
   try {
@@ -300,8 +318,9 @@ export function saveValue(key: string, value: unknown, deleted = false) {
     previous
     && !!previous.deleted === deleted
     && JSON.stringify(previous.value) === JSON.stringify(value)
-  )
+  ) {
     return true
+  }
   clock = Math.max(
     currentClockFloor() + 1,
     Date.now(),
@@ -309,8 +328,13 @@ export function saveValue(key: string, value: unknown, deleted = false) {
   )
   return saveEnvelope(key, {
     __ielts: 2,
-    stamp: [clock, writerId()],
-    ...(deleted ? { deleted: true } : { value }),
+    stamp: [
+      clock,
+      writerId(),
+    ],
+    ...(deleted
+      ? { deleted: true }
+      : { value }),
   })
 }
 export function entryKey(base: string, id: string, user: string | null) {
@@ -323,22 +347,22 @@ export function legacyEntries(
   if (setBases.includes(base)) {
     return Array.isArray(value)
       ? Object.fromEntries(
-        value.filter(x => typeof x === 'string').map(id => [id, true]),
-      )
+          value.filter(x => typeof x === 'string').map(id => [id, true]),
+        )
       : {}
   }
   if (arrayBases.includes(base)) {
     return Array.isArray(value)
       ? Object.fromEntries(
-        value
-          .filter(x => x && typeof x === 'object')
-          .map((x: any) => [
-            base === 'mock_history_v1'
-              ? `${x.kind}:${x.id}:${x.date}`
-              : String(x.id),
-            x,
-          ]),
-      )
+          value
+            .filter(x => x && typeof x === 'object')
+            .map((x: any) => [
+              base === 'mock_history_v1'
+                ? `${x.kind}:${x.id}:${x.date}`
+                : String(x.id),
+              x,
+            ]),
+        )
       : {}
   }
   return value && typeof value === 'object' && !Array.isArray(value)
@@ -353,14 +377,14 @@ export function deletionEnvelope(
   if (!target)
     return undefined
   try {
-    const stamp = JSON.parse(localStorage.getItem(target.key) || 'null')?.value
-      ?.entries?.[target.target]
+    const stamp = JSON.parse(localStorage.getItem(target.key) || 'null')?.value?.entries?.[target.target]
     if (
       Array.isArray(stamp)
       && Number.isSafeInteger(stamp[0])
       && typeof stamp[1] === 'string'
-    )
+    ) {
       return { __ielts: 2, stamp: stamp as [number, string], deleted: true }
+    }
   }
   catch {}
   return undefined
@@ -422,17 +446,26 @@ export function importTable(
       result.keptNewer++
       continue
     }
-    const merged = old ? mergeLegacy(base, old.value, item) : item
+    const merged = old
+      ? mergeLegacy(base, old.value, item)
+      : item
     if (!old || JSON.stringify(old.value) !== JSON.stringify(merged)) {
       if (
         saveEnvelope(
           key,
-          { __ielts: 2, stamp: [0, 'legacy'], value: merged },
+          {
+            __ielts: 2,
+            stamp: [0, 'legacy'],
+            value: merged,
+          },
           source,
         )
-      )
+      ) {
         result.imported++
-      else result.failed++
+      }
+      else {
+        result.failed++
+      }
     }
     else {
       result.keptNewer++
@@ -451,7 +484,9 @@ export function readRecords<T>(
       base,
       readValue(
         key,
-        setBases.includes(base) || arrayBases.includes(base) ? [] : {},
+        setBases.includes(base) || arrayBases.includes(base)
+          ? []
+          : {},
       ),
       user,
     )

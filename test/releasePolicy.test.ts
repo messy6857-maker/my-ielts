@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
+import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 
 it('deployment verification retries ten times, sleeps only between tries and fails independently of source push', () => {

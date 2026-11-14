@@ -1,11 +1,11 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { useAuth } from '../src/composables/useAuth'
-import { readRecords } from '../src/utils/storage'
-import vocabulary from '../src/pages/vocabulary/vocabulary'
 import SpellingPage from '../src/pages/vocabulary/index.vue'
 import TypingPage from '../src/pages/vocabulary/typing.vue'
+import vocabulary from '../src/pages/vocabulary/vocabulary'
+import { readRecords } from '../src/utils/storage'
 
 const CHAPTER = '01_自然地理'
 const TOTAL = (vocabulary as any)[CHAPTER].words.flat().length
@@ -16,7 +16,10 @@ beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   auth.currentUser.value = 'alice'
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
   vi.stubGlobal(
     'SpeechSynthesisUtterance',
     class {
@@ -38,7 +41,9 @@ afterEach(() => {
 function mountSpelling() {
   const w = mount(SpellingPage, {
     attachTo: document.body,
-    global: { stubs: { RouterLink: true } },
+    global: {
+      stubs: { RouterLink: true },
+    },
   })
   wrappers.push(w)
   return w
@@ -60,14 +65,16 @@ async function setTraining(w: any, on: boolean) {
 
 function statsText(w: any) {
   const p = w.findAll('p').find((el: any) => el.text().includes('个未完成'))
-  return p ? p.text() : ''
+  return p
+    ? p.text()
+    : ''
 }
 
 function spellInput(w: any, id: number) {
   return w.find(`input[id="${id}"]`)
 }
 
-it('B1: 刷新后重开练习模式，统计立即恢复，不再显示 stale 0,0,0', async () => {
+it('b1: 刷新后重开练习模式，统计立即恢复，不再显示 stale 0,0,0', async () => {
   let w: any = mountSpelling()
   await flushPromises()
   await setTraining(w, true)
@@ -83,7 +90,7 @@ it('B1: 刷新后重开练习模式，统计立即恢复，不再显示 stale 0,
   expect(statsText(w)).toBe(`${TOTAL - 2} 个未完成，1 个正确，1 个错误`)
 })
 
-it('B2: 完成练习后开关练习模式，完成着色复位', async () => {
+it('b2: 完成练习后开关练习模式，完成着色复位', async () => {
   const w = mountSpelling()
   await flushPromises()
   await setTraining(w, true)
@@ -98,7 +105,7 @@ it('B2: 完成练习后开关练习模式，完成着色复位', async () => {
   expect(spellInput(w, 1).classes()).not.toContain('bg-red-50')
 })
 
-it('B2: 完成练习后切章再切回，完成着色不再粘滞', async () => {
+it('b2: 完成练习后切章再切回，完成着色不再粘滞', async () => {
   const w = mountSpelling()
   await flushPromises()
   await setTraining(w, true)
@@ -114,7 +121,7 @@ it('B2: 完成练习后切章再切回，完成着色不再粘滞', async () => 
   expect(spellInput(w, 1).classes()).not.toContain('bg-red-50')
 })
 
-it('B3: 仅空格输入不计正确、不持久化空格串', async () => {
+it('b3: 仅空格输入不计正确、不持久化空格串', async () => {
   const w = mountSpelling()
   await flushPromises()
   await setTraining(w, true)
@@ -138,7 +145,7 @@ function feedbackSpans(w: any) {
   return layer.findAll('span')
 }
 
-it('B4: 忽略大小写开启时，Atmosphere 首字母不再显示错色', async () => {
+it('b4: 忽略大小写开启时，Atmosphere 首字母不再显示错色', async () => {
   const w = mountTyping()
   await flushPromises()
   // 首词即 atmosphere（首章首词）；只输前 5 个字母，避免触发完成进词。
@@ -150,7 +157,7 @@ it('B4: 忽略大小写开启时，Atmosphere 首字母不再显示错色', asyn
   expect(spans[0].classes()).not.toContain('text-red-500')
 })
 
-it('B4: 忽略大小写关闭时，大小写敏感着色保持不变', async () => {
+it('b4: 忽略大小写关闭时，大小写敏感着色保持不变', async () => {
   const w = mountTyping()
   await flushPromises()
   const label: any = w.findAll('label').find((l: any) => l.text().includes('忽略大小写'))
@@ -166,7 +173,7 @@ it('B4: 忽略大小写关闭时，大小写敏感着色保持不变', async () 
   expect(spans[1].classes()).toContain('text-green-500')
 })
 
-it('O1: 完成练习后错词旁直接显示正确答案', async () => {
+it('o1: 完成练习后错词旁直接显示正确答案', async () => {
   const w = mountSpelling()
   await flushPromises()
   await setTraining(w, true)
@@ -178,7 +185,7 @@ it('O1: 完成练习后错词旁直接显示正确答案', async () => {
   expect(w.text()).toContain('正确答案：atmosphere')
 })
 
-it('O2: 四个开关持久化，重新挂载后保持上次选择', async () => {
+it('o2: 四个开关持久化，重新挂载后保持上次选择', async () => {
   const w = mountSpelling()
   await flushPromises()
   await setTraining(w, true)
@@ -195,7 +202,7 @@ it('O2: 四个开关持久化，重新挂载后保持上次选择', async () => 
   expect((label.find('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
 })
 
-it('O3: 打字 WPM 按整章累计，不再每词重置', async () => {
+it('o3: 打字 WPM 按整章累计，不再每词重置', async () => {
   const w = mountTyping()
   await flushPromises()
   for (let i = 0; i < 80; i++) {

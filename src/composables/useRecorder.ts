@@ -86,8 +86,9 @@ export function useRecorder() {
       if (
         !navigator.mediaDevices?.getUserMedia
         || typeof MediaRecorder === 'undefined'
-      )
+      ) {
         throw new Error('当前浏览器不支持录音，请使用支持的浏览器')
+      }
       acquired = await navigator.mediaDevices.getUserMedia({ audio: true })
       if (disposed || sequence !== generation || active !== session) {
         acquired.getTracks().forEach(t => t.stop())
@@ -101,7 +102,9 @@ export function useRecorder() {
       ].find(t => MediaRecorder.isTypeSupported?.(t))
       const current = new MediaRecorder(
         acquired,
-        mimeType ? { mimeType } : undefined,
+        mimeType
+          ? { mimeType }
+          : undefined,
       )
       const chunks: Blob[] = []
       const currentStream = acquired
@@ -151,7 +154,7 @@ export function useRecorder() {
       }, 1000)
       const SR
         = (window as any).SpeechRecognition
-        || (window as any).webkitSpeechRecognition
+          || (window as any).webkitSpeechRecognition
       if (SR) {
         try {
           const recognizer = new SR()

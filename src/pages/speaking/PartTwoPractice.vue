@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import type { Part2Card } from './part2'
 import { computed, onUnmounted, ref } from 'vue'
+import { hasAISettings } from '~/composables/useAISettings'
+import { formatRecordingClock, useRecorder } from '~/composables/useRecorder'
 import AIGradeSpeaking from './AIGradeSpeaking.vue'
 import SpeakingSelfRubric from './SpeakingSelfRubric.vue'
-import type { Part2Card } from './part2'
-import { formatRecordingClock, useRecorder } from '~/composables/useRecorder'
-import { hasAISettings } from '~/composables/useAISettings'
 
 defineProps<{ card: Part2Card }>()
 const emit = defineEmits<{ back: [] }>()
@@ -125,7 +125,7 @@ onUnmounted(() => {
         You should say:
       </div>
       <ul
-        class="mt-1 list-disc pl-5 text-sm leading-6 text-gray-700 space-y-1 dark:text-gray-300"
+        class="mt-1 list-disc pl-5 text-sm text-gray-700 leading-6 space-y-1 dark:text-gray-300"
       >
         <li v-for="(b, i) in card.bullets" :key="i">
           {{ b }}
@@ -153,12 +153,12 @@ onUnmounted(() => {
       </div>
 
       <div v-if="phase === 'ready'" class="space-y-3">
-        <p class="text-sm leading-6 text-gray-500 dark:text-gray-400">
+        <p class="text-sm text-gray-500 leading-6 dark:text-gray-400">
           考试流程：先 <b>1 分钟准备</b>（可以在纸上记要点），然后
           <b>1–2 分钟陈述</b>。准备结束后点击开始陈述以授权录音，结束后可以回放检查流利度、语法和词汇。
         </p>
         <button
-          class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+          class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm text-white font-bold hover:bg-blue-700"
           @click="startPrep"
         >
           ▶ 开始 1 分钟准备
@@ -170,7 +170,7 @@ onUnmounted(() => {
           在纸上快速记下要点，想好开头、中间、结尾。准备好可提前开始。
         </p>
         <button
-          class="rounded-lg bg-green-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-green-700"
+          class="rounded-lg bg-green-600 px-5 py-2.5 text-sm text-white font-bold hover:bg-green-700"
           :disabled="recorder.starting.value"
           @click="startTalk"
         >
@@ -186,7 +186,7 @@ onUnmounted(() => {
           正在录音…覆盖所有 bullet points，保持说到 1 分半以上
         </p>
         <button
-          class="rounded-lg bg-gray-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-gray-700"
+          class="rounded-lg bg-gray-600 px-5 py-2.5 text-sm text-white font-bold hover:bg-gray-700"
           @click="finishTalk"
         >
           ⏹ 结束陈述
@@ -223,7 +223,7 @@ onUnmounted(() => {
           v-if="recorder.transcript.value"
           class="rounded-lg bg-gray-50 p-3 text-xs leading-5 dark:bg-gray-700/50"
         >
-          <div class="mb-1 font-bold text-gray-500 dark:text-gray-400">
+          <div class="mb-1 text-gray-500 font-bold dark:text-gray-400">
             📝 语音转写
           </div>
           <p class="text-gray-700 dark:text-gray-200">
@@ -234,7 +234,7 @@ onUnmounted(() => {
           v-else-if="recorder.audioUrl.value && !recorder.processing.value"
           class="rounded-lg bg-gray-50 p-3 text-xs leading-5 dark:bg-gray-700/50"
         >
-          <div class="mb-1 font-bold text-gray-500 dark:text-gray-400">
+          <div class="mb-1 text-gray-500 font-bold dark:text-gray-400">
             📝 语音转写
           </div>
           <p v-if="!recorder.transcriptionSupported" class="text-gray-400">
@@ -258,7 +258,7 @@ onUnmounted(() => {
         />
         <div class="flex gap-2">
           <button
-            class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+            class="rounded-lg bg-blue-600 px-5 py-2.5 text-sm text-white font-bold hover:bg-blue-700"
             @click="retry"
           >
             🔄 再练一次

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import type { MistakeItem, MistakeModule } from '../composables/useStudyData'
-import { MISTAKE_MODULE_LABEL } from '../composables/useStudyData'
+import { resolveMediaUrl } from '~/composables/useAudio'
 import { confirmDialog } from '../composables/useDialog'
+import { MISTAKE_MODULE_LABEL } from '../composables/useStudyData'
+import { diffDictation } from '../utils/dictationDiff'
 import {
   decodeMockMistakeMeta,
   mockReviewMatches,
 } from '../utils/mockMistakes'
-import { diffDictation } from '../utils/dictationDiff'
-import { resolveMediaUrl } from '~/composables/useAudio'
 
 const { currentUser } = useAuth()
 let reviewTimer: ReturnType<typeof setTimeout> | undefined
@@ -80,7 +80,9 @@ const filteredGrouped = computed(() => {
     list.push(item)
     map.set(item.module, list)
   }
-  return [...map.entries()].map(([module, items]) => ({
+  return [
+    ...map.entries(),
+  ].map(([module, items]) => ({
     module,
     label: MISTAKE_MODULE_LABEL[module] ?? module,
     items,
@@ -130,7 +132,9 @@ watch(filterTestId, () => {
 })
 
 function startReview(onlyFiltered = true) {
-  const pool = onlyFiltered ? filteredItems.value : allMistakes()
+  const pool = onlyFiltered
+    ? filteredItems.value
+    : allMistakes()
   if (pool.length === 0)
     return
   reviewSnapshot.value = [...pool]
@@ -155,7 +159,9 @@ function nextCard() {
   // 答错后点“下一个”应重看同一张（仅剩当前一张时也一样）；
   // 范围内一张不剩才停止，绝不越出快照范围。
   const others = pool.filter(m => m.key !== reviewItem.value?.key)
-  const candidates = others.length > 0 ? others : pool
+  const candidates = others.length > 0
+    ? others
+    : pool
   if (candidates.length === 0) {
     stopReview()
     return
@@ -226,8 +232,9 @@ async function confirmClearLegacyListening() {
       `确定要清理 ${count} 条旧听力错题吗？仅删除 listening: 开头、且非 listening179: 的旧键条目（键统一之前产生），新键 listening179: 与其他分组不受影响。此操作不可撤销。`,
       { danger: true, confirmText: '清理' },
     )
-  )
+  ) {
     legacyListeningKeys.value.forEach(key => removeMistake(key))
+  }
 }
 
 function mockOpenPath(item: MistakeItem): string | null {
@@ -235,7 +242,9 @@ function mockOpenPath(item: MistakeItem): string | null {
   if (!meta)
     return null
   const path
-    = meta.kind === 'listening' ? '/mock/listening-test' : '/mock/reading-test'
+    = meta.kind === 'listening'
+      ? '/mock/listening-test'
+      : '/mock/reading-test'
   return `${path}?test=${encodeURIComponent(meta.testId)}`
 }
 
@@ -265,10 +274,10 @@ function detailLines(detail: string) {
     >
       <div class="items-center justify-between gap-3 lg:flex">
         <div class="mb-4 lg:mb-0">
-          <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+          <h3 class="mb-2 text-xl text-gray-900 font-bold dark:text-white">
             错词本
           </h3>
-          <span class="text-base font-normal text-gray-500 dark:text-gray-400">
+          <span class="text-base text-gray-500 font-normal dark:text-gray-400">
             词汇、模考、听写等记错项会自动收录（共 {{ totalCount }} 个；当前筛选
             {{ filteredItems.length }} 个）
           </span>
@@ -277,7 +286,7 @@ function detailLines(detail: string) {
           <button
             v-if="filteredItems.length > 0 && !isReviewing"
             type="button"
-            class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800"
+            class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800"
             @click="startReview(true)"
           >
             只做错题重练（{{ filteredItems.length }}）
@@ -285,7 +294,7 @@ function detailLines(detail: string) {
           <button
             v-if="legacyListeningKeys.length > 0"
             type="button"
-            class="rounded-lg bg-amber-100 px-5 py-2.5 text-sm font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-200"
+            class="rounded-lg bg-amber-100 px-5 py-2.5 text-sm text-amber-800 font-medium dark:bg-amber-900/30 dark:text-amber-200"
             @click="confirmClearLegacyListening"
           >
             清理旧听力键（{{ legacyListeningKeys.length }} 条）
@@ -293,7 +302,7 @@ function detailLines(detail: string) {
           <button
             v-if="totalCount > 0"
             type="button"
-            class="rounded-lg bg-gray-200 px-5 py-2.5 text-sm font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200"
+            class="rounded-lg bg-gray-200 px-5 py-2.5 text-sm text-gray-700 font-medium dark:bg-gray-700 dark:text-gray-200"
             @click="confirmClearAll"
           >
             清空全部
@@ -365,12 +374,12 @@ function detailLines(detail: string) {
         <div
           class="mx-auto max-w-xl border border-gray-200 rounded-xl bg-gray-50 p-6 text-center dark:border-gray-700 dark:bg-gray-900 sm:p-8"
         >
-          <div class="mb-2 text-xs tracking-wider uppercase text-gray-500">
+          <div class="mb-2 text-xs text-gray-500 tracking-wider uppercase">
             {{ MISTAKE_MODULE_LABEL[reviewItem.module] || reviewItem.module }} · 剩余
             {{ reviewRemaining }}
           </div>
           <div
-            class="mb-3 whitespace-pre-line text-left text-sm leading-6 text-gray-700 dark:text-gray-300"
+            class="mb-3 whitespace-pre-line text-left text-sm text-gray-700 leading-6 dark:text-gray-300"
           >
             <p
               v-for="(line, i) in detailLines(reviewItem.detail)"
@@ -406,7 +415,7 @@ function detailLines(detail: string) {
           </div>
           <div
             v-if="reviewState === 'correct'"
-            class="mb-4 rounded-lg bg-green-50 p-3 font-bold text-green-700 dark:bg-green-900/30 dark:text-green-300"
+            class="mb-4 rounded-lg bg-green-50 p-3 text-green-700 font-bold dark:bg-green-900/30 dark:text-green-300"
           >
             答对了，已从错词本移除 ✓
           </div>
@@ -422,7 +431,7 @@ function detailLines(detail: string) {
             >
             <button
               type="button"
-              class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800"
+              class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800"
               @click="submitAnswer"
             >
               确认
@@ -459,7 +468,7 @@ function detailLines(detail: string) {
         </div>
         <template v-for="group in filteredGrouped" :key="group.module">
           <div class="mb-2 mt-6 flex items-center justify-between">
-            <h4 class="text-lg font-bold text-gray-900 dark:text-white">
+            <h4 class="text-lg text-gray-900 font-bold dark:text-white">
               {{ group.label }}（{{ group.items.length }}）
             </h4>
             <button
@@ -474,7 +483,7 @@ function detailLines(detail: string) {
               class="w-full text-left text-sm text-gray-500 dark:text-gray-400"
             >
               <thead
-                class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"
+                class="bg-gray-50 text-xs text-gray-700 uppercase dark:bg-gray-700 dark:text-gray-400"
               >
                 <tr>
                   <th class="px-4 py-3 sm:px-6">
@@ -499,7 +508,7 @@ function detailLines(detail: string) {
                   class="border-b bg-white dark:border-gray-700 dark:bg-gray-800"
                 >
                   <td
-                    class="px-4 py-4 font-medium text-gray-900 sm:px-6 dark:text-white"
+                    class="px-4 py-4 text-gray-900 font-medium sm:px-6 dark:text-white"
                   >
                     {{ item.title }}
                   </td>
@@ -532,7 +541,7 @@ function detailLines(detail: string) {
                   </td>
                   <td class="px-4 py-4 sm:px-6">
                     <span
-                      class="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                      class="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-700 font-bold dark:bg-red-900/40 dark:text-red-300"
                     >
                       {{ item.count }}
                     </span>

@@ -1,6 +1,6 @@
 import { isArchiveWatermark } from './archives'
-import { mergeEntry } from './entryMerge'
 import { triggerBlobDownload } from './download'
+import { mergeEntry } from './entryMerge'
 import {
   accountKey,
   batchStorage,
@@ -23,11 +23,11 @@ export function studyBackup(user: string | null) {
     )
     const guestDraft
       = user !== null
-      && ['task1', 'task2'].some(
-        task =>
-          key === accountKey(`${task}_draft_v1`, null)
-          || key.startsWith(`${accountKey(`${task}_draft_v1`, null)}__prompt_`),
-      )
+        && ['task1', 'task2'].some(
+          task =>
+            key === accountKey(`${task}_draft_v1`, null)
+            || key.startsWith(`${accountKey(`${task}_draft_v1`, null)}__prompt_`),
+        )
     const examDraft = [user, null].some(owner =>
       ['reading', 'listening'].some(kind =>
         key.startsWith(accountKey(`mock_draft_v1_${kind}_`, owner)),
@@ -39,8 +39,9 @@ export function studyBackup(user: string | null) {
       || draft
       || guestDraft
       || examDraft
-    )
+    ) {
       data[key] = localStorage.getItem(key)!
+    }
   }
   return {
     format: 'my-ielts-backup',
@@ -54,7 +55,9 @@ export function studyBackup(user: string | null) {
 export function downloadStudyBackup(user: string | null) {
   const data = studyBackup(user)
   triggerBlobDownload(
-    new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+    new Blob([
+      JSON.stringify(data, null, 2),
+    ], { type: 'application/json' }),
     `my-ielts-${new Date().toISOString().slice(0, 10)}.json`,
   )
 }
@@ -75,8 +78,9 @@ export function previewStudyBackup(
     || !backup.data
     || typeof backup.data !== 'object'
     || Array.isArray(backup.data)
-  )
+  ) {
     throw new Error('无法识别的学习备份文件')
+  }
   const source = guestOriginals
     ? null
     : typeof backup.username === 'string'
@@ -88,9 +92,9 @@ export function previewStudyBackup(
   for (const [key, value] of Object.entries(backup.data)) {
     const draft
       = key.startsWith(prefix)
-      && /^(?:task[12]_draft_v1(?:__prompt_.*)?|mock_draft_v1_(?:reading|listening)_.*)$/.test(
-        key.slice(prefix.length),
-      )
+        && /^(?:task[12]_draft_v1(?:__prompt_.*)?|mock_draft_v1_(?:reading|listening)_.*)$/.test(
+          key.slice(prefix.length),
+        )
     if ((!studyBaseOf(key, source) && !draft) || typeof value !== 'string') {
       skipped++
       continue
@@ -146,7 +150,9 @@ export function restoreStudyBackup(
         // Imports are independent recovery versions and never overwrite an active tab.
         try {
           localStorage.setItem(
-            `${/^task[12]_draft_v1$/.test(base) ? `${key}__prompt_${encodeURIComponent(JSON.parse(raw).promptId || 'recovered')}` : key}__session_import_${crypto.randomUUID()}`,
+            `${/^task[12]_draft_v1$/.test(base)
+              ? `${key}__prompt_${encodeURIComponent(JSON.parse(raw).promptId || 'recovered')}`
+              : key}__session_import_${crypto.randomUUID()}`,
             raw,
           )
           imported++
@@ -167,7 +173,9 @@ export function restoreStudyBackup(
         }
         const previous = localStorage.getItem(key)
         const barrier = deletionEnvelope(key, target)
-        const stored = previous ? envelope(previous) : undefined
+        const stored = previous
+          ? envelope(previous)
+          : undefined
         const prior
           = barrier && (!stored || compareStamp(barrier, stored) > 0)
             ? barrier

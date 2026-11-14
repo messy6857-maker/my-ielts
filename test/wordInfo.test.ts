@@ -1,9 +1,9 @@
+import type { WordSentence } from '../src/pages/vocabulary/wordSentences'
 import { describe, expect, it } from 'vitest'
 import {
   getWordInfo,
   getWordInfoWithFallback,
 } from '../src/composables/useWordInfo'
-import type { WordSentence } from '../src/pages/vocabulary/wordSentences'
 
 const DATA: Record<string, WordSentence> = {
   atmosphere: {
@@ -11,7 +11,11 @@ const DATA: Record<string, WordSentence> = {
     exFrom: '',
     syn: ['ambiance', 'air'],
   },
-  horizon: { ex: [], exFrom: '', syn: ['skyline'] },
+  horizon: {
+    ex: [],
+    exFrom: '',
+    syn: ['skyline'],
+  },
   horizontal: {
     ex: ['The horizon is horizontal.'],
     exFrom: '',
@@ -37,7 +41,11 @@ describe('getWordInfo', () => {
   it('exFrom 指向派生词时 word 为派生词', () => {
     const data: Record<string, WordSentence> = {
       ...DATA,
-      horizon: { ex: ['A horizontal line.'], exFrom: 'horizontal', syn: [] },
+      horizon: {
+        ex: ['A horizontal line.'],
+        exFrom: 'horizontal',
+        syn: [],
+      },
     }
     expect(getWordInfo('horizon', data)!.word).toBe('horizontal')
   })

@@ -1,15 +1,26 @@
-import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { describe, expect, it } from 'vitest'
 import { defineComponent, h } from 'vue'
 import TextHighlights from '../src/components/TextHighlights.vue'
-import { extractJson, highlightPieces, splitSentences } from '../src/utils/text'
 import { resolveMediaUrl } from '../src/composables/useAudio'
+import { extractJson, highlightPieces, splitSentences } from '../src/utils/text'
 
 describe('text parsing and presentation', () => {
   it.each([
-    ['prefix {"a":1} {"b":2}', { a: 1 }],
-    ['{"text":"a } b { \\\" quoted"} trailing }', { text: 'a } b { " quoted' }],
-    ['```json\n{"nested":{"a":2}}\n``` note }', { nested: { a: 2 } }],
+    [
+      'prefix {"a":1} {"b":2}',
+      { a: 1 },
+    ],
+    [
+      '{"text":"a } b { \\\" quoted"} trailing }',
+      { text: 'a } b { " quoted' },
+    ],
+    [
+      '```json\n{"nested":{"a":2}}\n``` note }',
+      {
+        nested: { a: 2 },
+      },
+    ],
   ])('extracts the first complete JSON from %s', (raw, expected) => {
     expect(JSON.parse(extractJson(raw))).toEqual(expected)
   })
@@ -40,7 +51,12 @@ describe('text parsing and presentation', () => {
     ).toBe(text)
     // 包一层 div：新版 test-utils 的 text() 会逐个文本节点去掉首尾空格，这里比较原始文本
     const w = mount(defineComponent({
-      render: () => h('div', [h(TextHighlights, { text, words: ['hello world', 'world', 'mark'] })]),
+      render: () => h('div', [
+        h(TextHighlights, {
+          text,
+          words: ['hello world', 'world', 'mark'],
+        }),
+      ]),
     }))
     expect(w.element.textContent).toBe(text)
     expect(w.find('img').exists()).toBe(false)

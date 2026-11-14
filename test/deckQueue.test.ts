@@ -1,6 +1,6 @@
+import type { WordSchedule } from '../src/composables/useSpacedRepetition'
 import { describe, expect, it } from 'vitest'
 import { planQueue } from '../src/composables/useDeckStore'
-import type { WordSchedule } from '../src/composables/useSpacedRepetition'
 
 const NOW = 1_000_000_000_000
 const DAY = 86_400_000
@@ -62,7 +62,11 @@ describe('planQueue（复习:新词 = 1:3）', () => {
     const many = Array.from({ length: 200 }, (_, i) => ({ id: `w${i}` }))
     const store: Record<string, WordSchedule> = {}
     many.forEach((c, i) => {
-      store[c.id] = sched({ dueAt: i < 100 ? NOW - 1 : NOW + DAY })
+      store[c.id] = sched({
+        dueAt: i < 100
+          ? NOW - 1
+          : NOW + DAY,
+      })
     })
     const plan = planQueue(many, id => store[id as string], 30, 30, NOW)
     expect(plan.reviews).toHaveLength(90)

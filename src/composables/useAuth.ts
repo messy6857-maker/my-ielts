@@ -22,7 +22,6 @@ import {
   subscribeStorage,
 } from '../utils/storage'
 import {
-  SYNC_PENDING_KEY,
   apiLogin,
   apiPull,
   apiPush,
@@ -34,6 +33,7 @@ import {
   handleRejectedKeys,
   setAuthPendingPush,
   setToken,
+  SYNC_PENDING_KEY,
   syncEnabled,
 } from './syncClient'
 
@@ -140,8 +140,9 @@ export function migrateGuestData(username: string) {
             && localStorage.getItem(entryKey(base, id, username)) === null
             && !deletionEnvelope(entryKey(base, id, username), username)
             && !deletionEnvelope(entryKey(base, id, null), null)
-          )
+          ) {
             saveRecord(base, id, item, username)
+          }
         }
         continue
       }
@@ -193,7 +194,9 @@ async function sha256Hex(text: string): Promise<string> {
     'SHA-256',
     new TextEncoder().encode(text),
   )
-  return [...new Uint8Array(buf)]
+  return [
+    ...new Uint8Array(buf),
+  ]
     .map(b => b.toString(16).padStart(2, '0'))
     .join('')
 }
@@ -223,7 +226,10 @@ export const useAuth = createGlobalState(() => {
     // 会话损坏则视为未登录
   }
   function setSession(username: string, remember: boolean) {
-    const value = JSON.stringify({ username, ts: Date.now() })
+    const value = JSON.stringify({
+      username,
+      ts: Date.now(),
+    })
     try {
       if (remember) {
         localStorage.setItem(SESSION_KEY, value)
@@ -256,7 +262,7 @@ export const useAuth = createGlobalState(() => {
     password: string,
   ): Promise<AuthResult> {
     username = username.trim()
-    if (!/^[a-zA-Z0-9_\u4E00-\u9FA5]{2,20}$/.test(username)) {
+    if (!/^[\w\u4E00-\u9FA5]{2,20}$/.test(username)) {
       return {
         ok: false,
         message: '用户名需为 2-20 位字母、数字、下划线或中文',
@@ -307,10 +313,11 @@ export const useAuth = createGlobalState(() => {
   ): Promise<AuthResult> {
     username = username.trim()
     if (
-      !/^[a-zA-Z0-9_\u4E00-\u9FA5]{2,20}$/.test(username)
+      !/^[\w\u4E00-\u9FA5]{2,20}$/.test(username)
       || password.length < 4
-    )
+    ) {
       return { ok: false, message: '请输入有效用户名（2–20位）及至少4位密码' }
+    }
     let r: Awaited<ReturnType<typeof apiLogin>>
     try {
       r = await apiLogin(username, password)
@@ -378,7 +385,7 @@ export const useAuth = createGlobalState(() => {
     password: string,
   ): Promise<AuthResult> {
     username = username.trim()
-    if (!/^[a-zA-Z0-9_\u4E00-\u9FA5]{2,20}$/.test(username)) {
+    if (!/^[\w\u4E00-\u9FA5]{2,20}$/.test(username)) {
       return {
         ok: false,
         message: '用户名需为 2-20 位字母、数字、下划线或中文',
@@ -391,7 +398,11 @@ export const useAuth = createGlobalState(() => {
       return { ok: false, message: '用户名已存在，换一个吧' }
     const salt = randomSalt()
     const hash = await sha256Hex(salt + password)
-    users[username] = { salt, hash, createdAt: Date.now() }
+    users[username] = {
+      salt,
+      hash,
+      createdAt: Date.now(),
+    }
     writeJson(USERS_KEY, users)
     migrateGuestData(username)
     setSession(username, true)
@@ -450,9 +461,9 @@ export const useAuth = createGlobalState(() => {
       return serverLogin(username, password, remember)
     return localLogin(username, password, remember)
   }
-  let logoutJob: Promise<{ pushOk: boolean; cancelled?: boolean }> | null
+  let logoutJob: Promise<{ pushOk: boolean, cancelled?: boolean }> | null
     = null
-  function logout(): Promise<{ pushOk: boolean; cancelled?: boolean }> {
+  function logout(): Promise<{ pushOk: boolean, cancelled?: boolean }> {
     if (logoutJob)
       return logoutJob
     const job = performLogout()
@@ -470,7 +481,9 @@ export const useAuth = createGlobalState(() => {
     cancelled?: boolean
   }> {
     const owner = currentUser.value
-    const tokenAtStart = owner ? getToken(owner) : null
+    const tokenAtStart = owner
+      ? getToken(owner)
+      : null
     loggingOut.value = true
     for (const cb of beforeLogout) {
       try {
@@ -579,11 +592,14 @@ export const useAuth = createGlobalState(() => {
         event.key !== SESSION_KEY
         && event.key !== 'myielts_sync_token_v1'
         && event.key !== null
-      )
+      ) {
         return
+      }
       // 纯本地模式没有 token：只看共享会话是否换成了别的账号，
       // 否则另一页签任何登录/登出都会把本页踢回游客。
-      const otherOwner = syncEnabled ? getTokenOwner() : sharedSessionUser()
+      const otherOwner = syncEnabled
+        ? getTokenOwner()
+        : sharedSessionUser()
       if (
         currentUser.value
         && otherOwner !== currentUser.value
@@ -597,5 +613,12 @@ export const useAuth = createGlobalState(() => {
       }
     })
   }
-  return { currentUser, loggingOut, register, login, logout, syncEnabled }
+  return {
+    currentUser,
+    loggingOut,
+    register,
+    login,
+    logout,
+    syncEnabled,
+  }
 })

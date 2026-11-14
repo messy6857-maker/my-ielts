@@ -10,8 +10,12 @@ const cards: DeckCard[] = []
 // Chapter2: [British, American, Meaning]，取第一个拼写为主词
 // r[0] 可能是字符串或数组（语料库页改写后），两种都兼容
 function firstCell(r: any): string {
-  const v = Array.isArray(r[0]) ? r[0][0] : r[0]
-  return typeof v === 'string' ? v : ''
+  const v = Array.isArray(r[0])
+    ? r[0][0]
+    : r[0]
+  return typeof v === 'string'
+    ? v
+    : ''
 }
 const ch2 = (corpusData as any)['Chapter2 拼写规范']
 if (ch2) {
@@ -22,7 +26,9 @@ if (ch2) {
       word,
       pos: '',
       meaning: r[2],
-      synonyms: r[1] ? [r[1]] : [],
+      synonyms: r[1]
+        ? [r[1]]
+        : [],
     })
   })
 }

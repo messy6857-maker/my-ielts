@@ -1,17 +1,23 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-import { useProgress } from '../src/composables/useStudyData'
-import { useAuth } from '../src/composables/useAuth'
-import { pruneCollectionData } from '../src/utils/retention'
 import {
   apiPull,
   apiPush,
   applySyncData,
   collectSyncData,
-  getQuarantineEntries,
   getQuarantinedKeys,
+  getQuarantineEntries,
   handleRejectedKeys,
   setToken,
 } from '../src/composables/syncClient'
+import { useAuth } from '../src/composables/useAuth'
+import { useProgress } from '../src/composables/useStudyData'
+import { loadVocabularyDetails } from '../src/composables/useVocabularyDetails'
+import { loadWordInfoWithFallback } from '../src/composables/useWordInfo'
+import { loadMockTest } from '../src/pages/mock/registry'
+import { analyzeEssay } from '../src/pages/writing/task1/grader'
+import { previewStudyBackup, restoreStudyBackup } from '../src/utils/backup'
+import { listDrafts, readDraft, saveDraft } from '../src/utils/drafts'
+import { pruneCollectionData } from '../src/utils/retention'
 import {
   accountKey,
   entryKey,
@@ -19,12 +25,6 @@ import {
   readRecords,
   saveRecord,
 } from '../src/utils/storage'
-import { analyzeEssay } from '../src/pages/writing/task1/grader'
-import { loadMockTest } from '../src/pages/mock/registry'
-import { previewStudyBackup, restoreStudyBackup } from '../src/utils/backup'
-import { listDrafts, readDraft, saveDraft } from '../src/utils/drafts'
-import { loadVocabularyDetails } from '../src/composables/useVocabularyDetails'
-import { loadWordInfoWithFallback } from '../src/composables/useWordInfo'
 
 beforeEach(() => {
   localStorage.clear()
@@ -66,7 +66,10 @@ it('collection watermark prunes old live and deleted records and prevents resurr
   expect(
     Object.keys(pruned).filter(k => k.includes('__entry_')),
   ).toHaveLength(50)
-  const again = pruneCollectionData({ ...data, ...pruned }, 'alice')
+  const again = pruneCollectionData({
+    ...data,
+    ...pruned,
+  }, 'alice')
   expect(again).toEqual(pruned)
 })
 it('local unsent records absent from a pull are preserved', () => {
@@ -77,9 +80,14 @@ it('local unsent records absent from a pull are preserved', () => {
 it('old rejection snapshot never quarantines a corrected local value', () => {
   saveRecord('progress_v1', 'reading', { done: 1 }, 'alice')
   const key = entryKey('progress_v1', 'reading', 'alice')
-  const sent = { [key]: localStorage.getItem(key)! }
+  const sent = {
+    [key]: localStorage.getItem(key)!,
+  }
   saveRecord('progress_v1', 'reading', { done: 2 }, 'alice')
-  handleRejectedKeys('alice', { ok: true, rejected: [key] }, sent)
+  handleRejectedKeys('alice', {
+    ok: true,
+    rejected: [key],
+  }, sent)
   expect(getQuarantinedKeys('alice')).not.toContain(key)
 })
 it('persisted clock floor is re-read before a new local version', () => {
@@ -219,22 +227,41 @@ it('large sync uploads are bounded into multiple requests', async () => {
 
 it('twenty thousand obsolete records shrink before upload, even above the old request ceiling', () => {
   const entries: Record<string, string> = {}
-  for (let i = 0; i < 20000; i++) entries[entryKey('daily_parts_v2', `vocabulary|2020-1-1|word-${i}|retired-writer-0000000000000000`, 'alice')] = JSON.stringify({ __ielts: 2, stamp: [1, 'retired-writer'], deleted: true })
+  for (let i = 0; i < 20000; i++) {
+    entries[entryKey('daily_parts_v2', `vocabulary|2020-1-1|word-${i}|retired-writer-0000000000000000`, 'alice')] = JSON.stringify({
+      __ielts: 2,
+      stamp: [1, 'retired-writer'],
+      deleted: true,
+    })
+  }
   expect(new TextEncoder().encode(JSON.stringify(entries)).length).toBeGreaterThan(5 * 1024 * 1024)
   expect(Object.keys(pruneCollectionData(entries, 'alice'))).toHaveLength(0)
 })
 it('deletion-only history is bounded and stale replicas cannot restore collected tombstones', () => {
   const entries: Record<string, string> = {}
-  for (let i = 0; i < 200; i++) entries[entryKey('task1_essays_v1', String(1700000000000 + i), 'alice')] = JSON.stringify({ __ielts: 2, stamp: [i, 'writer'], deleted: true })
+  for (let i = 0; i < 200; i++) {
+    entries[entryKey('task1_essays_v1', String(1700000000000 + i), 'alice')] = JSON.stringify({
+      __ielts: 2,
+      stamp: [i, 'writer'],
+      deleted: true,
+    })
+  }
   const pruned = pruneCollectionData(entries, 'alice')
   expect(Object.keys(pruned).filter(key => key.includes('__entry_'))).toHaveLength(100)
-  expect(pruneCollectionData({ ...entries, ...pruned }, 'alice')).toEqual(pruned)
+  expect(pruneCollectionData({
+    ...entries,
+    ...pruned,
+  }, 'alice')).toEqual(pruned)
 })
 
 it.each([
   ['old-key'],
-  [{ k: 'old-key', s: '[1,"actor"]', t: 12 }],
-  [{ key: 'old-key', stamp: '[1,"actor"]', at: 12 }],
+  [
+    { k: 'old-key', s: '[1,"actor"]', t: 12 },
+  ],
+  [
+    { key: 'old-key', stamp: '[1,"actor"]', at: 12 },
+  ],
 ])('quarantine restores supported legacy and current shapes: %j', (shape) => {
   localStorage.setItem('myielts_sync_quarantined:alice', JSON.stringify([shape]))
   expect(getQuarantineEntries('alice')[0]?.key).toBe('old-key')

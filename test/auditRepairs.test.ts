@@ -1,17 +1,17 @@
+import { flushPromises, mount } from '@vue/test-utils'
 // Regressions for independently reproduced data-loss and synchronization failures.
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { flushPromises, mount } from '@vue/test-utils'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { useAuth } from '../src/composables/useAuth'
 import { setToken } from '../src/composables/syncClient'
+import { useAuth } from '../src/composables/useAuth'
+import { useMistakes } from '../src/composables/useStudyData'
+import { readDraft, saveDraft } from '../src/utils/drafts'
 import {
   accountKey,
   readRecords,
   saveRecord,
   storageFailures,
 } from '../src/utils/storage'
-import { readDraft, saveDraft } from '../src/utils/drafts'
-import { useMistakes } from '../src/composables/useStudyData'
 
 const auth = useAuth()
 const wrappers: any[] = []
@@ -21,7 +21,10 @@ beforeEach(() => {
   storageFailures.value = []
   auth.currentUser.value = 'alice'
   setToken('token', 'alice')
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
   vi.stubGlobal(
     'SpeechSynthesisUtterance',
     class {
@@ -41,7 +44,9 @@ afterEach(() => {
 async function page(Page: any) {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/', component: Page }],
+    routes: [
+      { path: '/', component: Page },
+    ],
   })
   await router.push('/')
   await router.isReady()
@@ -75,10 +80,10 @@ it.each(['task1', 'task2'])(
   '%s retains its draft when history storage fails',
   async (task) => {
     const { TASK1_PROMPTS } = await import(
-      '../src/pages/writing/task1/prompts'
+      '../src/pages/writing/task1/prompts',
     )
     const { CAMBRIDGE_WRITING } = await import(
-      '../src/pages/writing/cambridge'
+      '../src/pages/writing/cambridge',
     )
     const p
       = task === 'task1'
@@ -208,22 +213,32 @@ it('spelling tabs preserve answers in different chapters', async () => {
     await flushPromises()
   }
   const wb = b.s.refVocabulary[bc].words[0][0]
-  a.s.onInputFocusOut({ target: { id: 'first', value: wa.word[0] } }, wa)
-  b.s.onInputFocusOut({ target: { id: 'second', value: wb.word[0] } }, wb)
+  a.s.onInputFocusOut({
+    target: { id: 'first', value: wa.word[0] },
+  }, wa)
+  b.s.onInputFocusOut({
+    target: { id: 'second', value: wb.word[0] },
+  }, wb)
   const saved = readRecords<string>('vocabulary_spell_v2', 'alice')
   expect(saved[`${ac}|${wa.id}`]).toBe(wa.word[0].toLowerCase())
   expect(saved[`${bc}|${wb.id}`]).toBe(wb.word[0].toLowerCase())
 })
 it('cross-chapter audio uses its original chapter', async () => {
   const { default: vocabulary } = await import(
-    '../src/pages/vocabulary/vocabulary'
+    '../src/pages/vocabulary/vocabulary',
   )
   const chapters = Object.keys(vocabulary)
   const w = (vocabulary as any)[chapters[1]].words[0][0]
   saveRecord(
     'sr_vocabulary_v1',
     `vocab:${w.id}`,
-    { ease: 2.5, interval: 1, dueAt: Date.now() - 1000, reps: 1, lapses: 0 },
+    {
+      ease: 2.5,
+      interval: 1,
+      dueAt: Date.now() - 1000,
+      reps: 1,
+      lapses: 0,
+    },
     'alice',
   )
   const Page = (await import('../src/pages/vocabulary/flashcard.vue')).default
@@ -245,7 +260,12 @@ it('cross-chapter audio uses its original chapter', async () => {
 it('flashcard ?review=due follows query changes in the same tab (M4)', async () => {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/', component: { template: '<div />' } }],
+    routes: [
+      {
+        path: '/',
+        component: { template: '<div />' },
+      },
+    ],
   })
   await router.push('/')
   await router.isReady()

@@ -1,11 +1,11 @@
 // 模考通用类型定义
 
-export type MockQuestionType =
-  | 'multiple-choice'
-  | 'multi-select'
-  | 'tfng'
-  | 'fill-blank'
-  | 'map-label'
+export type MockQuestionType
+  = | 'multiple-choice'
+    | 'multi-select'
+    | 'tfng'
+    | 'fill-blank'
+    | 'map-label'
 
 export interface MockQuestion {
   /** 题号，如 "Q1" */
@@ -100,7 +100,9 @@ export function bandScore(
   total = 40,
   table: BandTable = LISTENING_BAND_TABLE,
 ): number {
-  const t = total > 0 ? total : 40
+  const t = total > 0
+    ? total
+    : 40
   const at = (base: number) => Math.ceil((base / 40) * t)
   for (const [base, band] of table) {
     if (correct >= at(base))
@@ -147,17 +149,92 @@ const UK_US_WORDS: Record<string, string> = {
   practised: 'practiced',
   practising: 'practicing',
 }
-const OUR_KEEP = new Set(['our', 'four', 'hour', 'pour', 'tour', 'your', 'flour', 'sour', 'dour', 'devour', 'contour', 'detour'])
+const OUR_KEEP = new Set([
+  'our',
+  'four',
+  'hour',
+  'pour',
+  'tour',
+  'your',
+  'flour',
+  'sour',
+  'dour',
+  'devour',
+  'contour',
+  'detour',
+])
 const ISE_KEEP = new Set([
-  'advise', 'advertise', 'arise', 'comprise', 'compromise', 'concise', 'demise', 'despise', 'devise', 'disguise',
-  'enterprise', 'exercise', 'expertise', 'franchise', 'improvise', 'merchandise', 'noise', 'otherwise', 'paradise',
-  'praise', 'precise', 'premise', 'promise', 'raise', 'revise', 'rise', 'supervise', 'surprise', 'televise', 'wise',
-  'cruise', 'bruise', 'poise', 'guise', 'excise', 'treatise', 'reprise', 'chemise', 'sunrise', 'moonrise',
-  'likewise', 'clockwise', 'anticlockwise', 'incise', 'circumcise', 'apprise',
+  'advise',
+  'advertise',
+  'arise',
+  'comprise',
+  'compromise',
+  'concise',
+  'demise',
+  'despise',
+  'devise',
+  'disguise',
+  'enterprise',
+  'exercise',
+  'expertise',
+  'franchise',
+  'improvise',
+  'merchandise',
+  'noise',
+  'otherwise',
+  'paradise',
+  'praise',
+  'precise',
+  'premise',
+  'promise',
+  'raise',
+  'revise',
+  'rise',
+  'supervise',
+  'surprise',
+  'televise',
+  'wise',
+  'cruise',
+  'bruise',
+  'poise',
+  'guise',
+  'excise',
+  'treatise',
+  'reprise',
+  'chemise',
+  'sunrise',
+  'moonrise',
+  'likewise',
+  'clockwise',
+  'anticlockwise',
+  'incise',
+  'circumcise',
+  'apprise',
 ])
 const LL_STEMS = new Set([
-  'travel', 'cancel', 'model', 'label', 'level', 'fuel', 'signal', 'total', 'channel', 'dial', 'equal', 'marvel',
-  'quarrel', 'tunnel', 'counsel', 'jewel', 'panel', 'shovel', 'rival', 'pedal', 'refuel', 'snorkel', 'kennel',
+  'travel',
+  'cancel',
+  'model',
+  'label',
+  'level',
+  'fuel',
+  'signal',
+  'total',
+  'channel',
+  'dial',
+  'equal',
+  'marvel',
+  'quarrel',
+  'tunnel',
+  'counsel',
+  'jewel',
+  'panel',
+  'shovel',
+  'rival',
+  'pedal',
+  'refuel',
+  'snorkel',
+  'kennel',
 ])
 const MONTHS = 'january|february|march|april|may|june|july|august|september|october|november|december'
 
@@ -200,7 +277,9 @@ export function normalizeBlankAnswer(text: string): string {
     .replace(/(\d),(?=\d{3}(?!\d))/g, '$1')
     // 连字符当空格（part-time = part time），数字之间的保留（如 9-5）
     .replace(/-/g, (m, i: number, str: string) =>
-      /\d/.test(str[i - 1] ?? '') && /\d/.test(str[i + 1] ?? '') ? m : ' ')
+      /\d/.test(str[i - 1] ?? '') && /\d/.test(str[i + 1] ?? '')
+        ? m
+        : ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/\s*[.,;:!?]+$/, '')
@@ -230,11 +309,13 @@ function blankMatches(expected: string, user: string): boolean {
   return /\d/.test(a) && a.replace(/ /g, '') === b.replace(/ /g, '')
 }
 
-/** 配对/标注题选项框是否在本题渲染：同一 Part 内连续且选项内容相同的
+/**
+ * 配对/标注题选项框是否在本题渲染：同一 Part 内连续且选项内容相同的
  * 题组只在首题渲染一次（如剑 21 Test3 听力 P3 的 6 题共用一框），其余题
  * 不再重复渲染整框。上一题非 map-label、无选项或选项内容不同时重新渲染。
  * 注意：相邻两组选项内容恰好完全相同时，后一组不再重复出框（框仍在
- * 本页上方可见）；组间以题型或选项变化分隔是常态，此边界可接受。 */
+ * 本页上方可见）；组间以题型或选项变化分隔是常态，此边界可接受。
+ */
 export function showOptionsBox(questions: MockQuestion[], index: number): boolean {
   const q = questions[index]
   if (!q || q.type !== 'map-label' || !q.options?.length)
@@ -251,7 +332,9 @@ export function showOptionsBox(questions: MockQuestion[], index: number): boolea
 export function isCorrect(q: MockQuestion, userAnswer: string): boolean {
   if (q.type === 'fill-blank') {
     // 支持多答案：answer 可以是字符串或字符串数组
-    const answers = Array.isArray(q.answer) ? q.answer : [q.answer]
+    const answers = Array.isArray(q.answer)
+      ? q.answer
+      : [q.answer]
     return answers.some(a => blankMatches(String(a), userAnswer))
   }
   if (q.type === 'map-label') {
@@ -277,8 +360,11 @@ export function isCorrect(q: MockQuestion, userAnswer: string): boolean {
 
 /** 多选题得分：选对几个得几分（Choose TWO 最多 2 分）；用户选项数超过答案数时返回 0 分，防止全选刷分 */
 export function multiSelectScore(q: MockQuestion, userAnswer: string): number {
-  if (q.type !== 'multi-select' || !Array.isArray(q.answer))
-    return isCorrect(q, userAnswer) ? 1 : 0
+  if (q.type !== 'multi-select' || !Array.isArray(q.answer)) {
+    return isCorrect(q, userAnswer)
+      ? 1
+      : 0
+  }
   const userSet = new Set(
     userAnswer
       .split(',')
@@ -298,8 +384,10 @@ export function multiSelectScore(q: MockQuestion, userAnswer: string): number {
   return score
 }
 
-/** 两页镜像的纯逻辑（M-Opt-#1）：只抽与模板/计时器/路由无关的部分，
- *  行为与两页原内联实现逐行一致，改一处漏一处的风险不再靠复制粘贴兜底。 */
+/**
+ * 两页镜像的纯逻辑（M-Opt-#1）：只抽与模板/计时器/路由无关的部分，
+ *  行为与两页原内联实现逐行一致，改一处漏一处的风险不再靠复制粘贴兜底。
+ */
 
 /** 满分题数：多选题按答案个数计，其余每题 1 分 */
 export function totalScorePoints(questions: MockQuestion[]): number {
@@ -345,12 +433,18 @@ export function mockQuestionStatus(
     return 'unanswered'
   if (q.type === 'multi-select') {
     const score = multiSelectScore(q, userAns)
-    const max = Array.isArray(q.answer) ? q.answer.length : 1
+    const max = Array.isArray(q.answer)
+      ? q.answer.length
+      : 1
     if (score === max)
       return 'correct'
-    return score > 0 ? 'partial' : 'wrong'
+    return score > 0
+      ? 'partial'
+      : 'wrong'
   }
-  return isCorrect(q, userAns) ? 'correct' : 'wrong'
+  return isCorrect(q, userAns)
+    ? 'correct'
+    : 'wrong'
 }
 
 /** 多选切换：已选则取消；未选且未达上限则加入；已达上限拒绝加入 */
@@ -390,7 +484,9 @@ export function restoreTimeLeft(
 export function mapLabelPlaceholder(q: MockQuestion): string {
   if (q.type !== 'map-label')
     return '输入答案'
-  const a = typeof q.answer === 'string' ? q.answer : ''
+  const a = typeof q.answer === 'string'
+    ? q.answer
+    : ''
   if (a && a === a.toLowerCase() && /^[iv]+$/.test(a))
     return '输入序号，如 vii'
   return '输入字母'

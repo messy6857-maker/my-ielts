@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { transcriptSentenceEntries } from '../src/utils/text'
 import { cam18Test1ListeningTranscript } from '../src/pages/mock/cam18-test1-listening-transcript'
 import { cam18Test2ListeningTranscript } from '../src/pages/mock/cam18-test2-listening-transcript'
 import { cam18Test3ListeningTranscript } from '../src/pages/mock/cam18-test3-listening-transcript'
@@ -16,6 +15,7 @@ import { cam21Test1ListeningTranscript } from '../src/pages/mock/cam21-test1-lis
 import { cam21Test2ListeningTranscript } from '../src/pages/mock/cam21-test2-listening-transcript'
 import { cam21Test3ListeningTranscript } from '../src/pages/mock/cam21-test3-listening-transcript'
 import { cam21Test4ListeningTranscript } from '../src/pages/mock/cam21-test4-listening-transcript'
+import { transcriptSentenceEntries } from '../src/utils/text'
 
 const modules: Record<string, Record<string, string>> = {
   'cam18-test1': cam18Test1ListeningTranscript,
@@ -98,7 +98,12 @@ describe('sentence-timings', () => {
       }
     }
     expect(total).toBe(3622)
-    expect(counts).toEqual({ ok: 3473, weak: 44, tts: 40, skip: 65 })
+    expect(counts).toEqual({
+      ok: 3473,
+      weak: 44,
+      tts: 40,
+      skip: 65,
+    })
   })
 
   it('marks the cam20-test4-part3 meta sentence as skip, not audio', () => {

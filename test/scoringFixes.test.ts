@@ -1,5 +1,5 @@
-import { expect, it } from 'vitest'
 import type { MockQuestion } from '../src/pages/mock/types'
+import { expect, it } from 'vitest'
 import {
   isCorrect,
   listeningBandScore,
@@ -7,15 +7,44 @@ import {
 } from '../src/pages/mock/types'
 
 function blank(answer: string | string[]): MockQuestion {
-  return { id: 'Q1', type: 'fill-blank', question: '____', answer }
+  return {
+    id: 'Q1',
+    type: 'fill-blank',
+    question: '____',
+    answer,
+  }
 }
 
 it('listening uses the published IELTS/IDP conversion', () => {
   const expected = [
-    [40, 9], [39, 9], [38, 8.5], [37, 8.5], [36, 8], [35, 8], [34, 7.5], [32, 7.5],
-    [31, 7], [30, 7], [29, 6.5], [26, 6.5], [25, 6], [23, 6], [22, 5.5], [18, 5.5],
-    [17, 5], [16, 5], [15, 4.5], [13, 4.5], [12, 4], [11, 4], [10, 3.5], [8, 3.5],
-    [7, 3], [6, 3], [5, 2.5], [0, 2.5],
+    [40, 9],
+    [39, 9],
+    [38, 8.5],
+    [37, 8.5],
+    [36, 8],
+    [35, 8],
+    [34, 7.5],
+    [32, 7.5],
+    [31, 7],
+    [30, 7],
+    [29, 6.5],
+    [26, 6.5],
+    [25, 6],
+    [23, 6],
+    [22, 5.5],
+    [18, 5.5],
+    [17, 5],
+    [16, 5],
+    [15, 4.5],
+    [13, 4.5],
+    [12, 4],
+    [11, 4],
+    [10, 3.5],
+    [8, 3.5],
+    [7, 3],
+    [6, 3],
+    [5, 2.5],
+    [0, 2.5],
   ]
   for (const [raw, band] of expected)
     expect(listeningBandScore(raw)).toBe(band)
@@ -23,9 +52,28 @@ it('listening uses the published IELTS/IDP conversion', () => {
 
 it('academic reading uses its own conversion', () => {
   const expected = [
-    [39, 9], [37, 8.5], [35, 8], [33, 7.5], [32, 7], [30, 7], [29, 6.5], [27, 6.5],
-    [26, 6], [23, 6], [22, 5.5], [19, 5.5], [18, 5], [15, 5], [14, 4.5], [13, 4.5],
-    [12, 4], [10, 4], [9, 3.5], [8, 3.5], [6, 3], [5, 2.5],
+    [39, 9],
+    [37, 8.5],
+    [35, 8],
+    [33, 7.5],
+    [32, 7],
+    [30, 7],
+    [29, 6.5],
+    [27, 6.5],
+    [26, 6],
+    [23, 6],
+    [22, 5.5],
+    [19, 5.5],
+    [18, 5],
+    [15, 5],
+    [14, 4.5],
+    [13, 4.5],
+    [12, 4],
+    [10, 4],
+    [9, 3.5],
+    [8, 3.5],
+    [6, 3],
+    [5, 2.5],
   ]
   for (const [raw, band] of expected)
     expect(readingBandScore(raw)).toBe(band)

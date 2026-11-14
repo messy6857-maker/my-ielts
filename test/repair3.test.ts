@@ -1,13 +1,7 @@
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { examSessionId } from '../src/utils/examDrafts'
-import {
-  accountNotice,
-  accountNotices,
-  useAuth,
-} from '../src/composables/useAuth'
 import {
   apiPull,
   applySyncData,
@@ -17,6 +11,31 @@ import {
   unquarantineKeys,
 } from '../src/composables/syncClient'
 import {
+  accountNotice,
+  accountNotices,
+  useAuth,
+} from '../src/composables/useAuth'
+import { useDailyStore } from '../src/composables/useDailyStore'
+import { useWordSchedule } from '../src/composables/useSpacedRepetition'
+import {
+  studyDay,
+  useMistakes,
+  useProgress,
+} from '../src/composables/useStudyData'
+import * as details from '../src/composables/useVocabularyDetails'
+import * as wordInfo from '../src/composables/useWordInfo'
+import vocabulary from '../src/pages/vocabulary/vocabulary'
+import { analyzeEssay } from '../src/pages/writing/task1/grader'
+import { previewStudyBackup, restoreStudyBackup } from '../src/utils/backup'
+import { listDrafts, readDraft, saveDraft } from '../src/utils/drafts'
+import { examSessionId } from '../src/utils/examDrafts'
+import { mergeLegacy } from '../src/utils/legacyMerge'
+import {
+  compactDeletionData,
+  expandDeletionData,
+  pruneCollectionData,
+} from '../src/utils/retention'
+import {
   accountKey,
   entryKey,
   readRecord,
@@ -25,26 +44,7 @@ import {
   saveRecord,
   storageFailures,
 } from '../src/utils/storage'
-import {
-  compactDeletionData,
-  expandDeletionData,
-  pruneCollectionData,
-} from '../src/utils/retention'
-import { listDrafts, readDraft, saveDraft } from '../src/utils/drafts'
-import { previewStudyBackup, restoreStudyBackup } from '../src/utils/backup'
-import { mergeLegacy } from '../src/utils/legacyMerge'
 import { transcriptSentenceEntries } from '../src/utils/text'
-import { analyzeEssay } from '../src/pages/writing/task1/grader'
-import {
-  studyDay,
-  useMistakes,
-  useProgress,
-} from '../src/composables/useStudyData'
-import { useDailyStore } from '../src/composables/useDailyStore'
-import { useWordSchedule } from '../src/composables/useSpacedRepetition'
-import * as details from '../src/composables/useVocabularyDetails'
-import * as wordInfo from '../src/composables/useWordInfo'
-import vocabulary from '../src/pages/vocabulary/vocabulary'
 
 const auth = useAuth()
 const wrappers: any[] = []
@@ -57,7 +57,10 @@ beforeEach(() => {
   setToken('local-test', 'alice')
   accountNotice.value = ''
   accountNotices.value = []
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
   vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {})
@@ -71,7 +74,9 @@ afterEach(() => {
 async function page(Page: any) {
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/', component: Page }],
+    routes: [
+      { path: '/', component: Page },
+    ],
   })
   await router.push('/')
   await router.isReady()
@@ -105,7 +110,9 @@ function raw(value: any, stamp = 10, deleted = false) {
   return JSON.stringify({
     __ielts: 2,
     stamp: [stamp, 'writer'],
-    ...(deleted ? { deleted: true } : { value }),
+    ...(deleted
+      ? { deleted: true }
+      : { value }),
   })
 }
 it.each([
@@ -128,7 +135,11 @@ it('legacy spelling seeds preserve both conflicting answers on both replicas', (
   expect(a).toEqual(b)
   expect(a.alternatives).toEqual(['color', 'colour'])
   const key = entryKey('vocabulary_spell_v2', 'chapter|1', 'alice')
-  saveEnvelope(key, { __ielts: 2, stamp: [0, 'legacy'], value: 'colour' })
+  saveEnvelope(key, {
+    __ielts: 2,
+    stamp: [0, 'legacy'],
+    value: 'colour',
+  })
   applySyncData(
     {
       [key]: JSON.stringify({
@@ -147,7 +158,9 @@ it('the home progress derives old spelling answers before any new input', () => 
   const chapter = Object.keys(vocabulary)[0]
   localStorage.setItem(
     accountKey('vocabulary_spell_v1', 'alice'),
-    JSON.stringify({ [chapter]: { 1: 'atmosphere' } }),
+    JSON.stringify({
+      [chapter]: { 1: 'atmosphere' },
+    }),
   )
   const progress = useProgress()
   expect(
@@ -226,7 +239,9 @@ it('backup completion barriers preserve their exact key instead of becoming dead
       format: 'my-ielts-backup',
       version: 2,
       username: 'alice',
-      data: { [key]: JSON.stringify({ completedAt: 100 }) },
+      data: {
+        [key]: JSON.stringify({ completedAt: 100 }),
+      },
     }),
   )
   expect(restoreStudyBackup(backup, 'alice').imported).toBe(1)
@@ -237,7 +252,9 @@ it('backup completion barriers preserve their exact key instead of becoming dead
 })
 it('compacts hundreds of newer deletion envelopes without deleting the sole old live essay', () => {
   const old = entryKey('task1_essays_v1', '1700000000000', 'alice')
-  const input: Record<string, string> = { [old]: raw({ text: 'keep' }, 1) }
+  const input: Record<string, string> = {
+    [old]: raw({ text: 'keep' }, 1),
+  }
   for (let i = 1; i <= 300; i++) {
     input[entryKey('task1_essays_v1', String(1700000000000 + i), 'alice')]
       = raw(null, i, true)
@@ -257,7 +274,10 @@ it('compacts hundreds of newer deletion envelopes without deleting the sole old 
   const stale = entryKey('task1_essays_v1', '1700000000001', 'alice')
   expect(
     compactDeletionData(
-      { ...compact, [stale]: raw({ text: 'stale' }, 0) },
+      {
+        ...compact,
+        [stale]: raw({ text: 'stale' }, 0),
+      },
       'alice',
     )[stale],
   ).toBeUndefined()
@@ -276,11 +296,15 @@ it('unknown history ids no longer bypass the live count limit', () => {
 })
 it('the deletion index prevents both direct reads and legacy seeds from reviving an entry', () => {
   const key = entryKey('progress_v1', 'old', 'alice')
-  const compact = compactDeletionData({ [key]: raw(null, 20, true) }, 'alice')
+  const compact = compactDeletionData({
+    [key]: raw(null, 20, true),
+  }, 'alice')
   applySyncData(compact, 'alice')
   localStorage.setItem(
     accountKey('progress_v1', 'alice'),
-    JSON.stringify({ old: { done: 5, total: 10 } }),
+    JSON.stringify({
+      old: { done: 5, total: 10 },
+    }),
   )
   localStorage.removeItem(
     `myielts_local_migrated:${accountKey('progress_v1', 'alice')}`,
@@ -326,7 +350,9 @@ it('dated deletion guards expire after their deterministic date window', () => {
   const old = '2020-1-1'
   const key = entryKey('daily_parts_v2', `vocabulary|${old}|writer`, 'alice')
   const compact = compactDeletionData(
-    { [key]: raw(null, 10, true) },
+    {
+      [key]: raw(null, 10, true),
+    },
     'alice',
     true,
     new Date('2020-01-01T12:00:00+08:00').getTime(),
@@ -389,7 +415,13 @@ it('oversized backup selection clears an earlier valid preview', async () => {
     data: {},
   })
   expect(s.importPreview).not.toBeNull()
-  await s.chooseBackup({ target: { files: [{ size: 31 * 1024 * 1024 }] } })
+  await s.chooseBackup({
+    target: {
+      files: [
+        { size: 31 * 1024 * 1024 },
+      ],
+    },
+  })
   expect(s.importPreview).toBeNull()
   expect(s.importMessage).toContain('30MB')
 })
@@ -410,7 +442,9 @@ it('reading paper changes clear hints and image state', async () => {
   s.mapInputHint = 'old'
   s.selectionHint = 'old'
   s.enlargedImage = 'old'
-  await router.replace({ query: { test: 'cam20-test4' } })
+  await router.replace({
+    query: { test: 'cam20-test4' },
+  })
   await flushPromises()
   expect(s.mapInputHint).toBe('')
   expect(s.selectionHint).toBe('')
@@ -427,9 +461,13 @@ it('roman label validation replaces and clears earlier alphabet hints', async ()
     options: ['one', 'two'],
   }
   s.mapInputHint = 'old'
-  s.setMapLabel(q, { target: { value: 'ABC' } })
+  s.setMapLabel(q, {
+    target: { value: 'ABC' },
+  })
   expect(s.mapInputHint).toContain('罗马数字')
-  s.setMapLabel(q, { target: { value: 'iv' } })
+  s.setMapLabel(q, {
+    target: { value: 'iv' },
+  })
   expect(s.mapInputHint).toBe('')
   expect(s.answers.Q1).toBe('iv')
 })
@@ -513,12 +551,23 @@ it('all-chapter grading moves every duplicate word schedule and undo restores th
   for (const c of Object.values(vocabulary) as any[]) {
     for (const w of c.words.flat()) {
       const key = w.word[0].toLowerCase().trim()
-      byWord.set(key, [...(byWord.get(key) || []), w])
+      byWord.set(key, [
+        ...(byWord.get(key) || []),
+        w,
+      ])
     }
   }
-  const duplicate = [...byWord.values()].find(words => words.length > 1)!
+  const duplicate = [
+    ...byWord.values(),
+  ].find(words => words.length > 1)!
   const schedule = useWordSchedule()
-  const due = { ease: 2.5, interval: 1, dueAt: 1, reps: 1, lapses: 0 }
+  const due = {
+    ease: 2.5,
+    interval: 1,
+    dueAt: 1,
+    reps: 1,
+    lapses: 0,
+  }
   for (const word of duplicate) schedule.set(word.id, due)
   vi.spyOn(details, 'loadVocabularyDetails').mockResolvedValue({})
   vi.spyOn(wordInfo, 'loadWordInfoWithFallback').mockResolvedValue(null)
@@ -548,7 +597,9 @@ it('all-chapter grading moves every duplicate word schedule and undo restores th
 
 it('compacted cloud deletions still block guest migration and backup resurrection', async () => {
   const key = entryKey('progress_v1', 'old', 'alice')
-  const compact = compactDeletionData({ [key]: raw(null, 20, true) }, 'alice')
+  const compact = compactDeletionData({
+    [key]: raw(null, 20, true),
+  }, 'alice')
   applySyncData(compact, 'alice')
   saveRecord('progress_v1', 'old', { done: 5, total: 10 }, null)
   const { migrateGuestData } = await import('../src/composables/useAuth')
@@ -559,7 +610,9 @@ it('compacted cloud deletions still block guest migration and backup resurrectio
       format: 'my-ielts-backup',
       version: 2,
       username: 'alice',
-      data: { [key]: raw({ done: 5, total: 10 }, 5) },
+      data: {
+        [key]: raw({ done: 5, total: 10 }, 5),
+      },
     }),
   )
   expect(restoreStudyBackup(preview, 'alice').keptNewer).toBe(1)
@@ -569,12 +622,16 @@ it('spelling migration does not recreate retired answer records or derived progr
   const chapter = Object.keys(vocabulary)[0]
   const key = entryKey('vocabulary_spell_v2', `${chapter}|1`, 'alice')
   applySyncData(
-    compactDeletionData({ [key]: raw(null, 20, true) }, 'alice'),
+    compactDeletionData({
+      [key]: raw(null, 20, true),
+    }, 'alice'),
     'alice',
   )
   localStorage.setItem(
     accountKey('vocabulary_spell_v1', 'alice'),
-    JSON.stringify({ [chapter]: { 1: 'old answer' } }),
+    JSON.stringify({
+      [chapter]: { 1: 'old answer' },
+    }),
   )
   const { migrateStudy } = await import('../src/utils/migrateStudy')
   migrateStudy('alice')
@@ -587,7 +644,9 @@ it('image enlargement has a visible load-error retry that creates a new image', 
   const Page = (await import('../src/components/ImageViewer.vue')).default
   const w = mount(Page, {
     props: { src: 'missing.png' },
-    global: { stubs: { teleport: true } },
+    global: {
+      stubs: { teleport: true },
+    },
   })
   wrappers.push(w)
   await w.find('img').trigger('error')
@@ -648,7 +707,11 @@ it('compaction also removes non-canonical JSON originals after the replacement i
   localStorage.setItem(
     key,
     JSON.stringify(
-      { __ielts: 2, stamp: [20, 'writer'], deleted: true },
+      {
+        __ielts: 2,
+        stamp: [20, 'writer'],
+        deleted: true,
+      },
       null,
       2,
     ),

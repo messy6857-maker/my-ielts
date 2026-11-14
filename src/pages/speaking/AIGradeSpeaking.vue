@@ -1,13 +1,13 @@
 <script setup lang="ts">
+import type { AISpeakingResult } from '~/composables/useAISettings'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { onSyncApplied } from '~/composables/syncClient'
 import {
   gradeSpeakingWithAI,
   isValidSpeakingGrade,
 } from '~/composables/useAISettings'
-import type { AISpeakingResult } from '~/composables/useAISettings'
 import { readJson, useAuth } from '~/composables/useAuth'
 import { saveAiArchive } from '~/utils/archives'
-import { onSyncApplied } from '~/composables/syncClient'
 
 // part 由调用方传入（PartTwoPractice 传 part2；Part 1/3 的 QuestionRecorder 未传，
 // 其调用页不在本次改动范围，缺省为空，但 key 仍凭题目+转写哈希唯一）
@@ -39,7 +39,9 @@ const error = ref('')
 // 评分结果存档：与写作 AIGradePanel 同款写法（key 含 part + 题目 + 转写哈希，
 // 经 writeJson 进同步清单）；挂载时恢复同一题同一段转写的结果
 function storageKey(): string {
-  const user = currentUser.value ? `u_${currentUser.value}` : 'guest'
+  const user = currentUser.value
+    ? `u_${currentUser.value}`
+    : 'guest'
   const s = `${props.question}|${props.transcript}`
   let h = 0
   for (let i = 0; i < s.length; i++) h = ((h << 5) - h + s.charCodeAt(i)) | 0
@@ -95,7 +97,9 @@ function invalidate() {
 }
 async function runGrade() {
   if (!canUseAI.value || wordCount.value < 10) {
-    error.value = wordCount.value < 10 ? '至少说10个词后再评分' : '请先登录'
+    error.value = wordCount.value < 10
+      ? '至少说10个词后再评分'
+      : '请先登录'
     return
   }
   invalidate()
@@ -116,15 +120,19 @@ async function runGrade() {
       sequence !== requestId
       || owner !== currentUser.value
       || key !== storageKey()
-    )
+    ) {
       return
+    }
     result.value = value
     if (!saveAiArchive(key, value, owner))
       error.value = '评分已显示，但存档未能保存，请导出备份并清理空间'
   }
   catch (e) {
-    if (sequence === requestId)
-      error.value = e instanceof Error ? e.message : '评分失败，请重试'
+    if (sequence === requestId) {
+      error.value = e instanceof Error
+        ? e.message
+        : '评分失败，请重试'
+    }
   }
   finally {
     if (sequence === requestId)
@@ -132,7 +140,12 @@ async function runGrade() {
   }
 }
 watch(
-  [currentUser, () => props.question, () => props.transcript, () => props.part],
+  [
+    currentUser,
+    () => props.question,
+    () => props.transcript,
+    () => props.part,
+  ],
   () => {
     invalidate()
     result.value = null
@@ -167,7 +180,7 @@ function scoreColor(s: number) {
     <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
       <h4 class="text-sm font-bold dark:text-white">
         🤖 AI 评分
-        <span class="text-xs font-normal text-gray-400">（口语三项标准）</span>
+        <span class="text-xs text-gray-400 font-normal">（口语三项标准）</span>
       </h4>
       <div class="flex items-center gap-2">
         <span v-if="!canUseAI" class="text-gray-400" title="locked">🔒 需登录</span>
@@ -175,7 +188,7 @@ function scoreColor(s: number) {
           <!-- C-06:两调用方均已用 hasAISettings() 门控本组件，原“未配置去
           设置”分支永不可达，已删除；设置引导由口语页顶部横幅承接。 -->
           <button
-            class="rounded-lg bg-purple-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-purple-800 disabled:opacity-50"
+            class="rounded-lg bg-purple-700 px-3 py-1.5 text-xs text-white font-bold hover:bg-purple-800 disabled:opacity-50"
             :disabled="loading || wordCount < 10"
             @click="runGrade"
           >
@@ -192,14 +205,14 @@ function scoreColor(s: number) {
       {{ error }}
       <button
         v-if="error.includes('登录已过期')"
-        class="ml-2 rounded-lg bg-blue-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-blue-700"
+        class="ml-2 rounded-lg bg-blue-600 px-2 py-0.5 text-xs text-white font-medium hover:bg-blue-700"
         @click="goRelogin"
       >
         去登录
       </button>
       <button
         v-else-if="error.includes('API Key')"
-        class="ml-2 rounded-lg bg-blue-600 px-2 py-0.5 text-xs font-medium text-white hover:bg-blue-700"
+        class="ml-2 rounded-lg bg-blue-600 px-2 py-0.5 text-xs text-white font-medium hover:bg-blue-700"
         @click="$router.push('/settings')"
       >
         去设置
@@ -240,7 +253,7 @@ function scoreColor(s: number) {
           <div class="text-xs font-bold dark:text-white">
             {{ label }}
           </div>
-          <p class="text-xs leading-5 text-gray-600 dark:text-gray-300">
+          <p class="text-xs text-gray-600 leading-5 dark:text-gray-300">
             {{ result.comments?.[key] ?? '' }}
           </p>
         </div>
@@ -256,7 +269,7 @@ function scoreColor(s: number) {
       </p>
     </div>
 
-    <p v-else-if="!loading && !error" class="text-xs leading-5 text-gray-400">
+    <p v-else-if="!loading && !error" class="text-xs text-gray-400 leading-5">
       <template v-if="canUseAI">
         AI 会按流利连贯、词汇、语法三项打分（基于语音转写文字）。需先在 ⚙️
         设置页填写 API。

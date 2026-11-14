@@ -1,7 +1,7 @@
 <script setup>
-import { useAudioGroup } from '../../composables/useAudioGroup'
-
 import { resolveAudioUrl } from '../../composables/useAudio'
+
+import { useAudioGroup } from '../../composables/useAudioGroup'
 import words from './listening179.json'
 
 const managedAudio = useAudioGroup()
@@ -107,23 +107,23 @@ function next(index) {
   <div>
     <div class="mt-6 items-center justify-between lg:flex">
       <div class="mb-4 lg:mb-0">
-        <h3 class="mb-2 text-xl font-bold text-gray-900 dark:text-white">
+        <h3 class="mb-2 text-xl text-gray-900 font-bold dark:text-white">
           听力 179 考点词练习
         </h3>
         <ul
-          class="ml-4 list-decimal text-sm font-normal text-gray-500 dark:text-gray-400"
+          class="ml-4 list-decimal text-sm text-gray-500 font-normal dark:text-gray-400"
         >
           <li>
             同义替换多个词使用英文逗号
             <kbd
-              class="rounded-lg bg-gray-100 px-2 text-xs font-semibold text-gray-800 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-100"
+              class="rounded-lg bg-gray-100 px-2 text-xs text-gray-800 font-semibold dark:border-gray-500 dark:bg-gray-600 dark:text-gray-100"
             >,</kbd>
             分割
           </li>
           <li>
             音频会在切换下一个词、点击喇叭图表、按键
             <kbd
-              class="rounded-lg bg-gray-100 px-2 text-xs font-semibold text-gray-800 dark:border-gray-500 dark:bg-gray-600 dark:text-gray-100"
+              class="rounded-lg bg-gray-100 px-2 text-xs text-gray-800 font-semibold dark:border-gray-500 dark:bg-gray-600 dark:text-gray-100"
             >`</kbd>（数字 1 左边那个）播放
           </li>
           <li>
@@ -139,7 +139,7 @@ function next(index) {
         <div class="flex items-center">
           <button
             type="button"
-            class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm font-medium text-white dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
+            class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
             @click="
               () => {
                 play(words[0].word)
@@ -154,7 +154,7 @@ function next(index) {
     <div class="relative mt-4 overflow-x-auto">
       <table class="w-full text-left text-sm text-gray-500 dark:text-gray-400">
         <thead
-          class="bg-gray-50 text-xs uppercase text-gray-700 dark:bg-gray-700 dark:text-gray-400"
+          class="bg-gray-50 text-xs text-gray-700 uppercase dark:bg-gray-700 dark:text-gray-400"
         >
           <tr>
             <th class="w-0 px-6 py-3">

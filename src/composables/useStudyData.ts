@@ -1,5 +1,4 @@
 import { computed, watch } from 'vue'
-import vocabularyCounts from '../utils/vocabularyCounts.json'
 import { dateTime } from '../utils/legacyMerge'
 import {
   accountKey,
@@ -13,32 +12,33 @@ import {
   subscribeStorage,
   writerId,
 } from '../utils/storage'
+import vocabularyCounts from '../utils/vocabularyCounts.json'
 import { useAuth } from './useAuth'
 import { useRecordMap } from './useRecordData'
 
-export type MistakeModule =
-  | 'vocabulary'
-  | 'legacy_vocabulary'
-  | 'flashcard'
-  | 'typing'
-  | 'listening'
-  | 'reading'
-  | 'corpus'
-  | 'writing'
-  | 'mock_listening'
-  | 'mock_reading'
-  | 'dictation'
-export type ProgressModule =
-  | `spelling:${string}`
-  | 'vocabulary'
-  | 'flashcard'
-  | 'typing'
-  | 'listening'
-  | 'reading'
-  | 'writing'
-  | 'listening_flashcard'
-  | 'reading_flashcard'
-  | 'corpus_flashcard'
+export type MistakeModule
+  = | 'vocabulary'
+    | 'legacy_vocabulary'
+    | 'flashcard'
+    | 'typing'
+    | 'listening'
+    | 'reading'
+    | 'corpus'
+    | 'writing'
+    | 'mock_listening'
+    | 'mock_reading'
+    | 'dictation'
+export type ProgressModule
+  = | `spelling:${string}`
+    | 'vocabulary'
+    | 'flashcard'
+    | 'typing'
+    | 'listening'
+    | 'reading'
+    | 'writing'
+    | 'listening_flashcard'
+    | 'reading_flashcard'
+    | 'corpus_flashcard'
 export interface MistakeItem {
   key: string
   module: MistakeModule
@@ -87,13 +87,15 @@ export const PROGRESS_MODULE_LABEL: Record<
 export function nsKey(base: string, user?: string | null) {
   return accountKey(
     base,
-    user === undefined ? useAuth().currentUser.value : user,
+    user === undefined
+      ? useAuth().currentUser.value
+      : user,
   )
 }
 export function studyDay(date = new Date()) {
   return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`
 }
-interface MistakeAttempt { id: string; at: number }
+interface MistakeAttempt { id: string, at: number }
 interface MistakePart extends MistakeItem {
   legacyActivity?: 'vocabulary' | 'flashcard'
   /** 去重历史：新格式带时间戳；旧版纯字符串数组兼容读取。 */
@@ -139,7 +141,9 @@ export function migrateMistakes(user: string | null) {
             stamp: [0, 'legacy'],
             value: {
               ...item,
-              module: item.key.startsWith('corpus:') ? 'corpus' : item.module,
+              module: item.key.startsWith('corpus:')
+                ? 'corpus'
+                : item.module,
               epoch: '',
               days: {},
             },
@@ -203,11 +207,12 @@ export const useMistakes = createGlobalState(() => {
         !part
         || part.count <= 0
         || part.epoch
-          !== (resets.state.value[part.key]?.epoch
-            ?? resets.state.value[rawPart.key]?.epoch
-            ?? '')
-      )
+        !== (resets.state.value[part.key]?.epoch
+          ?? resets.state.value[rawPart.key]?.epoch
+          ?? '')
+      ) {
         continue
+      }
       const previous = result.get(part.key)
       const dates = previous?.dates ?? new Set<string>()
       for (const [day, count] of Object.entries(part.days ?? {})) {
@@ -224,7 +229,9 @@ export const useMistakes = createGlobalState(() => {
         dates,
       })
     }
-    return [...result.values()]
+    return [
+      ...result.values(),
+    ]
       .map(({ dates, ...item }) => ({
         ...item,
         detail:
@@ -261,7 +268,9 @@ export const useMistakes = createGlobalState(() => {
       id,
       currentUser.value,
     )
-    const previous = old?.epoch === epoch ? old : undefined
+    const previous = old?.epoch === epoch
+      ? old
+      : undefined
     // M5：去重历史与 epoch 脱钩——重置清计数、不清"已见过哪些 attempt"。
     // 否则重置后重提交的旧 attemptId 会被当作全新错题再计一次。
     const attempts = normalizeMistakeAttempts(old?.recordedAttempts, now)
@@ -286,7 +295,10 @@ export const useMistakes = createGlobalState(() => {
       epoch,
       days,
       recordedAttempts: input.attemptId
-        ? [...attempts, { id: input.attemptId, at: now }]
+        ? [
+            ...attempts,
+            { id: input.attemptId, at: now },
+          ]
         : attempts,
     })
   }
@@ -374,8 +386,9 @@ export const useMistakes = createGlobalState(() => {
         if (
           count > 0
           && (failureDate === null || dateTime(day) > dateTime(failureDate))
-        )
+        ) {
           failureDate = day
+        }
       }
     }
     return { outstanding: true, failureDate }
@@ -391,12 +404,13 @@ export const useMistakes = createGlobalState(() => {
         if (
           !part.key.startsWith('vocabulary:')
           || canonicalMistakeKey(part.key, part.legacyActivity) !== key
-        )
+        ) {
           continue
+        }
         const fromEpoch
           = resets.state.value[key]?.epoch
-          ?? resets.state.value[part.key]?.epoch
-          ?? ''
+            ?? resets.state.value[part.key]?.epoch
+            ?? ''
         if (part.epoch !== fromEpoch || part.count <= 0)
           continue
         const target = canonicalMistakeKey(part.key, activity)
@@ -422,11 +436,14 @@ export const useMistakes = createGlobalState(() => {
       && old.count > 0
       && (!old.hint || old.hint.startsWith(`${old.title}: `))
       && old.epoch === (resets.state.value[key]?.epoch ?? '')
-    )
+    ) {
       parts.set(id, { ...old, hint })
+    }
   }
   function removeMistake(key: string) {
-    resets.set(key, { epoch: crypto.randomUUID() })
+    resets.set(key, {
+      epoch: crypto.randomUUID(),
+    })
   }
   function clearMistakes(module?: MistakeModule) {
     batchStorage(() => {
@@ -489,7 +506,11 @@ export const useProgress = createGlobalState(() => {
           saveEnvelope(key, {
             __ielts: 2,
             stamp: [0, 'legacy'],
-            value: { doneAt: Number.isFinite(old.updatedAt) ? old.updatedAt : 0 },
+            value: {
+              doneAt: Number.isFinite(old.updatedAt)
+                ? old.updatedAt
+                : 0,
+            },
           })
         }
       }
@@ -504,8 +525,11 @@ export const useProgress = createGlobalState(() => {
   })
   function markListening179RowStudied(index: number) {
     if (Number.isInteger(index) && index >= 1 && index <= 179
-      && !listening179Done.state.value[index])
-      listening179Done.set(String(index), { doneAt: Date.now() })
+      && !listening179Done.state.value[index]) {
+      listening179Done.set(String(index), {
+        doneAt: Date.now(),
+      })
+    }
   }
   const progress = computed(() => {
     const out = { ...store.state.value }
@@ -548,8 +572,9 @@ export const useProgress = createGlobalState(() => {
         if (
           !localStorage.getItem(key)
           && !deletionEnvelope(key, useAuth().currentUser.value)
-        )
+        ) {
           add(chapter, id, value)
+        }
       }
     }
     for (const [key, value] of Object.entries(spelling.state.value)) {
@@ -563,8 +588,9 @@ export const useProgress = createGlobalState(() => {
       if (
         (vocabularyCounts as Record<string, number>)[chapter]
         && !grouped.has(chapter)
-      )
+      ) {
         grouped.set(chapter, new Set())
+      }
     }
     for (const [chapter, ids] of grouped) {
       const key = `spelling:${chapter}`
@@ -582,7 +608,11 @@ export const useProgress = createGlobalState(() => {
     done: number,
     total: number,
   ) {
-    store.set(module, { done, total, updatedAt: Date.now() })
+    store.set(module, {
+      done,
+      total,
+      updatedAt: Date.now(),
+    })
   }
   const getProgress = (module: ProgressModule) =>
     progress.value[module] || { done: 0, total: 0, updatedAt: 0 }
@@ -607,10 +637,10 @@ export const useProgress = createGlobalState(() => {
             || !chapterModules.value.some(row =>
               row.module.startsWith('flashcard:'),
             ))
-          && (module !== 'vocabulary'
-            || !chapterModules.value.some(row =>
-              row.module.startsWith('spelling:'),
-            )),
+            && (module !== 'vocabulary'
+              || !chapterModules.value.some(row =>
+                row.module.startsWith('spelling:'),
+              )),
       )
       .map(module => ({
         module,
@@ -647,7 +677,9 @@ export function useMastered(base: string) {
   const isMastered = (id: string | number) =>
     mastered.value.includes(String(id))
   const toggleMastered = (id: string | number) =>
-    store.set(id, isMastered(id) ? undefined : true)
+    store.set(id, isMastered(id)
+      ? undefined
+      : true)
   return {
     mastered,
     isMastered,

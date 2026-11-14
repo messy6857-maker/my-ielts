@@ -1,4 +1,6 @@
 <script setup>
+import AppDialog from './components/AppDialog.vue'
+import { onSyncApplied } from './composables/syncClient'
 import {
   accountNotices,
   dismissAccountNotice,
@@ -6,9 +8,7 @@ import {
   storageFailures,
   useAuth,
 } from './composables/useAuth'
-import { onSyncApplied } from './composables/syncClient'
 import { initSingleAudio, stopAllAudio } from './composables/useSingleAudio'
-import AppDialog from './components/AppDialog.vue'
 
 // 全站单音频：同一时间只播放一个音频，点新的自动暂停旧的
 initSingleAudio()
@@ -44,8 +44,9 @@ watch(currentUser, (user, previous) => {
     previous
     && user !== previous
     && !router.currentRoute.value.path.startsWith('/mock/')
-  )
+  ) {
     router.replace('/')
+  }
 })
 // 存储失败横幅：会话内可关闭；失败列表变化（新 key 失败或旧失败清除后重现）时自动重现。
 const storageBannerClosed = ref(false)

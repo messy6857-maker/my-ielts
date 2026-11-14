@@ -6,8 +6,8 @@ import {
   subscribeStorage,
   writerId,
 } from '../utils/storage'
-import { useRecordMap } from './useRecordData'
 import { readJson, useAuth, writeJson } from './useAuth'
+import { useRecordMap } from './useRecordData'
 import { nsKey, studyDay } from './useStudyData'
 
 interface DailyPart {
@@ -32,9 +32,13 @@ function createDaily(ns: string) {
   setInterval(refreshDay, 30000)
   document.addEventListener('visibilitychange', refreshDay)
   const goalBase
-    = ns === 'vocabulary' ? 'flashcard_daily_goal_v1' : `${ns}_daily_goal_v1`
+    = ns === 'vocabulary'
+      ? 'flashcard_daily_goal_v1'
+      : `${ns}_daily_goal_v1`
   const legacyBase
-    = ns === 'vocabulary' ? 'flashcard_daily_new_v1' : `${ns}_daily_new_v1`
+    = ns === 'vocabulary'
+      ? 'flashcard_daily_new_v1'
+      : `${ns}_daily_new_v1`
   const goal = ref(readJson(nsKey(goalBase), 30))
   const load = () => {
     refreshDay()
@@ -84,7 +88,9 @@ function createDaily(ns: string) {
     return Math.max(
       0,
       parts.filter(p => p.word === null).reduce((n, p) => n + p.count, 0)
-        + new Set(parts.flatMap(p => (p.word ? [p.word] : []))).size,
+      + new Set(parts.flatMap(p => (p.word
+        ? [p.word]
+        : []))).size,
     )
   })
   function recordNewWord(id: string | number = crypto.randomUUID()) {

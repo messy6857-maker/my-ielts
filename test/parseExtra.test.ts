@@ -44,7 +44,9 @@ describe('parseExtra', () => {
 
   it('中文开头的补充释义拼接到上一条', () => {
     const r = parseExtra('excel v. 擅长；突出')
-    expect(r).toEqual([{ word: 'excel', pos: 'v.', meaning: '擅长；突出' }])
+    expect(r).toEqual([
+      { word: 'excel', pos: 'v.', meaning: '擅长；突出' },
+    ])
   })
 
   it('备注与纯英文无释义被丢弃', () => {

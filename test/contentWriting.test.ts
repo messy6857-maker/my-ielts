@@ -1,16 +1,16 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
-import sentences from '../src/pages/writing/100sentences'
-import { analyzeEssay } from '../src/pages/writing/task1/grader'
 import {
   isValidEssayGrade,
   repairSavedGrade,
   roundHalf,
 } from '../src/composables/useAISettings'
+import sentences from '../src/pages/writing/100sentences'
+import { analyzeEssay } from '../src/pages/writing/task1/grader'
 
 const byNo = (no: number) => (sentences as any[]).find(s => s.no === no)
 
-it('W1: 100-sentences ChatGPT field mistranslations are corrected', () => {
+it('w1: 100-sentences ChatGPT field mistranslations are corrected', () => {
   expect(byNo(32).chatgpt).toBe(
     'The troublesome children should be allowed to be removed from the classroom by the teachers',
   )
@@ -18,7 +18,7 @@ it('W1: 100-sentences ChatGPT field mistranslations are corrected', () => {
   expect(byNo(45).chatgpt).not.toContain('thread to social cohesion')
 })
 
-it('W1: 100-sentences ChatGPT fields carry no Chinese commentary any more', () => {
+it('w1: 100-sentences ChatGPT fields carry no Chinese commentary any more', () => {
   for (const entry of sentences as any[]) {
     if (typeof entry.chatgpt === 'string')
       expect(entry.chatgpt).not.toMatch(/[\u4E00-\u9FFF]/)
@@ -40,7 +40,7 @@ it('W1: 100-sentences ChatGPT fields carry no Chinese commentary any more', () =
   )
 })
 
-it('W1: sentence 89 keeps its Gemini provenance in data, label is fixed at the page', () => {
+it('w1: sentence 89 keeps its Gemini provenance in data, label is fixed at the page', () => {
   expect(byNo(89).chatgpt).toContain('from Gemini')
   const src = readFileSync('src/pages/writing/index.vue', 'utf8')
   expect(src).toContain('from Gemini')
@@ -48,7 +48,7 @@ it('W1: sentence 89 keeps its Gemini provenance in data, label is fixed at the p
   expect(src).toContain('aiSource(item)')
 })
 
-it('W2: sentence-initial that is a demonstrative, not a subordinate clause', () => {
+it('w2: sentence-initial that is a demonstrative, not a subordinate clause', () => {
   expect(analyzeEssay('That rose in 2020.').complexRatio).toBe(0)
   expect(analyzeEssay('That was the highest figure.').complexRatio).toBe(0)
   expect(
@@ -59,7 +59,7 @@ it('W2: sentence-initial that is a demonstrative, not a subordinate clause', () 
   ).toBeGreaterThan(0)
 })
 
-it('W3: irregular passives count as complex sentences', () => {
+it('w3: irregular passives count as complex sentences', () => {
   for (const s of [
     'The figure was taken from the chart.',
     'The figure was built in 2020.',
@@ -70,12 +70,12 @@ it('W3: irregular passives count as complex sentences', () => {
     expect(analyzeEssay(s).complexRatio).toBeGreaterThan(0)
 })
 
-it('W4: a wrong self-grade un-masters the sentence in the same flow', () => {
+it('w4: a wrong self-grade un-masters the sentence in the same flow', () => {
   const src = readFileSync('src/pages/writing/index.vue', 'utf8')
   expect(src).toContain('if (isMastered(item.no))')
 })
 
-it('W5: sentence list keys are unique across items and chapter headers', () => {
+it('w5: sentence list keys are unique across items and chapter headers', () => {
   const src = readFileSync('src/pages/writing/index.vue', 'utf8')
   expect(src).toMatch(/:key="item\.no \?\? `sec-\$\{item\.title\}`"/)
   const rows = sentences as any[]
@@ -84,7 +84,7 @@ it('W5: sentence list keys are unique across items and chapter headers', () => {
   expect(new Set(keys).size).toBe(keys.length)
 })
 
-it('W6: book answers and remarks typos are corrected', () => {
+it('w6: book answers and remarks typos are corrected', () => {
   expect(byNo(21).sentence).not.toMatch(/^\s/)
   expect(byNo(31).sentence).not.toMatch(/^\s/)
   expect(byNo(92).translationFromBook).not.toMatch(/^\s/)
@@ -103,14 +103,20 @@ it('W6: book answers and remarks typos are corrected', () => {
 
 function essayGrade(overall: number, first = 6) {
   return {
-    scores: { ta: first, cc: 6, lr: 6, gra: 6, overall },
+    scores: {
+      ta: first,
+      cc: 6,
+      lr: 6,
+      gra: 6,
+      overall,
+    },
     comments: { ta: 'a', cc: 'b', lr: 'c', gra: 'd' },
     corrections: [],
     suggestion: 's',
   }
 }
 
-it('W7: essay overall must be consistent with the four criteria', () => {
+it('w7: essay overall must be consistent with the four criteria', () => {
   expect(isValidEssayGrade(essayGrade(6), 'task1')).toBe(true)
   expect(isValidEssayGrade(essayGrade(6.5), 'task1')).toBe(true)
   expect(isValidEssayGrade(essayGrade(7), 'task1')).toBe(false)
@@ -119,14 +125,26 @@ it('W7: essay overall must be consistent with the four criteria', () => {
   expect(repairSavedGrade(essayGrade(9) as any, 'task1')!.scores.overall).toBe(6)
   expect(repairSavedGrade(essayGrade(7) as any, 'task1')!.scores.overall).toBe(6)
   const uneven = {
-    scores: { ta: 6, cc: 6, lr: 6, gra: 7, overall: 9 },
+    scores: {
+      ta: 6,
+      cc: 6,
+      lr: 6,
+      gra: 7,
+      overall: 9,
+    },
     comments: { ta: 'a', cc: 'b', lr: 'c', gra: 'd' },
     corrections: [],
     suggestion: 's',
   }
   expect(repairSavedGrade(uneven as any, 'task1')!.scores.overall).toBe(6.5)
   const task2 = {
-    scores: { tr: 6, cc: 6, lr: 6, gra: 6, overall: 9 },
+    scores: {
+      tr: 6,
+      cc: 6,
+      lr: 6,
+      gra: 6,
+      overall: 9,
+    },
     comments: { tr: 'a', cc: 'b', lr: 'c', gra: 'd' },
     corrections: [],
     suggestion: 's',

@@ -1,17 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { effectScope } from 'vue'
-import { useAuth } from '../src/composables/useAuth'
-import { useMastered, useProgress } from '../src/composables/useStudyData'
-import {
-  useCheckin,
-  useDailyGoal,
-} from '../src/composables/useSpacedRepetition'
-import { useDeckStore } from '../src/composables/useDeckStore'
-import {
-  decrementAttempt,
-  getAttempts,
-  recordAttempt,
-} from '../src/composables/useStats'
 import {
   apiPull,
   apiPush,
@@ -20,6 +8,21 @@ import {
   getToken,
   setToken,
 } from '../src/composables/syncClient'
+import { useAuth } from '../src/composables/useAuth'
+import { useDeckStore } from '../src/composables/useDeckStore'
+import {
+  useCheckin,
+  useDailyGoal,
+} from '../src/composables/useSpacedRepetition'
+import {
+  decrementAttempt,
+  getAttempts,
+  recordAttempt,
+} from '../src/composables/useStats'
+import { useMastered, useProgress } from '../src/composables/useStudyData'
+import { pruneArchives } from '../src/utils/archives'
+import { deleteDraft, listDrafts, saveDraft } from '../src/utils/drafts'
+import { migrateStudy } from '../src/utils/migrateStudy'
 import {
   accountKey,
   entryKey,
@@ -31,12 +34,15 @@ import {
   saveRecord,
   saveValue,
 } from '../src/utils/storage'
-import { migrateStudy } from '../src/utils/migrateStudy'
-import { pruneArchives } from '../src/utils/archives'
-import { deleteDraft, listDrafts, saveDraft } from '../src/utils/drafts'
 
 const auth = useAuth()
-const sched = { ease: 2.5, interval: 1, dueAt: 100000, reps: 1, lapses: 0 }
+const sched = {
+  ease: 2.5,
+  interval: 1,
+  dueAt: 100000,
+  reps: 1,
+  lapses: 0,
+}
 beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date(2026, 9, 27, 12))
@@ -128,7 +134,12 @@ describe('versioned records and identity boundaries', () => {
   it('malformed legacy tombstones cannot break an otherwise valid pull', () => {
     localStorage.setItem(
       accountKey('tombstones_v1', 'alice'),
-      JSON.stringify([{ k: accountKey('aigrade_v1_a', 'alice'), h: 'x' }]),
+      JSON.stringify([
+        {
+          k: accountKey('aigrade_v1_a', 'alice'),
+          h: 'x',
+        },
+      ]),
     )
     localStorage.setItem(accountKey('aigrade_v1_a', 'alice'), 'broken')
     expect(() => applySyncData({}, 'alice')).not.toThrow()
@@ -214,7 +225,9 @@ describe('daily counters, totals and migration', () => {
     localStorage.setItem(
       accountKey('stats_attempts_v1', 'alice'),
       JSON.stringify({
-        '2026-1-1': { vocabulary: { known: 7, vague: 2, unknown: 1 } },
+        '2026-1-1': {
+          vocabulary: { known: 7, vague: 2, unknown: 1 },
+        },
       }),
     )
     collectSyncData('alice')
@@ -245,7 +258,13 @@ describe('daily counters, totals and migration', () => {
     const key = entryKey('checkin_years_v2', '2026', 'alice')
     saveRecord('checkin_years_v2', '2026', [1, 2], 'alice')
     applySyncData(
-      { [key]: JSON.stringify({ __ielts: 2, stamp: [0, 'old'], value: [3] }) },
+      {
+        [key]: JSON.stringify({
+          __ielts: 2,
+          stamp: [0, 'old'],
+          value: [3],
+        }),
+      },
       'alice',
     )
     expect(readValue(key, [])).toEqual([1, 2, 3])
@@ -253,8 +272,11 @@ describe('daily counters, totals and migration', () => {
 })
 describe('bounded archives and independent drafts', () => {
   it('keeps at most 30 AI archives and rejects stale restoration', () => {
-    for (let i = 0; i < 35; i++)
-      saveValue(accountKey(`aigrade_v2_${i}`, 'alice'), { text: String(i) })
+    for (let i = 0; i < 35; i++) {
+      saveValue(accountKey(`aigrade_v2_${i}`, 'alice'), {
+        text: String(i),
+      })
+    }
     const key = accountKey('aigrade_v2_0', 'alice')
     const old = localStorage.getItem(key)!
     pruneArchives('alice')
@@ -267,8 +289,11 @@ describe('bounded archives and independent drafts', () => {
     expect(localStorage.getItem(key)).toBeNull()
   })
   it('legacy AI archives are never pruned by the retired cutoff (M7)', () => {
-    for (let i = 0; i < 35; i++)
-      saveValue(accountKey(`aigrade_v1_${i}`, 'alice'), { text: String(i) })
+    for (let i = 0; i < 35; i++) {
+      saveValue(accountKey(`aigrade_v1_${i}`, 'alice'), {
+        text: String(i),
+      })
+    }
     pruneArchives('alice')
     expect(
       Object.keys(collectSyncData('alice')).filter(k =>
@@ -280,8 +305,12 @@ describe('bounded archives and independent drafts', () => {
   })
   it('v2 writing budget is independent of legacy archives (M6)', () => {
     for (let i = 0; i < 25; i++) {
-      saveValue(accountKey(`aigrade_v2_${i}`, 'alice'), { text: String(i) })
-      saveValue(accountKey(`aigrade_v1_${i}`, 'alice'), { text: String(i) })
+      saveValue(accountKey(`aigrade_v2_${i}`, 'alice'), {
+        text: String(i),
+      })
+      saveValue(accountKey(`aigrade_v1_${i}`, 'alice'), {
+        text: String(i),
+      })
     }
     pruneArchives('alice')
     expect(
@@ -347,7 +376,11 @@ describe('sync protocol responses', () => {
     const key = entryKey('progress_v1', 'reading', 'alice')
     saveEnvelope(
       key,
-      { __ielts: 2, stamp: [Date.now() + 100000, 'cloud'], value: { done: 1 } },
+      {
+        __ielts: 2,
+        stamp: [Date.now() + 100000, 'cloud'],
+        value: { done: 1 },
+      },
       'remote',
     )
     saveRecord('progress_v1', 'reading', { done: 2 }, 'alice')
@@ -386,14 +419,18 @@ it('preserves higher legacy totals when the cloud snapshot overlaps', () => {
   localStorage.setItem(
     accountKey('stats_attempts_v1', 'alice'),
     JSON.stringify({
-      '2026-10-27': { vocabulary: { known: 5, vague: 0, unknown: 0 } },
+      '2026-10-27': {
+        vocabulary: { known: 5, vague: 0, unknown: 0 },
+      },
     }),
   )
   migrateStudy('alice')
   applySyncData(
     {
       [accountKey('stats_attempts_v1', 'alice')]: JSON.stringify({
-        '2026-10-27': { vocabulary: { known: 7, vague: 0, unknown: 0 } },
+        '2026-10-27': {
+          vocabulary: { known: 7, vague: 0, unknown: 0 },
+        },
       }),
     },
     'alice',

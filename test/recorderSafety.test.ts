@@ -20,7 +20,9 @@ class FakeRecorder {
 
   start() {}
   stop() {
-    this.ondataavailable?.({ data: new Blob(['recording']) })
+    this.ondataavailable?.({
+      data: new Blob(['recording']),
+    })
     this.onstop?.()
   }
 }
@@ -36,7 +38,9 @@ beforeEach(() => {
   vi.stubGlobal('MediaRecorder', FakeRecorder)
   Object.defineProperty(navigator, 'mediaDevices', {
     configurable: true,
-    value: { getUserMedia: vi.fn() },
+    value: {
+      getUserMedia: vi.fn(),
+    },
   })
   URL.createObjectURL = vi.fn().mockReturnValue('blob:recording')
   URL.revokeObjectURL = vi.fn()
@@ -49,7 +53,9 @@ afterEach(() => {
 })
 it('stops a stream granted after the component exits', async () => {
   let grant!: (v: any) => void
-  const track = { stop: vi.fn() }
+  const track = {
+    stop: vi.fn(),
+  }
   vi.mocked(navigator.mediaDevices.getUserMedia).mockImplementation(
     () =>
       new Promise<MediaStream>((resolve) => {
@@ -59,7 +65,9 @@ it('stops a stream granted after the component exits', async () => {
   const r = make()
   const pending = r.start()
   r.dispose()
-  grant({ getTracks: () => [track] })
+  grant({
+    getTracks: () => [track],
+  })
   expect(await pending).toBe(false)
   expect(track.stop).toHaveBeenCalled()
   expect(recordings).toHaveLength(0)
@@ -77,7 +85,9 @@ it('preserves an earlier recording and transcript when rerecording permission fa
   expect(r.error.value).toContain('原录音已保留')
 })
 it('chooses a browser-supported MIME type and publishes data after stop', async () => {
-  const track = { stop: vi.fn() }
+  const track = {
+    stop: vi.fn(),
+  }
   vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue({
     getTracks: () => [track],
   } as any)
@@ -90,7 +100,11 @@ it('chooses a browser-supported MIME type and publishes data after stop', async 
 })
 it('allows only one active recording session across cards', async () => {
   vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue({
-    getTracks: () => [{ stop: vi.fn() }],
+    getTracks: () => [
+      {
+        stop: vi.fn(),
+      },
+    ],
   } as any)
   const a = make()
   const b = make()
@@ -116,7 +130,11 @@ it('surfaces transcription errors while retaining the recording', async () => {
     },
   )
   vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue({
-    getTracks: () => [{ stop: vi.fn() }],
+    getTracks: () => [
+      {
+        stop: vi.fn(),
+      },
+    ],
   } as any)
   const r = make()
   await r.start()
@@ -143,7 +161,11 @@ it('onend restart 抛错后不进入“健康却永久停摆”：延迟重试�
   }
   vi.stubGlobal('SpeechRecognition', FakeRecognition)
   vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue({
-    getTracks: () => [{ stop: vi.fn() }],
+    getTracks: () => [
+      {
+        stop: vi.fn(),
+      },
+    ],
   } as any)
   const r = make()
   await r.start()

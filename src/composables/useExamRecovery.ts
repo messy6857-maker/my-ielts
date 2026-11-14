@@ -1,19 +1,19 @@
-import { computed, onUnmounted, ref, watch } from 'vue'
 import type { Ref } from 'vue'
+import type { MockRecord } from './useMockHistory'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import {
   examAttemptId,
   examSessionId,
   newestAttemptDrafts,
 } from '../utils/examDrafts'
 import { accountKey, readRecords, storageFailures } from '../utils/storage'
-import type { MockRecord } from './useMockHistory'
-import { saveMockRecord } from './useMockHistory'
 import {
   dismissAccountNotice,
   onBeforeLogout,
   pushAccountNotice,
   useAuth,
 } from './useAuth'
+import { saveMockRecord } from './useMockHistory'
 
 export interface ExamDraft {
   editedAt?: number
@@ -199,13 +199,13 @@ export function useExamRecovery(options: {
     }
     const changedAnswers
       = !previousSnapshot
-      || JSON.stringify(previousSnapshot.answers)
+        || JSON.stringify(previousSnapshot.answers)
         !== JSON.stringify(options.answers.value)
     const editedAt = changedAnswers
       ? Math.max(
-        Date.now(),
-        (previousSnapshot?.editedAt ?? previousSnapshot?.updatedAt ?? 0) + 1,
-      )
+          Date.now(),
+          (previousSnapshot?.editedAt ?? previousSnapshot?.updatedAt ?? 0) + 1,
+        )
       : (previousSnapshot!.editedAt ?? previousSnapshot!.updatedAt)
     const value: ExamDraft = {
       attemptId,
@@ -256,8 +256,12 @@ export function useExamRecovery(options: {
         retiredMessage.value
           = '本次作答已在另一页签提交或放弃，计时已暂停；恢复副本保存失败，请先复制答案，不要关闭页面。'
       }
-      if (!storageFailures.value.includes(key(activeTestId)))
-        storageFailures.value = [...storageFailures.value, key(activeTestId)]
+      if (!storageFailures.value.includes(key(activeTestId))) {
+        storageFailures.value = [
+          ...storageFailures.value,
+          key(activeTestId),
+        ]
+      }
       return false
     }
   }
@@ -280,8 +284,9 @@ export function useExamRecovery(options: {
       !retired.value
       || !recoveryId
       || useAuth().currentUser.value !== owner.value
-    )
+    ) {
       return
+    }
     const old = attemptId
     attemptId = recoveryId
     if (writeDraft()) {
@@ -332,7 +337,9 @@ export function useExamRecovery(options: {
       ) {
         localStorage.setItem(
           `${baseKey()}__completed_${encodeURIComponent(retiring)}`,
-          JSON.stringify({ completedAt: Date.now() }),
+          JSON.stringify({
+            completedAt: Date.now(),
+          }),
         )
       }
       if (options.started.value || sourceKey === key()) {
@@ -393,7 +400,9 @@ export function useExamRecovery(options: {
       try {
         localStorage.setItem(
           `${baseKey()}__completed_${encodeURIComponent(attemptId)}`,
-          JSON.stringify({ completedAt: Date.now() }),
+          JSON.stringify({
+            completedAt: Date.now(),
+          }),
         )
         localStorage.setItem(
           key(),
@@ -450,7 +459,9 @@ export function useExamRecovery(options: {
     const retiredSaved = retired.value && recoverySaved
     const message = retiredSaved
       ? `账号已变化，本次模考已暂停。当前答案已另存为恢复副本；${owner.value ? '重新登录原账号' : '退出账号后以游客身份'}回到此套题，可从草稿列表选择恢复。`
-      : `账号已变化，本次模考已暂停。${saved ? `答案已保存在原身份的本机草稿中；${owner.value ? '重新登录原账号' : '退出账号后以游客身份'}回到此套题，可从剩余时间继续作答。` : '作答草稿保存失败，请先复制答案，不要关闭页面。'}`
+      : `账号已变化，本次模考已暂停。${saved
+        ? `答案已保存在原身份的本机草稿中；${owner.value ? '重新登录原账号' : '退出账号后以游客身份'}回到此套题，可从剩余时间继续作答。`
+        : '作答草稿保存失败，请先复制答案，不要关闭页面。'}`
     pauseMessage = message
     error.value = message
     pushAccountNotice(message, pauseNoticeId, 2)
@@ -490,7 +501,10 @@ export function useExamRecovery(options: {
   // pagehide / visibilitychange 走 saveFlush() 立即写，不受防抖影响。
   let answersTimer: ReturnType<typeof setTimeout> | null = null
   const stopAnswers = watch(
-    [options.answers, () => options.extra?.()],
+    [
+      options.answers,
+      () => options.extra?.(),
+    ],
     () => {
       if (answersTimer)
         clearTimeout(answersTimer)
@@ -516,11 +530,12 @@ export function useExamRecovery(options: {
   const onRetirement = (event: StorageEvent) => {
     if (
       event.key
-        === `${baseKey(activeTestId)}__completed_${encodeURIComponent(attemptId)}`
+      === `${baseKey(activeTestId)}__completed_${encodeURIComponent(attemptId)}`
       && options.started.value
       && !options.submitted.value
-    )
+    ) {
       saveFlush()
+    }
   }
   window.addEventListener('storage', onRetirement)
   window.addEventListener('pagehide', saveFlush)
@@ -567,10 +582,14 @@ export function useExamRecovery(options: {
         catch {}
         if (!old?.submitted) {
           try {
-            const id = old ? examAttemptId(old, ownKey) : crypto.randomUUID()
+            const id = old
+              ? examAttemptId(old, ownKey)
+              : crypto.randomUUID()
             localStorage.setItem(
               `${ownKey}__attempt_${encodeURIComponent(id)}`,
-              old ? JSON.stringify({ ...old, attemptId: id }) : oldRaw,
+              old
+                ? JSON.stringify({ ...old, attemptId: id })
+                : oldRaw,
             )
           }
           catch {
@@ -606,7 +625,9 @@ export function useExamRecovery(options: {
       retainedNotice.value = ''
       recoveryId = ''
       sourceKey = saved?.versionId
-      sourceRaw = sourceKey ? localStorage.getItem(sourceKey) : null
+      sourceRaw = sourceKey
+        ? localStorage.getItem(sourceKey)
+        : null
       owner.value = useAuth().currentUser.value
       activeTestId = options.testId.value
       wasBlocked = false

@@ -9,7 +9,10 @@ const props = withDefaults(
     colors?: string[]
     marking?: boolean
   }>(),
-  { colors: () => [], marking: false },
+  {
+    colors: () => [],
+    marking: false,
+  },
 )
 const pieces = computed(() =>
   highlightPieces(props.text, props.words).map((piece, id) => ({
@@ -30,6 +33,8 @@ const pieces = computed(() =>
       :class="colors[piece.index % colors.length]"
     >{{ piece.text }}</span>
     <!-- 普通文本原样输出，不能带模板缩进的空白，否则空格会被编译器折叠或丢失 -->
-    <template v-else>{{ piece.text }}</template>
+    <template v-else>
+      {{ piece.text }}
+    </template>
   </template>
 </template>
