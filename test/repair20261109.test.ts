@@ -273,8 +273,11 @@ it('daily bookmarks follow a paragraph after layout changes and stay scoped to t
   reloadPageBookmarks()
   addPageBookmark('/reading/daily', 1200)
   const { w, s } = await page((await import('../src/pages/reading/daily.vue')).default, '/reading/daily')
-  for (let i = 0; i < 30 && s.dailyLoading; i++)
+  // 每日阅读数据是动态导入的，冷启动时要等真正的宏任务，不能只刷微任务
+  for (let i = 0; i < 100 && s.dailyLoading; i++) {
+    await new Promise(resolve => setTimeout(resolve, 10))
     await flushPromises()
+  }
   expect(s.dailyLoading).toBe(false)
   const paragraph = w.get('.passage-text > p').element
   vi.spyOn(paragraph, 'getBoundingClientRect').mockReturnValue(rect)

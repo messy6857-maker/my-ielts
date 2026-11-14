@@ -169,7 +169,8 @@ it('reading highlights keep escaped text safe', async () => {
     props: { text, words: ['alpha'], marking: true },
   })
   wrappers.push(w)
-  expect(w.text()).toBe(text)
+  // 新版 test-utils 的 text() 会逐个文本节点去掉首尾空格，这里比较原始文本
+  expect(w.element.parentElement!.textContent).toBe(text)
   expect(w.find('img').exists()).toBe(false)
   expect(w.findAll('mark')).toHaveLength(1)
 })

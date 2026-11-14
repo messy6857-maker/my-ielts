@@ -40,7 +40,8 @@ describe('text parsing and presentation', () => {
     const w = mount(TextHighlights, {
       props: { text, words: ['hello world', 'world', 'mark'] },
     })
-    expect(w.text()).toBe(text)
+    // 新版 test-utils 的 text() 会逐个文本节点去掉首尾空格，这里比较原始文本
+    expect(w.element.parentElement!.textContent).toBe(text)
     expect(w.find('img').exists()).toBe(false)
     expect(w.find('mark mark').exists()).toBe(false)
     w.unmount()

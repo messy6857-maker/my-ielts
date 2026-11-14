@@ -50,7 +50,9 @@ async function setTraining(w: any, on: boolean) {
   await label.find('input[type="checkbox"]').setChecked(on)
   await nextTick()
   // 章节词表是异步加载的：冷启动时等输入框真正渲染出来再继续
-  for (let i = 0; on && !w.find('input[id="1"]').exists() && i < 100; i++) {
+  if (!on)
+    return
+  for (let i = 0; !w.find('input[id="1"]').exists() && i < 100; i++) {
     await new Promise(resolve => setTimeout(resolve, 10))
     await flushPromises()
   }
