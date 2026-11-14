@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
-import { nextTick } from 'vue'
+import { defineComponent, h, nextTick } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { accountNotice, useAuth } from '../src/composables/useAuth'
 import { setToken } from '../src/composables/syncClient'
@@ -165,12 +165,12 @@ it('reading highlights keep escaped text safe', async () => {
   const Component = (await import('../src/components/TextHighlights.vue'))
     .default
   const text = '<img src=x onerror=alert(1)> alpha & beta'
-  const w = mount(Component, {
-    props: { text, words: ['alpha'], marking: true },
-  })
+  // 包一层 div：新版 test-utils 的 text() 会逐个文本节点去掉首尾空格，这里比较原始文本
+  const w = mount(defineComponent({
+    render: () => h('div', [h(Component, { text, words: ['alpha'], marking: true })]),
+  }))
   wrappers.push(w)
-  // 新版 test-utils 的 text() 会逐个文本节点去掉首尾空格，这里比较原始文本
-  expect(w.element.parentElement!.textContent).toBe(text)
+  expect(w.element.textContent).toBe(text)
   expect(w.find('img').exists()).toBe(false)
   expect(w.findAll('mark')).toHaveLength(1)
 })

@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils'
 import TextHighlights from '../src/components/TextHighlights.vue'
 import { extractJson, highlightPieces, splitSentences } from '../src/utils/text'
 import { resolveMediaUrl } from '../src/composables/useAudio'
+import { defineComponent, h } from 'vue'
 
 describe('text parsing and presentation', () => {
   it.each([
@@ -37,11 +38,11 @@ describe('text parsing and presentation', () => {
         .map(p => p.text)
         .join(''),
     ).toBe(text)
-    const w = mount(TextHighlights, {
-      props: { text, words: ['hello world', 'world', 'mark'] },
-    })
-    // 新版 test-utils 的 text() 会逐个文本节点去掉首尾空格，这里比较原始文本
-    expect(w.element.parentElement!.textContent).toBe(text)
+    // 包一层 div：新版 test-utils 的 text() 会逐个文本节点去掉首尾空格，这里比较原始文本
+    const w = mount(defineComponent({
+      render: () => h('div', [h(TextHighlights, { text, words: ['hello world', 'world', 'mark'] })]),
+    }))
+    expect(w.element.textContent).toBe(text)
     expect(w.find('img').exists()).toBe(false)
     expect(w.find('mark mark').exists()).toBe(false)
     w.unmount()
