@@ -433,8 +433,9 @@ it.each(['reading', 'listening'])(
     const again = await show(Page, `/mock/${kind}-test`)
     expect(again.state.recovery.draft.value).not.toBeNull()
     vi.spyOn(window, 'confirm').mockReturnValue(true)
-    again.state.discardDraftAndStart()
-    await nextTick()
+    // 放弃草稿要先等确认弹窗（这里退回原生 confirm）的结果，再重新开考
+    await again.state.discardDraftAndStart()
+    await flushPromises()
     expect(again.state.recovery.draft.value.answers).toEqual({})
     expect(again.w.html()).not.toContain('继续所选作答')
   },
