@@ -15,6 +15,7 @@ import { CAMBRIDGE_WRITING } from '../cambridge'
 import type { CambridgeWritingTask } from '../cambridge'
 import { EXTRA_TASK2 } from '../cambridge-extra'
 import { onBeforeLogout, useAuth } from '../../../composables/useAuth'
+import { alertDialog, confirmDialog } from '../../../composables/useDialog'
 import AIGradePanel from '../AIGradePanel.vue'
 import ModelEssayView from '../ModelEssayView.vue'
 
@@ -425,14 +426,21 @@ function retryArchive() {
 }
 function submitEssay() {
   if (wordCount.value < 50) {
-    alert('词数太少（<50），先多写一点吧')
+    void alertDialog('词数太少（<50），先多写一点吧')
     return
   }
-  if (
-    wordCount.value < 250
-    && !confirm(`只有 ${wordCount.value} 词，不足 250 会被扣分，确定提交吗？`)
-  )
+  // 词数足够时同步提交；不足 250 词先弹站内确认框，确定后再提交
+  if (wordCount.value < 250) {
+    void confirmDialog(`只有 ${wordCount.value} 词，不足 250 会被扣分，确定提交吗？`, { confirmText: '提交' })
+      .then((ok) => {
+        if (ok)
+          doSubmitEssay()
+      })
     return
+  }
+  doSubmitEssay()
+}
+function doSubmitEssay() {
   if (timerId)
     clearInterval(timerId)
   timerOn.value = false

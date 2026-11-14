@@ -3,6 +3,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { clearMockHistory, getMockHistory } from '~/composables/useMockHistory'
 import { onSyncApplied } from '~/composables/syncClient'
 import { useAuth } from '~/composables/useAuth'
+import { confirmDialog } from '~/composables/useDialog'
 import type { MockRecord } from '~/composables/useMockHistory'
 
 const records = ref<MockRecord[]>([])
@@ -31,8 +32,8 @@ function formatDate(iso: string): string {
   return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 }
 
-function handleClear() {
-  if (confirm('确定清空所有模考记录吗？开始屏的“已有交卷记录”提示也会一并清除，进行中草稿不受影响。')) {
+async function handleClear() {
+  if (await confirmDialog('确定清空所有模考记录吗？开始屏的“已有交卷记录”提示也会一并清除，进行中草稿不受影响。', { danger: true, confirmText: '清空' })) {
     clearMockHistory()
     records.value = []
   }

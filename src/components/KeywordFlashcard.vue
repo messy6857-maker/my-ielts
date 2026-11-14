@@ -2,6 +2,7 @@
      与词汇自测卡片（/vocabulary/flashcard）是独立入口、独立进度 -->
 <script setup lang="ts">
 import { useAudioGroup } from '../composables/useAudioGroup'
+import { confirmDialog } from '../composables/useDialog'
 import { studyDay } from '../composables/useStudyData'
 
 import { gradeSchedule } from '../composables/useSpacedRepetition'
@@ -274,9 +275,10 @@ function restart() {
 }
 
 // 重置记忆：二次确认后清空本卡片的 SM-2 调度 + 自测进度 + 今日新词计数
-function resetMemory() {
-  const ok = window.confirm(
+async function resetMemory() {
+  const ok = await confirmDialog(
     '确定要重置记忆吗？此操作不可撤销。\n\n将清除：\n- 本卡片全部单词的记忆曲线（所有词回到新词）\n- 本卡片自测进度\n- 今日已学新词计数\n\n不受影响：错词本、打卡、模考记录、学习统计历史',
+    { danger: true, confirmText: '重置' },
   )
   if (!ok)
     return

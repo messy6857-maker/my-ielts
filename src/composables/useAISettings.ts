@@ -4,7 +4,7 @@ import { SYNC_API_BASE } from '../sync-config'
 import { getToken } from './syncClient'
 import { useAuth } from './useAuth'
 
-// AI 批改设置：存在浏览器 localStorage（全局，不按账号隔离），key 只留用户自己浏览器
+// AI 批改设置：存在浏览器 localStorage，按账号分开保存（游客单独一份），不参与同步和备份
 export interface AISettings {
   baseUrl: string // 如 https://api-cdn.thehive.ai/api/v3（不带 /chat/completions）
   apiKey: string
@@ -14,7 +14,27 @@ export interface AISettings {
   /** 各服务商的 Key（按服务商 id 存）：切换服务商时密钥框跟着换，没填过就是空 */
   apiKeys?: Record<string, string>
 }
-const KEY = 'myielts_ai_settings_v1'
+/** 旧版全局 key（所有账号共用）；首次读取时归当前账号（或游客）所有并删除 */
+const LEGACY_KEY = 'myielts_ai_settings_v1'
+/** 按账号的 key。故意不用 accountKey 的 myielts_u_ 前缀，确保永远不会被当成学习数据同步或导出备份 */
+export function aiSettingsKey(user: string | null): string {
+  return user ? `${LEGACY_KEY}:u:${user}` : `${LEGACY_KEY}:guest`
+}
+function currentKey(): string {
+  const key = aiSettingsKey(useAuth().currentUser.value)
+  try {
+    const legacy = localStorage.getItem(LEGACY_KEY)
+    if (legacy !== null) {
+      if (localStorage.getItem(key) === null)
+        localStorage.setItem(key, legacy)
+      localStorage.removeItem(LEGACY_KEY)
+    }
+  }
+  catch {
+    /* 存储不可用时按无设置处理 */
+  }
+  return key
+}
 const DEFAULTS: AISettings = {
   baseUrl: 'https://api-cdn.thehive.ai/api/v3',
   apiKey: '',
@@ -127,7 +147,7 @@ export function reasoningEffortForProvider(providerId: string, effort: AISetting
 
 export function getAISettings(): AISettings {
   try {
-    const raw = localStorage.getItem(KEY)
+    const raw = localStorage.getItem(currentKey())
     if (raw) {
       const parsed: AISettings = { ...DEFAULTS, ...JSON.parse(raw) }
       // 兼容旧版：只有单个 Key、没有分服务商的 map 时，把现有 Key 记到当前服务商名下
@@ -145,7 +165,7 @@ export function saveAISettings(s: AISettings) {
   // 保存时把当前 Key 写回当前服务商名下（切换服务商时取的就是这里）
   const apiKeys = { ...(s.apiKeys ?? {}) }
   apiKeys[getProviderIdForBaseUrl(s.baseUrl)] = s.apiKey.trim()
-  localStorage.setItem(KEY, JSON.stringify({ ...s, apiKeys }))
+  localStorage.setItem(currentKey(), JSON.stringify({ ...s, apiKeys }))
 }
 export function hasAISettings(): boolean {
   const s = getAISettings()
