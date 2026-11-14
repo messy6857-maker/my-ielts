@@ -4,7 +4,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "vite --port 3333 --open",
-    "lint": "eslint src test vite.config.ts uno.config.ts capacitor.config.ts",
+    "lint": "eslint src test vite.config.ts uno.config.ts capacitor.config.ts eslint.config.mjs",
     "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
     "test": "vitest",
@@ -19,16 +19,15 @@
     "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^0.39.5",
+    "@antfu/eslint-config": "^10.0.0",
     "@iconify-json/carbon": "^1.1.17",
     "@iconify-json/ph": "^1.1.12",
     "@iconify-json/simple-icons": "^1.1.87",
     "@types/node": "^24.0.0",
-    "@unocss/eslint-config": "^0.53.0",
     "@unocss/reset": "^66.13.0",
     "@vitejs/plugin-vue": "^6.0.11",
     "@vue/test-utils": "^2.5.1",
-    "eslint": "^8.42.0",
+    "eslint": "^10.15.0",
     "jsdom": "^31.0.1",
     "lint-staged": "^13.2.2",
     "pnpm": "^8.6.0",
@@ -41,12 +40,7 @@
     "vite-plugin-pages": "^0.33.3",
     "vitest": "^5.1.0",
     "vue-tsc": "^3.3.14",
-    "@capacitor/cli": "^8.5.3"
-  },
-  "eslintConfig": {
-    "extends": [
-      "@antfu",
-      "@unocss"
-    ]
+    "@capacitor/cli": "^8.5.3",
+    "@unocss/eslint-plugin": "^66.13.0"
   }
 }
