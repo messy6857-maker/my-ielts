@@ -1,4 +1,5 @@
 import { accountPrefix, clearRecords, readRecords, saveRecord } from '../utils/storage'
+import { listeningBandScore, readingBandScore } from '../pages/mock/types'
 import { useAuth } from './useAuth'
 
 export interface MockRecord {
@@ -14,10 +15,23 @@ export interface MockRecord {
 function owner() {
   return useAuth().currentUser.value
 }
+/**
+ * 换算分按当前换算表从正确数重算：存档里的 band 是交卷时算的，
+ * 换算表修正前的记录会偏低（存档本身不改，只影响显示和统计）。
+ */
+export function currentBand(r: MockRecord): number {
+  if (!Number.isFinite(r.score) || !Number.isFinite(r.total) || r.total <= 0)
+    return r.band
+  return r.kind === 'reading'
+    ? readingBandScore(r.score, r.total)
+    : listeningBandScore(r.score, r.total)
+}
 export function getMockHistory(): MockRecord[] {
   return Object.values(
     readRecords<MockRecord>('mock_history_v1', owner()),
-  ).sort((a, b) => b.date.localeCompare(a.date))
+  )
+    .map(r => ({ ...r, band: currentBand(r) }))
+    .sort((a, b) => b.date.localeCompare(a.date))
 }
 export function saveMockRecord(r: Omit<MockRecord, 'date'>) {
   const record = { ...r, date: new Date().toISOString() }

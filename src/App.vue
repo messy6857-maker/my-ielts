@@ -8,6 +8,7 @@ import {
 } from './composables/useAuth'
 import { onSyncApplied } from './composables/syncClient'
 import { initSingleAudio, stopAllAudio } from './composables/useSingleAudio'
+import AppDialog from './components/AppDialog.vue'
 
 // 全站单音频：同一时间只播放一个音频，点新的自动暂停旧的
 initSingleAudio()
@@ -129,4 +130,5 @@ watch(storageFailures, () => {
 
   <PageBookmark />
   <TheFooter />
+  <AppDialog />
 </template>

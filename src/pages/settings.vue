@@ -139,6 +139,11 @@ async function clearQuarantine() {
 const { goBack } = useGoBack('/')
 
 const form = ref({ ...getAISettings() })
+// AI 设置按账号分开保存：切换账号/退出时换成该身份自己的设置
+watch(currentUser, () => {
+  form.value = { ...getAISettings() }
+  aiSettingsState.value = getAISettings()
+})
 let detectRevision = 0
 const saved = ref(false)
 const testing = ref(false)
@@ -393,7 +398,7 @@ async function onDetect() {
         可用于大小作文批改、口语转写评分和每日阅读翻译。
         三项都要填齐（API 地址、密钥、模型）才会启用；未配置时口语页会提示并提供本地 4 项自评清单。
         Key 只保存在本机浏览器，请求经 VPS 中转（浏览器直连第三方会被 CORS 拦截）。
-        注意：每个服务商各记一个 Key，切换服务商时密钥框跟着换（没填过就是空）；Key 不按账号隔离，同一浏览器的各账号共用此 Key；评分存档仍按账号隔离。
+        注意：每个服务商各记一个 Key，切换服务商时密钥框跟着换（没填过就是空）；Key 按账号分开保存（游客单独一份），换账号或退出后不会被别人看到或使用，也不会同步到云端或写进备份。
       </p>
 
       <div class="mb-4">

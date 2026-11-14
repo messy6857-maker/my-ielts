@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { MistakeItem, MistakeModule } from '../composables/useStudyData'
 import { MISTAKE_MODULE_LABEL } from '../composables/useStudyData'
+import { confirmDialog } from '../composables/useDialog'
 import {
   decodeMockMistakeMeta,
   mockReviewMatches,
@@ -198,13 +199,13 @@ function submitAnswer() {
   }
 }
 
-function confirmClearAll() {
-  if (window.confirm('确定要清空整个错词本吗？'))
+async function confirmClearAll() {
+  if (await confirmDialog('确定要清空整个错词本吗？', { danger: true, confirmText: '清空' }))
     clearMistakes()
 }
 
-function confirmClearModule(module: string, label: string) {
-  if (window.confirm(`确定要清空「${label}」的错词吗？`))
+async function confirmClearModule(module: string, label: string) {
+  if (await confirmDialog(`确定要清空「${label}」的错词吗？`, { danger: true, confirmText: '清空' }))
     clearMistakes(module as any)
 }
 
@@ -216,13 +217,14 @@ const legacyListeningKeys = computed(() =>
     )
     .map(m => m.key),
 )
-function confirmClearLegacyListening() {
+async function confirmClearLegacyListening() {
   const count = legacyListeningKeys.value.length
   if (count === 0)
     return
   if (
-    window.confirm(
+    await confirmDialog(
       `确定要清理 ${count} 条旧听力错题吗？仅删除 listening: 开头、且非 listening179: 的旧键条目（键统一之前产生），新键 listening179: 与其他分组不受影响。此操作不可撤销。`,
+      { danger: true, confirmText: '清理' },
     )
   )
     legacyListeningKeys.value.forEach(key => removeMistake(key))
