@@ -26,6 +26,7 @@ import type { MockQuestion } from './types'
 import { resolveMediaUrl } from '~/composables/useAudio'
 import { useGoBack } from '~/composables/useGoBack'
 import { useStudyTimer } from '~/composables/useStudyTimer'
+import { confirmDialog } from '~/composables/useDialog'
 import { collectMockMistakeEntries } from '~/utils/mockMistakes'
 import { useMockMistakeSave } from '~/composables/useMockMistakeSave'
 import ListeningTabs from '~/components/ListeningTabs.vue'
@@ -191,43 +192,57 @@ async function loadTest() {
 }
 
 // 点"开始测试"才重置状态并开始计时
+type ExamDraft = NonNullable<typeof recovery.draft.value>
+// 0 秒草稿的二选一弹窗还在等待时，再点“开始测试”不再叠出第二个弹窗
+let expiredPromptOpen = false
 function startTest() {
   if (recovery.mismatch())
     return
-  if (!testPair.value || started.value)
+  if (!testPair.value || started.value || expiredPromptOpen)
     return
   // 已交卷的草稿不再续做：按全新测试开始
-  let saved
+  const saved
     = recovery.draft.value && !recovery.draft.value.submitted
       ? recovery.draft.value
       : null
-  // M-Opt-#4：0 秒草稿不再 1 秒后自动交卷，给二选一：确定 = 直接交卷查看
-  // 成绩，取消 = 放弃草稿、全新开始。
+  // M-Opt-#4：0 秒草稿不再 1 秒后自动交卷，给二选一：直接交卷查看成绩，
+  // 或放弃草稿、全新开始。
   if (saved && saved.timeLeft <= 0) {
     if (!recovery.begin(saved))
       return
-    if (
-      window.confirm(
-        '该草稿剩余时间已到（0 秒）。点“确定”直接交卷查看成绩，点“取消”放弃草稿、全新开始。',
-      )
-    ) {
-      answers.value = saved.answers ?? {}
-      activePart.value = saved.extra?.active ?? 0
-      started.value = true
-      submitted.value = false
-      studyTimer.start()
-      submit()
-      return
-    }
-    if (!recovery.clear())
-      return
-    saved = null
+    expiredPromptOpen = true
+    const pair = testPair.value
+    confirmDialog(
+      '该草稿剩余时间已到（0 秒）。可以直接交卷查看成绩，或放弃草稿、全新开始。',
+      { confirmText: '直接交卷', cancelText: '放弃草稿，重新开始' },
+    ).then((submitNow) => {
+      expiredPromptOpen = false
+      // 弹窗期间换了套题、已经开考或换了账号：这次选择作废
+      if (testPair.value !== pair || started.value || recovery.mismatch())
+        return
+      if (submitNow) {
+        answers.value = saved.answers ?? {}
+        activePart.value = saved.extra?.active ?? 0
+        started.value = true
+        submitted.value = false
+        studyTimer.start()
+        submit()
+        return
+      }
+      if (recovery.clear())
+        beginTest(null)
+    })
+    return
   }
-  if (!recovery.begin(saved))
+  beginTest(saved)
+}
+function beginTest(saved: ExamDraft | null) {
+  const pair = testPair.value
+  if (!pair || !recovery.begin(saved))
     return
   timeLeft.value = restoreTimeLeft(
     saved?.timeLeft,
-    testPair.value.listening.timeLimit,
+    pair.listening.timeLimit,
   )
   answers.value = saved?.answers ?? {}
   submitted.value = false
@@ -240,11 +255,12 @@ function startTest() {
 
 // 放弃当前草稿并重新开始：清掉本会话草稿后立刻全新开考，
 // 避免清完仍留在开始屏、下次刷新又被其他页签快照顶回来。
-function discardDraftAndStart() {
+async function discardDraftAndStart() {
   if (
-    !window.confirm(
+    !(await confirmDialog(
       '放弃所选的这一次作答并重新开始？同一 attempt 的副本将退役，其他独立作答不受影响。',
-    )
+      { danger: true, confirmText: '放弃并重新开始' },
+    ))
   )
     return
   if (recovery.clear())
@@ -425,13 +441,16 @@ function toggleMultiSelect(qid: string, idx: number) {
 const hasAnswers = computed(() =>
   Object.values(answers.value).some(v => v.trim() !== ''),
 )
-function onTestChange(e: Event) {
-  const target = (e.target as HTMLSelectElement).value
+async function onTestChange(e: Event) {
+  const select = e.target as HTMLSelectElement
+  const target = select.value
   if (started.value && !submitted.value && hasAnswers.value) {
-    if (!window.confirm('切换套题将暂停并保留当前作答草稿，确定吗？')) {
-      (e.target as HTMLSelectElement).value = testId.value
+    // 弹窗期间下拉框先显示回当前套题，确认后再跳转
+    select.value = testId.value
+    if (!(await confirmDialog('切换套题将暂停并保留当前作答草稿，确定吗？', { confirmText: '切换' })))
       return
-    }
+    if (target === testId.value)
+      return
   }
 
   router.push({ path: '/mock/listening-test', query: { test: target } })
@@ -442,12 +461,24 @@ function questionStatus(
 ): 'correct' | 'wrong' | 'partial' | 'unanswered' {
   return mockQuestionStatus(q, answers.value[q.id] ?? '', submitted.value)
 }
-onBeforeRouteLeave(() => {
+// 离开确认弹窗还开着时又发起导航（再点链接、按返回键）：共用同一个弹窗的结果
+let leavePrompt: Promise<boolean> | null = null
+onBeforeRouteLeave(async () => {
   if (!started.value || submitted.value)
     return true
-  if (useAuth().currentUser.value === recovery.owner.value
-    && !window.confirm('尚未交卷，离开将暂停本页作答并保留草稿，其他页签独立作答不受影响，确定吗？'))
-    return false
+  if (useAuth().currentUser.value === recovery.owner.value) {
+    leavePrompt ??= confirmDialog(
+      '尚未交卷，离开将暂停本页作答并保留草稿，其他页签独立作答不受影响，确定吗？',
+      { confirmText: '离开', cancelText: '继续作答' },
+    ).finally(() => {
+      leavePrompt = null
+    })
+    if (!(await leavePrompt))
+      return false
+    // 弹窗期间时间到已自动交卷：直接放行
+    if (!started.value || submitted.value)
+      return true
+  }
   return recovery.saveBeforeLeave()
 })
 watch([submitted, testPair], ([done, pair]) => {
