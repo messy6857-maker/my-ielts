@@ -59,7 +59,7 @@ async function show(Page: any, path = '/exercise') {
   })
   wrappers.push(root)
   await flushPromises()
-  const state = (root.findComponent(Page).vm as any).$.setupState
+  const state = ((root.findComponent(Page) as any).vm as any).$.setupState
   for (let i = 0; state.loading && i < 50; i++) {
     await new Promise(resolve => setTimeout(resolve, 5))
     await flushPromises()
