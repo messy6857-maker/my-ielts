@@ -1,1 +1,0 @@
-import{R as a}from"./index-766918d7.js";function c(o="/"){const t=a();function r(){const s=t.options.history.state.back;typeof s=="string"&&s.startsWith("/")&&!s.startsWith("//")?t.back():t.push(o)}return{goBack:r}}export{c as u};
