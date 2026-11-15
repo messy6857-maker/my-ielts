@@ -89,42 +89,29 @@ const filteredGrouped = computed(() => {
   }))
 })
 
-// 分批显示：错题多时一次渲染全部会让页面卡顿好几秒（每条十几个元素，上千条就是上万个元素）。
-// 按分组顺序先显示前 PAGE_SIZE 条，其余点“再显示”；组标题的数量、筛选、复习仍针对全部错题。
+// 分批显示：错题多时一次渲染全部会让页面卡顿（每条十几个元素，上千条就是上万个元素）。
+// 每组都显示标题和总数，组内先显示 PAGE_SIZE 条，其余点本组的“再显示”；筛选、复习、清空仍针对全部错题。
 // 筛选条件或账号变化时回到第一批。
-const PAGE_SIZE = 100
-const visibleLimit = ref(PAGE_SIZE)
-watch([
-  filterModule,
-  filterTestId,
-  filterPart,
-  currentUser,
-], () => {
-  visibleLimit.value = PAGE_SIZE
+const PAGE_SIZE = 50
+const groupLimits = ref<Partial<Record<MistakeModule, number>>>({})
+watch([filterModule, filterTestId, filterPart, currentUser], () => {
+  groupLimits.value = {}
 })
-const pagedGrouped = computed(() => {
-  let left = visibleLimit.value
-  const out: Array<{ module: MistakeModule, label: string, total: number, items: MistakeItem[] }> = []
-  for (const group of filteredGrouped.value) {
-    if (left <= 0)
-      break
-    const items = group.items.slice(0, left)
-    left -= items.length
-    out.push({
-      module: group.module,
-      label: group.label,
-      total: group.items.length,
-      items,
-    })
+const pagedGrouped = computed(() => filteredGrouped.value.map((group) => {
+  const limit = groupLimits.value[group.module] ?? PAGE_SIZE
+  return {
+    module: group.module,
+    label: group.label,
+    total: group.items.length,
+    items: group.items.slice(0, limit),
+    hidden: Math.max(0, group.items.length - limit),
   }
-  return out
-})
-const hiddenCount = computed(() => Math.max(0, filteredItems.value.length - visibleLimit.value))
-function showMore() {
-  visibleLimit.value += PAGE_SIZE
+}))
+function showMore(module: MistakeModule) {
+  groupLimits.value = { ...groupLimits.value, [module]: (groupLimits.value[module] ?? PAGE_SIZE) + PAGE_SIZE }
 }
-function showAll() {
-  visibleLimit.value = filteredItems.value.length
+function showAll(module: MistakeModule, total: number) {
+  groupLimits.value = { ...groupLimits.value, [module]: total }
 }
 
 const mockTestOptions = computed(() => {
@@ -600,22 +587,22 @@ function detailLines(detail: string) {
               </tbody>
             </table>
           </div>
-        </template>
-        <div
-          v-if="hiddenCount > 0"
-          class="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm"
-        >
-          <span class="text-gray-500 dark:text-gray-400">还有 {{ hiddenCount }} 条未显示</span>
-          <button
-            class="border border-gray-300 rounded-lg px-4 py-2 dark:border-gray-600 dark:text-white"
-            @click="showMore"
+          <div
+            v-if="group.hidden > 0"
+            class="mt-3 flex flex-wrap items-center justify-center gap-3 text-sm"
           >
-            再显示 {{ Math.min(PAGE_SIZE, hiddenCount) }} 条
-          </button>
-          <button class="text-gray-500 underline dark:text-gray-400" @click="showAll">
-            全部显示
-          </button>
-        </div>
+            <span class="text-gray-500 dark:text-gray-400">本组还有 {{ group.hidden }} 条未显示</span>
+            <button
+              class="border border-gray-300 rounded-lg px-4 py-2 dark:border-gray-600 dark:text-white"
+              @click="showMore(group.module)"
+            >
+              再显示 {{ Math.min(PAGE_SIZE, group.hidden) }} 条
+            </button>
+            <button class="text-gray-500 underline dark:text-gray-400" @click="showAll(group.module, group.total)">
+              全部显示
+            </button>
+          </div>
+        </template>
       </div>
     </div>
   </div>

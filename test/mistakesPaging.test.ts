@@ -60,27 +60,42 @@ async function open() {
 }
 const rows = (w: any) => w.findAll('tbody tr').length
 const button = (w: any, text: RegExp) => w.findAll('button').find((b: any) => text.test(b.text()))
+/** 某组（按标题里的总数找）显示了几行、还有几条没显示 */
+function group(w: any, total: number) {
+  const headers = w.findAll('h4')
+  const i = headers.findIndex((h: any) => h.text().includes(`（${total}）`))
+  expect(i).toBeGreaterThanOrEqual(0)
+  const tables = w.findAll('table')
+  const bar = w.findAll('span').filter((sp: any) => sp.text().startsWith('本组还有'))
+  return { index: i, rows: tables[i].findAll('tbody tr').length, bars: bar.map((b: any) => b.text()) }
+}
 
-describe('mistakes page shows mistakes in batches', () => {
-  it('renders the first 100, group headers still count everything', async () => {
+describe('mistakes page shows each group in batches', () => {
+  it('every group shows its header and total, with the first 50 rows each', async () => {
     seed(80, 170)
     const w = await open()
+    expect(group(w, 80).rows).toBe(50)
+    expect(group(w, 170).rows).toBe(50)
     expect(rows(w)).toBe(100)
-    const headers = w.findAll('h4').map((h: any) => h.text())
-    expect(headers.some((t: string) => t.includes('（80）'))).toBe(true)
-    expect(headers.some((t: string) => t.includes('（170）'))).toBe(true)
-    expect(w.text()).toContain('还有 150 条未显示')
+    expect(w.text()).toContain('本组还有 30 条未显示')
+    expect(w.text()).toContain('本组还有 120 条未显示')
   })
 
-  it('“再显示” adds 100, “全部显示” shows the rest, and the bar disappears', async () => {
+  it('“再显示” and “全部显示” only affect their own group', async () => {
     seed(80, 170)
     const w = await open()
-    await button(w, /再显示 100 条/).trigger('click')
-    expect(rows(w)).toBe(200)
-    expect(button(w, /再显示 50 条/)).toBeTruthy()
-    await button(w, /全部显示/).trigger('click')
-    expect(rows(w)).toBe(250)
-    expect(w.text()).not.toContain('未显示')
+    const typing = group(w, 170).index
+    const moreButtons = () => w.findAll('button').filter((b: any) => /再显示/.test(b.text()))
+    const allButtons = () => w.findAll('button').filter((b: any) => /全部显示/.test(b.text()))
+    // 两组各有一套按钮，按组的顺序排列
+    await moreButtons()[typing].trigger('click')
+    expect(group(w, 170).rows).toBe(100)
+    expect(group(w, 80).rows).toBe(50)
+    await allButtons()[typing].trigger('click')
+    expect(group(w, 170).rows).toBe(170)
+    expect(group(w, 80).rows).toBe(50)
+    expect(w.text()).not.toContain('本组还有 70')
+    expect(w.text()).toContain('本组还有 30 条未显示')
   })
 
   it('few mistakes: everything shows and there is no bar', async () => {
@@ -90,22 +105,24 @@ describe('mistakes page shows mistakes in batches', () => {
     expect(w.text()).not.toContain('未显示')
   })
 
-  it('changing the filter starts from the first batch again and counts only the filtered ones', async () => {
+  it('changing the filter starts from the first batch again', async () => {
     seed(80, 170)
     const w = await open()
     await button(w, /全部显示/).trigger('click')
-    expect(rows(w)).toBe(250)
-    ;(w.vm as any).$.setupState.filterModule = 'typing'
+    const s = (w.vm as any).$.setupState
+    s.filterModule = 'typing'
+    await nextTick()
+    expect(rows(w)).toBe(50)
+    expect(w.text()).toContain('本组还有 120 条未显示')
+    s.filterModule = 'dictation'
+    await nextTick()
+    expect(rows(w)).toBe(50)
+    s.filterModule = 'all'
     await nextTick()
     expect(rows(w)).toBe(100)
-    expect(w.text()).toContain('还有 70 条未显示')
-    ;(w.vm as any).$.setupState.filterModule = 'dictation'
-    await nextTick()
-    expect(rows(w)).toBe(80)
-    expect(w.text()).not.toContain('未显示')
   })
 
-  it('removing a shown mistake pulls the next hidden one up, review still covers all', async () => {
+  it('removing a shown mistake pulls the next hidden one up; review and counts still cover all', async () => {
     const m = seed(80, 170)
     const w = await open()
     const s = (w.vm as any).$.setupState
@@ -113,7 +130,7 @@ describe('mistakes page shows mistakes in batches', () => {
     await flushPromises()
     expect(m.mistakes.value).toHaveLength(249)
     expect(rows(w)).toBe(100)
-    expect(w.text()).toContain('还有 149 条未显示')
+    expect(w.findAll('h4').map((h: any) => h.text()).join(' ')).toMatch(/（79）|（169）/)
     s.startReview()
     expect(s.reviewSnapshot.length).toBe(249)
   })
