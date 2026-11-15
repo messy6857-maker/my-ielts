@@ -51,7 +51,7 @@ function normalizeItem(raw: unknown): PageBookmarkItem | null {
 
 // 存储：每条书签单独一个 key（myielts_page_bookmark_v2:<页面>|<id>），加/删只动自己那一条，
 // 多个页签同时保存不同书签时不会互相覆盖。旧版把整张表存在 KEY 里，读取时迁移成单条 key，
-// 旧表只读保留，没迁过去的条目（如存储满）两边合并显示，按 id 去重。
+// 旧表只读保留（全部处理过且 30 天没变化后删除），没迁过去的条目（如存储满）两边合并显示，按 id 去重。
 // 升级期间仍在运行的旧版页签会整表写回旧表：只迁其中新增的条目，见 migrateLegacyTable。
 const ITEM_PREFIX = 'myielts_page_bookmark_v2:'
 function itemKey(path: string, id: string): string {
@@ -122,7 +122,11 @@ const MIGRATED_LIST_KEY = 'myielts_page_bookmark_v2_migrated'
 function doneKey(path: string, id: string): string {
   return `${DONE_PREFIX}${itemKey(path, id).slice(ITEM_PREFIX.length)}`
 }
+/** 删了、但“已处理”标记暂时写不进去（存储满）的旧表条目：先在本页签隐藏，之后每次读取重试写标记 */
+const pendingDone = new Set<string>()
 function isDone(path: string, id: string, legacyList: Set<string>): boolean {
+  if (pendingDone.has(doneKey(path, id)))
+    return true
   try {
     return localStorage.getItem(doneKey(path, id)) !== null || legacyList.has(itemKey(path, id))
   }
@@ -133,11 +137,58 @@ function isDone(path: string, id: string, legacyList: Set<string>): boolean {
 function markDone(path: string, id: string): boolean {
   try {
     localStorage.setItem(doneKey(path, id), '1')
+    pendingDone.delete(doneKey(path, id))
     return true
   }
   catch {
     return false
   }
+}
+function retryPendingDone(): void {
+  for (const key of [...pendingDone]) {
+    try {
+      localStorage.setItem(key, '1')
+      pendingDone.delete(key)
+    }
+    catch {
+      return
+    }
+  }
+}
+/**
+ * 旧表连续这么久没被写过才删：这时已不会有旧版页签还在用它。即使之后还有极少数长期没刷新的
+ * 旧版页签写回，它写的是整张表（等于把旧表重建），新增的条目照样会被迁过来，不会丢；
+ * 已处理的条目有标记，也不会复活。
+ */
+const LEGACY_RETIRE_MS = 30 * 24 * 60 * 60 * 1000
+/** 旧表内容的指纹和首次看到这份内容的时间 */
+const LEGACY_SEEN_KEY = 'myielts_page_bookmark_v1_seen'
+function fingerprint(raw: string): string {
+  let h = 0x811C9DC5
+  for (let i = 0; i < raw.length; i++) {
+    h ^= raw.charCodeAt(i)
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return `${raw.length}:${h.toString(36)}`
+}
+/** 旧表全部处理过：内容变了就重新计时；同一份内容放满 LEGACY_RETIRE_MS 才删 */
+function retireLegacyTableWhenIdle(raw: string): void {
+  try {
+    const print = fingerprint(raw)
+    const seen = JSON.parse(localStorage.getItem(LEGACY_SEEN_KEY) ?? 'null')
+    const now = Date.now()
+    if (!seen || seen.print !== print || typeof seen.since !== 'number' || seen.since > now) {
+      localStorage.setItem(LEGACY_SEEN_KEY, JSON.stringify({ print, since: now }))
+      return
+    }
+    if (now - seen.since < LEGACY_RETIRE_MS)
+      return
+    if (localStorage.getItem(KEY) !== raw)
+      return
+    localStorage.removeItem(KEY)
+    localStorage.removeItem(LEGACY_SEEN_KEY)
+  }
+  catch {}
 }
 function readMigratedList(): Set<string> {
   try {
@@ -152,10 +203,11 @@ function readMigratedList(): Set<string> {
 }
 /**
  * 把旧整表里还没处理过的条目迁成单条 key，并逐条记下“已处理”。
- * 新版从不改写、也不删除旧表：localStorage 没有原子的“比较后删除”，任何删除/改写都可能吞掉
- * 旧版页签刚写进去的书签。旧表留着只读（很小），旧版页签再写进新书签，下次读取就迁过来。
+ * 新版不改写旧表：localStorage 没有原子的“比较后删除/改写”，随时改动都可能吞掉旧版页签刚写进去的书签。
+ * 旧表只读保留，旧版页签再写进新书签，下次读取就迁过来；全部处理过、且连续 30 天没变化才删掉。
  */
 function migrateLegacyTable(): void {
+  retryPendingDone()
   let raw: string | null
   try {
     raw = localStorage.getItem(KEY)
@@ -166,6 +218,7 @@ function migrateLegacyTable(): void {
   if (raw === null)
     return
   const legacyList = readMigratedList()
+  let allDone = true
   for (const [path, items] of Object.entries(parseLegacyTable(raw))) {
     for (const item of items) {
       if (isDone(path, item.id, legacyList))
@@ -174,13 +227,17 @@ function migrateLegacyTable(): void {
         const key = itemKey(path, item.id)
         if (localStorage.getItem(key) === null)
           localStorage.setItem(key, JSON.stringify(item))
-        markDone(path, item.id)
+        if (!markDone(path, item.id))
+          allDone = false
       }
       catch {
         // 存储满：留到下次再迁，期间照常从旧表显示
+        allDone = false
       }
     }
   }
+  if (allDone && pendingDone.size === 0)
+    retireLegacyTableWhenIdle(raw)
 }
 /** 从 localStorage 读最新书签；存储本身不可读时返回 null（调用方回退到内存里的列表） */
 function readStoredBookmarks(): PageBookmarks | null {
@@ -236,28 +293,22 @@ function writeItem(path: string, item: PageBookmarkItem): boolean {
   }
 }
 /**
- * 删除单条书签。旧表里也有这一条且还没处理过时，记“已处理”让它不再从旧表显示/导入；
- * 只有标记也写不进去（存储满）时才退而改写旧表。
+ * 删除单条书签。旧表里也有这一条且还没处理过时，记“已处理”让它不再从旧表显示/导入（从不改写旧表）。
+ * 标记写不进去（存储满）时先在本页签隐藏、之后自动重试，并返回 false 让界面提示刷新后可能还会出现。
  */
-function deleteItem(path: string, id: string): void {
+function deleteItem(path: string, id: string): boolean {
   try {
     localStorage.removeItem(itemKey(path, id))
   }
-  catch {}
-  if (!readLegacyTable()[path]?.some(b => b.id === id))
-    return
-  if (isDone(path, id, readMigratedList()) || markDone(path, id))
-    return
-  try {
-    const table = readLegacyTable()
-    const rest = (table[path] ?? []).filter(b => b.id !== id)
-    if (rest.length)
-      table[path] = rest
-    else
-      delete table[path]
-    localStorage.setItem(KEY, JSON.stringify(table))
+  catch {
+    return false
   }
-  catch {}
+  if (!readLegacyTable()[path]?.some(b => b.id === id))
+    return true
+  if (isDone(path, id, readMigratedList()) || markDone(path, id))
+    return !pendingDone.has(doneKey(path, id))
+  pendingDone.add(doneKey(path, id))
+  return false
 }
 
 /** 各页面的书签（路由 → 书签列表），模块级共享状态 */
@@ -443,9 +494,11 @@ export function addPageBookmark(path: string, y: number, anchor?: BookmarkAnchor
   pageBookmarksState.value = loadBookmarks()
   return item
 }
-export function removePageBookmark(path: string, id: string): void {
-  deleteItem(path, id)
+/** 删除书签；删除没能完整保存（存储满，刷新后可能还会出现）时返回 false */
+export function removePageBookmark(path: string, id: string): boolean {
+  const saved = deleteItem(path, id)
   pageBookmarksState.value = loadBookmarks()
+  return saved
 }
 /** 回到某个书签的位置：没有该书签返回 false */
 export function jumpToPageBookmark(path: string, id: string): boolean {

@@ -112,7 +112,10 @@ function onRemove(id: string) {
   const legacyCount = viewingLegacy
     ? getPageBookmarks(path.value).length
     : 0
-  removePageBookmark(bookmarkPath.value, id)
+  if (!removePageBookmark(bookmarkPath.value, id)) {
+    notice.value = '书签已删除，但没能保存到浏览器（可能存储空间不足），刷新页面后可能还会出现'
+    return
+  }
   if (viewingLegacy && legacyCount <= 1) {
     showLegacy.value = false
     notice.value = '旧书签已删完，已回到当前日期的书签'

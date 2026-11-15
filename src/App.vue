@@ -8,10 +8,14 @@ import {
   storageFailures,
   useAuth,
 } from './composables/useAuth'
+import { appOutdated, reloadApp, startAppUpdateWatch } from './composables/useAppUpdate'
 import { initSingleAudio, stopAllAudio } from './composables/useSingleAudio'
 
 // 全站单音频：同一时间只播放一个音频，点新的自动暂停旧的
 initSingleAudio()
+// 网站更新后，还开着的旧页签提示刷新
+startAppUpdateWatch()
+const updateNoticeClosed = ref(false)
 const { currentUser, loggingOut } = useAuth()
 const router = useRouter()
 const guestPending = ref(false)
@@ -74,6 +78,17 @@ watch(storageFailures, () => {
         继续以游客身份学习
       </button>。<button class="ml-2 underline" @click="guestNoticeClosed = true">
         暂时关闭
+      </button>
+    </p>
+    <p
+      v-if="appOutdated && !updateNoticeClosed"
+      role="status"
+      class="mx-4 mt-2 border border-blue-300 rounded bg-blue-50 p-3 text-sm text-blue-900 dark:bg-blue-900 dark:text-blue-100"
+    >
+      网站已更新，请先保存正在做的内容，再刷新页面使用新版。<button class="ml-2 underline" @click="reloadApp">
+        立即刷新
+      </button><button class="ml-2 underline" @click="updateNoticeClosed = true">
+        稍后
       </button>
     </p>
     <div
