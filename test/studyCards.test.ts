@@ -155,7 +155,7 @@ describe('学新词 writes back to each deck’s original records', () => {
       reps: 1,
       lapses: 0,
     }
-    useDeckStore('listening179').setSchedule(0, due as any)
+    useDeckStore('listening179').setSchedule(1, due as any)
     const { w } = await mountLearn('deck=listening179')
     expect(w.text()).toContain('复习 1（到期 1）')
     expect(w.find('[data-card]').text()).toContain('复习')

@@ -91,6 +91,8 @@ const finished = ref(false)
 const studying = ref<SessionCard | null>(null)
 const lastGrade = ref<0 | 3 | 5 | null>(null)
 const gradeHistory = ref<GradeHistoryEntry[]>([])
+/** 每换一张卡加一，晚到的例句、同义词不会落到别的卡上 */
+let wordInfoSeq = 0
 
 const current = computed(() => studying.value
   ? null
@@ -272,7 +274,6 @@ const wordInfo = ref<WordInfo | null>(null)
 const wordInfoError = ref(false)
 const cardDetailsError = ref(false)
 const wordInfoLoading = ref(false)
-let wordInfoSeq = 0
 async function loadWordInfo(card: SessionCard) {
   const sequence = ++wordInfoSeq
   const owner = useAuth().currentUser.value
