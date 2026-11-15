@@ -7,6 +7,7 @@ import { useCheckin, useWordSchedule } from '../src/composables/useSpacedRepetit
 import { nsKey, useMistakes } from '../src/composables/useStudyData'
 import GamePage from '../src/pages/game.vue'
 import {
+  buildFloor,
   buildPool,
   buildRun,
   checkSpelling,
@@ -14,6 +15,7 @@ import {
   flattenListening,
   flattenReading,
   flattenVocabulary,
+  floorRules,
   isSynonym,
   offerRelics,
   phaseScore,
@@ -427,16 +429,70 @@ describe('custom list, relics and the daily dungeon', () => {
     expect(buildPool(WORDS, NONE, c)).toEqual([])
   })
 
-  it('relic offers: three different ones not owned yet, fewer when few are left', () => {
+  it('relic offers: three different ones; the life charm repeats, the shield returns once used, others only once', () => {
     for (let seed = 1; seed < 20; seed++) {
-      const offer = offerRelics(['heart'], seeded(seed))
+      const offer = offerRelics(['letter', 'drum'], seeded(seed))
       expect(offer).toHaveLength(3)
       expect(new Set(offer.map(r => r.id)).size).toBe(3)
-      expect(offer.map(r => r.id)).not.toContain('heart')
+      expect(offer.map(r => r.id)).not.toContain('letter')
+      expect(offer.map(r => r.id)).not.toContain('drum')
     }
     const all = RELICS.map(r => r.id)
-    expect(offerRelics(all.slice(0, 4), seeded()).map(r => r.id).sort()).toEqual(all.slice(4).sort())
-    expect(offerRelics(all, seeded())).toEqual([])
+    // 全拿过了、免死金牌还没用：只剩生命护符可拿
+    expect(offerRelics(all, seeded(), true).map(r => r.id)).toEqual(['heart'])
+    // 免死金牌用掉了：可以再拿
+    expect(offerRelics(all, seeded(), false).map(r => r.id).sort()).toEqual(['heart', 'shield'])
+  })
+
+  it('floors get harder step by step', () => {
+    expect(floorRules(1)).toEqual({
+      kinds: ['slime', 'bat'],
+      eliteChance: 0,
+      timedSeconds: 15,
+      scoreMultiplier: 1,
+      bossTimed: false,
+    })
+    expect(floorRules(2)).toMatchObject({
+      kinds: ['slime', 'bat', 'archer', 'mimic'],
+      eliteChance: 0,
+      timedSeconds: 14,
+      bossTimed: false,
+    })
+    expect(floorRules(3)).toMatchObject({ eliteChance: 0.15, timedSeconds: 13, bossTimed: true })
+    expect(floorRules(3).scoreMultiplier).toBeCloseTo(1.4)
+    expect(floorRules(10)).toMatchObject({ eliteChance: 0.6, timedSeconds: 8 })
+    expect(floorRules(50)).toMatchObject({ eliteChance: 0.6, timedSeconds: 8 })
+    expect(phaseScore(1, 'slime', false, 1.8)).toBe(180)
+  })
+
+  it('a floor has five rooms; words are not repeated until every selected word has appeared', () => {
+    const many = Array.from({ length: 12 }, (_, i) => word(100 + i, `w${i}`, `释义${i}`))
+    const used = new Set<string>()
+    const rng = seeded(5)
+    const f1 = buildFloor(many, many, ctx(), rng, 1, used)
+    const f2 = buildFloor(many, many, ctx(), rng, 2, used)
+    const f3 = buildFloor(many, many, ctx(), rng, 3, used)
+    for (const f of [f1, f2, f3]) {
+      expect(f).toHaveLength(5)
+      expect(f.at(-1)!.kind).toBe('boss')
+      expect(new Set(f.map(m => m.word.key)).size).toBe(5)
+    }
+    expect(f1.slice(0, -1).every(m => m.kind === 'slime' || m.kind === 'bat')).toBe(true)
+    expect(f1.at(-1)!.phases).toEqual(['choice', 'spell'])
+    expect(f3.at(-1)!.phases).toEqual(['choice', 'timed'])
+    // 前两层 10 个词互不重复；第三层先出剩下的 2 个，再用出过的补齐
+    const firstTen = [
+      ...f1,
+      ...f2,
+    ].map(m => m.word.key)
+    expect(new Set(firstTen).size).toBe(10)
+    const leftover = many.map(w => w.key).filter(k => !firstTen.includes(k))
+    expect(f3.map(m => m.word.key)).toEqual(expect.arrayContaining(leftover))
+    // 只有 2 个词：每层 2 个房间，一直重复
+    const two = many.slice(0, 2)
+    const usedTwo = new Set<string>()
+    expect(buildFloor(two, many, ctx(), rng, 1, usedTwo)).toHaveLength(2)
+    expect(buildFloor(two, many, ctx(), rng, 2, usedTwo)).toHaveLength(2)
   })
 
   it('the same seed gives the same run; another day gives another', () => {
@@ -544,7 +600,7 @@ describe('the game page', () => {
   const startButton = (w: any) => w.findAll('button').find((b: any) => b.text() === '进入地牢')
   const continueButton = (w: any) => w.findAll('button').find((b: any) => /^(?:继续|查看结果)$/.test(b.text()))
   async function pickFirstChapter(w: any) {
-    await w.find('button[aria-pressed]').trigger('click')
+    await w.find('button[data-chapter]').trigger('click')
   }
   /** 答当前这道题 */
   async function play(w: any, correct: boolean) {
@@ -579,44 +635,146 @@ describe('the game page', () => {
   }
   const over = (w: any) => ['won', 'lost'].includes(state(w).stage)
 
-  it('nothing selected: cannot start; picking a chapter starts a 10-room run ending with the boss', async () => {
+  it('nothing selected: cannot start; picking a chapter starts floor 1 with five rooms ending with the boss', async () => {
     const w = await open()
     expect(w.text()).toContain('还没有选中任何词')
     expect(startButton(w).attributes('disabled')).toBeDefined()
     await pickFirstChapter(w)
-    expect(w.text()).toContain('每局随机抽 10 个')
+    expect(w.text()).toContain('每层抽 5 个')
     await startButton(w).trigger('click')
     const s = state(w)
     expect(s.stage).toBe('playing')
-    expect(s.monsters).toHaveLength(10)
+    expect(s.monsters).toHaveLength(5)
     expect(s.monsters.at(-1).kind).toBe('boss')
-    expect(w.text()).toContain('房间 1 / 10')
+    // 第一层只有史莱姆和蝙蝠
+    expect(s.monsters.slice(0, -1).every((m: any) => ['slime', 'bat'].includes(m.kind))).toBe(true)
+    expect(w.text()).toContain('第 1 / 3 层 · 房间 1 / 5')
     // 选择被记住，下次进来还是它
     expect(JSON.parse(localStorage.getItem(nsKey('dungeon_selection_v1'))!).chapters).toHaveLength(1)
   })
 
-  it('clearing every room wins: score, combo and best score are recorded, nothing goes to the mistake book', async () => {
+  it('quick mode: clearing three floors wins; each cleared floor offers a relic; records are kept per mode', async () => {
     const w = await open()
     await pickFirstChapter(w)
     await startButton(w).trigger('click')
     const s = state(w)
     let questions = 0
-    for (let guard = 0; !over(w) && guard < 60; guard++) {
+    const seen = new Set<string>()
+    for (let guard = 0; !over(w) && guard < 80; guard++) {
+      seen.add(s.monster.word.key)
       await play(w, true)
       questions++
       expect(s.result).toBe('right')
       await proceed(w)
     }
     expect(s.stage).toBe('won')
-    expect(s.defeated).toBe(10)
+    expect(s.floor).toBe(3)
+    expect(s.defeated).toBe(15)
+    // 词够多时每层都是没出过的词
+    expect(seen.size).toBe(15)
     expect(s.hearts).toBe(s.maxHearts)
     expect(s.maxCombo).toBe(questions)
-    // 10 个房间：打完第 3、6、9 间各拿一件遗物
-    expect(s.relics).toHaveLength(3)
+    // 打通第 1、2 层各拿一件遗物
+    expect(s.relics).toHaveLength(2)
     expect(w.text()).toContain('通关')
     expect(w.text()).toContain('新的最高分')
-    expect(JSON.parse(localStorage.getItem(nsKey('dungeon_best_v1'))!)).toEqual({ score: s.score, combo: questions })
+    expect(JSON.parse(localStorage.getItem(nsKey('dungeon_best_v1'))!)).toEqual({
+      combo: questions,
+      modes: {
+        quick: { score: s.score, floor: 3 },
+      },
+    })
     expect(useMistakes().mistakes.value).toHaveLength(0)
+    await w.findAll('button').find((b: any) => b.text() === '重新选词')!.trigger('click')
+    expect(w.find('button[data-mode="quick"]').text()).toContain(`最高 ${s.score} 分`)
+    expect(w.find('button[data-mode="quick"]').text()).toContain('到过第 3 层')
+  })
+
+  it('modes: standard has ten floors, endless has no end; leaving after a floor keeps the score', async () => {
+    const w = await open()
+    await pickFirstChapter(w)
+    await w.find('button[data-mode="classic"]').trigger('click')
+    await startButton(w).trigger('click')
+    const s = state(w)
+    expect(w.text()).toContain('第 1 / 10 层')
+    expect(localStorage.getItem(nsKey('dungeon_mode_v1'))).toBe('"classic"')
+    s.stage = 'setup'
+    await nextTick()
+    await w.find('button[data-mode="endless"]').trigger('click')
+    await startButton(w).trigger('click')
+    expect(w.text()).toContain('第 1 层 · 房间 1 / 5')
+    for (let guard = 0; s.stage === 'playing' && guard < 30; guard++) {
+      await play(w, true)
+      await continueButton(w).trigger('click')
+      await nextTick()
+    }
+    expect(s.stage).toBe('relic')
+    expect(w.text()).toContain('第 1 层通关')
+    await w.find('button[data-leave]').trigger('click')
+    expect(s.stage).toBe('left')
+    expect(w.text()).toContain('打通第 1 层后离开了地牢')
+    expect(JSON.parse(localStorage.getItem(nsKey('dungeon_best_v1'))!).modes.endless).toEqual({ score: s.score, floor: 1 })
+  })
+
+  it('deeper floors are harder: shorter timers, higher scores; clearing a floor heals one heart', async () => {
+    const w = await open()
+    await pickFirstChapter(w)
+    await w.find('button[data-mode="endless"]').trigger('click')
+    await startButton(w).trigger('click')
+    const s = state(w)
+    // 第一间答错一次，后面全对
+    await play(w, false)
+    await proceed(w)
+    expect(s.hearts).toBe(2)
+    for (let guard = 0; s.stage === 'playing' && guard < 30; guard++) {
+      await play(w, true)
+      await continueButton(w).trigger('click')
+      await nextTick()
+    }
+    expect(s.stage).toBe('relic')
+    expect(s.hearts).toBe(3)
+    expect(w.text()).toContain('回复了一颗心')
+    s.offered = RELICS.filter(r => ['scout', 'drum', 'letter'].includes(r.id))
+    await nextTick()
+    await w.find('button[data-relic="letter"]').trigger('click')
+    expect(s.floor).toBe(2)
+    expect(s.room).toBe(0)
+    // 跳到第 5 层看计时和倍率
+    s.floor = 5
+    s.monsters[0].kind = 'archer'
+    s.monsters[0].phases = ['timed']
+    await s.enterQuestion()
+    await nextTick()
+    expect(w.find('[role="timer"]').text()).toContain('11 秒')
+    const before = s.score
+    s.combo = 0
+    await play(w, true)
+    expect(s.score - before).toBe(180)
+  })
+
+  it('few words: they come back on later floors, but the review schedule moves only once per run', async () => {
+    const schedules = useWordSchedule()
+    schedules.set(1, {
+      ease: 2.5,
+      interval: 2,
+      dueAt: Date.now() - 1000,
+      reps: 2,
+      lapses: 0,
+    })
+    useMistakes().addMistake('flashcard', { key: 'flashcard:1', title: 'atmosphere' })
+    const w = await open()
+    await w.find('input[data-source="today"]').setValue(false)
+    await w.find('input[data-source="mistakes"]').setValue(true)
+    expect(w.text()).toContain('选中 1 个词，每层 1 个房间，这些词会反复出现')
+    await startButton(w).trigger('click')
+    const s = state(w)
+    for (let guard = 0; !over(w) && guard < 30; guard++) {
+      await play(w, true)
+      await proceed(w)
+    }
+    expect(s.stage).toBe('won')
+    expect(s.defeated).toBe(3)
+    expect(schedules.get(1)!.reps).toBe(3)
   })
 
   it('three wrong answers lose the run; each missed word goes to the mistake book under the matching module', async () => {
@@ -692,7 +850,7 @@ describe('the game page', () => {
     const w = await open()
     expect(w.text()).toContain('错词（1）')
     await w.find('input[data-source="mistakes"]').setValue(true)
-    expect(w.text()).toContain('选中 1 个词，这局 1 个房间')
+    expect(w.text()).toContain('选中 1 个词，每层 1 个房间')
     await startButton(w).trigger('click')
     const s = state(w)
     expect(s.monsters.map((m: any) => [m.kind, m.word.word])).toEqual([
@@ -713,29 +871,29 @@ describe('the game page', () => {
     return s
   }
 
-  it('a chest appears after every third room; the life charm adds a heart', async () => {
+  it('relics stack up over many floors: the life charm can be taken again and adds a heart each time', async () => {
     const w = await open()
     await pickFirstChapter(w)
+    await w.find('button[data-mode="endless"]').trigger('click')
     await startButton(w).trigger('click')
     const s = state(w)
-    for (let guard = 0; guard < 20; guard++) {
-      await play(w, true)
-      if (s.room === 2 && s.phase + 1 >= s.monster.phases.length)
-        break
-      await proceed(w)
+    for (let cleared = 1; cleared <= 2; cleared++) {
+      for (let guard = 0; s.stage === 'playing' && guard < 30; guard++) {
+        await play(w, true)
+        await continueButton(w).trigger('click')
+        await nextTick()
+      }
+      expect(s.stage).toBe('relic')
+      expect(w.findAll('button[data-relic]')).toHaveLength(3)
+      s.offered = RELICS.filter(r => ['heart', 'shield', 'scout'].includes(r.id))
+      await nextTick()
+      await w.find('button[data-relic="heart"]').trigger('click')
+      expect(s.stage).toBe('playing')
+      expect(s.floor).toBe(cleared + 1)
+      expect(s.maxHearts).toBe(3 + cleared)
+      expect(s.hearts).toBe(3 + cleared)
     }
-    await continueButton(w).trigger('click')
-    await nextTick()
-    expect(s.stage).toBe('relic')
-    expect(w.findAll('button[data-relic]')).toHaveLength(3)
-    s.offered = RELICS.filter(r => ['heart', 'shield', 'scout'].includes(r.id))
-    await nextTick()
-    await w.find('button[data-relic="heart"]').trigger('click')
-    expect(s.stage).toBe('playing')
-    expect(s.room).toBe(3)
-    expect(s.hearts).toBe(4)
-    expect(s.maxHearts).toBe(4)
-    expect(w.text()).toContain('房间 4 / 10')
+    expect(w.text()).toContain('第 3 层 · 房间 1 / 5')
   })
 
   it('the shield absorbs one wrong answer, the scout removes a wrong option, the scroll shows the first letter', async () => {
@@ -790,7 +948,7 @@ describe('the game page', () => {
   it('reading words: synonym questions, and misses go to the reading mistakes under the self-test key', async () => {
     const w = await open()
     await w.find('button[data-deck="reading538"]').trigger('click')
-    expect(w.text()).toContain('每局随机抽 10 个')
+    expect(w.text()).toContain('每层抽 5 个')
     const s = await startWith(w, ['synonym', 'synonym'], (m: any) => m.synonymOptions.length === 4)
     const target = s.monster.word
     expect(target.deck).toBe('reading538')
@@ -811,12 +969,13 @@ describe('the game page', () => {
   it('the daily dungeon is the same run all day, and clearing it checks in', async () => {
     const w = await open()
     expect(w.find('[data-daily]').text()).toContain('词汇表')
+    expect(w.find('[data-daily]').text()).toContain('共 3 层')
     await w.find('[data-daily] button').trigger('click')
     const s = state(w)
     expect(s.isDaily).toBe(true)
-    expect(w.text()).toContain('每日地牢 · 房间 1 / 10')
+    expect(w.text()).toContain('每日地牢 · 第 1 / 3 层 · 房间 1 / 5')
     const first = s.monsters.map((m: any) => `${m.kind}:${m.word.key}`)
-    for (let guard = 0; !over(w) && guard < 60; guard++) {
+    for (let guard = 0; !over(w) && guard < 80; guard++) {
       await play(w, true)
       await proceed(w)
     }
@@ -853,7 +1012,7 @@ describe('the game page', () => {
     await w.find('button[data-list-word]').trigger('click')
     expect(w.text()).toContain('我的词单（1）')
     await w.find('input[data-source="custom"]').setValue(true)
-    expect(w.text()).toContain('选中 1 个词，这局 1 个房间')
+    expect(w.text()).toContain('选中 1 个词，每层 1 个房间')
     await startButton(w).trigger('click')
     expect(state(w).monsters).toHaveLength(1)
     expect(JSON.parse(localStorage.getItem(nsKey('dungeon_selection_v1'))!).custom).toBe(true)
