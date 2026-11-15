@@ -84,6 +84,7 @@ const STUDY_PATHS = new Set([
   '/reading/flashcard',
   '/listening/flashcard',
   '/listening/corpus-flashcard',
+  '/listening/corpus-spelling',
   '/listening/179practice',
 ])
 function isActive(link: string) {

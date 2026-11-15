@@ -75,12 +75,13 @@ const DECKS: Deck[] = [
     id: 'corpus',
     name: '听力语料库',
     desc: '拼写规范、特别名词、形容词副词等',
-    aim: '记住拼写规范和特殊写法，看到能认出',
+    aim: '记住拼写规范和特殊写法，能拼对',
     schedules: () => stores.corpus.schedules.value,
     dailyCount: () => stores.corpus.dailyCount.value,
     goal: () => stores.corpus.goal.value,
     modes: [
       { label: '卡片自测', desc: CARD_DESC, to: '/listening/corpus-flashcard' },
+      { label: '拼写练习', desc: '听发音、看释义把词拼出来，英式美式都算对，拼错标出错的字母', to: '/listening/corpus-spelling' },
     ],
   },
 ]
