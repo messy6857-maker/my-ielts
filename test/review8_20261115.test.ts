@@ -36,7 +36,9 @@ function crashAfter(match: (key: string) => boolean) {
 
 describe('a migration interrupted between steps recovers on the next load', () => {
   it('crash right after recording the origin: the bookmark still shows, and the next load finishes migrating it', () => {
-    localStorage.setItem(LEGACY, JSON.stringify({ '/x': [A, B] }))
+    localStorage.setItem(LEGACY, JSON.stringify({
+      '/x': [A, B],
+    }))
     crashAfter(key => key === `${SRC_PREFIX}%2Fx|a`)
     reloadPageBookmarks()
     vi.restoreAllMocks()
@@ -52,7 +54,9 @@ describe('a migration interrupted between steps recovers on the next load', () =
   })
 
   it('crash right after writing the entry: shown once, and marked complete next time', () => {
-    localStorage.setItem(LEGACY, JSON.stringify({ '/x': [A] }))
+    localStorage.setItem(LEGACY, JSON.stringify({
+      '/x': [A],
+    }))
     crashAfter(key => key === `${ITEM_PREFIX}%2Fx|a`)
     reloadPageBookmarks()
     vi.restoreAllMocks()
@@ -63,7 +67,9 @@ describe('a migration interrupted between steps recovers on the next load', () =
   })
 
   it('“completed” is only recorded after the entry is written', () => {
-    localStorage.setItem(LEGACY, JSON.stringify({ '/x': [A] }))
+    localStorage.setItem(LEGACY, JSON.stringify({
+      '/x': [A],
+    }))
     const order: string[] = []
     const set = Storage.prototype.setItem
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
@@ -75,12 +81,16 @@ describe('a migration interrupted between steps recovers on the next load', () =
   })
 
   it('deleting an entry that only has the origin record still writes the delete record', () => {
-    localStorage.setItem(LEGACY, JSON.stringify({ '/x': [A, B] }))
+    localStorage.setItem(LEGACY, JSON.stringify({
+      '/x': [A, B],
+    }))
     crashAfter(key => key === `${SRC_PREFIX}%2Fx|a`)
     reloadPageBookmarks()
     vi.restoreAllMocks()
     // 旧版页签把 a 移出旧表，新版页签删掉 a（a 此时只有“来自旧表”记录）
-    localStorage.setItem(LEGACY, JSON.stringify({ '/x': [B] }))
+    localStorage.setItem(LEGACY, JSON.stringify({
+      '/x': [B],
+    }))
     reloadPageBookmarks()
     removePageBookmark('/x', 'a')
     expect(localStorage.getItem(`${DEL_PREFIX}%2Fx|a`)).toBe('1')
