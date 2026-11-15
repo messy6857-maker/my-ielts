@@ -1,0 +1,278 @@
+{
+  "date": "2026-11-16",
+  "newsReadings": [
+    {
+      "title": "After Thirty-Three Years, Nvidia's Founder Steps Aside",
+      "passage": "On 12 November 2026, NVIDIA, the world's most valuable semiconductor company, announced a leadership change of a magnitude rarely seen in corporate history. Jensen Huang, the founder who had led the company since its creation in 1993, resigned as president and chief executive officer, and left its board of directors, with immediate effect. After thirty-three years at the helm, the departure of the only chief executive the company had ever known marks the end of an era — and the beginning of a period of profound uncertainty for investors, customers and the wider technology industry.\n\nThe announcement itself was brief. NVIDIA said its board of directors had accepted Mr Huang's resignation on 11 November, and that Colette Kress, the company's executive vice president and chief financial officer, would serve as interim chief executive while retaining her finance role. Mrs Kress, who is 59 and has been chief financial officer since September 2013, will lead the company until a permanent successor is named. The board said it would consider candidates from inside and outside the company, and gave no timetable for the appointment. In the same announcement, the board named Harvey C. Jones as its first-ever chair of the board, a post that had not previously existed at NVIDIA.\n\nThe timing is striking. Under Mr Huang, NVIDIA grew from a small maker of graphics chips for video games into the dominant supplier of the processors that power artificial intelligence, with its data-centre business at the centre of a global boom in AI infrastructure. The company's chips are now embedded in the strategies of the world's largest technology firms, and its market value has come to reflect expectations that demand for AI computing will keep growing for years. A change of leadership at such a moment, therefore, raises questions that go far beyond one company: it tests whether an organisation so closely identified with its founder can preserve its momentum under new management.\n\nThe resignation followed reports concerning Mr Huang's personal conduct, which the company did not address in its announcement. In the same week, reports also emerged that the United States Department of Justice was examining NVIDIA, along with the server makers Megaspeed and Super Micro, over allegations that advanced chips had been smuggled to China in breach of export controls. Neither development was mentioned in the company's statement, and no connection between them has been established by the company. Yet together they have intensified scrutiny of a business that already operates at the intersection of technology, geopolitics and national security.\n\nFinancial markets reacted cautiously rather than dramatically. NVIDIA's shares fell by about two per cent in the days following the announcement, a modest decline that suggests investors are waiting for evidence rather than rushing to judgement. That evidence may arrive soon: the company confirmed that it will report its third-quarter results for fiscal 2027 on Tuesday 17 November, at approximately 1:20 p.m. Pacific Time, followed by an earnings call at 2 p.m. The call will be Mrs Kress's first public appearance as interim chief executive, and analysts will listen closely for any change in tone, priorities or guidance.\n\nWhat happens next will depend on two decisions. The first is the choice of a permanent successor: whether the board promotes from within, preserving continuity, or brings in an outsider capable of imposing a fresh direction. The second is whether the company can sustain the pace of innovation that made it indispensable to the AI industry, at a time when competitors are investing heavily to close the gap and regulators on several continents are examining the market power of the largest chipmakers. For now, the world's most important semiconductor company is being run by a finance chief who has never before held the top job. The coming months will reveal whether that is a prudent bridge to a new era — or the beginning of a more turbulent chapter.",
+      "notes": [
+        {
+          "word": "semiconductor",
+          "pos": "n.",
+          "meaning": "半导体"
+        },
+        {
+          "word": "resignation",
+          "pos": "n.",
+          "meaning": "辞职"
+        },
+        {
+          "word": "interim",
+          "pos": "adj.",
+          "meaning": "临时的；过渡的"
+        },
+        {
+          "word": "successor",
+          "pos": "n.",
+          "meaning": "继任者"
+        },
+        {
+          "word": "helm",
+          "pos": "n.",
+          "meaning": "领导地位；掌舵"
+        },
+        {
+          "word": "governance",
+          "pos": "n.",
+          "meaning": "治理；管理"
+        },
+        {
+          "word": "allegation",
+          "pos": "n.",
+          "meaning": "指控；说法"
+        },
+        {
+          "word": "scrutiny",
+          "pos": "n.",
+          "meaning": "审查；细察"
+        },
+        {
+          "word": "dominant",
+          "pos": "adj.",
+          "meaning": "占主导地位的"
+        },
+        {
+          "word": "embedded",
+          "pos": "adj.",
+          "meaning": "深入融入的"
+        },
+        {
+          "word": "earnings",
+          "pos": "n.",
+          "meaning": "收益；利润"
+        },
+        {
+          "word": "turbulent",
+          "pos": "adj.",
+          "meaning": "动荡的；不稳定的"
+        }
+      ],
+      "questions": [
+        {
+          "q": "When did NVIDIA announce Jensen Huang's resignation?",
+          "options": [
+            "11 November 2026",
+            "12 November 2026",
+            "13 November 2026",
+            "17 November 2026"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Who has been appointed interim chief executive of NVIDIA?",
+          "options": [
+            "Harvey C. Jones",
+            "Jensen Huang",
+            "Colette Kress",
+            "An external candidate"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "What is notable about Harvey C. Jones's appointment?",
+          "options": [
+            "He is the company's first-ever chair of the board",
+            "He was previously chief financial officer",
+            "He founded the company with Jensen Huang",
+            "He will also serve as interim chief executive"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "NVIDIA's announcement explained the reasons for Mr Huang's resignation.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "According to the passage, why is the leadership change significant for the wider industry?",
+          "options": [
+            "Because NVIDIA is the dominant supplier of processors powering artificial intelligence",
+            "Because NVIDIA is leaving the semiconductor business",
+            "Because the company's market value has collapsed",
+            "Because competitors have stopped investing in AI chips"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The Department of Justice investigation mentioned in the passage concerns alleged smuggling of advanced chips to China.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "When will NVIDIA report its third-quarter results for fiscal 2027?",
+          "options": [
+            "11 November 2026",
+            "12 November 2026",
+            "17 November 2026",
+            "No date has been announced"
+          ],
+          "answer": 2
+        }
+      ],
+      "source": "NVIDIA Investor Relations (press release, 12 November 2026); TechCrunch, 12 November 2026"
+    },
+    {
+      "title": "Biodegradable Does Not Always Mean Gone: A Landfill Reality Check",
+      "passage": "The label “biodegradable” carries a reassuring promise: throw a product away, and nature will take care of the rest. Yet a study reported by the Korea Advanced Institute of Science and Technology (KAIST) on 10 November 2026 suggests that this promise depends far more on where the product ends up than on what it is made of. Researchers compared three supposedly biodegradable plastics in the oxygen-poor liquid found in landfill sites, rather than assuming that results obtained in industrial composting facilities would apply everywhere. Their findings, published in the journal Nature Communications, reveal a striking gap between the label and the reality.\n\nThe team incubated samples of three biodegradable polymers — PHB, PLA and PBAT — in landfill leachate, the dark liquid that drains through buried waste, at 35 degrees Celsius for as long as 320 days. Conventional polyethylene, the plastic used in most carrier bags, was included as a comparison. The results were sharply differentiated. PHB, a polymer produced by bacteria, reached 99.9 per cent mineralisation — complete breakdown into carbon dioxide, water and biomass — within just 17 days. PLA, the bioplastic most commonly used in disposable cups and packaging, eventually reached 83.6 per cent, but only after the full 320 days. PBAT, by contrast, reached only 2.7 per cent, barely better than the 0.4 per cent recorded for conventional polyethylene.\n\nThe explanation lies in the conditions under which each material breaks down. Industrial composting provides warmth, moisture, oxygen and a rich community of microorganisms, and under those controlled conditions many bioplastics degrade rapidly. A landfill, however, is a very different environment: oxygen is scarce, temperatures are lower and less stable, and the microbial community is adapted to a diet of buried waste rather than to novel polymers. A material that performs well in a composter may therefore persist for years, or even decades, once it is buried beneath tonnes of rubbish.\n\nThe distinction matters because most plastic waste does not reach a composting facility at all. In many countries, the majority of household waste is still sent to landfill, and separate collection of compostable packaging remains rare. Consumers who choose a product labelled biodegradable may reasonably assume that it will disappear harmlessly wherever it is discarded. The KAIST findings suggest that, for some materials at least, this assumption is mistaken: a cup or bag marketed as environmentally friendly may behave, in a landfill, almost exactly like the conventional plastic it was designed to replace.\n\nThe implications extend beyond the choices of individual shoppers. Regulators and manufacturers face a difficult question: should a product be allowed to carry the word biodegradable if it only degrades under conditions that most waste never experiences? Some experts argue that labels should specify the environment in which breakdown has been demonstrated — industrial composting, home composting, soil or marine water — rather than offering a single, undifferentiated claim. Others contend that the priority should be to improve waste collection, so that compostable materials actually reach the facilities designed to process them. Both approaches recognise the same underlying point: a label is only as honest as the system that stands behind it.\n\nFor now, the study offers a practical lesson for anyone concerned about plastic pollution. Choosing a biodegradable product is not, by itself, a solution; what matters is what happens to it afterwards. Until collection systems catch up with the claims printed on packaging, the most reliable way to reduce plastic waste remains the oldest one: to use less of it in the first place. That conclusion may sound modest, but it is supported by the arithmetic of waste: every tonne of plastic never produced is a tonne that cannot leak into a river, a landfill or an ocean, whatever label it might otherwise have carried.",
+      "notes": [
+        {
+          "word": "biodegradable",
+          "pos": "adj.",
+          "meaning": "可生物降解的"
+        },
+        {
+          "word": "mineralisation",
+          "pos": "n.",
+          "meaning": "矿化作用；完全分解"
+        },
+        {
+          "word": "leachate",
+          "pos": "n.",
+          "meaning": "渗液；渗出液"
+        },
+        {
+          "word": "landfill",
+          "pos": "n.",
+          "meaning": "垃圾填埋场"
+        },
+        {
+          "word": "polymer",
+          "pos": "n.",
+          "meaning": "聚合物"
+        },
+        {
+          "word": "composting",
+          "pos": "n.",
+          "meaning": "堆肥处理"
+        },
+        {
+          "word": "incubate",
+          "pos": "v.",
+          "meaning": "孵育；保温培养"
+        },
+        {
+          "word": "differentiated",
+          "pos": "adj.",
+          "meaning": "有差异的；区分开的"
+        },
+        {
+          "word": "microorganism",
+          "pos": "n.",
+          "meaning": "微生物"
+        },
+        {
+          "word": "persist",
+          "pos": "v.",
+          "meaning": "持续存在；坚持"
+        },
+        {
+          "word": "discard",
+          "pos": "v.",
+          "meaning": "丢弃"
+        },
+        {
+          "word": "regulator",
+          "pos": "n.",
+          "meaning": "监管机构"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What did the KAIST researchers test in their study?",
+          "options": [
+            "How three biodegradable plastics break down in landfill liquid",
+            "How to manufacture a new type of compostable plastic",
+            "Whether plastic bags can be recycled more efficiently",
+            "How long polyethylene survives in the ocean"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "Which material broke down almost completely within 17 days?",
+          "options": [
+            "PLA",
+            "PBAT",
+            "PHB",
+            "Polyethylene"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "After 320 days, PLA had reached 83.6 per cent mineralisation.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "PBAT broke down faster than conventional polyethylene in the experiment.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "Why do many bioplastics degrade slowly in landfills?",
+          "options": [
+            "Because landfills are too hot for microorganisms",
+            "Because oxygen is scarce and conditions differ from industrial composting",
+            "Because the plastics are buried too deeply to be found",
+            "Because landfill liquid destroys the polymers instantly"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "According to the passage, most plastic waste is processed in industrial composting facilities.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What solution does the author present as the most reliable way to reduce plastic waste?",
+          "options": [
+            "Buying only products labelled biodegradable",
+            "Improving landfill design",
+            "Using less plastic in the first place",
+            "Banning all disposable packaging immediately"
+          ],
+          "answer": 2
+        }
+      ],
+      "source": "Nature Communications (KAIST study, reported 10 November 2026); Next Horizon, 11 November 2026"
+    }
+  ]
+}
