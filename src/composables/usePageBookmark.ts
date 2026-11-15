@@ -35,9 +35,13 @@ function normalizeItem(raw: unknown): PageBookmarkItem | null {
     ...(validAnchor
       ? { anchor }
       : {}),
+    // 没有 id 的旧书签用位置和创建时间生成固定 id：每次改书签都会重读存储，
+    // 随机 id 会让界面上拿着的 id 对不上，删不掉这个书签
     id: typeof o.id === 'string' && o.id
       ? o.id
-      : `bm-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      : `bm-legacy-${Math.round(o.y)}-${typeof o.createdAt === 'number'
+        ? o.createdAt
+        : 0}`,
     y: Math.round(o.y),
     createdAt: typeof o.createdAt === 'number'
       ? o.createdAt
@@ -46,8 +50,18 @@ function normalizeItem(raw: unknown): PageBookmarkItem | null {
 }
 
 function loadBookmarks(): PageBookmarks {
+  return readStoredBookmarks() ?? {}
+}
+/** 从 localStorage 读最新书签；存储本身不可读时返回 null（调用方回退到内存里的列表） */
+function readStoredBookmarks(): PageBookmarks | null {
+  let raw: string | null
   try {
-    const raw = localStorage.getItem(KEY)
+    raw = localStorage.getItem(KEY)
+  }
+  catch {
+    return null
+  }
+  try {
     if (!raw)
       return {}
     const parsed = JSON.parse(raw)
@@ -85,6 +99,23 @@ function persistBookmarks(map: PageBookmarks) {
 
 /** 各页面的书签（路由 → 书签列表），模块级共享状态 */
 export const pageBookmarksState = ref<PageBookmarks>(loadBookmarks())
+/**
+ * 改书签前先取存储里的最新列表：多个页签各自有一份内存列表，直接拿内存列表写回会覆盖
+ * 别的页签刚加/删的书签。存储不可读时退回内存列表。
+ */
+function latestBookmarks(): PageBookmarks {
+  const stored = readStoredBookmarks()
+  if (stored)
+    pageBookmarksState.value = stored
+  return pageBookmarksState.value
+}
+// 其他页签改了书签：跟着更新（key 为 null 是整个 localStorage 被清空）
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === KEY || event.key === null)
+      pageBookmarksState.value = loadBookmarks()
+  })
+}
 /** 重新从 localStorage 读（测试用；正常使用不需要调） */
 export function reloadPageBookmarks(): void {
   pageBookmarksState.value = loadBookmarks()
@@ -159,7 +190,7 @@ export function adoptLegacyGuestPageBookmarks(guestId: string): void {
 }
 /** 把 scope 第二项满足 match 的 daily 书签按日期并入 [日期, to]，按位置去重后删掉原 scope */
 function moveDailyBookmarks(match: (owner: unknown) => boolean, to: string): void {
-  const map = pageBookmarksState.value
+  const map = latestBookmarks()
   let changed = false
   const next: PageBookmarks = { ...map }
   for (const [path, items] of Object.entries(map)) {
@@ -218,7 +249,8 @@ export function readingBookmarkAnchor(): BookmarkAnchor | undefined {
 
 export function addPageBookmark(path: string, y: number, anchor?: BookmarkAnchor): PageBookmarkItem | null {
   const rounded = Math.max(0, Math.round(y))
-  const existing = pageBookmarksState.value[path] ?? []
+  const latest = latestBookmarks()
+  const existing = latest[path] ?? []
   // M1：去重不能只在锚点状态一致时比较——有锚点/无锚点混用时也按记录位置比较，
   // 否则同一位置会同时存一个有锚点和一个无锚点书签。两边都有锚点才按锚点比较。
   if (existing.some((b) => {
@@ -240,7 +272,7 @@ export function addPageBookmark(path: string, y: number, anchor?: BookmarkAnchor
       : {}),
   }
   const next = {
-    ...pageBookmarksState.value,
+    ...latest,
     [path]: [...existing, item],
   }
   pageBookmarksState.value = next
@@ -248,11 +280,12 @@ export function addPageBookmark(path: string, y: number, anchor?: BookmarkAnchor
   return item
 }
 export function removePageBookmark(path: string, id: string): void {
-  const existing = pageBookmarksState.value[path]
+  const latest = latestBookmarks()
+  const existing = latest[path]
   if (!existing)
     return
   const next = existing.filter(b => b.id !== id)
-  const map = { ...pageBookmarksState.value }
+  const map = { ...latest }
   if (next.length)
     map[path] = next
   else

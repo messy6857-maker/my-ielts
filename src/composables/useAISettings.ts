@@ -62,20 +62,6 @@ export function legacyAISettingsInfo(): { keyTail: string, baseUrl: string } | n
     return null
   }
 }
-/** 把旧版共用设置认领到当前身份名下（覆盖当前身份已有的设置），成功后删除旧数据 */
-export function claimLegacyAISettings(): boolean {
-  const raw = readLegacyRaw()
-  if (!raw || !legacyAISettingsInfo())
-    return false
-  try {
-    localStorage.setItem(currentKey(), raw)
-    localStorage.removeItem(LEGACY_KEY)
-    return true
-  }
-  catch {
-    return false
-  }
-}
 /** 删除旧版共用设置（不是自己的，或不再需要） */
 export function discardLegacyAISettings(): void {
   try {
@@ -250,6 +236,99 @@ export function reasoningEffortForProvider(providerId: string, effort: AISetting
       : 'medium'
 }
 
+function parseStoredSettings(raw: string | null): Partial<AISettings> | null {
+  if (!raw)
+    return null
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Partial<AISettings>
+      : null
+  }
+  catch {
+    return null
+  }
+}
+function readCurrentRaw(): string | null {
+  try {
+    return localStorage.getItem(currentKey())
+  }
+  catch {
+    return null
+  }
+}
+/** 一份设置里各服务商的 Key（apiKeys 加上当前选中服务商的 apiKey） */
+function keysOfSettings(settings: Partial<AISettings>): Record<string, string> {
+  const keys: Record<string, string> = {}
+  for (const [id, key] of Object.entries(settings.apiKeys ?? {})) {
+    if (typeof key === 'string' && key.trim())
+      keys[id] = key.trim()
+  }
+  if (typeof settings.apiKey === 'string' && settings.apiKey.trim() && typeof settings.baseUrl === 'string')
+    keys[getProviderIdForBaseUrl(settings.baseUrl)] = settings.apiKey.trim()
+  return keys
+}
+export interface LegacyClaimConflict {
+  provider: string
+  label: string
+  /** 旧设置里这家 Key 的末 4 位 */
+  legacyTail: string
+  /** 当前身份这家 Key 的末 4 位 */
+  currentTail: string
+}
+/** 认领旧设置时，同一服务商两边各有一个不同 Key 的冲突列表（没有冲突时为空） */
+export function legacyClaimConflicts(): LegacyClaimConflict[] {
+  const legacy = parseStoredSettings(readLegacyRaw())
+  const current = parseStoredSettings(readCurrentRaw())
+  if (!legacy || !current)
+    return []
+  const legacyKeys = keysOfSettings(legacy)
+  const currentKeys = keysOfSettings(current)
+  return Object.keys(legacyKeys)
+    .filter(id => currentKeys[id] && currentKeys[id] !== legacyKeys[id])
+    .map(id => ({
+      provider: id,
+      label: AI_PROVIDERS.find(p => p.id === id)?.label ?? '自定义地址',
+      legacyTail: legacyKeys[id].slice(-4),
+      currentTail: currentKeys[id].slice(-4),
+    }))
+}
+/**
+ * 把旧版共用设置认领到当前身份名下，成功后删除旧数据。
+ * 与当前身份已有的设置合并：各服务商的 Key 都保留；同一家两边 Key 不同时按 onConflict 取舍
+ * （默认保留当前的）。当前身份已经配好（地址、模型、该服务商的 Key 齐全）就沿用它选中的服务商和模型，
+ * 否则用旧设置里选中的。
+ */
+export function claimLegacyAISettings(onConflict: 'legacy' | 'current' = 'current'): boolean {
+  const legacy = parseStoredSettings(readLegacyRaw())
+  if (!legacy || !legacyAISettingsInfo())
+    return false
+  const current = parseStoredSettings(readCurrentRaw())
+  const legacyKeys = keysOfSettings(legacy)
+  const currentKeys = current
+    ? keysOfSettings(current)
+    : {}
+  const apiKeys: Record<string, string> = onConflict === 'legacy'
+    ? { ...currentKeys, ...legacyKeys }
+    : { ...legacyKeys, ...currentKeys }
+  const currentConfigured = !!current
+    && typeof current.baseUrl === 'string' && !!current.baseUrl.trim()
+    && typeof current.model === 'string' && !!current.model.trim()
+    && !!currentKeys[getProviderIdForBaseUrl(current.baseUrl)]
+  const chosen: Partial<AISettings> = currentConfigured
+    ? current!
+    : legacy
+  const merged: AISettings = { ...DEFAULTS, ...chosen, apiKeys }
+  merged.apiKey = apiKeys[getProviderIdForBaseUrl(merged.baseUrl)] ?? ''
+  try {
+    localStorage.setItem(currentKey(), JSON.stringify(merged))
+    localStorage.removeItem(LEGACY_KEY)
+    return true
+  }
+  catch {
+    return false
+  }
+}
 export function getAISettings(): AISettings {
   try {
     const raw = localStorage.getItem(currentKey())

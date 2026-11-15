@@ -1,9 +1,16 @@
 <script setup lang="ts">
 import type { DialogResult } from '../composables/useDialog'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { dialogQueue, registerDialogHost, settleDialog } from '../composables/useDialog'
+import { computed, inject, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { routeLocationKey } from 'vue-router'
+import { dialogQueue, dismissDialogsNotOn, registerDialogHost, settleDialog } from '../composables/useDialog'
 
 const current = computed(() => dialogQueue.value[0] ?? null)
+// 当前路由（单独挂载、没有路由时为 null）：离开发起弹窗的页面时关掉那些弹窗
+const route = inject(routeLocationKey, null)
+watch(() => route?.path, (path) => {
+  if (path)
+    dismissDialogsNotOn(path)
+})
 const panel = ref<HTMLElement | null>(null)
 const confirmButton = ref<HTMLButtonElement | null>(null)
 const cancelButton = ref<HTMLButtonElement | null>(null)
@@ -79,7 +86,7 @@ function onFocusIn(event: FocusEvent) {
 
 let unregister: (() => void) | null = null
 onMounted(() => {
-  unregister = registerDialogHost()
+  unregister = registerDialogHost(() => route?.path ?? null)
   window.addEventListener('keydown', onKey, true)
   document.addEventListener('focusin', onFocusIn)
 })

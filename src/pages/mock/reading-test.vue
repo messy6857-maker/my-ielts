@@ -4,7 +4,7 @@ import type { MockQuestion } from './types'
 import { useRouter } from 'vue-router'
 import { resolveMediaUrl } from '~/composables/useAudio'
 
-import { chooseDialog, confirmDialog } from '~/composables/useDialog'
+import { alertDialog, chooseDialog, confirmDialog } from '~/composables/useDialog'
 import { useGoBack } from '~/composables/useGoBack'
 import { useMockMistakeSave } from '~/composables/useMockMistakeSave'
 import { useStudyTimer } from '~/composables/useStudyTimer'
@@ -171,6 +171,27 @@ async function loadTest() {
 type ExamDraft = NonNullable<typeof recovery.draft.value>
 // 0 秒草稿的二选一弹窗还在等待时，再点“开始测试”不再叠出第二个弹窗
 let expiredPromptOpen = false
+/**
+ * 弹窗确认后、动手之前：重新从存储读取草稿（页面里的草稿只是打开弹窗时的快照，
+ * 其他页签期间保存的新答案不会自动同步过来），确认仍是同一份、内容没被改过、
+ * 没被交卷或退役。变了就什么都不做，页面已显示最新内容，提示用户重新确认。
+ */
+function draftStillSame(before: ExamDraft | null): ExamDraft | null | false {
+  recovery.refresh()
+  const current = recovery.draft.value
+  const same = before
+    ? !!current
+    && !current.submitted
+    && current.versionId === before.versionId
+    && current.attemptId === before.attemptId
+    && (current.revision ?? 0) === (before.revision ?? 0)
+    && current.updatedAt === before.updatedAt
+    : !current
+  if (same)
+    return current
+  alertDialog('这份草稿刚在其他页签更新过（或已被交卷/放弃）。页面已载入最新内容，请确认后再操作。')
+  return false
+}
 function startTest() {
   if (recovery.mismatch())
     return
@@ -195,20 +216,19 @@ function startTest() {
       // 按 Esc / 点遮罩关掉弹窗：什么都不做，草稿原样保留，可再点“开始测试”重新选
       if (choice === 'dismiss')
         return
-      // 弹窗期间换了账号、换了套题、已经开考，或这份草稿已被别处改动/交卷：这次选择作废
-      const current = recovery.draft.value
+      // 弹窗期间换了账号、换了套题、已经开考：这次选择作废
       if (
         useAuth().currentUser.value !== user
         || testPair.value !== pair
         || started.value
-        || !current
-        || current.submitted
-        || current.versionId !== saved.versionId
-        || current.attemptId !== saved.attemptId
         || recovery.mismatch()
       ) {
         return
       }
+      // 这份草稿弹窗期间被其他页签改过、交卷或退役：保留最新答案，请用户重新确认
+      const current = draftStillSame(saved)
+      if (!current)
+        return
       if (!recovery.begin(current))
         return
       if (choice === 'cancel') {
@@ -262,15 +282,11 @@ async function discardDraftAndStart() {
   ) {
     return
   }
-  const current = recovery.draft.value
-  if (
-    started.value
-    || testPair.value !== pair
-    || current?.versionId !== target?.versionId
-    || current?.attemptId !== target?.attemptId
-  ) {
+  if (started.value || testPair.value !== pair)
     return
-  }
+  // 弹窗期间这份草稿被其他页签改过/交卷/退役：不退役新内容，请用户重新确认
+  if (draftStillSame(target) === false)
+    return
   if (recovery.clear())
     startTest()
 }

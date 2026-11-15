@@ -9,7 +9,8 @@ import { useAuth } from './useAuth'
 //   confirm —— 点了确认按钮
 //   cancel  —— 点了取消按钮（取消按钮本身可能代表一个操作，如“放弃草稿”）
 //   dismiss —— 按 Esc、点遮罩，或弹窗打开期间账号变了：什么都不做
-// 弹窗记住打开时的账号；账号一变，所有打开的弹窗都按 dismiss 结束，确认不会落到新账号头上。
+// 弹窗记住打开时的账号和页面（路由 path）；账号一变或离开了那个页面，弹窗都按 dismiss 结束，
+// 确认不会落到新账号头上，也不会在页面已经离开后才执行。
 export type DialogResult = 'confirm' | 'cancel' | 'dismiss'
 export interface DialogOptions {
   confirmText?: string
@@ -26,6 +27,8 @@ export interface DialogRequest {
   danger: boolean
   /** 打开时的账号（游客为 null） */
   owner: string | null
+  /** 打开时所在页面的路由 path（拿不到路由时为 null，不参与离开页面的判断） */
+  path: string | null
   resolve: (result: DialogResult) => void
 }
 
@@ -33,6 +36,7 @@ export const dialogQueue = ref<DialogRequest[]>([])
 let hosts = 0
 let nextId = 0
 let stopOwnerWatch: (() => void) | null = null
+let currentPath: (() => string | null) | null = null
 
 function dismissAll() {
   const pending = dialogQueue.value
@@ -40,8 +44,19 @@ function dismissAll() {
   pending.forEach(d => d.resolve('dismiss'))
 }
 
-export function registerDialogHost() {
+/** 离开页面：关掉在其他页面打开的弹窗（只看 path，同一页面改 query 不算离开） */
+export function dismissDialogsNotOn(path: string) {
+  const stale = dialogQueue.value.filter(d => d.path !== null && d.path !== path)
+  if (!stale.length)
+    return
+  dialogQueue.value = dialogQueue.value.filter(d => !stale.includes(d))
+  stale.forEach(d => d.resolve('dismiss'))
+}
+
+export function registerDialogHost(getPath?: () => string | null) {
   hosts++
+  if (getPath)
+    currentPath = getPath
   if (!stopOwnerWatch) {
     stopOwnerWatch = watch(useAuth().currentUser, (user) => {
       // 账号变了：打开的弹窗全部作废，避免旧账号的操作在新账号上执行
@@ -61,6 +76,7 @@ export function registerDialogHost() {
     if (!hosts) {
       stopOwnerWatch?.()
       stopOwnerWatch = null
+      currentPath = null
       dismissAll()
     }
   }
@@ -91,6 +107,7 @@ function open(kind: DialogRequest['kind'], message: string, options: DialogOptio
         cancelText: options.cancelText ?? '取消',
         danger: options.danger ?? false,
         owner,
+        path: currentPath?.() ?? null,
         resolve,
       },
     ]
