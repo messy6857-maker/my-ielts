@@ -92,9 +92,12 @@ function onAdd() {
   showLegacy.value = false
   jumpFailed.value = false
   notice.value = ''
-  addPageBookmark(scopedPath.value, window.scrollY, props.scope
+  const added = addPageBookmark(scopedPath.value, window.scrollY, props.scope
     ? readingBookmarkAnchor()
     : undefined)
+  // 写入存储失败：书签没有加上，告诉用户，而不是先显示出来、过后又消失
+  if (added === false)
+    notice.value = '书签保存失败（可能是浏览器存储空间不足），请稍后重试'
 }
 function onJump(id: string) {
   notice.value = ''

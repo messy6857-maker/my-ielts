@@ -164,39 +164,53 @@ function reloadAIForm() {
 // AI 设置按账号分开保存：切换账号/退出时换成该身份自己的设置
 watch(currentUser, reloadAIForm)
 async function claimLegacyAI() {
-  const who = currentUser.value
-    ? `账号「${currentUser.value}」`
-    : '游客'
-  // 只有同一服务商两边各有一个不同的 Key 时才需要选；其余服务商的 Key 都合并保留
-  const conflicts = legacyClaimConflicts()
-  let prefer: 'legacy' | 'current' = 'current'
-  if (conflicts.length) {
-    const lines = conflicts
-      .map(c => `${c.label}：旧设置末 4 位 ${c.legacyTail}，${who}现在的末 4 位 ${c.currentTail}`)
-      .join('\n')
-    const choice = await chooseDialog(
-      `把这份旧设置认领给${who}。以下服务商两边各有一个不同的 Key：\n${lines}\n要保留哪一个？其他服务商的 Key 都会合并保留。`,
-      { confirmText: '用旧设置的 Key', cancelText: '保留现在的 Key' },
-    )
-    if (choice === 'dismiss')
-      return
-    prefer = choice === 'confirm'
-      ? 'legacy'
-      : 'current'
+  // 保存前会重新核对冲突：期间其他页签改了 AI 设置（新增或改了冲突的 Key）时什么都不保存，
+  // 按最新情况重新问一次，不把没确认过的选择套到新 Key 上
+  let notice = ''
+  for (let round = 0; round < 3; round++) {
+    const who = currentUser.value
+      ? `账号「${currentUser.value}」`
+      : '游客'
+    const conflicts = legacyClaimConflicts()
+    const decisions: Record<string, 'legacy' | 'current'> = {}
+    if (conflicts.length) {
+      const lines = conflicts
+        .map(c => `${c.label}：旧设置末 4 位 ${c.legacyTail}，${who}现在的末 4 位 ${c.currentTail}`)
+        .join('\n')
+      const choice = await chooseDialog(
+        `${notice}把这份旧设置认领给${who}。以下地址两边各有一个不同的 Key：\n${lines}\n要保留哪一个？其他地址的 Key 都会合并保留，每个 Key 仍跟着原来的地址。`,
+        { confirmText: '用旧设置的 Key', cancelText: '保留现在的 Key' },
+      )
+      if (choice === 'dismiss')
+        return
+      for (const c of conflicts) {
+        decisions[c.provider] = choice === 'confirm'
+          ? 'legacy'
+          : 'current'
+      }
+    }
+    else {
+      const ok = await confirmDialog(
+        `${notice}${hasAISettings()
+          ? `把这份旧设置认领给${who}？会与${who}现在的 AI 设置合并，各地址的 Key 都保留；认领后其他账号和游客都看不到它。`
+          : `把这份旧设置认领给${who}？认领后其他账号和游客都看不到它。`}`,
+        { confirmText: '认领' },
+      )
+      if (!ok)
+        return
+    }
+    const result = claimLegacyAISettings(decisions, conflicts)
+    if (result === 'changed') {
+      notice = 'AI 设置刚在其他页签改过，请按最新情况重新确认。\n'
+      continue
+    }
+    legacyMsg.value = result === 'claimed'
+      ? ''
+      : '认领失败：旧设置已不存在或无法保存'
+    reloadAIForm()
+    return
   }
-  else {
-    const ok = await confirmDialog(
-      hasAISettings()
-        ? `把这份旧设置认领给${who}？会与${who}现在的 AI 设置合并，各服务商的 Key 都保留；认领后其他账号和游客都看不到它。`
-        : `把这份旧设置认领给${who}？认领后其他账号和游客都看不到它。`,
-      { confirmText: '认领' },
-    )
-    if (!ok)
-      return
-  }
-  legacyMsg.value = claimLegacyAISettings(prefer)
-    ? ''
-    : '认领失败：旧设置已不存在或无法保存'
+  legacyMsg.value = 'AI 设置在其他页签反复变化，暂未认领，请稍后再试'
   reloadAIForm()
 }
 async function discardLegacyAI() {

@@ -57,13 +57,13 @@ it('the old shared AI setting is not given to anyone until it is claimed', () =>
   expect(legacyAISettingsInfo()).toEqual({ keyTail: '1234', baseUrl: 'https://api.openai.com/v1' })
   // 认领后只归认领者，旧数据删除
   auth.currentUser.value = 'bob'
-  expect(claimLegacyAISettings()).toBe(true)
+  expect(claimLegacyAISettings()).toBe('claimed')
   expect(getAISettings().apiKey).toBe('sk-old-1234')
   expect(localStorage.getItem('myielts_ai_settings_v1')).toBeNull()
   expect(legacyAISettingsInfo()).toBeNull()
   auth.currentUser.value = 'alice'
   expect(hasAISettings()).toBe(false)
-  expect(claimLegacyAISettings()).toBe(false)
+  expect(claimLegacyAISettings()).toBe('failed')
 })
 
 it('the old shared AI setting can be deleted without claiming it', () => {

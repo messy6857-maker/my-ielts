@@ -223,7 +223,7 @@ describe('claiming the old shared AI setting merges keys', () => {
     })
     setLegacy({ baseUrl: 'https://api.deepseek.com', apiKey: 'sk-legacy-deepseek', model: 'deepseek-flash' })
     expect(legacyClaimConflicts()).toEqual([])
-    expect(claimLegacyAISettings()).toBe(true)
+    expect(claimLegacyAISettings()).toBe('claimed')
     const merged = getAISettings()
     expect(merged.apiKeys).toMatchObject({ openai: 'sk-alice-openai', deepseek: 'sk-legacy-deepseek' })
     // 当前身份没配好：沿用旧设置选中的服务商
@@ -234,7 +234,7 @@ describe('claiming the old shared AI setting merges keys', () => {
   it('keeps the current provider selection when it is fully configured', () => {
     setCurrent({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-alice-openai', model: 'gpt-4o-mini' })
     setLegacy({ baseUrl: 'https://api.deepseek.com', apiKey: 'sk-legacy-deepseek', model: 'deepseek-flash' })
-    expect(claimLegacyAISettings()).toBe(true)
+    expect(claimLegacyAISettings()).toBe('claimed')
     const merged = getAISettings()
     expect(merged.baseUrl).toBe('https://api.openai.com/v1')
     expect(merged.apiKey).toBe('sk-alice-openai')
@@ -244,7 +244,13 @@ describe('claiming the old shared AI setting merges keys', () => {
   it('reports a conflict only when the same provider has two different keys', () => {
     setCurrent({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-new-2222', model: 'gpt-4o-mini' })
     setLegacy({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-old-1111', model: 'gpt-4o-mini' })
-    expect(legacyClaimConflicts()).toEqual([
+    const conflicts = legacyClaimConflicts()
+    expect(conflicts.map(({ provider, label, legacyTail, currentTail }) => ({
+      provider,
+      label,
+      legacyTail,
+      currentTail,
+    }))).toEqual([
       {
         provider: 'openai',
         label: 'OpenAI',
@@ -252,50 +258,48 @@ describe('claiming the old shared AI setting merges keys', () => {
         currentTail: '2222',
       },
     ])
-    expect(claimLegacyAISettings('current')).toBe(true)
+    expect(claimLegacyAISettings({ openai: 'current' }, conflicts)).toBe('claimed')
     expect(getAISettings().apiKey).toBe('sk-new-2222')
   })
 
   it('uses the old key for a conflicting provider when the user picks it', () => {
     setCurrent({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-new-2222', model: 'gpt-4o-mini' })
     setLegacy({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-old-1111', model: 'gpt-4o-mini' })
-    expect(claimLegacyAISettings('legacy')).toBe(true)
+    expect(claimLegacyAISettings({ openai: 'legacy' }, legacyClaimConflicts())).toBe('claimed')
     expect(getAISettings().apiKey).toBe('sk-old-1111')
     expect(localStorage.getItem('myielts_ai_settings_v1')).toBeNull()
   })
 })
 
 describe('bookmarks from two tabs', () => {
+  /** 模拟另一个页签：只写它自己那一条书签的 key */
+  function otherTabSaves(path: string, id: string, y: number) {
+    localStorage.setItem(
+      `myielts_page_bookmark_v2:${encodeURIComponent(path)}|${encodeURIComponent(id)}`,
+      JSON.stringify({ id, y, createdAt: 2 }),
+    )
+  }
+
   it('adding in one tab keeps a bookmark another tab just saved', () => {
     addPageBookmark('/reading/daily:["2026-11-14","alice"]', 100)
-    // 另一个页签（它的内存列表与本页无关）在别的日期加了书签并写入存储
-    const stored = JSON.parse(localStorage.getItem('myielts_page_bookmarks_v1')!)
-    stored['/reading/daily:["2026-11-15","alice"]'] = [
-      { id: 'other-tab', y: 500, createdAt: 2 },
-    ]
-    localStorage.setItem('myielts_page_bookmarks_v1', JSON.stringify(stored))
+    otherTabSaves('/reading/daily:["2026-11-15","alice"]', 'other-tab', 500)
     addPageBookmark('/reading/daily:["2026-11-14","alice"]', 900)
-    const saved = JSON.parse(localStorage.getItem('myielts_page_bookmarks_v1')!)
-    expect(saved['/reading/daily:["2026-11-15","alice"]'].map((b: any) => b.id)).toEqual(['other-tab'])
-    expect(saved['/reading/daily:["2026-11-14","alice"]']).toHaveLength(2)
+    reloadPageBookmarks()
+    expect(getPageBookmarks('/reading/daily:["2026-11-15","alice"]').map(b => b.id)).toEqual(['other-tab'])
+    expect(getPageBookmarks('/reading/daily:["2026-11-14","alice"]')).toHaveLength(2)
   })
 
   it('removing in one tab keeps another tab’s new bookmark on the same page', () => {
-    const mine = addPageBookmark('/reading/daily', 100)!
-    const stored = JSON.parse(localStorage.getItem('myielts_page_bookmarks_v1')!)
-    stored['/reading/daily'].push({ id: 'other-tab', y: 900, createdAt: 2 })
-    localStorage.setItem('myielts_page_bookmarks_v1', JSON.stringify(stored))
-    removePageBookmark('/reading/daily', mine.id)
+    const mine = addPageBookmark('/reading/daily', 100)
+    expect(mine).toBeTruthy()
+    otherTabSaves('/reading/daily', 'other-tab', 900)
+    removePageBookmark('/reading/daily', (mine as { id: string }).id)
     expect(getPageBookmarks('/reading/daily').map(b => b.id)).toEqual(['other-tab'])
   })
 
   it('follows changes saved by other tabs', () => {
-    localStorage.setItem('myielts_page_bookmarks_v1', JSON.stringify({
-      '/x': [
-        { id: 'a', y: 1, createdAt: 1 },
-      ],
-    }))
-    window.dispatchEvent(new StorageEvent('storage', { key: 'myielts_page_bookmarks_v1' }))
+    otherTabSaves('/x', 'a', 1)
+    window.dispatchEvent(new StorageEvent('storage', { key: 'myielts_page_bookmark_v2:%2Fx|a' }))
     expect(pageBookmarksState.value['/x'].map(b => b.id)).toEqual(['a'])
   })
 

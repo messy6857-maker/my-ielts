@@ -57,12 +57,15 @@ describe('页面位置书签（多个）', () => {
     expect(scrollTo).not.toHaveBeenCalled()
     scrollTo.mockRestore()
   })
-  it('存进 localStorage，刷新后还在', () => {
+  it('存进 localStorage（每条书签一个 key），刷新后还在', () => {
     addPageBookmark('/reading/daily', 1200)
     addPageBookmark('/reading/daily', 2400)
-    const raw = localStorage.getItem('myielts_page_bookmarks_v1')
-    const parsed = JSON.parse(raw ?? '{}') as Record<string, { y: number }[]>
-    expect(parsed['/reading/daily'].map(b => b.y).sort((x, y) => x - y)).toEqual([1200, 2400])
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('myielts_page_bookmark_v2:'))
+    expect(keys).toHaveLength(2)
+    expect(keys.map(k => JSON.parse(localStorage.getItem(k)!).y).sort((x, y) => x - y)).toEqual([1200, 2400])
+    pageBookmarksState.value = {}
+    reloadPageBookmarks()
+    expect(getPageBookmarks('/reading/daily').map(b => b.y)).toEqual([1200, 2400])
   })
   it('兼容旧版：单个数值自动转成一个书签', () => {
     localStorage.setItem('myielts_page_bookmarks_v1', JSON.stringify({ '/reading/daily': 1200 }))
