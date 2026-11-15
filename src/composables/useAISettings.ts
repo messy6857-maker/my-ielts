@@ -187,9 +187,57 @@ export function getProviderForBaseUrl(baseUrl: string): AIProvider | null {
   const normalized = baseUrl.trim().replace(/\/+$/, '').toLowerCase()
   return AI_PROVIDERS.find(p => p.baseUrl.toLowerCase() === normalized) ?? null
 }
-/** 根据 API 地址取服务商 id（手动改过的地址归为 'custom'，与预设共用一个 Key 槽）。 */
+/** 根据 API 地址取服务商 id（不在三家预设里的地址归为 'custom'；只用于判断服务商能力，Key 槽位见 keySlotForBaseUrl）。 */
 export function getProviderIdForBaseUrl(baseUrl: string): string {
   return getProviderForBaseUrl(baseUrl)?.id ?? 'custom'
+}
+/** 规范化 API 地址：协议和域名小写，去掉查询串、锚点和末尾的斜杠（路径大小写保留） */
+export function normalizeBaseUrl(baseUrl: string): string {
+  const trimmed = baseUrl.trim()
+  try {
+    const url = new URL(trimmed)
+    return `${url.protocol}//${url.host}${url.pathname.replace(/\/+$/, '')}`
+  }
+  catch {
+    return trimmed.replace(/\/+$/, '').toLowerCase()
+  }
+}
+/** 旧版所有自定义地址共用的 Key 槽位 */
+const SHARED_CUSTOM_SLOT = 'custom'
+/**
+ * Key 存放的槽位：三家预设用服务商 id；自定义地址按规范化后的地址各占一个槽（custom:<地址>），
+ * 不同的自定义地址不会再共用同一个 Key。
+ */
+export function keySlotForBaseUrl(baseUrl: string): string {
+  const preset = getProviderForBaseUrl(baseUrl)
+  if (preset)
+    return preset.id
+  return baseUrl.trim()
+    ? `${SHARED_CUSTOM_SLOT}:${normalizeBaseUrl(baseUrl)}`
+    : SHARED_CUSTOM_SLOT
+}
+/**
+ * 一份设置的 Key 表（槽位 → Key），并把旧版共用的 custom 槽绑定到这份设置选中的自定义地址：
+ * 只有当前地址是自定义地址时才知道它属于谁；否则原样留在 custom 槽，不会被当成任何地址的 Key。
+ */
+function boundApiKeys(settings: Partial<AISettings>): Record<string, string> {
+  const keys: Record<string, string> = {}
+  for (const [slot, key] of Object.entries(settings.apiKeys ?? {})) {
+    if (typeof key === 'string')
+      keys[slot] = key
+  }
+  const baseUrl = typeof settings.baseUrl === 'string'
+    ? settings.baseUrl
+    : ''
+  const slot = keySlotForBaseUrl(baseUrl)
+  if (slot.startsWith(`${SHARED_CUSTOM_SLOT}:`) && SHARED_CUSTOM_SLOT in keys) {
+    if (!keys[slot])
+      keys[slot] = keys[SHARED_CUSTOM_SLOT]
+    delete keys[SHARED_CUSTOM_SLOT]
+  }
+  if (typeof settings.apiKey === 'string' && settings.apiKey.trim())
+    keys[slot] = settings.apiKey.trim()
+  return keys
 }
 /**
  * 切服务商：先把当前 Key 存到旧服务商名下，再把新服务商存过的 Key（没填过就是空）取出来；
@@ -199,7 +247,7 @@ export function switchProviderSettings(current: AISettings, provider: AIProvider
   const apiKeys = {
     ...(current.apiKeys ?? {}),
   }
-  apiKeys[getProviderIdForBaseUrl(current.baseUrl)] = current.apiKey.trim()
+  apiKeys[keySlotForBaseUrl(current.baseUrl)] = current.apiKey.trim()
   return {
     ...current,
     apiKeys,
@@ -260,67 +308,94 @@ function readCurrentRaw(): string | null {
 /** 一份设置里各服务商的 Key（apiKeys 加上当前选中服务商的 apiKey） */
 function keysOfSettings(settings: Partial<AISettings>): Record<string, string> {
   const keys: Record<string, string> = {}
-  for (const [id, key] of Object.entries(settings.apiKeys ?? {})) {
-    if (typeof key === 'string' && key.trim())
-      keys[id] = key.trim()
+  for (const [slot, key] of Object.entries(boundApiKeys(settings))) {
+    if (key.trim())
+      keys[slot] = key.trim()
   }
-  if (typeof settings.apiKey === 'string' && settings.apiKey.trim() && typeof settings.baseUrl === 'string')
-    keys[getProviderIdForBaseUrl(settings.baseUrl)] = settings.apiKey.trim()
   return keys
 }
 export interface LegacyClaimConflict {
+  /** Key 槽位（服务商 id，或 custom:<规范化地址>） */
   provider: string
   label: string
-  /** 旧设置里这家 Key 的末 4 位 */
+  /** 旧设置里这一槽的 Key 末 4 位 */
   legacyTail: string
-  /** 当前身份这家 Key 的末 4 位 */
+  /** 当前身份这一槽的 Key 末 4 位 */
   currentTail: string
+  /** 弹窗打开时两边的完整 Key：保存前核对冲突没有变化（不显示给用户） */
+  legacyKey: string
+  currentKey: string
 }
-/** 认领旧设置时，同一服务商两边各有一个不同 Key 的冲突列表（没有冲突时为空） */
-export function legacyClaimConflicts(): LegacyClaimConflict[] {
-  const legacy = parseStoredSettings(readLegacyRaw())
-  const current = parseStoredSettings(readCurrentRaw())
-  if (!legacy || !current)
+function slotLabel(slot: string): string {
+  if (slot.startsWith(`${SHARED_CUSTOM_SLOT}:`))
+    return `自定义地址 ${slot.slice(SHARED_CUSTOM_SLOT.length + 1)}`
+  return AI_PROVIDERS.find(p => p.id === slot)?.label ?? slot
+}
+function computeClaimConflicts(legacy: Partial<AISettings>, current: Partial<AISettings> | null): LegacyClaimConflict[] {
+  if (!current)
     return []
   const legacyKeys = keysOfSettings(legacy)
   const currentKeys = keysOfSettings(current)
   return Object.keys(legacyKeys)
-    .filter(id => currentKeys[id] && currentKeys[id] !== legacyKeys[id])
-    .map(id => ({
-      provider: id,
-      label: AI_PROVIDERS.find(p => p.id === id)?.label ?? '自定义地址',
-      legacyTail: legacyKeys[id].slice(-4),
-      currentTail: currentKeys[id].slice(-4),
+    // 没绑定地址的旧 custom 槽不会被任何地址使用，不算冲突（合并时保留当前的）
+    .filter(slot => slot !== SHARED_CUSTOM_SLOT && currentKeys[slot] && currentKeys[slot] !== legacyKeys[slot])
+    .map(slot => ({
+      provider: slot,
+      label: slotLabel(slot),
+      legacyTail: legacyKeys[slot].slice(-4),
+      currentTail: currentKeys[slot].slice(-4),
+      legacyKey: legacyKeys[slot],
+      currentKey: currentKeys[slot],
     }))
 }
+/** 认领旧设置时，同一槽位两边各有一个不同 Key 的冲突列表（没有冲突时为空） */
+export function legacyClaimConflicts(): LegacyClaimConflict[] {
+  const legacy = parseStoredSettings(readLegacyRaw())
+  if (!legacy)
+    return []
+  return computeClaimConflicts(legacy, parseStoredSettings(readCurrentRaw()))
+}
+/** claimed：已认领；changed：冲突和弹窗里给用户看的不一样了，什么都没改，需要重新确认；failed：旧设置不存在或保存失败 */
+export type LegacyClaimResult = 'claimed' | 'changed' | 'failed'
 /**
  * 把旧版共用设置认领到当前身份名下，成功后删除旧数据。
- * 与当前身份已有的设置合并：各服务商的 Key 都保留；同一家两边 Key 不同时按 onConflict 取舍
- * （默认保留当前的）。当前身份已经配好（地址、模型、该服务商的 Key 齐全）就沿用它选中的服务商和模型，
- * 否则用旧设置里选中的。
+ * 与当前身份已有的设置合并，Key 始终跟着自己的地址（槽位）：各槽位的 Key 都保留；
+ * 同一槽位两边 Key 不同时，只按用户在弹窗里对“这些冲突”做的选择处理（decisions，默认保留当前的）。
+ * 保存前重新计算冲突，必须和弹窗里给用户看的 shown 完全一致（同样的槽位、同样的两个 Key），
+ * 否则返回 changed 不做任何修改——期间其他页签新存的 Key 不会被没确认过的选择覆盖。
+ * 当前身份已经配好（地址、模型、该地址的 Key 齐全）就沿用它选中的地址和模型，否则用旧设置里选中的。
  */
-export function claimLegacyAISettings(onConflict: 'legacy' | 'current' = 'current'): boolean {
+export function claimLegacyAISettings(
+  decisions: Record<string, 'legacy' | 'current'> = {},
+  shown: LegacyClaimConflict[] = [],
+): LegacyClaimResult {
   const legacy = parseStoredSettings(readLegacyRaw())
   if (!legacy || !legacyAISettingsInfo())
-    return false
+    return 'failed'
   const current = parseStoredSettings(readCurrentRaw())
+  const conflicts = computeClaimConflicts(legacy, current)
+  const unchanged = conflicts.length === shown.length
+    && conflicts.every(c => shown.some(s => s.provider === c.provider
+      && s.legacyKey === c.legacyKey
+      && s.currentKey === c.currentKey))
+  if (!unchanged)
+    return 'changed'
   const legacyKeys = keysOfSettings(legacy)
   const currentKeys = current
     ? keysOfSettings(current)
     : {}
-  const apiKeys: Record<string, string> = onConflict === 'legacy'
-    ? {
-        ...currentKeys,
-        ...legacyKeys,
-      }
-    : {
-        ...legacyKeys,
-        ...currentKeys,
-      }
+  const apiKeys: Record<string, string> = {
+    ...legacyKeys,
+    ...currentKeys,
+  }
+  for (const c of conflicts) {
+    if (decisions[c.provider] === 'legacy')
+      apiKeys[c.provider] = c.legacyKey
+  }
   const currentConfigured = !!current
     && typeof current.baseUrl === 'string' && !!current.baseUrl.trim()
     && typeof current.model === 'string' && !!current.model.trim()
-    && !!currentKeys[getProviderIdForBaseUrl(current.baseUrl)]
+    && !!currentKeys[keySlotForBaseUrl(current.baseUrl)]
   const chosen: Partial<AISettings> = currentConfigured
     ? current!
     : legacy
@@ -329,14 +404,14 @@ export function claimLegacyAISettings(onConflict: 'legacy' | 'current' = 'curren
     ...chosen,
     apiKeys,
   }
-  merged.apiKey = apiKeys[getProviderIdForBaseUrl(merged.baseUrl)] ?? ''
+  merged.apiKey = apiKeys[keySlotForBaseUrl(merged.baseUrl)] ?? ''
   try {
     localStorage.setItem(currentKey(), JSON.stringify(merged))
     localStorage.removeItem(LEGACY_KEY)
-    return true
+    return 'claimed'
   }
   catch {
-    return false
+    return 'failed'
   }
 }
 export function getAISettings(): AISettings {
@@ -347,12 +422,9 @@ export function getAISettings(): AISettings {
         ...DEFAULTS,
         ...JSON.parse(raw),
       }
-      // 兼容旧版：只有单个 Key、没有分服务商的 map 时，把现有 Key 记到当前服务商名下
-      if (!parsed.apiKeys && parsed.apiKey.trim()) {
-        parsed.apiKeys = {
-          [getProviderIdForBaseUrl(parsed.baseUrl)]: parsed.apiKey.trim(),
-        }
-      }
+      // 兼容旧版：没有分服务商的 map 时把现有 Key 记到当前槽位；旧的共用 custom 槽绑定到当前自定义地址
+      if (parsed.apiKeys || parsed.apiKey.trim())
+        parsed.apiKeys = boundApiKeys(parsed)
       return parsed
     }
   }
@@ -366,7 +438,7 @@ export function saveAISettings(s: AISettings) {
   const apiKeys = {
     ...(s.apiKeys ?? {}),
   }
-  apiKeys[getProviderIdForBaseUrl(s.baseUrl)] = s.apiKey.trim()
+  apiKeys[keySlotForBaseUrl(s.baseUrl)] = s.apiKey.trim()
   localStorage.setItem(currentKey(), JSON.stringify({ ...s, apiKeys }))
 }
 export function hasAISettings(): boolean {

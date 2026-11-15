@@ -49,19 +49,31 @@ function normalizeItem(raw: unknown): PageBookmarkItem | null {
   }
 }
 
-function loadBookmarks(): PageBookmarks {
-  return readStoredBookmarks() ?? {}
+// 存储：每条书签单独一个 key（myielts_page_bookmark_v2:<页面>|<id>），加/删只动自己那一条，
+// 多个页签同时保存不同书签时不会互相覆盖。旧版把整张表存在 KEY 里，读取时迁移成单条 key，
+// 迁完删掉旧表；迁移没完成（如存储满）前两边合并显示，按 id 去重。
+const ITEM_PREFIX = 'myielts_page_bookmark_v2:'
+function itemKey(path: string, id: string): string {
+  return `${ITEM_PREFIX}${encodeURIComponent(path)}|${encodeURIComponent(id)}`
 }
-/** 从 localStorage 读最新书签；存储本身不可读时返回 null（调用方回退到内存里的列表） */
-function readStoredBookmarks(): PageBookmarks | null {
-  let raw: string | null
+function parseItemKey(key: string): { path: string, id: string } | null {
+  if (!key.startsWith(ITEM_PREFIX))
+    return null
+  const rest = key.slice(ITEM_PREFIX.length)
+  const sep = rest.indexOf('|')
+  if (sep < 0)
+    return null
   try {
-    raw = localStorage.getItem(KEY)
+    return { path: decodeURIComponent(rest.slice(0, sep)), id: decodeURIComponent(rest.slice(sep + 1)) }
   }
   catch {
     return null
   }
+}
+/** 旧版整表（KEY）；没有或读不出时为 {} */
+function readLegacyTable(): PageBookmarks {
   try {
+    const raw = localStorage.getItem(KEY)
     if (!raw)
       return {}
     const parsed = JSON.parse(raw)
@@ -69,7 +81,7 @@ function readStoredBookmarks(): PageBookmarks | null {
       return {}
     const out: PageBookmarks = {}
     for (const [path, value] of Object.entries(parsed)) {
-      // 兼容旧版：单个数值就是一个书签
+      // 兼容更旧版：单个数值就是一个书签
       if (typeof value === 'number') {
         const item = normalizeItem({ y: value })
         if (item)
@@ -88,21 +100,110 @@ function readStoredBookmarks(): PageBookmarks | null {
     return {}
   }
 }
-function persistBookmarks(map: PageBookmarks) {
+/** 把旧整表迁成单条 key：全部写成功才删旧表，否则保留旧表下次再迁 */
+function migrateLegacyTable(): void {
+  let hasLegacy = false
   try {
-    localStorage.setItem(KEY, JSON.stringify(map))
+    hasLegacy = localStorage.getItem(KEY) !== null
   }
   catch {
-    /* 存储满了就丢弃，不打扰用户 */
+    return
   }
+  if (!hasLegacy)
+    return
+  let allWritten = true
+  for (const [path, items] of Object.entries(readLegacyTable())) {
+    for (const item of items) {
+      try {
+        if (localStorage.getItem(itemKey(path, item.id)) === null)
+          localStorage.setItem(itemKey(path, item.id), JSON.stringify(item))
+      }
+      catch {
+        allWritten = false
+      }
+    }
+  }
+  if (allWritten) {
+    try {
+      localStorage.removeItem(KEY)
+    }
+    catch {}
+  }
+}
+/** 从 localStorage 读最新书签；存储本身不可读时返回 null（调用方回退到内存里的列表） */
+function readStoredBookmarks(): PageBookmarks | null {
+  migrateLegacyTable()
+  let keys: string[]
+  try {
+    keys = Object.keys(localStorage)
+  }
+  catch {
+    return null
+  }
+  const out: PageBookmarks = {}
+  for (const key of keys) {
+    const parsedKey = parseItemKey(key)
+    if (!parsedKey)
+      continue
+    try {
+      const item = normalizeItem({ ...JSON.parse(localStorage.getItem(key) ?? 'null'), id: parsedKey.id })
+      if (item)
+        (out[parsedKey.path] ??= []).push(item)
+    }
+    catch {}
+  }
+  // 迁移没完成时，旧表里还没迁过去的书签也要显示（按 id 去重）
+  for (const [path, items] of Object.entries(readLegacyTable())) {
+    for (const item of items) {
+      const list = (out[path] ??= [])
+      if (!list.some(b => b.id === item.id))
+        list.push(item)
+    }
+  }
+  for (const list of Object.values(out))
+    list.sort((a, b) => a.createdAt - b.createdAt)
+  return out
+}
+function loadBookmarks(): PageBookmarks {
+  return readStoredBookmarks() ?? {}
+}
+/** 写入单条书签；存储满等原因失败时返回 false */
+function writeItem(path: string, item: PageBookmarkItem): boolean {
+  try {
+    localStorage.setItem(itemKey(path, item.id), JSON.stringify(item))
+    return true
+  }
+  catch {
+    return false
+  }
+}
+/** 删除单条书签（连同还没迁走的旧表里的同一条） */
+function deleteItem(path: string, id: string): void {
+  try {
+    localStorage.removeItem(itemKey(path, id))
+  }
+  catch {}
+  try {
+    const raw = localStorage.getItem(KEY)
+    if (!raw)
+      return
+    const table = readLegacyTable()
+    const list = table[path]
+    if (!list?.some(b => b.id === id))
+      return
+    const rest = list.filter(b => b.id !== id)
+    if (rest.length)
+      table[path] = rest
+    else
+      delete table[path]
+    localStorage.setItem(KEY, JSON.stringify(table))
+  }
+  catch {}
 }
 
 /** 各页面的书签（路由 → 书签列表），模块级共享状态 */
 export const pageBookmarksState = ref<PageBookmarks>(loadBookmarks())
-/**
- * 改书签前先取存储里的最新列表：多个页签各自有一份内存列表，直接拿内存列表写回会覆盖
- * 别的页签刚加/删的书签。存储不可读时退回内存列表。
- */
+/** 改书签前先取存储里的最新列表（多个页签各有一份内存列表）；存储不可读时退回内存列表 */
 function latestBookmarks(): PageBookmarks {
   const stored = readStoredBookmarks()
   if (stored)
@@ -112,7 +213,7 @@ function latestBookmarks(): PageBookmarks {
 // 其他页签改了书签：跟着更新（key 为 null 是整个 localStorage 被清空）
 if (typeof window !== 'undefined') {
   window.addEventListener('storage', (event) => {
-    if (event.key === KEY || event.key === null)
+    if (event.key === null || event.key === KEY || event.key.startsWith(ITEM_PREFIX))
       pageBookmarksState.value = loadBookmarks()
   })
 }
@@ -207,8 +308,8 @@ function moveDailyBookmarks(match: (owner: unknown) => boolean, to: string): voi
     if (!Array.isArray(scope) || scope.length !== 2 || scope[1] === to || !match(scope[1]))
       continue
     const targetPath = `/reading/daily:${JSON.stringify([scope[0], to])}`
-    const target = next[targetPath] ?? []
-    const merged = [...target]
+    const merged = [...(next[targetPath] ?? [])]
+    // 逐条迁：先写到目标，写成功（或目标已有同位置书签）才删原条目；写失败的留在原处，不会丢
     for (const item of items) {
       const dup = merged.some(b => (
         item.anchor && b.anchor
@@ -217,20 +318,20 @@ function moveDailyBookmarks(match: (owner: unknown) => boolean, to: string): voi
           && Math.abs(b.anchor.offset - item.anchor.offset) <= DEDUP_PX
           : Math.abs(b.y - item.y) <= DEDUP_PX
       ))
-      if (!dup)
+      if (!dup) {
+        if (!writeItem(targetPath, item))
+          continue
         merged.push(item)
+      }
+      deleteItem(path, item.id)
+      changed = true
     }
-    if (merged.length)
-      next[targetPath] = merged
-    delete next[path]
-    changed = true
+    next[targetPath] = merged
   }
-  if (!changed)
-    return
-  pageBookmarksState.value = next
-  persistBookmarks(next)
+  if (changed)
+    pageBookmarksState.value = loadBookmarks()
 }
-/** 在当前位置增加一个书签；50px 内已有书签时不重复加，返回 null */
+/** 阅读页当前位置的段落锚点（找不到返回 undefined） */
 export function readingBookmarkAnchor(): BookmarkAnchor | undefined {
   const top = 90
   for (const passage of Array.from(document.querySelectorAll<HTMLElement>('.passage-text[data-article]'))) {
@@ -247,7 +348,11 @@ export function readingBookmarkAnchor(): BookmarkAnchor | undefined {
   }
 }
 
-export function addPageBookmark(path: string, y: number, anchor?: BookmarkAnchor): PageBookmarkItem | null {
+/**
+ * 在当前位置增加一个书签。50px 内已有书签时不重复加，返回 null；
+ * 写入存储失败（如存储满）时不加进列表，返回 false，由调用方提示用户。
+ */
+export function addPageBookmark(path: string, y: number, anchor?: BookmarkAnchor): PageBookmarkItem | null | false {
   const rounded = Math.max(0, Math.round(y))
   const latest = latestBookmarks()
   const existing = latest[path] ?? []
@@ -271,27 +376,15 @@ export function addPageBookmark(path: string, y: number, anchor?: BookmarkAnchor
       ? { anchor }
       : {}),
   }
-  const next = {
-    ...latest,
-    [path]: [...existing, item],
-  }
-  pageBookmarksState.value = next
-  persistBookmarks(next)
+  // 先写存储，写成功才显示：避免失败后书签先出现、下次重读又消失
+  if (!writeItem(path, item))
+    return false
+  pageBookmarksState.value = loadBookmarks()
   return item
 }
 export function removePageBookmark(path: string, id: string): void {
-  const latest = latestBookmarks()
-  const existing = latest[path]
-  if (!existing)
-    return
-  const next = existing.filter(b => b.id !== id)
-  const map = { ...latest }
-  if (next.length)
-    map[path] = next
-  else
-    delete map[path]
-  pageBookmarksState.value = map
-  persistBookmarks(map)
+  deleteItem(path, id)
+  pageBookmarksState.value = loadBookmarks()
 }
 /** 回到某个书签的位置：没有该书签返回 false */
 export function jumpToPageBookmark(path: string, id: string): boolean {

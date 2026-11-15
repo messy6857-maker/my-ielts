@@ -348,7 +348,8 @@ it('old guest daily bookmarks stored under a null owner become visible and migra
   // 820 与 800 相距不到 50px：按位置去重，只留一个
   expect(getPageBookmarks(`/reading/daily:${JSON.stringify([date, 'device-1'])}`)).toHaveLength(1)
   expect(getPageBookmarks(`/reading/daily:${JSON.stringify([date, null])}`)).toEqual([])
-  // 登录时游客书签（含残留的 null 版）一并迁到账号名下
+  // 登录时游客书签（含残留的 null 版）一并迁到账号名下（换一套干净数据）
+  localStorage.clear()
   localStorage.setItem('myielts_page_bookmarks_v1', JSON.stringify({
     [`/reading/daily:${JSON.stringify([date, null])}`]: [
       { id: 'old', y: 100, createdAt: 1 },
