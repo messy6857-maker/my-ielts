@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DungeonDeck, DungeonSelection, DungeonWord, Monster, QuestionKind, Relic, RelicId, Rng } from '../utils/dungeon'
+import type { DungeonDeck, DungeonMode, DungeonSelection, DungeonWord, Monster, QuestionKind, Relic, RelicId, Rng } from '../utils/dungeon'
 import { resolveAudioUrl } from '../composables/useAudio'
 import { useAudioGroup } from '../composables/useAudioGroup'
 import { useDeckStore } from '../composables/useDeckStore'
@@ -8,30 +8,31 @@ import { recordAttempt } from '../composables/useStats'
 import { nsKey, studyDay, useMistakes } from '../composables/useStudyData'
 import {
   buildPool,
-  buildRun,
+  buildFloor,
   checkSpelling,
+  DAILY_FLOORS,
   DAILY_SOURCE_LABEL,
   dailyPool,
   DECK_LABEL,
   flattenListening,
   flattenReading,
   flattenVocabulary,
+  floorRules,
   isSynonym,
+  MODES,
   MONSTER_ICON,
   MONSTER_LABEL,
   offerRelics,
   phaseScore,
-  RELIC_EVERY,
-  ROOMS_PER_RUN,
+  ROOMS_PER_FLOOR,
   seededRng,
   sourceWords,
   START_HEARTS,
-  TIMED_SECONDS,
 } from '../utils/dungeon'
 import { readValue, saveValue } from '../utils/storage'
 import { getVocabularyChapterMeta, listVocabularyChapters, loadAllVocabulary } from './vocabulary/loadVocabulary'
 
-// 单词地牢：把选中的词变成怪物，一局最多 10 个房间。
+// 单词地牢：把选中的词变成怪物，一层 5 个房间，一层层往下打（快速 3 层 / 标准 10 层 / 无尽）。
 // 答对算一次复习（只更新已经学过的词的复习进度，没学过的词仍算新词），答错记进错词本。
 const managedAudio = useAudioGroup()
 const { mistakes, addMistake } = useMistakes()
@@ -93,12 +94,30 @@ function readSelection(): DungeonSelection {
   }
 }
 const selection = ref<DungeonSelection>(readSelection())
-interface Best { score: number, combo: number }
+interface ModeBest { score: number, floor: number }
+interface Best { combo: number, modes: Partial<Record<DungeonMode, ModeBest>> }
 function readBest(): Best {
-  const saved = readValue<Partial<Best> | null>(nsKey(BEST_KEY), null)
-  return { score: Number(saved?.score) || 0, combo: Number(saved?.combo) || 0 }
+  const saved = readValue<any>(nsKey(BEST_KEY), null)
+  const modes: Best['modes'] = {}
+  for (const m of MODES) {
+    const b = saved?.modes?.[m.id]
+    if (b)
+      modes[m.id] = { score: Number(b.score) || 0, floor: Number(b.floor) || 0 }
+  }
+  // 第一版只有一种玩法，记录是 { score, combo }：分数算到快速模式头上
+  if (!saved?.modes && Number(saved?.score) > 0)
+    modes.quick = { score: Number(saved.score), floor: 0 }
+  return { combo: Number(saved?.combo) || 0, modes }
 }
 const best = ref<Best>(readBest())
+const MODE_KEY = 'dungeon_mode_v1'
+function readMode(): DungeonMode {
+  const saved = readValue<unknown>(nsKey(MODE_KEY), 'quick')
+  return MODES.some(m => m.id === saved)
+    ? saved as DungeonMode
+    : 'quick'
+}
+const mode = ref<DungeonMode>(readMode())
 function readCustomKeys(): string[] {
   const saved = readValue<unknown>(nsKey(LIST_KEY), [])
   return Array.isArray(saved)
@@ -194,9 +213,20 @@ function clearCustom() {
 }
 
 // ---------- 游戏中 ----------
-type Stage = 'setup' | 'playing' | 'relic' | 'won' | 'lost'
+type Stage = 'setup' | 'playing' | 'relic' | 'won' | 'left' | 'lost'
 const stage = ref<Stage>('setup')
 const monsters = ref<Monster[]>([])
+/** 现在在第几层、这一局一共几层（无尽为 Infinity） */
+const floor = ref(1)
+const totalFloors = ref(1)
+const floorLabel = computed(() => Number.isFinite(totalFloors.value)
+  ? `第 ${floor.value} / ${totalFloors.value} 层`
+  : `第 ${floor.value} 层`)
+/** 这一局打哪些词、哪些已经出过、哪些已经记过复习结果 */
+let runPool: DungeonWord[] = []
+let usedKeys = new Set<string>()
+let gradedKeys = new Set<string>()
+const healed = ref(false)
 const room = ref(0)
 const phase = ref(0)
 const hearts = ref(START_HEARTS)
@@ -274,7 +304,7 @@ function stopTimer() {
 }
 function startTimer() {
   stopTimer()
-  const total = TIMED_SECONDS + (has('hourglass')
+  const total = floorRules(floor.value).timedSeconds + (has('hourglass')
     ? 5
     : 0)
   deadline = Date.now() + total * 1000
@@ -302,12 +332,19 @@ async function enterQuestion() {
   if (question.value === 'timed')
     startTimer()
 }
-function begin(run: Monster[], rng: Rng, asDaily: boolean) {
-  if (!run.length)
+function begin(words: DungeonWord[], rng: Rng, asDaily: boolean, floors: number) {
+  const used = new Set<string>()
+  const first = buildFloor(words, allWords.value, context.value, rng, 1, used)
+  if (!first.length)
     return
+  runPool = words
+  usedKeys = used
+  gradedKeys = new Set()
   runRng = rng
   isDaily.value = asDaily
-  monsters.value = run
+  floor.value = 1
+  totalFloors.value = floors
+  monsters.value = first
   room.value = 0
   phase.value = 0
   hearts.value = START_HEARTS
@@ -329,13 +366,13 @@ function begin(run: Monster[], rng: Rng, asDaily: boolean) {
 function start() {
   now.value = Date.now()
   saveValue(nsKey(SELECTION_KEY), selection.value)
-  begin(buildRun(pool.value, allWords.value, context.value), Math.random, false)
+  saveValue(nsKey(MODE_KEY), mode.value)
+  begin(pool.value, Math.random, false, MODES.find(m => m.id === mode.value)!.floors)
 }
 /** 每日地牢：用日期当随机种子，同一天、同一批词每次都是同一局 */
 function startDaily() {
   now.value = Date.now()
-  const rng = seededRng(`daily:${studyDay()}`)
-  begin(buildRun(daily.value.pool, allWords.value, context.value, rng), rng, true)
+  begin(daily.value.pool, seededRng(`daily:${studyDay()}`), true, DAILY_FLOORS)
 }
 function restart() {
   if (isDaily.value)
@@ -353,10 +390,13 @@ function recordWord(m: Monster, wrongKind: QuestionKind | null) {
   else if (monsterHinted)
     grade = 3
   const detail = `${w.pos} ${w.meaning}`.trim()
+  // 词不够多时同一个词会在后面的层再出现：复习进度一局只更新一次，免得一天之内被连推好几档
+  const firstTime = !gradedKeys.has(w.key)
+  gradedKeys.add(w.key)
   // 只更新已经在自测里学过的词；没学过的词不建复习记录，在自测里仍算新词
   if (w.deck === 'vocabulary') {
     const previous = scheduleStore.get(w.id)
-    if (previous)
+    if (previous && firstTime)
       scheduleStore.set(w.id, gradeSchedule(previous, grade))
     recordAttempt('vocabulary', grade)
     if (!wrongKind)
@@ -382,7 +422,7 @@ function recordWord(m: Monster, wrongKind: QuestionKind | null) {
   }
   const deck = deckStores[w.deck]
   const previous = deck.getSchedule(w.id)
-  if (previous)
+  if (previous && firstTime)
     deck.setSchedule(w.id, gradeSchedule(previous, grade))
   recordAttempt(w.deck, grade)
   // 阅读、听力考点词：和各自自测里的错题用同一条记录
@@ -399,17 +439,20 @@ function recordWord(m: Monster, wrongKind: QuestionKind | null) {
   }
 }
 
-function finish(next: 'won' | 'lost') {
+function finish(next: 'won' | 'left' | 'lost') {
   stopTimer()
   managedAudio.dispose()
-  if (score.value > best.value.score || maxCombo.value > best.value.combo) {
-    newRecord.value = score.value > best.value.score
-    best.value = {
-      score: Math.max(best.value.score, score.value),
-      combo: Math.max(best.value.combo, maxCombo.value),
+  const updated: Best = { combo: Math.max(best.value.combo, maxCombo.value), modes: { ...best.value.modes } }
+  if (!isDaily.value) {
+    const previous = updated.modes[mode.value]
+    newRecord.value = score.value > (previous?.score ?? 0)
+    updated.modes[mode.value] = {
+      score: Math.max(previous?.score ?? 0, score.value),
+      floor: Math.max(previous?.floor ?? 0, floor.value),
     }
-    saveValue(nsKey(BEST_KEY), best.value)
   }
+  best.value = updated
+  saveValue(nsKey(BEST_KEY), updated)
   if (isDaily.value) {
     const previous = readDaily()
     dailyResult.value = {
@@ -424,7 +467,7 @@ function finish(next: 'won' | 'lost') {
   }
   stage.value = next
 }
-/** 进下一题 / 下一个房间 / 选遗物 / 结算 */
+/** 进下一题 / 下一个房间 / 打通一层去选遗物 / 结算 */
 function advance() {
   const m = monster.value
   if (stage.value !== 'playing' || !m || result.value === null)
@@ -438,23 +481,24 @@ function advance() {
     finish('lost')
     return
   }
-  if (room.value + 1 >= monsters.value.length) {
+  if (room.value + 1 < monsters.value.length) {
+    room.value++
+    phase.value = 0
+    monsterHinted = false
+    enterQuestion()
+    return
+  }
+  if (floor.value >= totalFloors.value) {
     finish('won')
     return
   }
-  room.value++
-  phase.value = 0
-  monsterHinted = false
+  // 打通一层：回一颗心，三选一拿一件遗物，再往下走
   result.value = null
-  // 每打完 RELIC_EVERY 个房间，三选一拿一件遗物
-  if (room.value % RELIC_EVERY === 0) {
-    offered.value = offerRelics(relics.value.map(r => r.id), runRng)
-    if (offered.value.length) {
-      stage.value = 'relic'
-      return
-    }
-  }
-  enterQuestion()
+  healed.value = hearts.value < maxHearts.value
+  if (healed.value)
+    hearts.value++
+  offered.value = offerRelics(relics.value.map(r => r.id), runRng, shieldReady.value)
+  stage.value = 'relic'
 }
 function chooseRelic(relic: Relic) {
   if (stage.value !== 'relic' || !offered.value.includes(relic))
@@ -467,8 +511,18 @@ function chooseRelic(relic: Relic) {
   }
   if (relic.id === 'shield')
     shieldReady.value = true
+  floor.value++
+  monsters.value = buildFloor(runPool, allWords.value, context.value, runRng, floor.value, usedKeys)
+  room.value = 0
+  phase.value = 0
+  monsterHinted = false
   stage.value = 'playing'
   enterQuestion()
+}
+/** 打通一层后不再往下：带着现在的成绩离开 */
+function leave() {
+  if (stage.value === 'relic' && !isDaily.value)
+    finish('left')
 }
 function answer(correct: boolean) {
   const m = monster.value
@@ -480,7 +534,7 @@ function answer(correct: boolean) {
     result.value = 'right'
     combo.value++
     maxCombo.value = Math.max(maxCombo.value, combo.value)
-    score.value += phaseScore(combo.value, m.kind, has('drum'))
+    score.value += phaseScore(combo.value, m.kind, has('drum'), floorRules(floor.value).scoreMultiplier)
     if (phase.value + 1 >= m.phases.length) {
       defeated.value++
       recordWord(m, null)
@@ -496,7 +550,8 @@ function answer(correct: boolean) {
     else {
       hearts.value--
     }
-    missed.value.push(m)
+    if (!missed.value.some(x => x.word.key === m.word.key))
+      missed.value.push(m)
     recordWord(m, kind)
   }
   nextTick(() => continueButton.value?.focus())
@@ -545,6 +600,7 @@ watch(currentUser, () => {
   stopTimer()
   selection.value = readSelection()
   best.value = readBest()
+  mode.value = readMode()
   customKeys.value = readCustomKeys()
   dailyResult.value = readDaily()
   stage.value = 'setup'
@@ -611,8 +667,8 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
         <h3 class="text-xl text-gray-900 font-bold dark:text-white">
           单词地牢
         </h3>
-        <span v-if="best.score > 0" class="text-sm text-gray-500 dark:text-gray-400">
-          最高分 {{ best.score }} · 最长连击 {{ best.combo }}
+        <span v-if="best.combo > 0" class="text-sm text-gray-500 dark:text-gray-400">
+          最长连击 {{ best.combo }}
         </span>
       </div>
 
@@ -639,7 +695,7 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
               <span v-else-if="dailyResult" class="ml-2 text-sm text-gray-500 dark:text-gray-300">今日最高 {{ dailyResult.score }} 分，还没通关</span>
             </div>
             <div class="text-sm text-gray-600 dark:text-gray-300">
-              今天的固定关卡，打{{ DAILY_SOURCE_LABEL[daily.from] }}（{{ daily.pool.length }} 个），通关算今天打卡
+              今天的固定关卡，共 {{ DAILY_FLOORS }} 层，打{{ DAILY_SOURCE_LABEL[daily.from] }}（{{ daily.pool.length }} 个），通关算今天打卡
             </div>
           </div>
           <button class="rounded-lg bg-orange-500 px-5 py-2 text-white font-bold" @click="startDaily">
@@ -648,8 +704,36 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
         </div>
 
         <p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
-          也可以自己选词：一局最多 {{ ROOMS_PER_RUN }} 个房间，{{ START_HEARTS }} 颗心，答错扣一颗，每 {{ RELIC_EVERY }} 个房间选一件遗物。答对算一次复习，答错记进错词本。
+          也可以自己选词、选模式：每层 {{ ROOMS_PER_FLOOR }} 个房间，最后一间是这层的 Boss。{{ START_HEARTS }} 颗心，答错扣一颗；每打通一层回一颗心、选一件遗物，越往下怪越强、分越高。答对算一次复习，答错记进错词本。
         </p>
+        <h4 class="mb-2 font-bold">
+          模式
+        </h4>
+        <div class="mb-4 grid gap-2 sm:grid-cols-3">
+          <button
+            v-for="m in MODES"
+            :key="m.id"
+            :data-mode="m.id"
+            :aria-pressed="mode === m.id"
+            class="border rounded-lg px-3 py-2 text-left"
+            :class="mode === m.id
+              ? 'border-blue-600 bg-blue-50 dark:bg-gray-700'
+              : 'border-gray-300 dark:border-gray-600'"
+            @click="mode = m.id"
+          >
+            <div class="font-bold">
+              {{ m.name }}
+            </div>
+            <div class="text-xs text-gray-600 dark:text-gray-300">
+              {{ m.desc }}
+            </div>
+            <div v-if="best.modes[m.id]" class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              最高 {{ best.modes[m.id]!.score }} 分<template v-if="best.modes[m.id]!.floor > 0">
+                · 到过第 {{ best.modes[m.id]!.floor }} 层
+              </template>
+            </div>
+          </button>
+        </div>
         <h4 class="mb-2 font-bold">
           打哪些词（可以多选）
         </h4>
@@ -779,8 +863,8 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
           </button>
           <span class="text-sm text-gray-600 dark:text-gray-300">
             <template v-if="pool.length === 0">还没有选中任何词</template>
-            <template v-else-if="pool.length < ROOMS_PER_RUN">选中 {{ pool.length }} 个词，这局 {{ pool.length }} 个房间</template>
-            <template v-else>选中 {{ pool.length }} 个词，每局随机抽 {{ ROOMS_PER_RUN }} 个，错得多的更容易遇到</template>
+            <template v-else-if="pool.length < ROOMS_PER_FLOOR">选中 {{ pool.length }} 个词，每层 {{ pool.length }} 个房间，这些词会反复出现</template>
+            <template v-else>选中 {{ pool.length }} 个词，每层抽 {{ ROOMS_PER_FLOOR }} 个，错得多的更容易遇到</template>
           </span>
         </div>
       </div>
@@ -788,10 +872,10 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
       <!-- 选遗物 -->
       <div v-else-if="stage === 'relic'" class="text-center text-gray-900 dark:text-white">
         <h4 class="mb-1 text-lg font-bold">
-          发现宝箱！选一件遗物
+          第 {{ floor }} 层通关！选一件遗物再往下走
         </h4>
         <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-          已通过 {{ room }} / {{ monsters.length }} 个房间
+          {{ floorLabel }} · 得分 {{ score }} · {{ healed ? '回复了一颗心' : '心是满的' }}（{{ hearts }} / {{ maxHearts }}）
         </p>
         <div class="grid gap-3 sm:grid-cols-3">
           <button
@@ -815,12 +899,15 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
             </div>
           </button>
         </div>
+        <button v-if="!isDaily" class="mt-4 text-sm text-gray-500 underline dark:text-gray-400" data-leave @click="leave">
+          不往下了，带着成绩离开
+        </button>
       </div>
 
       <!-- 战斗 -->
       <div v-else-if="stage === 'playing' && monster" class="text-gray-900 dark:text-white">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-          <span>{{ isDaily ? '每日地牢 · ' : '' }}房间 {{ room + 1 }} / {{ monsters.length }}</span>
+          <span>{{ isDaily ? '每日地牢 · ' : '' }}{{ floorLabel }} · 房间 {{ room + 1 }} / {{ monsters.length }}</span>
           <span :aria-label="`剩余 ${hearts} 颗心`">
             <span v-for="i in maxHearts" :key="i">{{ i <= hearts ? '❤️' : '🖤' }}</span>
           </span>
@@ -829,8 +916,8 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
         </div>
         <div v-if="relics.length" class="mb-2 text-sm" aria-label="已有遗物">
           <span
-            v-for="relic in relics"
-            :key="relic.id"
+            v-for="(relic, i) in relics"
+            :key="i"
             class="mr-1"
             :class="relic.id === 'shield' && !shieldReady ? 'opacity-30' : ''"
             :title="`${relic.name}：${relic.desc}`"
@@ -950,13 +1037,13 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
       <!-- 结算 -->
       <div v-else class="text-center text-gray-900 dark:text-white">
         <div class="text-5xl" aria-hidden="true">
-          {{ stage === 'won' ? '🏆' : '💀' }}
+          {{ { won: '🏆', left: '🚪', lost: '💀' }[stage as 'won' | 'left' | 'lost'] }}
         </div>
         <h4 class="mt-2 text-lg font-bold">
-          {{ stage === 'won' ? '通关！' : '倒在了地牢里' }}
+          {{ { won: '通关！', left: `打通第 ${floor} 层后离开了地牢`, lost: `倒在了第 ${floor} 层` }[stage as 'won' | 'left' | 'lost'] }}
         </h4>
         <p class="mt-2">
-          得分 {{ score }} · 击败 {{ defeated }} / {{ monsters.length }} · 最长连击 {{ maxCombo }}
+          得分 {{ score }} · {{ floorLabel }} · 击败 {{ defeated }} 只 · 最长连击 {{ maxCombo }}
         </p>
         <p v-if="newRecord" class="mt-1 text-orange-500 font-bold">
           新的最高分！

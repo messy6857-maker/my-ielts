@@ -60,14 +60,53 @@ export interface Monster {
   wrongCount: number
 }
 
+/** buildRun 不指定房间数时的默认值 */
 export const ROOMS_PER_RUN = 10
+/** 每层的房间数（最后一间是该层 Boss） */
+export const ROOMS_PER_FLOOR = 5
 export const START_HEARTS = 3
 /** 错到这个次数的词变成精英怪，两种题型都要答对 */
 export const ELITE_WRONG_COUNT = 3
-/** 限时拼写的秒数 */
+/** 第一层限时拼写的秒数（越往下越短，见 floorRules） */
 export const TIMED_SECONDS = 15
-/** 每打完这么多个房间选一次遗物 */
-export const RELIC_EVERY = 3
+/** 每日地牢的层数 */
+export const DAILY_FLOORS = 3
+
+export type DungeonMode = 'quick' | 'classic' | 'endless'
+export interface ModeInfo { id: DungeonMode, name: string, floors: number, desc: string }
+export const MODES: ModeInfo[] = [
+  { id: 'quick', name: '快速', floors: 3, desc: '3 层，几分钟一局' },
+  { id: 'classic', name: '标准', floors: 10, desc: '10 层，打穿算通关' },
+  { id: 'endless', name: '无尽', floors: Number.POSITIVE_INFINITY, desc: '没有尽头，看你能下到第几层' },
+]
+
+export interface FloorRules {
+  /** 这一层会出现的普通怪 */
+  kinds: MonsterKind[]
+  /** 普通怪随机变成精英怪（两种题型）的概率 */
+  eliteChance: number
+  /** 限时拼写的秒数 */
+  timedSeconds: number
+  /** 得分倍率 */
+  scoreMultiplier: number
+  /** Boss 的拼写题是否限时 */
+  bossTimed: boolean
+}
+/**
+ * 越往下越难：第 1 层只有史莱姆和蝙蝠；第 2 层起出现骷髅弓手和变形怪；
+ * 第 3 层起普通怪有概率变成精英怪（每层 +15%，最多 60%），Boss 的拼写题变成限时；
+ * 限时每层少 1 秒（最少 8 秒）；得分每层 +20%。
+ */
+export function floorRules(floor: number): FloorRules {
+  const f = Math.max(1, Math.floor(floor))
+  return {
+    kinds: f === 1 ? ['slime', 'bat'] : ['slime', 'bat', 'archer', 'mimic'],
+    eliteChance: f < 3 ? 0 : Math.min(0.6, (f - 2) * 0.15),
+    timedSeconds: Math.max(8, TIMED_SECONDS - (f - 1)),
+    scoreMultiplier: 1 + (f - 1) * 0.2,
+    bossTimed: f >= 3,
+  }
+}
 const DAY = 86400000
 /** 词汇类错题：这些模块的错题能对应到词汇表里的词 */
 const WORD_MISTAKE_MODULES = new Set([
@@ -134,9 +173,19 @@ export const RELICS: Relic[] = [
     desc: '限时拼写多 5 秒',
   },
 ]
-/** 三选一：从还没拿过的遗物里随机给最多三个 */
-export function offerRelics(owned: RelicId[], rng: Rng = Math.random): Relic[] {
-  return shuffle(RELICS.filter(r => !owned.includes(r.id)), rng).slice(0, 3)
+/**
+ * 三选一：从还没拿过的遗物里随机给最多三个。生命护符可以重复拿，
+ * 免死金牌用掉以后（armed 为 false）可以再拿，所以层数再多也总有得选。
+ */
+export function offerRelics(owned: RelicId[], rng: Rng = Math.random, armed = owned.includes('shield')): Relic[] {
+  const available = RELICS.filter((r) => {
+    if (r.id === 'heart')
+      return true
+    if (r.id === 'shield')
+      return !armed
+    return !owned.includes(r.id)
+  })
+  return shuffle(available, rng).slice(0, 3)
 }
 
 export type Rng = () => number
@@ -450,56 +499,64 @@ export function isSynonym(option: string, word: DungeonWord): boolean {
   return word.synonyms.some(sy => norm(sy) === norm(option))
 }
 
+export interface RunOptions {
+  /** 房间数（含 Boss），默认 ROOMS_PER_RUN */
+  rooms?: number
+  /** 第几层：决定出哪些怪、多难；不给就是所有怪都可能出、没有额外难度 */
+  floor?: number
+  /** 这一局已经出过的词（DungeonWord.key）：优先出没出过的，全出过一轮后重新开始；会被本函数更新 */
+  used?: Set<string>
+}
 /**
- * 生成一局：从选中的词里抽最多 ROOMS_PER_RUN 个（错得多的更容易抽中），
- * 其中错得最多的那个放最后当 Boss（都没错过就挑最长的词）。选中的词不够时房间数相应减少。
+ * 生成一组房间：从选中的词里抽（错得多的更容易抽中），其中错得最多的那个放最后当 Boss
+ * （都没错过就挑最长的词）。选中的词不够时房间数相应减少。
  */
-export function buildRun(pool: DungeonWord[], allWords: DungeonWord[], ctx: DungeonContext, rng: Rng = Math.random): Monster[] {
+export function buildRun(pool: DungeonWord[], allWords: DungeonWord[], ctx: DungeonContext, rng: Rng = Math.random, options: RunOptions = {}): Monster[] {
   if (!pool.length)
     return []
+  const rooms = Math.min(options.rooms ?? ROOMS_PER_RUN, pool.length)
+  const rules = options.floor === undefined ? null : floorRules(options.floor)
   const counts = wrongCounts(pool, ctx)
   const count = (w: DungeonWord) => counts.get(w) ?? 0
-  const chosen = weightedSample(pool, w => 1 + Math.min(count(w), 5), ROOMS_PER_RUN, rng)
+  const weight = (w: DungeonWord) => 1 + Math.min(count(w), 5)
+  const used = options.used
+  let fresh = used ? pool.filter(w => !used.has(w.key)) : pool
+  if (used && fresh.length === 0) {
+    used.clear()
+    fresh = pool
+  }
+  const chosen = weightedSample(fresh, weight, rooms, rng)
+  // 没出过的词不够一层：用出过的词补齐，然后从头算新一轮
+  if (chosen.length < rooms) {
+    chosen.push(...weightedSample(pool.filter(w => !chosen.includes(w)), weight, rooms - chosen.length, rng))
+    used?.clear()
+  }
+  chosen.forEach(w => used?.add(w.key))
   const boss = chosen.reduce((best, w) => {
-    if (count(w) !== count(best)) {
-      return count(w) > count(best)
-        ? w
-        : best
-    }
-    return w.word.length > best.word.length
-      ? w
-      : best
+    if (count(w) !== count(best))
+      return count(w) > count(best) ? w : best
+    return w.word.length > best.word.length ? w : best
   })
   const rest = shuffle(chosen.filter(w => w !== boss), rng)
   const make = (word: DungeonWord, isBoss: boolean): Monster => {
     const synonymOptions = pickSynonymOptions(word, allWords, rng)
-    const elite = !isBoss && count(word) >= ELITE_WRONG_COUNT
-    const single: Array<[MonsterKind, QuestionKind]> = [
-      ['slime', 'choice'],
-      ['bat', 'spell'],
-      ['archer', 'timed'],
-    ]
+    let single: Array<[MonsterKind, QuestionKind]> = [['slime', 'choice'], ['bat', 'spell'], ['archer', 'timed']]
     if (synonymOptions.length)
       single.push(['mimic', 'synonym'])
+    if (rules)
+      single = single.filter(([kind]) => rules.kinds.includes(kind))
     const [kind, question] = single[Math.floor(rng() * single.length)]
+    const elite = !isBoss && (count(word) >= ELITE_WRONG_COUNT || (!!rules && rules.eliteChance > 0 && rng() < rules.eliteChance))
     let phases: QuestionKind[] = [question]
     if (isBoss) {
-      phases = synonymOptions.length
-        ? ['choice', 'synonym', 'spell']
-        : ['choice', 'spell']
+      const last: QuestionKind = rules?.bossTimed ? 'timed' : 'spell'
+      phases = synonymOptions.length ? ['choice', 'synonym', last] : ['choice', last]
     }
     else if (elite) {
-      phases = [
-        synonymOptions.length && rng() < 0.5
-          ? 'synonym'
-          : 'choice',
-        'spell',
-      ]
+      phases = [synonymOptions.length && rng() < 0.5 ? 'synonym' : 'choice', 'spell']
     }
     return {
-      kind: isBoss
-        ? 'boss'
-        : (elite ? 'elite' : kind),
+      kind: isBoss ? 'boss' : (elite ? 'elite' : kind),
       word,
       phases,
       options: pickOptions(word, allWords, rng),
@@ -507,10 +564,11 @@ export function buildRun(pool: DungeonWord[], allWords: DungeonWord[], ctx: Dung
       wrongCount: count(word),
     }
   }
-  return [
-    ...rest.map(w => make(w, false)),
-    make(boss, true),
-  ]
+  return [...rest.map(w => make(w, false)), make(boss, true)]
+}
+/** 生成第 floor 层的房间 */
+export function buildFloor(pool: DungeonWord[], allWords: DungeonWord[], ctx: DungeonContext, rng: Rng, floor: number, used: Set<string>): Monster[] {
+  return buildRun(pool, allWords, ctx, rng, { rooms: ROOMS_PER_FLOOR, floor, used })
 }
 
 /** 拼写是否正确：不分大小写，忽略首尾和多余空格，接受任一拼写变体 */
@@ -519,12 +577,13 @@ export function checkSpelling(input: string, word: DungeonWord): boolean {
   return !!answer && word.variants.some(v => norm(v) === answer)
 }
 
-/** 答对一题的得分：基础 100，连击每层 +10（最多 +100，有连击战鼓翻倍），Boss 翻倍。combo 是答对这题之后的连击数 */
-export function phaseScore(combo: number, kind: MonsterKind, doubleCombo = false): number {
+/**
+ * 答对一题的得分：基础 100，连击每层 +10（最多 +100，有连击战鼓翻倍），Boss 翻倍，
+ * 再乘所在层的倍率。combo 是答对这题之后的连击数
+ */
+export function phaseScore(combo: number, kind: MonsterKind, doubleCombo = false, multiplier = 1): number {
   const bonus = Math.min(Math.max(combo - 1, 0), 10) * 10 * (doubleCombo ? 2 : 1)
-  return (100 + bonus) * (kind === 'boss'
-    ? 2
-    : 1)
+  return Math.round((100 + bonus) * (kind === 'boss' ? 2 : 1) * multiplier)
 }
 
 /** 可复现的随机数：同一个种子每次给出同一串数（每日地牢用日期当种子） */
