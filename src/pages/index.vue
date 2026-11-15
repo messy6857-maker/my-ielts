@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
+import { useDeckStore } from '../composables/useDeckStore'
 import { useWordSchedule } from '../composables/useSpacedRepetition'
 import {
   formatDate,
@@ -23,6 +24,9 @@ const { modules, hasAnyProgress } = useProgress()
 const { mistakes, totalCount: mistakeCount } = useMistakes()
 const { currentUser } = useAuth()
 const { schedules } = useWordSchedule()
+// 到期复习按全部词库算（词汇表、阅读考点词、听力 179、语料库，各自的键互不重叠）
+const deckSchedules = ['reading538', 'listening179', 'corpus'].map(ns => useDeckStore(ns).schedules)
+const allSchedules = computed(() => Object.assign({}, schedules.value, ...deckSchedules.map(d => d.value)))
 const timer = useStudyTimer()
 
 const tasksTick = ref(0)
@@ -34,7 +38,7 @@ function refreshTasks() {
 const today = computed(() => {
   const revision = tasksTick.value
   return buildTodayTasks({
-    schedules: schedules.value,
+    schedules: allSchedules.value,
     mistakes: mistakes.value,
     owner: currentUser.value,
     studySeconds: timer.dailySeconds.value,
@@ -120,10 +124,10 @@ const menus = reactive([
     desc: '剑桥 18–21 阅读真题模考，限时作答与交卷评分',
   },
   {
-    label: '单词练习',
-    icon: 'i-carbon-keyboard',
-    link: '/vocabulary/typing',
-    desc: '背景单词跟打练习，提升打字速度与单词读写熟悉度',
+    label: '背单词',
+    icon: 'i-carbon-book',
+    link: '/study',
+    desc: '词汇表、阅读和听力考点词的自测卡片、拼写练习和单词地牢',
   },
   {
     label: '学习统计',
@@ -179,7 +183,7 @@ const menus = reactive([
             class="grid mb-4 gap-3 lg:grid-cols-4 sm:grid-cols-2"
           >
             <RouterLink
-              to="/vocabulary/flashcard?review=due"
+              to="/study"
               class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40"
             >
               <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -189,7 +193,7 @@ const menus = reactive([
                 {{ today.dueWordCount }}
               </p>
               <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                进入自测 →
+                去复习 →
               </p>
             </RouterLink>
             <div class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40">

@@ -28,17 +28,12 @@ function audioFor(word: string) {
 </script>
 
 <template>
-  <div class="bg-gray-50 px-4 pt-6 dark:bg-gray-900 lg:px-8 sm:px-6">
-    <div class="mx-auto max-w-2xl">
-      <ReadingTabs />
-    </div>
-  </div>
   <KeywordFlashcard
     ns="reading538"
     title="阅读 376 自测"
     subtitle="看到单词先凭感觉自评，重点记同义替换"
-    back-to="/reading"
-    back-label="返回考点词"
+    back-to="/study"
+    back-label="返回背单词"
     :cards="cards"
     :audio-for="audioFor"
     mistake-module="reading"

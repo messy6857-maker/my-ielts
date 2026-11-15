@@ -6,7 +6,6 @@ import { useRoute, useRouter } from 'vue-router'
 // 阅读四个入口本就是独立路由，这里用路由切换达到同样的切换体验）。
 const TABS = [
   { key: 'keywords', label: '阅读考点词', to: '/reading' },
-  { key: 'flashcard', label: '自测卡片', to: '/reading/flashcard' },
   { key: 'daily', label: '每日阅读', to: '/reading/daily' },
   { key: 'mock', label: '限时模考', to: '/mock/reading-test' },
 ]
@@ -15,8 +14,6 @@ const route = useRoute()
 const router = useRouter()
 
 const activeKey = computed(() => {
-  if (route.path === '/reading/flashcard')
-    return 'flashcard'
   if (route.path === '/reading/daily')
     return 'daily'
   if (route.path.startsWith('/mock/reading-test'))

@@ -1,5 +1,4 @@
 <script setup>
-import { RouterLink } from 'vue-router'
 import { resolveAudioUrl } from '../../composables/useAudio'
 
 import { useAudioGroup } from '../../composables/useAudioGroup'
@@ -62,14 +61,6 @@ const filteredRows = computed(() => {
         听力真题语料库
       </h3>
       <span class="text-base text-gray-500 font-normal dark:text-gray-400">包括各种词性、特殊训练</span>
-      <div class="mt-3">
-        <RouterLink
-          to="/listening/corpus-flashcard"
-          class="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white font-medium hover:bg-blue-700"
-        >
-          🃏 进入自测卡片
-        </RouterLink>
-      </div>
     </div>
     <div class="items-center sm:flex">
       <div class="flex items-center">

@@ -9,6 +9,15 @@ export const DECK_LABEL: Record<DungeonDeck, string> = {
   reading538: '阅读考点词',
   listening179: '听力 179',
 }
+/**
+ * 各词库要不要会拼写：词汇表要会读会拼；听力词考试要填空，也要会拼；
+ * 阅读考点词只要看到能认出意思、想到同义替换，不出拼写题。
+ */
+export const DECK_NEEDS_SPELLING: Record<DungeonDeck, boolean> = {
+  vocabulary: true,
+  reading538: false,
+  listening179: true,
+}
 export interface DungeonWord {
   id: number | string
   /** 全局唯一，也是复习记录的键：vocab:<id> / reading538:<id> / listening179:<id> */
@@ -577,22 +586,28 @@ export function buildRun(pool: DungeonWord[], allWords: DungeonWord[], ctx: Dung
       single.push(['mimic', 'synonym'])
     if (rules)
       single = single.filter(([kind]) => rules.kinds.includes(kind))
+    // 不要求拼写的词：不出蝙蝠、骷髅弓手；精英怪和 Boss 也换成认词 + 同义替换
+    const spelling = DECK_NEEDS_SPELLING[word.deck]
+    if (!spelling)
+      single = single.filter(([, q]) => q === 'choice' || q === 'synonym')
     const [kind, question] = single[Math.floor(rng() * single.length)]
     const elite = !isBoss && (count(word) >= ELITE_WRONG_COUNT || (!!rules && rules.eliteChance > 0 && rng() < rules.eliteChance))
     let phases: QuestionKind[] = [question]
+    const recognize: QuestionKind[] = synonymOptions.length
+      ? ['choice', 'synonym']
+      : ['choice']
     if (isBoss) {
-      const last: QuestionKind = rules?.bossTimed ? 'timed' : 'spell'
-      phases = synonymOptions.length
-        ? ['choice', 'synonym', last]
-        : ['choice', last]
+      const last: QuestionKind = rules?.bossTimed
+        ? 'timed'
+        : 'spell'
+      phases = spelling
+        ? [...recognize, last]
+        : recognize
     }
     else if (elite) {
-      phases = [
-        synonymOptions.length && rng() < 0.5
-          ? 'synonym'
-          : 'choice',
-        'spell',
-      ]
+      phases = spelling
+        ? [synonymOptions.length && rng() < 0.5 ? 'synonym' : 'choice', 'spell']
+        : recognize
     }
     return {
       kind: isBoss
