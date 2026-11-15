@@ -445,8 +445,19 @@ describe('custom list, relics and the daily dungeon', () => {
   })
 
   it('floors get harder step by step', () => {
-    expect(floorRules(1)).toEqual({ kinds: ['slime', 'bat'], eliteChance: 0, timedSeconds: 15, scoreMultiplier: 1, bossTimed: false })
-    expect(floorRules(2)).toMatchObject({ kinds: ['slime', 'bat', 'archer', 'mimic'], eliteChance: 0, timedSeconds: 14, bossTimed: false })
+    expect(floorRules(1)).toEqual({
+      kinds: ['slime', 'bat'],
+      eliteChance: 0,
+      timedSeconds: 15,
+      scoreMultiplier: 1,
+      bossTimed: false,
+    })
+    expect(floorRules(2)).toMatchObject({
+      kinds: ['slime', 'bat', 'archer', 'mimic'],
+      eliteChance: 0,
+      timedSeconds: 14,
+      bossTimed: false,
+    })
     expect(floorRules(3)).toMatchObject({ eliteChance: 0.15, timedSeconds: 13, bossTimed: true })
     expect(floorRules(3).scoreMultiplier).toBeCloseTo(1.4)
     expect(floorRules(10)).toMatchObject({ eliteChance: 0.6, timedSeconds: 8 })
@@ -470,7 +481,10 @@ describe('custom list, relics and the daily dungeon', () => {
     expect(f1.at(-1)!.phases).toEqual(['choice', 'spell'])
     expect(f3.at(-1)!.phases).toEqual(['choice', 'timed'])
     // 前两层 10 个词互不重复；第三层先出剩下的 2 个，再用出过的补齐
-    const firstTen = [...f1, ...f2].map(m => m.word.key)
+    const firstTen = [
+      ...f1,
+      ...f2,
+    ].map(m => m.word.key)
     expect(new Set(firstTen).size).toBe(10)
     const leftover = many.map(w => w.key).filter(k => !firstTen.includes(k))
     expect(f3.map(m => m.word.key)).toEqual(expect.arrayContaining(leftover))
@@ -664,7 +678,12 @@ describe('the game page', () => {
     expect(s.relics).toHaveLength(2)
     expect(w.text()).toContain('通关')
     expect(w.text()).toContain('新的最高分')
-    expect(JSON.parse(localStorage.getItem(nsKey('dungeon_best_v1'))!)).toEqual({ combo: questions, modes: { quick: { score: s.score, floor: 3 } } })
+    expect(JSON.parse(localStorage.getItem(nsKey('dungeon_best_v1'))!)).toEqual({
+      combo: questions,
+      modes: {
+        quick: { score: s.score, floor: 3 },
+      },
+    })
     expect(useMistakes().mistakes.value).toHaveLength(0)
     await w.findAll('button').find((b: any) => b.text() === '重新选词')!.trigger('click')
     expect(w.find('button[data-mode="quick"]').text()).toContain(`最高 ${s.score} 分`)
@@ -735,7 +754,13 @@ describe('the game page', () => {
 
   it('few words: they come back on later floors, but the review schedule moves only once per run', async () => {
     const schedules = useWordSchedule()
-    schedules.set(1, { ease: 2.5, interval: 2, dueAt: Date.now() - 1000, reps: 2, lapses: 0 })
+    schedules.set(1, {
+      ease: 2.5,
+      interval: 2,
+      dueAt: Date.now() - 1000,
+      reps: 2,
+      lapses: 0,
+    })
     useMistakes().addMistake('flashcard', { key: 'flashcard:1', title: 'atmosphere' })
     const w = await open()
     await w.find('input[data-source="today"]').setValue(false)

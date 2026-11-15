@@ -7,8 +7,8 @@ import { gradeSchedule, useCheckin, useWordSchedule } from '../composables/useSp
 import { recordAttempt } from '../composables/useStats'
 import { nsKey, studyDay, useMistakes } from '../composables/useStudyData'
 import {
-  buildPool,
   buildFloor,
+  buildPool,
   checkSpelling,
   DAILY_FLOORS,
   DAILY_SOURCE_LABEL,
@@ -105,8 +105,12 @@ function readBest(): Best {
       modes[m.id] = { score: Number(b.score) || 0, floor: Number(b.floor) || 0 }
   }
   // 第一版只有一种玩法，记录是 { score, combo }：分数算到快速模式头上
-  if (!saved?.modes && Number(saved?.score) > 0)
-    modes.quick = { score: Number(saved.score), floor: 0 }
+  if (!saved?.modes && Number(saved?.score) > 0) {
+    modes.quick = {
+      score: Number(saved.score),
+      floor: 0,
+    }
+  }
   return { combo: Number(saved?.combo) || 0, modes }
 }
 const best = ref<Best>(readBest())
@@ -442,7 +446,10 @@ function recordWord(m: Monster, wrongKind: QuestionKind | null) {
 function finish(next: 'won' | 'left' | 'lost') {
   stopTimer()
   managedAudio.dispose()
-  const updated: Best = { combo: Math.max(best.value.combo, maxCombo.value), modes: { ...best.value.modes } }
+  const updated: Best = {
+    combo: Math.max(best.value.combo, maxCombo.value),
+    modes: { ...best.value.modes },
+  }
   if (!isDaily.value) {
     const previous = updated.modes[mode.value]
     newRecord.value = score.value > (previous?.score ?? 0)
@@ -709,7 +716,7 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
         <h4 class="mb-2 font-bold">
           模式
         </h4>
-        <div class="mb-4 grid gap-2 sm:grid-cols-3">
+        <div class="grid mb-4 gap-2 sm:grid-cols-3">
           <button
             v-for="m in MODES"
             :key="m.id"

@@ -75,9 +75,24 @@ export const DAILY_FLOORS = 3
 export type DungeonMode = 'quick' | 'classic' | 'endless'
 export interface ModeInfo { id: DungeonMode, name: string, floors: number, desc: string }
 export const MODES: ModeInfo[] = [
-  { id: 'quick', name: '快速', floors: 3, desc: '3 层，几分钟一局' },
-  { id: 'classic', name: '标准', floors: 10, desc: '10 层，打穿算通关' },
-  { id: 'endless', name: '无尽', floors: Number.POSITIVE_INFINITY, desc: '没有尽头，看你能下到第几层' },
+  {
+    id: 'quick',
+    name: '快速',
+    floors: 3,
+    desc: '3 层，几分钟一局',
+  },
+  {
+    id: 'classic',
+    name: '标准',
+    floors: 10,
+    desc: '10 层，打穿算通关',
+  },
+  {
+    id: 'endless',
+    name: '无尽',
+    floors: Number.POSITIVE_INFINITY,
+    desc: '没有尽头，看你能下到第几层',
+  },
 ]
 
 export interface FloorRules {
@@ -100,8 +115,12 @@ export interface FloorRules {
 export function floorRules(floor: number): FloorRules {
   const f = Math.max(1, Math.floor(floor))
   return {
-    kinds: f === 1 ? ['slime', 'bat'] : ['slime', 'bat', 'archer', 'mimic'],
-    eliteChance: f < 3 ? 0 : Math.min(0.6, (f - 2) * 0.15),
+    kinds: f === 1
+      ? ['slime', 'bat']
+      : ['slime', 'bat', 'archer', 'mimic'],
+    eliteChance: f < 3
+      ? 0
+      : Math.min(0.6, (f - 2) * 0.15),
     timedSeconds: Math.max(8, TIMED_SECONDS - (f - 1)),
     scoreMultiplier: 1 + (f - 1) * 0.2,
     bossTimed: f >= 3,
@@ -515,12 +534,16 @@ export function buildRun(pool: DungeonWord[], allWords: DungeonWord[], ctx: Dung
   if (!pool.length)
     return []
   const rooms = Math.min(options.rooms ?? ROOMS_PER_RUN, pool.length)
-  const rules = options.floor === undefined ? null : floorRules(options.floor)
+  const rules = options.floor === undefined
+    ? null
+    : floorRules(options.floor)
   const counts = wrongCounts(pool, ctx)
   const count = (w: DungeonWord) => counts.get(w) ?? 0
   const weight = (w: DungeonWord) => 1 + Math.min(count(w), 5)
   const used = options.used
-  let fresh = used ? pool.filter(w => !used.has(w.key)) : pool
+  let fresh = used
+    ? pool.filter(w => !used.has(w.key))
+    : pool
   if (used && fresh.length === 0) {
     used.clear()
     fresh = pool
@@ -533,14 +556,23 @@ export function buildRun(pool: DungeonWord[], allWords: DungeonWord[], ctx: Dung
   }
   chosen.forEach(w => used?.add(w.key))
   const boss = chosen.reduce((best, w) => {
-    if (count(w) !== count(best))
-      return count(w) > count(best) ? w : best
-    return w.word.length > best.word.length ? w : best
+    if (count(w) !== count(best)) {
+      return count(w) > count(best)
+        ? w
+        : best
+    }
+    return w.word.length > best.word.length
+      ? w
+      : best
   })
   const rest = shuffle(chosen.filter(w => w !== boss), rng)
   const make = (word: DungeonWord, isBoss: boolean): Monster => {
     const synonymOptions = pickSynonymOptions(word, allWords, rng)
-    let single: Array<[MonsterKind, QuestionKind]> = [['slime', 'choice'], ['bat', 'spell'], ['archer', 'timed']]
+    let single: Array<[MonsterKind, QuestionKind]> = [
+      ['slime', 'choice'],
+      ['bat', 'spell'],
+      ['archer', 'timed'],
+    ]
     if (synonymOptions.length)
       single.push(['mimic', 'synonym'])
     if (rules)
@@ -550,13 +582,22 @@ export function buildRun(pool: DungeonWord[], allWords: DungeonWord[], ctx: Dung
     let phases: QuestionKind[] = [question]
     if (isBoss) {
       const last: QuestionKind = rules?.bossTimed ? 'timed' : 'spell'
-      phases = synonymOptions.length ? ['choice', 'synonym', last] : ['choice', last]
+      phases = synonymOptions.length
+        ? ['choice', 'synonym', last]
+        : ['choice', last]
     }
     else if (elite) {
-      phases = [synonymOptions.length && rng() < 0.5 ? 'synonym' : 'choice', 'spell']
+      phases = [
+        synonymOptions.length && rng() < 0.5
+          ? 'synonym'
+          : 'choice',
+        'spell',
+      ]
     }
     return {
-      kind: isBoss ? 'boss' : (elite ? 'elite' : kind),
+      kind: isBoss
+        ? 'boss'
+        : (elite ? 'elite' : kind),
       word,
       phases,
       options: pickOptions(word, allWords, rng),
@@ -564,7 +605,10 @@ export function buildRun(pool: DungeonWord[], allWords: DungeonWord[], ctx: Dung
       wrongCount: count(word),
     }
   }
-  return [...rest.map(w => make(w, false)), make(boss, true)]
+  return [
+    ...rest.map(w => make(w, false)),
+    make(boss, true),
+  ]
 }
 /** 生成第 floor 层的房间 */
 export function buildFloor(pool: DungeonWord[], allWords: DungeonWord[], ctx: DungeonContext, rng: Rng, floor: number, used: Set<string>): Monster[] {
@@ -583,7 +627,9 @@ export function checkSpelling(input: string, word: DungeonWord): boolean {
  */
 export function phaseScore(combo: number, kind: MonsterKind, doubleCombo = false, multiplier = 1): number {
   const bonus = Math.min(Math.max(combo - 1, 0), 10) * 10 * (doubleCombo ? 2 : 1)
-  return Math.round((100 + bonus) * (kind === 'boss' ? 2 : 1) * multiplier)
+  return Math.round((100 + bonus) * (kind === 'boss'
+    ? 2
+    : 1) * multiplier)
 }
 
 /** 可复现的随机数：同一个种子每次给出同一串数（每日地牢用日期当种子） */
