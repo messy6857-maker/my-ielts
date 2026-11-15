@@ -81,10 +81,10 @@ it('c5: evidence comments are narrowed to the questions the evidence set covers'
 })
 
 it('c7: reading flashcards carry the remark the vocabulary page shows', () => {
-  const flashcard = readFileSync('src/pages/reading/flashcard.vue', 'utf8')
-  expect(flashcard).toContain('remark: w[5]')
-  const component = readFileSync('src/components/KeywordFlashcard.vue', 'utf8')
-  expect(component).toContain('remark?: string')
+  // 阅读考点词的卡片在统一卡片自测里：取备注，并在看词条时显示
+  const deck = readFileSync('src/utils/studyDeck.ts', 'utf8')
+  expect(deck).toContain('remark: w[5]')
+  const component = readFileSync('src/components/StudyCardSession.vue', 'utf8')
   expect(component).toContain('studying.remark')
 })
 
@@ -100,7 +100,7 @@ it('c8: reading vocabulary fixes and phrase labels', () => {
   expect(readFileSync('src/pages/reading/538keyword.md', 'utf8')).not.toContain('## 第 2 类观点词')
   const index = readFileSync('src/pages/reading/index.vue', 'utf8')
   expect(index).toContain('!w[2].join(\' \').trim()')
-  expect(readFileSync('src/pages/reading/flashcard.vue', 'utf8')).toContain('|| \'短语\'')
+  expect(readFileSync('src/utils/studyDeck.ts', 'utf8')).toContain('|| \'短语\'')
 })
 
 it('c9: star markers never reach pronunciation audio or dictionary URLs', () => {
@@ -111,7 +111,7 @@ it('c9: star markers never reach pronunciation audio or dictionary URLs', () => 
     'rather than*',
     'thanks to*',
   ])
-  const flashcard = readFileSync('src/pages/reading/flashcard.vue', 'utf8')
+  const flashcard = readFileSync('src/utils/studyDeck.ts', 'utf8')
   expect(flashcard).toContain('word.replace(/\\*/g, \'\')')
   const index = readFileSync('src/pages/reading/index.vue', 'utf8')
   expect(index).toContain('w[1].replace(/\\*/g, \'\')')

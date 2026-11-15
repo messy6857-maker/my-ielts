@@ -20,12 +20,11 @@ const activeKey = computed(() => {
   const p = route.path
   if (
     p === '/listening/keyword'
-    || p === '/listening/flashcard'
     || p === '/listening/179practice'
   ) {
     return 'keyword'
   }
-  if (p === '/listening/corpus' || p === '/listening/corpus-flashcard')
+  if (p === '/listening/corpus')
     return 'corpus'
   if (p === '/listening/intensive')
     return 'intensive'
