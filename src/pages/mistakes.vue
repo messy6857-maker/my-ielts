@@ -94,7 +94,12 @@ const filteredGrouped = computed(() => {
 // 筛选条件或账号变化时回到第一批。
 const PAGE_SIZE = 50
 const groupLimits = ref<Partial<Record<MistakeModule, number>>>({})
-watch([filterModule, filterTestId, filterPart, currentUser], () => {
+watch([
+  filterModule,
+  filterTestId,
+  filterPart,
+  currentUser,
+], () => {
   groupLimits.value = {}
 })
 const pagedGrouped = computed(() => filteredGrouped.value.map((group) => {

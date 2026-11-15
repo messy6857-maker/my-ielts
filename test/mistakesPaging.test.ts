@@ -67,7 +67,11 @@ function group(w: any, total: number) {
   expect(i).toBeGreaterThanOrEqual(0)
   const tables = w.findAll('table')
   const bar = w.findAll('span').filter((sp: any) => sp.text().startsWith('本组还有'))
-  return { index: i, rows: tables[i].findAll('tbody tr').length, bars: bar.map((b: any) => b.text()) }
+  return {
+    index: i,
+    rows: tables[i].findAll('tbody tr').length,
+    bars: bar.map((b: any) => b.text()),
+  }
 }
 
 describe('mistakes page shows each group in batches', () => {
