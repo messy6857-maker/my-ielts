@@ -27,12 +27,39 @@ import {
 const DAY = 86400000
 const NOW = new Date(2026, 10, 15, 15, 0, 0).getTime()
 function word(id: number, w: string, meaning: string, chapter = 'c1', pos = 'n.'): DungeonWord {
-  return { id, key: `vocab:${id}`, deck: 'vocabulary', word: w, variants: [w], pos, meaning, chapter, synonyms: [] }
+  return {
+    id,
+    key: `vocab:${id}`,
+    deck: 'vocabulary',
+    word: w,
+    variants: [w],
+    pos,
+    meaning,
+    chapter,
+    synonyms: [],
+  }
 }
 function reading(id: number, w: string, meaning: string, synonyms: string[]): DungeonWord {
-  return { id: `类-${id}`, key: `reading538:类-${id}`, deck: 'reading538', word: w, variants: [w], pos: 'v.', meaning, chapter: '', synonyms }
+  return {
+    id: `类-${id}`,
+    key: `reading538:类-${id}`,
+    deck: 'reading538',
+    word: w,
+    variants: [w],
+    pos: 'v.',
+    meaning,
+    chapter: '',
+    synonyms,
+  }
 }
-const NONE: DungeonSelection = { today: false, mistakes: false, due: false, custom: false, chapters: [], decks: [] }
+const NONE: DungeonSelection = {
+  today: false,
+  mistakes: false,
+  due: false,
+  custom: false,
+  chapters: [],
+  decks: [],
+}
 const WORDS = [
   word(1, 'atmosphere', '大气层'),
   word(2, 'hydrosphere', '水圈'),
@@ -278,18 +305,90 @@ describe('reading and listening words, synonyms', () => {
   ]
 
   it('flattens the reading and listening lists with the same ids the self-tests use', () => {
-    const r = flattenReading([{ title: '第 1 类考点词', words: [[1, 'that*', ['conj.'], ['那个', '引导从句'], ['which', 'that', ' '], ''], [2, '', [], ['x'], [], '']] }])
-    expect(r).toEqual([{ id: '第 1 类考点词-1', key: 'reading538:第 1 类考点词-1', deck: 'reading538', word: 'that', variants: ['that'], pos: 'conj.', meaning: '那个；引导从句', chapter: '', synonyms: ['which'] }])
-    const l = flattenListening([{ index: 7, word: 'reserve', type: 'v.', meaning: '预订', replace: ['book'] }, { index: 8, word: 'x', meaning: '' }])
-    expect(l).toEqual([{ id: 7, key: 'listening179:7', deck: 'listening179', word: 'reserve', variants: ['reserve'], pos: 'v.', meaning: '预订', chapter: '', synonyms: ['book'] }])
+    const r = flattenReading([
+      {
+        title: '第 1 类考点词',
+        words: [
+          [
+            1,
+            'that*',
+            ['conj.'],
+            ['那个', '引导从句'],
+            ['which', 'that', ' '],
+            '',
+          ],
+          [
+            2,
+            '',
+            [],
+            ['x'],
+            [],
+            '',
+          ],
+        ],
+      },
+    ])
+    expect(r).toEqual([
+      {
+        id: '第 1 类考点词-1',
+        key: 'reading538:第 1 类考点词-1',
+        deck: 'reading538',
+        word: 'that',
+        variants: ['that'],
+        pos: 'conj.',
+        meaning: '那个；引导从句',
+        chapter: '',
+        synonyms: ['which'],
+      },
+    ])
+    const l = flattenListening([
+      {
+        index: 7,
+        word: 'reserve',
+        type: 'v.',
+        meaning: '预订',
+        replace: ['book'],
+      },
+      { index: 8, word: 'x', meaning: '' },
+    ])
+    expect(l).toEqual([
+      {
+        id: 7,
+        key: 'listening179:7',
+        deck: 'listening179',
+        word: 'reserve',
+        variants: ['reserve'],
+        pos: 'v.',
+        meaning: '预订',
+        chapter: '',
+        synonyms: ['book'],
+      },
+    ])
   })
 
   it('whole decks can be selected; their mistakes and schedules are matched by key', () => {
-    const all = [...WORDS, ...R]
-    expect(buildPool(all, { ...NONE, decks: ['reading538'] }, ctx()).map(w => w.word)).toEqual(R.map(w => w.word))
+    const all = [
+      ...WORDS,
+      ...R,
+    ]
+    expect(buildPool(all, {
+      ...NONE,
+      decks: ['reading538'],
+    }, ctx()).map(w => w.word)).toEqual(R.map(w => w.word))
     const c = ctx({
-      mistakes: [mistake('reading538:类-2', 'adjust', 4, NOW - 1000, 'reading'), mistake('typing:gather', 'gather', 1, NOW)],
-      schedules: { 'reading538:类-4': { ease: 2.5, interval: 2, dueAt: NOW - 1000, reps: 1, lapses: 0 } },
+      mistakes: [
+        mistake('reading538:类-2', 'adjust', 4, NOW - 1000, 'reading'),
+        mistake('typing:gather', 'gather', 1, NOW),
+      ],
+      schedules: {
+        'reading538:类-4': {
+          ease: 2.5,
+          interval: 2,
+          dueAt: NOW - 1000,
+          reps: 1,
+          lapses: 0,
+        },
+      },
     })
     const s = sourceWords(all, c)
     // 打字错题只对应词汇表里的词，不会算到阅读考点词头上
@@ -309,7 +408,10 @@ describe('reading and listening words, synonyms', () => {
     }
     expect(pickSynonymOptions(R[5], R, seeded())).toEqual([])
     expect(pickSynonymOptions(R[0], R.slice(0, 3), seeded())).toEqual([])
-    expect(pickSynonymOptions(WORDS[0], [...WORDS, ...R], seeded())).toEqual([])
+    expect(pickSynonymOptions(WORDS[0], [
+      ...WORDS,
+      ...R,
+    ], seeded())).toEqual([])
   })
 
   it('words with synonyms can become mimics; the boss then needs all three question types', () => {
@@ -330,7 +432,9 @@ describe('reading and listening words, synonyms', () => {
 
 describe('custom list, relics and the daily dungeon', () => {
   it('the custom list is a source of its own', () => {
-    const c = ctx({ customKeys: ['vocab:2', 'vocab:6', 'vocab:999'] })
+    const c = ctx({
+      customKeys: ['vocab:2', 'vocab:6', 'vocab:999'],
+    })
     expect(sourceWords(WORDS, c).custom.map(w => w.id)).toEqual([2, 6])
     expect(buildPool(WORDS, { ...NONE, custom: true }, c).map(w => w.id)).toEqual([2, 6])
     expect(buildPool(WORDS, NONE, c)).toEqual([])
@@ -360,13 +464,51 @@ describe('custom list, relics and the daily dungeon', () => {
   })
 
   it('daily words: today, else due, else mistakes, else the whole vocabulary list', () => {
-    const due = { ease: 2.5, interval: 3, dueAt: NOW - 1000, reps: 1, lapses: 0 }
-    const today = { ease: 2.5, interval: 1, dueAt: NOW - 60000 + DAY, reps: 1, lapses: 0 }
+    const due = {
+      ease: 2.5,
+      interval: 3,
+      dueAt: NOW - 1000,
+      reps: 1,
+      lapses: 0,
+    }
+    const today = {
+      ease: 2.5,
+      interval: 1,
+      dueAt: NOW - 60000 + DAY,
+      reps: 1,
+      lapses: 0,
+    }
     const old = mistake('flashcard:4', 'oxygen', 1, NOW - 5 * DAY)
-    const all = [...WORDS, reading(1, 'resemble', '像', ['like'])]
-    expect(dailyPool(all, ctx({ schedules: { 'vocab:1': today, 'vocab:2': due }, mistakes: [old] }))).toMatchObject({ from: 'today', pool: [{ id: 1 }] })
-    expect(dailyPool(all, ctx({ schedules: { 'vocab:2': due }, mistakes: [old] }))).toMatchObject({ from: 'due', pool: [{ id: 2 }] })
-    expect(dailyPool(all, ctx({ mistakes: [old] }))).toMatchObject({ from: 'mistakes', pool: [{ id: 4 }] })
+    const all = [
+      ...WORDS,
+      reading(1, 'resemble', '像', ['like']),
+    ]
+    expect(dailyPool(all, ctx({
+      schedules: { 'vocab:1': today, 'vocab:2': due },
+      mistakes: [old],
+    }))).toMatchObject({
+      from: 'today',
+      pool: [
+        { id: 1 },
+      ],
+    })
+    expect(dailyPool(all, ctx({
+      schedules: { 'vocab:2': due },
+      mistakes: [old],
+    }))).toMatchObject({
+      from: 'due',
+      pool: [
+        { id: 2 },
+      ],
+    })
+    expect(dailyPool(all, ctx({
+      mistakes: [old],
+    }))).toMatchObject({
+      from: 'mistakes',
+      pool: [
+        { id: 4 },
+      ],
+    })
     const fallback = dailyPool(all, ctx())
     expect(fallback.from).toBe('all')
     expect(fallback.pool).toHaveLength(WORDS.length)
@@ -442,7 +584,9 @@ describe('the game page', () => {
     await continueButton(w).trigger('click')
     await nextTick()
     if (state(w).stage === 'relic') {
-      await w.find(relic ? `button[data-relic="${relic}"]` : 'button[data-relic]').trigger('click')
+      await w.find(relic
+        ? `button[data-relic="${relic}"]`
+        : 'button[data-relic]').trigger('click')
       await nextTick()
     }
   }
@@ -573,7 +717,10 @@ describe('the game page', () => {
     await startButton(w).trigger('click')
     const s = state(w)
     const m = s.monsters.find(pick)
-    s.monsters = [{ ...m, kind: 'slime', phases }, ...s.monsters.filter((x: any) => x.word.key !== m.word.key)]
+    s.monsters = [
+      { ...m, kind: 'slime', phases },
+      ...s.monsters.filter((x: any) => x.word.key !== m.word.key),
+    ]
     await s.enterQuestion()
     await nextTick()
     return s
@@ -669,7 +816,9 @@ describe('the game page', () => {
     expect(s.result).toBe('wrong')
     expect(w.text()).toContain(`同义替换：${target.synonyms.join(' / ')}`)
     const saved = useMistakes().mistakes.value
-    expect(saved.map(m => [m.module, m.key])).toEqual([['reading', target.key]])
+    expect(saved.map(m => [m.module, m.key])).toEqual([
+      ['reading', target.key],
+    ])
   })
 
   it('the daily dungeon is the same run all day, and clearing it checks in', async () => {

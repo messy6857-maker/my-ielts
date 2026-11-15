@@ -36,7 +36,10 @@ import { getVocabularyChapterMeta, listVocabularyChapters, loadAllVocabulary } f
 const managedAudio = useAudioGroup()
 const { mistakes, addMistake } = useMistakes()
 const scheduleStore = useWordSchedule()
-const deckStores = { reading538: useDeckStore('reading538'), listening179: useDeckStore('listening179') }
+const deckStores = {
+  reading538: useDeckStore('reading538'),
+  listening179: useDeckStore('listening179'),
+}
 const checkin = useCheckin()
 const { currentUser } = useAuth()
 
@@ -123,7 +126,12 @@ const context = computed(() => {
     if (schedule)
       schedules[w.key] = schedule
   }
-  return { schedules, mistakes: mistakes.value, customKeys: customKeys.value, now: now.value }
+  return {
+    schedules,
+    mistakes: mistakes.value,
+    customKeys: customKeys.value,
+    now: now.value,
+  }
 })
 const sources = computed(() => sourceWords(allWords.value, context.value))
 const pool = computed(() => buildPool(allWords.value, selection.value, context.value))
@@ -167,7 +175,10 @@ const searchResults = computed(() => {
     else if (text.includes(q) || w.meaning.includes(q))
       contains.push(w)
   }
-  return [...starts, ...contains].slice(0, SEARCH_LIMIT)
+  return [
+    ...starts,
+    ...contains,
+  ].slice(0, SEARCH_LIMIT)
 })
 function saveCustomKeys(keys: string[]) {
   customKeys.value = keys
@@ -263,7 +274,9 @@ function stopTimer() {
 }
 function startTimer() {
   stopTimer()
-  const total = TIMED_SECONDS + (has('hourglass') ? 5 : 0)
+  const total = TIMED_SECONDS + (has('hourglass')
+    ? 5
+    : 0)
   deadline = Date.now() + total * 1000
   timeLeft.value = total
   timerId = setInterval(() => {
@@ -349,10 +362,22 @@ function recordWord(m: Monster, wrongKind: QuestionKind | null) {
     if (!wrongKind)
       return
     // 认错释义记到“单词自测”，拼错记到“打字练习”，和那两处的错题合并计数
-    if (wrongKind === 'choice')
-      addMistake('flashcard', { key: `flashcard:${w.id}`, title: w.word, detail, hint: `${w.word}: ${w.meaning}` })
-    else
-      addMistake('typing', { key: `typing:${w.word}`, title: w.word, detail, hint: `${w.word}: ${w.meaning}` })
+    if (wrongKind === 'choice') {
+      addMistake('flashcard', {
+        key: `flashcard:${w.id}`,
+        title: w.word,
+        detail,
+        hint: `${w.word}: ${w.meaning}`,
+      })
+    }
+    else {
+      addMistake('typing', {
+        key: `typing:${w.word}`,
+        title: w.word,
+        detail,
+        hint: `${w.word}: ${w.meaning}`,
+      })
+    }
     return
   }
   const deck = deckStores[w.deck]
@@ -365,7 +390,12 @@ function recordWord(m: Monster, wrongKind: QuestionKind | null) {
     const module = w.deck === 'reading538'
       ? 'reading'
       : 'listening'
-    addMistake(module, { key: w.key, title: w.word, detail, hint: w.synonyms.slice(0, 4).join(' / ') })
+    addMistake(module, {
+      key: w.key,
+      title: w.word,
+      detail,
+      hint: w.synonyms.slice(0, 4).join(' / '),
+    })
   }
 }
 
@@ -374,7 +404,10 @@ function finish(next: 'won' | 'lost') {
   managedAudio.dispose()
   if (score.value > best.value.score || maxCombo.value > best.value.combo) {
     newRecord.value = score.value > best.value.score
-    best.value = { score: Math.max(best.value.score, score.value), combo: Math.max(best.value.combo, maxCombo.value) }
+    best.value = {
+      score: Math.max(best.value.score, score.value),
+      combo: Math.max(best.value.combo, maxCombo.value),
+    }
     saveValue(nsKey(BEST_KEY), best.value)
   }
   if (isDaily.value) {
@@ -765,7 +798,7 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
             v-for="(relic, i) in offered"
             :key="relic.id"
             :data-relic="relic.id"
-            class="border border-gray-300 rounded-lg p-4 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700"
+            class="border border-gray-300 rounded-lg p-4 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
             @click="chooseRelic(relic)"
           >
             <div class="text-3xl" aria-hidden="true">

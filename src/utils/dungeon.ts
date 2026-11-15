@@ -70,7 +70,12 @@ export const TIMED_SECONDS = 15
 export const RELIC_EVERY = 3
 const DAY = 86400000
 /** 词汇类错题：这些模块的错题能对应到词汇表里的词 */
-const WORD_MISTAKE_MODULES = new Set(['flashcard', 'typing', 'vocabulary', 'legacy_vocabulary'])
+const WORD_MISTAKE_MODULES = new Set([
+  'flashcard',
+  'typing',
+  'vocabulary',
+  'legacy_vocabulary',
+])
 
 export const MONSTER_LABEL: Record<MonsterKind, string> = {
   slime: '史莱姆',
@@ -92,12 +97,42 @@ export const MONSTER_ICON: Record<MonsterKind, string> = {
 export type RelicId = 'heart' | 'shield' | 'letter' | 'drum' | 'scout' | 'hourglass'
 export interface Relic { id: RelicId, name: string, icon: string, desc: string }
 export const RELICS: Relic[] = [
-  { id: 'heart', name: '生命护符', icon: '❤️', desc: '立刻多一颗心' },
-  { id: 'shield', name: '免死金牌', icon: '🛡️', desc: '下一次答错不扣心（一次）' },
-  { id: 'letter', name: '首字母卷轴', icon: '📜', desc: '拼写题直接显示首字母和词长' },
-  { id: 'drum', name: '连击战鼓', icon: '🥁', desc: '连击加分翻倍' },
-  { id: 'scout', name: '侦察之眼', icon: '👁️', desc: '选择题去掉一个错误选项' },
-  { id: 'hourglass', name: '沙漏', icon: '⏳', desc: '限时拼写多 5 秒' },
+  {
+    id: 'heart',
+    name: '生命护符',
+    icon: '❤️',
+    desc: '立刻多一颗心',
+  },
+  {
+    id: 'shield',
+    name: '免死金牌',
+    icon: '🛡️',
+    desc: '下一次答错不扣心（一次）',
+  },
+  {
+    id: 'letter',
+    name: '首字母卷轴',
+    icon: '📜',
+    desc: '拼写题直接显示首字母和词长',
+  },
+  {
+    id: 'drum',
+    name: '连击战鼓',
+    icon: '🥁',
+    desc: '连击加分翻倍',
+  },
+  {
+    id: 'scout',
+    name: '侦察之眼',
+    icon: '👁️',
+    desc: '选择题去掉一个错误选项',
+  },
+  {
+    id: 'hourglass',
+    name: '沙漏',
+    icon: '⏳',
+    desc: '限时拼写多 5 秒',
+  },
 ]
 /** 三选一：从还没拿过的遗物里随机给最多三个 */
 export function offerRelics(owned: RelicId[], rng: Rng = Math.random): Relic[] {
@@ -119,15 +154,29 @@ export function flattenVocabulary(all: Record<string, RawChapter>): DungeonWord[
       const variants = (item.word ?? []).map(w => String(w).trim()).filter(Boolean)
       if (!variants.length || !String(item.meaning ?? '').trim())
         continue
-      out.push({ id: item.id, key: `vocab:${item.id}`, deck: 'vocabulary', word: variants[0], variants, pos: item.pos ?? '', meaning: item.meaning, chapter, synonyms: [] })
+      out.push({
+        id: item.id,
+        key: `vocab:${item.id}`,
+        deck: 'vocabulary',
+        word: variants[0],
+        variants,
+        pos: item.pos ?? '',
+        meaning: item.meaning,
+        chapter,
+        synonyms: [],
+      })
     }
   }
   return out
 }
 function cleanSynonyms(list: unknown, word: string): string[] {
-  const seen = new Set([norm(word)])
+  const seen = new Set([
+    norm(word),
+  ])
   const out: string[] = []
-  for (const raw of Array.isArray(list) ? list : []) {
+  for (const raw of Array.isArray(list)
+    ? list
+    : []) {
     const text = String(raw ?? '').replace(/\*/g, '').trim()
     if (!text || seen.has(norm(text)))
       continue
@@ -148,7 +197,17 @@ export function flattenReading(cats: Array<{ title: string, words: RawReadingWor
       if (!word || !meaning)
         continue
       const id = `${cat.title}-${w[0]}`
-      out.push({ id, key: `reading538:${id}`, deck: 'reading538', word, variants: [word], pos: (w[2] ?? []).join(' ').trim() || '短语', meaning, chapter: '', synonyms: cleanSynonyms(w[4], word) })
+      out.push({
+        id,
+        key: `reading538:${id}`,
+        deck: 'reading538',
+        word,
+        variants: [word],
+        pos: (w[2] ?? []).join(' ').trim() || '短语',
+        meaning,
+        chapter: '',
+        synonyms: cleanSynonyms(w[4], word),
+      })
     }
   }
   return out
@@ -161,7 +220,17 @@ export function flattenListening(list: Array<{ index: number, word: string, type
     const meaning = String(w.meaning ?? '').trim()
     if (!word || !meaning)
       continue
-    out.push({ id: w.index, key: `listening179:${w.index}`, deck: 'listening179', word, variants: [word], pos: w.type || '短语', meaning, chapter: '', synonyms: cleanSynonyms(w.replace, word) })
+    out.push({
+      id: w.index,
+      key: `listening179:${w.index}`,
+      deck: 'listening179',
+      word,
+      variants: [word],
+      pos: w.type || '短语',
+      meaning,
+      chapter: '',
+      synonyms: cleanSynonyms(w.replace, word),
+    })
   }
   return out
 }
@@ -181,7 +250,9 @@ export function lastReviewedAt(schedule: WordSchedule): number {
 function mistakeIndex(ctx: DungeonContext, pick: (m: MistakeItem) => number, merge: (a: number, b: number) => number) {
   const byKey = new Map<string, number>()
   const byWord = new Map<string, number>()
-  const put = (map: Map<string, number>, key: string, value: number) => map.set(key, map.has(key) ? merge(map.get(key)!, value) : value)
+  const put = (map: Map<string, number>, key: string, value: number) => map.set(key, map.has(key)
+    ? merge(map.get(key)!, value)
+    : value)
   for (const m of ctx.mistakes) {
     const flash = /^flashcard:(.+)$/.exec(m.key)
     if (/^(?:reading538|listening179):/.test(m.key))
@@ -351,7 +422,10 @@ export function pickOptions(word: DungeonWord, allWords: DungeonWord[], rng: Rng
 export function pickSynonymOptions(word: DungeonWord, allWords: DungeonWord[], rng: Rng): string[] {
   if (!word.synonyms.length)
     return []
-  const own = new Set([norm(word.word), ...word.synonyms.map(norm)])
+  const own = new Set([
+    norm(word.word),
+    ...word.synonyms.map(norm),
+  ])
   const others = new Set<string>()
   const distractors: string[] = []
   for (const other of shuffle(allWords.filter(w => w !== word && w.synonyms.length), rng)) {
@@ -387,25 +461,45 @@ export function buildRun(pool: DungeonWord[], allWords: DungeonWord[], ctx: Dung
   const count = (w: DungeonWord) => counts.get(w) ?? 0
   const chosen = weightedSample(pool, w => 1 + Math.min(count(w), 5), ROOMS_PER_RUN, rng)
   const boss = chosen.reduce((best, w) => {
-    if (count(w) !== count(best))
-      return count(w) > count(best) ? w : best
-    return w.word.length > best.word.length ? w : best
+    if (count(w) !== count(best)) {
+      return count(w) > count(best)
+        ? w
+        : best
+    }
+    return w.word.length > best.word.length
+      ? w
+      : best
   })
   const rest = shuffle(chosen.filter(w => w !== boss), rng)
   const make = (word: DungeonWord, isBoss: boolean): Monster => {
     const synonymOptions = pickSynonymOptions(word, allWords, rng)
     const elite = !isBoss && count(word) >= ELITE_WRONG_COUNT
-    const single: Array<[MonsterKind, QuestionKind]> = [['slime', 'choice'], ['bat', 'spell'], ['archer', 'timed']]
+    const single: Array<[MonsterKind, QuestionKind]> = [
+      ['slime', 'choice'],
+      ['bat', 'spell'],
+      ['archer', 'timed'],
+    ]
     if (synonymOptions.length)
       single.push(['mimic', 'synonym'])
     const [kind, question] = single[Math.floor(rng() * single.length)]
     let phases: QuestionKind[] = [question]
-    if (isBoss)
-      phases = synonymOptions.length ? ['choice', 'synonym', 'spell'] : ['choice', 'spell']
-    else if (elite)
-      phases = [synonymOptions.length && rng() < 0.5 ? 'synonym' : 'choice', 'spell']
+    if (isBoss) {
+      phases = synonymOptions.length
+        ? ['choice', 'synonym', 'spell']
+        : ['choice', 'spell']
+    }
+    else if (elite) {
+      phases = [
+        synonymOptions.length && rng() < 0.5
+          ? 'synonym'
+          : 'choice',
+        'spell',
+      ]
+    }
     return {
-      kind: isBoss ? 'boss' : (elite ? 'elite' : kind),
+      kind: isBoss
+        ? 'boss'
+        : (elite ? 'elite' : kind),
       word,
       phases,
       options: pickOptions(word, allWords, rng),
@@ -413,7 +507,10 @@ export function buildRun(pool: DungeonWord[], allWords: DungeonWord[], ctx: Dung
       wrongCount: count(word),
     }
   }
-  return [...rest.map(w => make(w, false)), make(boss, true)]
+  return [
+    ...rest.map(w => make(w, false)),
+    make(boss, true),
+  ]
 }
 
 /** 拼写是否正确：不分大小写，忽略首尾和多余空格，接受任一拼写变体 */
@@ -425,7 +522,9 @@ export function checkSpelling(input: string, word: DungeonWord): boolean {
 /** 答对一题的得分：基础 100，连击每层 +10（最多 +100，有连击战鼓翻倍），Boss 翻倍。combo 是答对这题之后的连击数 */
 export function phaseScore(combo: number, kind: MonsterKind, doubleCombo = false): number {
   const bonus = Math.min(Math.max(combo - 1, 0), 10) * 10 * (doubleCombo ? 2 : 1)
-  return (100 + bonus) * (kind === 'boss' ? 2 : 1)
+  return (100 + bonus) * (kind === 'boss'
+    ? 2
+    : 1)
 }
 
 /** 可复现的随机数：同一个种子每次给出同一串数（每日地牢用日期当种子） */
@@ -453,11 +552,21 @@ export const DAILY_SOURCE_LABEL: Record<DailySource, string> = {
 }
 /** 每日地牢打哪些词：今天学的；今天还没学就用到期复习的；再没有用错词；都没有就从整个词汇表里出 */
 export function dailyPool(words: DungeonWord[], ctx: DungeonContext): { from: DailySource, pool: DungeonWord[] } {
-  const none: DungeonSelection = { today: false, mistakes: false, due: false, custom: false, chapters: [], decks: [] }
+  const none: DungeonSelection = {
+    today: false,
+    mistakes: false,
+    due: false,
+    custom: false,
+    chapters: [],
+    decks: [],
+  }
   for (const from of ['today', 'due', 'mistakes'] as const) {
     const pool = buildPool(words, { ...none, [from]: true }, ctx)
     if (pool.length)
       return { from, pool }
   }
-  return { from: 'all', pool: words.filter(w => w.deck === 'vocabulary') }
+  return {
+    from: 'all',
+    pool: words.filter(w => w.deck === 'vocabulary'),
+  }
 }
