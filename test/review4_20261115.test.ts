@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import type { AISettings } from '../src/composables/useAISettings'
 import { setToken } from '../src/composables/syncClient'
 import {
   AI_PROVIDERS,
@@ -119,18 +120,18 @@ describe('editing the API address by hand switches keys like picking a preset', 
   })
 
   it('half-typed addresses do not leave keys behind; the empty address never uses the old shared slot', () => {
-    let s = {
+    let s: AISettings = {
       baseUrl: OPENAI,
       apiKey: 'sk-fake-openai',
       model: 'm',
-      apiKeys: { custom: 'sk-fake-unknown' } as Record<string, string>,
+      apiKeys: { custom: 'sk-fake-unknown' },
     }
     for (const url of ['', 'h', 'https://b.ex', CUSTOM_B]) {
       s = rebindKeyForBaseUrl({ ...s, baseUrl: url }, s.baseUrl)
       expect(s.apiKey).toBe('')
     }
-    expect(Object.keys(s.apiKeys).sort()).toEqual(['custom', 'openai'])
-    expect(s.apiKeys.openai).toBe('sk-fake-openai')
+    expect(Object.keys(s.apiKeys ?? {}).sort()).toEqual(['custom', 'openai'])
+    expect(s.apiKeys?.openai).toBe('sk-fake-openai')
   })
 
   it('test connection after typing a DeepSeek address sends the DeepSeek key, never the OpenAI one', async () => {

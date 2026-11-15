@@ -401,7 +401,11 @@ export function claimLegacyAISettings(
   const currentKeys = current
     ? keysOfSettings(current)
     : {}
+  // 当前身份明确存的空值（旧设置这一槽也没有 Key 时）原样保留，不因认领被删掉
   const apiKeys: Record<string, string> = {
+    ...(current
+      ? boundApiKeys(current)
+      : {}),
     ...legacyKeys,
     ...currentKeys,
   }
