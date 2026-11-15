@@ -83,7 +83,7 @@ describe('背单词 hub', () => {
     ])
     expect(links('reading538')).toEqual(['/reading/flashcard'])
     expect(links('listening179')).toEqual(['/listening/flashcard', '/listening/179practice'])
-    expect(links('corpus')).toEqual(['/listening/corpus-flashcard'])
+    expect(links('corpus')).toEqual(['/listening/corpus-flashcard', '/listening/corpus-spelling'])
     expect(w.find('[data-game]').attributes('href')).toBe('/game')
   })
 

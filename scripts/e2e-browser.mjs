@@ -213,6 +213,17 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
     await page.getByRole('button', { name: '退出', exact: true }).click()
     await page.locator('[data-deck="reading538"]').waitFor()
   }
+  // 语料库拼写练习：拼错一个，看到标红的字母，返回
+  await page.locator('[data-deck="corpus"] a').filter({ hasText: '拼写练习' }).click()
+  await page.getByRole('button', { name: '开始' }).click()
+  await page.locator('input[aria-label="拼写"]').fill('zzzz')
+  await page.locator('input[aria-label="拼写"]').press('Enter')
+  await page.locator('[data-answer]').waitFor()
+  await page.keyboard.press('Enter')
+  await page.locator('input[aria-label="拼写"]:enabled').waitFor()
+  assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).includes('text-primary-700'))
+  await page.getByRole('button', { name: '← 返回背单词' }).click()
+  await page.locator('[data-deck="reading538"]').waitFor()
   await page.locator('[data-deck="vocabulary"] a').filter({ hasText: '拼写练习' }).click()
   await page.locator('input[id="1"]').waitFor({ timeout: 20000 })
   assert.equal(await page.getByRole('link', { name: '自测卡片' }).count(), 0)
