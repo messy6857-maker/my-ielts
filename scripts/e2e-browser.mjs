@@ -229,7 +229,7 @@ await step('单词地牢：从导航进入，选章节开局，一路作答到�
   }
   await page.getByRole('button', { name: '再来一局' }).waitFor()
   const text = await page.locator('main, body').first().innerText()
-  assert.ok(/通关|倒在了地牢里/.test(text))
+  assert.ok(/通关|倒在了第 \d+ 层/.test(text))
   // 再来一局能直接开打；刷新后记得上次选的章节
   await page.getByRole('button', { name: '再来一局' }).click()
   await page.getByText('房间 1 /').waitFor()
