@@ -187,8 +187,16 @@ describe('word sources', () => {
     })
     expect(buildPool(WORDS, { ...NONE, mistakes: false, chapters: [] }, c)).toEqual([])
     expect(buildPool(WORDS, { ...NONE, mistakes: true, chapters: [] }, c).map(w => w.id)).toEqual([5])
-    expect(buildPool(WORDS, { ...NONE, mistakes: true, chapters: ['c1'] }, c).map(w => w.id)).toEqual([1, 2, 3, 4, 5])
-    expect(buildPool(WORDS, { ...NONE, mistakes: false, chapters: ['c1', 'c2'] }, c).map(w => w.id)).toEqual([1, 2, 3, 4, 5, 6])
+    expect(buildPool(WORDS, {
+      ...NONE,
+      mistakes: true,
+      chapters: ['c1'],
+    }, c).map(w => w.id)).toEqual([1, 2, 3, 4, 5])
+    expect(buildPool(WORDS, {
+      ...NONE,
+      mistakes: false,
+      chapters: ['c1', 'c2'],
+    }, c).map(w => w.id)).toEqual([1, 2, 3, 4, 5, 6])
   })
 })
 
