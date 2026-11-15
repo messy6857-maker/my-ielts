@@ -39,14 +39,14 @@ describe('a migrated bookmark the old tab already dropped from the old table sta
     expect(getPageBookmarks('/x').map(b => b.id)).toEqual(['b'])
   })
 
-  it('a delete between this tab marking an entry migrated and writing it also sticks', () => {
+  it('a delete between this tab recording the origin and writing the entry also sticks', () => {
     oldTabWrites([A, B])
     const set = Storage.prototype.setItem
     let injected = false
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
       const r = set.call(this, key, value)
-      // 刚记下 a “已迁移”、还没写单条 key：旧版页签把 a 移出旧表，另一个页签删掉了 a
-      if (!injected && key === `${DONE_PREFIX}%2Fx|a`) {
+      // 刚记下 a “来自旧表”、还没写单条 key：旧版页签把 a 移出旧表，另一个页签删掉了 a
+      if (!injected && key === `myielts_page_bookmark_v2_src:%2Fx|a`) {
         injected = true
         set.call(this, LEGACY, JSON.stringify({
           '/x': [B],

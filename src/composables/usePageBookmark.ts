@@ -112,7 +112,7 @@ function parseLegacyTable(raw: string | null): PageBookmarks {
   }
 }
 /**
- * 旧表条目的“已迁移”标记：每条一个 key（myielts_page_bookmark_v2_done:<页面>|<id>）。
+ * 旧表条目的“迁移完成”标记：每条一个 key（myielts_page_bookmark_v2_done:<页面>|<id>），单条 key 写成功后才记。
  * 每条单独写，多个新版页签同时迁移也不会互相覆盖记录；旧版页签之后整表写回过期快照时，
  * 已处理的条目不再导入，删掉的书签不会复活。
  */
@@ -134,6 +134,31 @@ function markDone(path: string, id: string): boolean {
   try {
     localStorage.setItem(doneKey(path, id), '1')
     return true
+  }
+  catch {
+    return false
+  }
+}
+/**
+ * “来自旧表”记录（myielts_page_bookmark_v2_src:<页面>|<id>）：迁移写单条 key 之前先记下。
+ * 只用于删除时判断要不要写删除记录；不代表迁移完成，不会让迁移或旧表显示跳过它。
+ */
+const ORIGIN_PREFIX = 'myielts_page_bookmark_v2_src:'
+function originKey(path: string, id: string): string {
+  return `${ORIGIN_PREFIX}${itemKey(path, id).slice(ITEM_PREFIX.length)}`
+}
+function markOrigin(path: string, id: string): boolean {
+  try {
+    localStorage.setItem(originKey(path, id), '1')
+    return true
+  }
+  catch {
+    return false
+  }
+}
+function hasOrigin(path: string, id: string): boolean {
+  try {
+    return localStorage.getItem(originKey(path, id)) !== null
   }
   catch {
     return false
@@ -221,9 +246,9 @@ function migrateLegacyTable(): void {
     for (const item of items) {
       if (isDone(path, item.id, legacyList) || isDeleted(path, item.id))
         continue
-      // 先记“已迁移”再写单条 key：删除时据此知道它来自旧表（旧版页签可能已把它挤出旧表），
-      // 写入和删除无论怎么交错都会留下删除记录。单条 key 写不进去（存储满）就撤回标记，下次再迁，期间照常从旧表显示
-      if (!markDone(path, item.id))
+      // 三步：先记“来自旧表”（删除时据此写删除记录，旧版页签可能已把它挤出旧表），再写单条 key，
+      // 写成功后才记“迁移完成”。任何一步中断（页签崩溃、存储满）都不会记成完成：下次读取接着迁，期间照常从旧表显示
+      if (!markOrigin(path, item.id))
         continue
       try {
         const key = itemKey(path, item.id)
@@ -231,11 +256,9 @@ function migrateLegacyTable(): void {
           localStorage.setItem(key, JSON.stringify(item))
       }
       catch {
-        try {
-          localStorage.removeItem(doneKey(path, item.id))
-        }
-        catch {}
+        continue
       }
+      markDone(path, item.id)
     }
   }
 }
@@ -294,13 +317,14 @@ function writeItem(path: string, item: PageBookmarkItem): boolean {
   }
 }
 /**
- * 删除单条书签。它来自旧表时（旧表里有、或记过“已迁移”），先写“已删除”记录再删单条 key：别的页签迁移时把旧条目写回来，
+ * 删除单条书签。它来自旧表时（旧表里有、或记过“来自旧表/迁移完成”），先写“已删除”记录再删单条 key：别的页签迁移时把旧条目写回来，
  * 也会被这条记录挡住（从不改写旧表）。记录写不进去（存储满）时先在本页签隐藏、之后自动重试，
  * 并返回 false 让界面提示刷新后可能还会出现。
  */
 function deleteItem(path: string, id: string): boolean {
-  // 来自旧表：旧表现在还有它，或迁移时记过“已迁移”（旧版页签整表写回时可能已把它从旧表里挤掉）
+  // 来自旧表：旧表现在还有它，或迁移时记过“来自旧表/迁移完成”（旧版页签整表写回时可能已把它从旧表里挤掉）
   const fromLegacy = !!readLegacyTable()[path]?.some(b => b.id === id)
+    || hasOrigin(path, id)
     || isDone(path, id, readMigratedList())
   const recorded = !fromLegacy || isDeleted(path, id) || markDeleted(path, id)
   try {
