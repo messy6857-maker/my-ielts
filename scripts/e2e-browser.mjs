@@ -210,6 +210,7 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
     // 在自测页里导航仍高亮“背单词”
     assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).includes('text-primary-700'))
     await page.getByRole('button', { name: /返回背单词/ }).first().click()
+    await page.getByRole('button', { name: '退出', exact: true }).click()
     await page.locator('[data-deck="reading538"]').waitFor()
   }
   await page.locator('[data-deck="vocabulary"] a').filter({ hasText: '拼写练习' }).click()

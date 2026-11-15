@@ -1,22 +1,6 @@
 <script setup lang="ts">
 import { accountNotice } from '../composables/useAuth'
 
-// 各词库的自测、练习和单词地牢都从“背单词”进入，在这些页面里也高亮“背单词”
-const STUDY_PATHS = new Set([
-  '/study',
-  '/game',
-  '/vocabulary/flashcard',
-  '/vocabulary/typing',
-  '/reading/flashcard',
-  '/listening/flashcard',
-  '/listening/corpus-flashcard',
-  '/listening/179practice',
-])
-function isActive(link: string) {
-  return link === '/study'
-    ? STUDY_PATHS.has(route.path)
-    : route.path === link
-}
 const menus = reactive([
   {
     label: '首页',
@@ -91,6 +75,22 @@ watch(currentUser, (u, prev) => {
 })
 const router = useRouter()
 const route = useRoute()
+// 各词库的自测、练习和单词地牢都从“背单词”进入，在这些页面里也高亮“背单词”
+const STUDY_PATHS = new Set([
+  '/study',
+  '/game',
+  '/vocabulary/flashcard',
+  '/vocabulary/typing',
+  '/reading/flashcard',
+  '/listening/flashcard',
+  '/listening/corpus-flashcard',
+  '/listening/179practice',
+])
+function isActive(link: string) {
+  return link === '/study'
+    ? STUDY_PATHS.has(route.path)
+    : route.path === link
+}
 
 const syncDotClass = computed(() => {
   switch (status.value) {

@@ -14,7 +14,7 @@ interface Deck {
   name: string
   desc: string
   /** 这个词库要掌握到什么程度 */
-  goal: string
+  aim: string
   schedules: () => Record<string, WordSchedule | undefined>
   dailyCount: () => number
   goal: () => number
@@ -35,7 +35,7 @@ const DECKS: Deck[] = [
     id: 'vocabulary',
     name: '词汇表',
     desc: '按话题分章的雅思核心词汇',
-    goal: '会认、会读、会拼写，知道用法和同义词',
+    aim: '会认、会读、会拼写，知道用法和同义词',
     schedules: () => vocabularySchedules.schedules.value,
     dailyCount: () => vocabularyDaily.dailyCount.value,
     goal: () => vocabularyDaily.goal.value,
@@ -50,7 +50,7 @@ const DECKS: Deck[] = [
     id: 'reading538',
     name: '阅读考点词',
     desc: '376 个阅读考点词和同义替换',
-    goal: '看到能认出意思、想到同义替换，不要求拼写',
+    aim: '看到能认出意思、想到同义替换，不要求拼写',
     schedules: () => stores.reading538.schedules.value,
     dailyCount: () => stores.reading538.dailyCount.value,
     goal: () => stores.reading538.goal.value,
@@ -62,7 +62,7 @@ const DECKS: Deck[] = [
     id: 'listening179',
     name: '听力 179 考点词',
     desc: '听力高频考点词和同义替换',
-    goal: '听到能听懂、能拼对（听力要填空），知道同义替换',
+    aim: '听到能听懂、能拼对（听力要填空），知道同义替换',
     schedules: () => stores.listening179.schedules.value,
     dailyCount: () => stores.listening179.dailyCount.value,
     goal: () => stores.listening179.goal.value,
@@ -75,7 +75,7 @@ const DECKS: Deck[] = [
     id: 'corpus',
     name: '听力语料库',
     desc: '拼写规范、特别名词、形容词副词等',
-    goal: '记住拼写规范和特殊写法，看到能认出',
+    aim: '记住拼写规范和特殊写法，看到能认出',
     schedules: () => stores.corpus.schedules.value,
     dailyCount: () => stores.corpus.dailyCount.value,
     goal: () => stores.corpus.goal.value,
@@ -137,7 +137,7 @@ const totalDue = computed(() => stats.value.reduce((n, s) => n + s.due, 0))
             {{ s.deck.desc }}
           </p>
           <p class="mt-1 text-sm text-blue-700 dark:text-blue-300" data-goal>
-            目标：{{ s.deck.goal }}
+            目标：{{ s.deck.aim }}
           </p>
           <div class="my-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700 dark:text-gray-200" data-stats>
             <span>到期 <b :class="s.due > 0 ? 'text-orange-600 dark:text-orange-400' : ''">{{ s.due }}</b></span>
