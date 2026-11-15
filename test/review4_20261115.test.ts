@@ -37,7 +37,16 @@ beforeEach(() => {
   fetchMock = vi.fn(async () => ({
     ok: true,
     status: 200,
-    json: async () => ({ ok: true, data: null, content: '{"ok":true}', choices: [{ message: { content: '{"ok":true}' } }] }),
+    json: async () => ({
+      ok: true,
+      data: null,
+      content: '{"ok":true}',
+      choices: [
+        {
+          message: { content: '{"ok":true}' },
+        },
+      ],
+    }),
   }))
   vi.stubGlobal('fetch', fetchMock)
 })
@@ -60,10 +69,24 @@ function chatRequests() {
     .map(([, init]) => JSON.parse((init as RequestInit).body as string))
 }
 async function mountSettings() {
-  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/settings', component: { template: '<p />' } }] })
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      {
+        path: '/settings',
+        component: { template: '<p />' },
+      },
+    ],
+  })
   await router.push('/settings')
   const Page = (await import('../src/pages/settings.vue')).default
-  const w = mount(Page, { attachTo: document.body, global: { plugins: [router], stubs: { RouterLink: true } } })
+  const w = mount(Page, {
+    attachTo: document.body,
+    global: {
+      plugins: [router],
+      stubs: { RouterLink: true },
+    },
+  })
   wrappers.push(w)
   await flushPromises()
   return w
@@ -78,7 +101,12 @@ async function typeAddress(w: any, value: string) {
 
 describe('editing the API address by hand switches keys like picking a preset', () => {
   it('rebinding: the key stays with its address and the new address gets its own key or none', () => {
-    const start = { baseUrl: OPENAI, apiKey: 'sk-fake-openai', model: 'gpt-4o-mini', apiKeys: { deepseek: 'sk-fake-deepseek' } }
+    const start = {
+      baseUrl: OPENAI,
+      apiKey: 'sk-fake-openai',
+      model: 'gpt-4o-mini',
+      apiKeys: { deepseek: 'sk-fake-deepseek' },
+    }
     const toDeepseek = rebindKeyForBaseUrl({ ...start, baseUrl: DEEPSEEK }, OPENAI)
     expect(toDeepseek.apiKey).toBe('sk-fake-deepseek')
     expect(toDeepseek.apiKeys?.openai).toBe('sk-fake-openai')
@@ -91,7 +119,12 @@ describe('editing the API address by hand switches keys like picking a preset', 
   })
 
   it('half-typed addresses do not leave keys behind; the empty address never uses the old shared slot', () => {
-    let s = { baseUrl: OPENAI, apiKey: 'sk-fake-openai', model: 'm', apiKeys: { custom: 'sk-fake-unknown' } as Record<string, string> }
+    let s = {
+      baseUrl: OPENAI,
+      apiKey: 'sk-fake-openai',
+      model: 'm',
+      apiKeys: { custom: 'sk-fake-unknown' } as Record<string, string>,
+    }
     for (const url of ['', 'h', 'https://b.ex', CUSTOM_B]) {
       s = rebindKeyForBaseUrl({ ...s, baseUrl: url }, s.baseUrl)
       expect(s.apiKey).toBe('')
@@ -101,7 +134,12 @@ describe('editing the API address by hand switches keys like picking a preset', 
   })
 
   it('test connection after typing a DeepSeek address sends the DeepSeek key, never the OpenAI one', async () => {
-    setCurrentAI({ baseUrl: OPENAI, apiKey: 'sk-fake-openai', model: 'gpt-4o-mini', apiKeys: { deepseek: 'sk-fake-deepseek' } })
+    setCurrentAI({
+      baseUrl: OPENAI,
+      apiKey: 'sk-fake-openai',
+      model: 'gpt-4o-mini',
+      apiKeys: { deepseek: 'sk-fake-deepseek' },
+    })
     const w = await mountSettings()
     await typeAddress(w, DEEPSEEK)
     await button(w, '测试连接').trigger('click')
@@ -141,9 +179,17 @@ describe('editing the API address by hand switches keys like picking a preset', 
 
 describe('an old shared custom key of unknown origin is never bound to a new address', () => {
   it('save with an empty key, read back, then claim: the unknown key is never used', () => {
-    setCurrentAI({ baseUrl: OPENAI, apiKey: 'sk-fake-openai', model: 'm', apiKeys: { openai: 'sk-fake-openai', custom: 'sk-fake-unknown' } })
+    setCurrentAI({
+      baseUrl: OPENAI,
+      apiKey: 'sk-fake-openai',
+      model: 'm',
+      apiKeys: { openai: 'sk-fake-openai', custom: 'sk-fake-unknown' },
+    })
     // 1. 从预设切到新的自定义地址，Key 留空保存
-    const form = rebindKeyForBaseUrl({ ...getAISettings(), baseUrl: CUSTOM_B }, OPENAI)
+    const form = rebindKeyForBaseUrl({
+      ...getAISettings(),
+      baseUrl: CUSTOM_B,
+    }, OPENAI)
     expect(form.apiKey).toBe('')
     saveAISettings(form)
     // 2. 重新读取：用户保存的空值保持为空
@@ -151,7 +197,12 @@ describe('an old shared custom key of unknown origin is never bound to a new add
     expect(loaded.apiKey).toBe('')
     expect(loaded.apiKeys?.[`custom:${CUSTOM_B}`]).toBe('')
     // 3. 认领一份同样只有来源不明 custom Key 的旧设置：它不会成为当前 Key
-    localStorage.setItem(LEGACY_AI, JSON.stringify({ baseUrl: CUSTOM_B, apiKey: '', model: 'm', apiKeys: { custom: 'sk-fake-legacy-unknown' } }))
+    localStorage.setItem(LEGACY_AI, JSON.stringify({
+      baseUrl: CUSTOM_B,
+      apiKey: '',
+      model: 'm',
+      apiKeys: { custom: 'sk-fake-legacy-unknown' },
+    }))
     expect(legacyClaimConflicts()).toEqual([])
     expect(claimLegacyAISettings()).toBe('claimed')
     const claimed = getAISettings()
@@ -162,7 +213,12 @@ describe('an old shared custom key of unknown origin is never bound to a new add
 
   it('a key saved together with its custom address is still kept for that address', () => {
     setCurrentAI({ baseUrl: OPENAI, apiKey: 'sk-fake-openai', model: 'm' })
-    localStorage.setItem(LEGACY_AI, JSON.stringify({ baseUrl: CUSTOM_B, apiKey: 'sk-fake-b', model: 'm', apiKeys: { custom: 'sk-fake-b' } }))
+    localStorage.setItem(LEGACY_AI, JSON.stringify({
+      baseUrl: CUSTOM_B,
+      apiKey: 'sk-fake-b',
+      model: 'm',
+      apiKeys: { custom: 'sk-fake-b' },
+    }))
     expect(claimLegacyAISettings()).toBe('claimed')
     const claimed = getAISettings()
     expect(claimed.apiKey).toBe('sk-fake-openai')
@@ -172,8 +228,18 @@ describe('an old shared custom key of unknown origin is never bound to a new add
   })
 
   it('an empty address never picks up the unknown key, even right after a claim', () => {
-    setCurrentAI({ baseUrl: '', apiKey: '', model: '', apiKeys: { custom: 'sk-fake-unknown' } })
-    localStorage.setItem(LEGACY_AI, JSON.stringify({ baseUrl: '', apiKey: '', model: '', apiKeys: { custom: 'sk-fake-legacy' } }))
+    setCurrentAI({
+      baseUrl: '',
+      apiKey: '',
+      model: '',
+      apiKeys: { custom: 'sk-fake-unknown' },
+    })
+    localStorage.setItem(LEGACY_AI, JSON.stringify({
+      baseUrl: '',
+      apiKey: '',
+      model: '',
+      apiKeys: { custom: 'sk-fake-legacy' },
+    }))
     expect(claimLegacyAISettings()).toBe('claimed')
     expect(getAISettings().apiKey).toBe('')
   })
@@ -186,7 +252,12 @@ describe('upgrading while an old-version tab is still open', () => {
   }
 
   it('a bookmark the old tab adds during migration is not lost when the old table is cleaned up', () => {
-    oldTabWrites({ '/x': [{ id: 'a', y: 100, createdAt: 1 }, { id: 'b', y: 900, createdAt: 2 }] })
+    oldTabWrites({
+      '/x': [
+        { id: 'a', y: 100, createdAt: 1 },
+        { id: 'b', y: 900, createdAt: 2 },
+      ],
+    })
     const set = Storage.prototype.setItem
     let interleaved = false
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
@@ -194,7 +265,13 @@ describe('upgrading while an old-version tab is still open', () => {
       // 新页签迁完第一条时，旧页签整表写回（多了 c）
       if (!interleaved && key.startsWith(ITEM_PREFIX)) {
         interleaved = true
-        set.call(this, LEGACY_BOOKMARKS, JSON.stringify({ '/x': [{ id: 'a', y: 100, createdAt: 1 }, { id: 'b', y: 900, createdAt: 2 }, { id: 'c', y: 2000, createdAt: 3 }] }))
+        set.call(this, LEGACY_BOOKMARKS, JSON.stringify({
+          '/x': [
+            { id: 'a', y: 100, createdAt: 1 },
+            { id: 'b', y: 900, createdAt: 2 },
+            { id: 'c', y: 2000, createdAt: 3 },
+          ],
+        }))
       }
       return result
     })
@@ -213,13 +290,24 @@ describe('upgrading while an old-version tab is still open', () => {
   })
 
   it('the old tab writing its stale table after migration adds its new bookmark without bringing back deleted ones', () => {
-    oldTabWrites({ '/x': [{ id: 'a', y: 100, createdAt: 1 }, { id: 'b', y: 900, createdAt: 2 }] })
+    oldTabWrites({
+      '/x': [
+        { id: 'a', y: 100, createdAt: 1 },
+        { id: 'b', y: 900, createdAt: 2 },
+      ],
+    })
     reloadPageBookmarks()
     expect(localStorage.getItem(LEGACY_BOOKMARKS)).toBeNull()
     // 新页签删掉 a
     removePageBookmark('/x', 'a')
     // 旧页签内存里还是 a、b，再加一条 d，整表写回
-    oldTabWrites({ '/x': [{ id: 'a', y: 100, createdAt: 1 }, { id: 'b', y: 900, createdAt: 2 }, { id: 'd', y: 3000, createdAt: 4 }] })
+    oldTabWrites({
+      '/x': [
+        { id: 'a', y: 100, createdAt: 1 },
+        { id: 'b', y: 900, createdAt: 2 },
+        { id: 'd', y: 3000, createdAt: 4 },
+      ],
+    })
     window.dispatchEvent(new StorageEvent('storage', { key: LEGACY_BOOKMARKS }))
     expect(getPageBookmarks('/x').map(b => b.id)).toEqual(['b', 'd'])
     expect(localStorage.getItem(LEGACY_BOOKMARKS)).toBeNull()
@@ -228,7 +316,12 @@ describe('upgrading while an old-version tab is still open', () => {
   })
 
   it('while the old table cannot be removed yet, migrated-then-deleted bookmarks stay hidden', () => {
-    oldTabWrites({ '/x': [{ id: 'a', y: 100, createdAt: 1 }, { id: 'b', y: 900, createdAt: 2 }] })
+    oldTabWrites({
+      '/x': [
+        { id: 'a', y: 100, createdAt: 1 },
+        { id: 'b', y: 900, createdAt: 2 },
+      ],
+    })
     // 旧表删不掉也改不了（比如旧版页签一直在写、存储满）：迁过的书签以单条 key 为准
     const remove = Storage.prototype.removeItem
     vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(function (this: Storage, key: string) {

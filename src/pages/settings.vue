@@ -22,8 +22,8 @@ import {
   MODEL_STRENGTH_LABELS,
   modelSupportsReasoningEffort,
   reasoningEffortForProvider,
-  saveAISettings,
   rebindKeyForBaseUrl,
+  saveAISettings,
   switchProviderSettings,
   testAIConnection,
 } from '../composables/useAISettings'
