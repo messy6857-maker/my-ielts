@@ -190,6 +190,51 @@ await step('设置页：先粘贴新 Key 再逐字输入地址，Key 被清空�
   await ctx.close()
 })
 
+await step('单词地牢：从导航进入，选章节开局，一路作答到结算，没有报错', async () => {
+  const ctx = await launched.newContext({ viewport: { width: 1280, height: 900 } })
+  const page = await ctx.newPage()
+  const errors = []
+  page.on('pageerror', e => errors.push(e.message))
+  await page.goto(`${BASE}#/grammar`)
+  const nav = page.locator('a[href="#/game"]').first()
+  await nav.waitFor({ timeout: 20000 })
+  // 导航图标确实画出来了（图标名写错的话宽度为 0）
+  const icon = await nav.locator('[class*="i-carbon-game-console"]').first().boundingBox()
+  assert.ok(icon && icon.width > 0, '导航图标没有显示')
+  await nav.click()
+  await page.getByRole('button', { name: '进入地牢' }).waitFor({ timeout: 20000 })
+  assert.ok(await page.getByRole('button', { name: '进入地牢' }).isDisabled())
+  await page.locator('button[aria-pressed]').first().click()
+  await page.getByRole('button', { name: '进入地牢' }).click()
+  await page.getByText('房间 1 / 10').waitFor()
+  for (let i = 0; i < 40; i++) {
+    if (await page.getByRole('button', { name: '再来一局' }).count())
+      break
+    const input = page.locator('input[aria-label="拼写"]')
+    if (await input.count()) {
+      await input.fill('zzzz')
+      await input.press('Enter')
+    }
+    else {
+      await page.keyboard.press('1')
+    }
+    await page.getByRole('button', { name: /^(继续|查看结果)$/ }).waitFor()
+    await page.keyboard.press('Enter')
+    await sleep(50)
+  }
+  await page.getByRole('button', { name: '再来一局' }).waitFor()
+  const text = await page.locator('main, body').first().innerText()
+  assert.ok(/通关|倒在了地牢里/.test(text))
+  // 再来一局能直接开打；刷新后记得上次选的章节
+  await page.getByRole('button', { name: '再来一局' }).click()
+  await page.getByText('房间 1 /').waitFor()
+  await page.reload()
+  await page.getByRole('button', { name: '进入地牢' }).waitFor({ timeout: 20000 })
+  assert.equal(await page.locator('button[aria-pressed="true"]').count(), 1)
+  assert.deepEqual(errors, [])
+  await ctx.close()
+})
+
 await browser.close()
 console.log(results.join('\n'))
 if (results.some(r => !r.startsWith('PASS')))

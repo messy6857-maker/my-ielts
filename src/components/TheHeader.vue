@@ -43,6 +43,11 @@ const menus = reactive([
     link: '/mistakes',
   },
   {
+    label: '单词地牢',
+    icon: 'i-carbon-game-console',
+    link: '/game',
+  },
+  {
     label: '学习统计',
     icon: 'i-carbon-dashboard',
     link: '/stats',
