@@ -1,7 +1,7 @@
+import type { AISettings } from '../src/composables/useAISettings'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import type { AISettings } from '../src/composables/useAISettings'
 import { setToken } from '../src/composables/syncClient'
 import {
   AI_PROVIDERS,
@@ -73,7 +73,9 @@ describe('the new version never deletes or rewrites the old bookmark table', () 
       // 迁移的最后一次写入（b 的“已处理”标记）之后，旧版页签立刻整表写回、多了 c
       if (!injected && key === `${DONE_PREFIX}%2Fx|b`) {
         injected = true
-        set.call(this, LEGACY_BOOKMARKS, JSON.stringify({ '/x': [A, B, C] }))
+        set.call(this, LEGACY_BOOKMARKS, JSON.stringify({
+          '/x': [A, B, C],
+        }))
       }
       return result
     })
@@ -153,7 +155,12 @@ describe('migration records cannot be overwritten by another tab', () => {
 
 describe('a key typed for an unsaved custom address survives switching away and back', () => {
   it('composable: custom address + key → preset → back to the address', () => {
-    let s: AISettings = { baseUrl: OPENAI, apiKey: 'sk-fake-openai', model: 'gpt-4o-mini', apiKeys: {} }
+    let s: AISettings = {
+      baseUrl: OPENAI,
+      apiKey: 'sk-fake-openai',
+      model: 'gpt-4o-mini',
+      apiKeys: {},
+    }
     for (const url of ['h', 'https://b.ex', CUSTOM_B])
       s = rebindKeyForBaseUrl({ ...s, baseUrl: url }, s.baseUrl)
     s = { ...s, apiKey: 'sk-fake-b' }
@@ -167,10 +174,24 @@ describe('a key typed for an unsaved custom address survives switching away and 
 
   it('settings page: the typed key comes back and is saved under its own address', async () => {
     localStorage.setItem(aiSettingsKey('alice'), JSON.stringify({ baseUrl: OPENAI, apiKey: 'sk-fake-openai', model: 'gpt-4o-mini' }))
-    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/settings', component: { template: '<p />' } }] })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/settings',
+          component: { template: '<p />' },
+        },
+      ],
+    })
     await router.push('/settings')
     const Page = (await import('../src/pages/settings.vue')).default
-    const w = mount(Page, { attachTo: document.body, global: { plugins: [router], stubs: { RouterLink: true } } })
+    const w = mount(Page, {
+      attachTo: document.body,
+      global: {
+        plugins: [router],
+        stubs: { RouterLink: true },
+      },
+    })
     wrappers.push(w)
     await flushPromises()
     const address = w.get('input[placeholder="https://api-cdn.thehive.ai/api/v3"]')
