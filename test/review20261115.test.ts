@@ -37,7 +37,10 @@ beforeEach(() => {
   auth.currentUser.value = 'alice'
   setToken('token', 'alice')
   accountNotice.value = ''
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
   vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {})
@@ -61,14 +64,22 @@ async function show(Page: any, path: string) {
     history: createMemoryHistory(),
     routes: [
       { path: path.split('?')[0], component: Page },
-      { path: '/outside', component: { template: '<p>outside</p>' } },
+      {
+        path: '/outside',
+        component: { template: '<p>outside</p>' },
+      },
     ],
   })
   await router.push(path)
   await router.isReady()
-  const root = mount(defineComponent({ render: () => h(RouterView) }), {
+  const root = mount(defineComponent({
+    render: () => h(RouterView),
+  }), {
     attachTo: document.body,
-    global: { plugins: [router], stubs },
+    global: {
+      plugins: [router],
+      stubs,
+    },
   })
   wrappers.push(root)
   await flushPromises()
@@ -80,7 +91,10 @@ async function mockPage(kind: 'listening' | 'reading') {
   const Page = kind === 'reading'
     ? (await import('../src/pages/mock/reading-test.vue')).default
     : (await import('../src/pages/mock/listening-test.vue')).default
-  return { Page, ...(await show(Page, `/mock/${kind}-test`)) }
+  return {
+    Page,
+    ...(await show(Page, `/mock/${kind}-test`)),
+  }
 }
 
 /** 做一份剩余时间为 0 的草稿：开考、答一题、离开，再把存档里的剩余时间改成 0 */
@@ -154,7 +168,12 @@ describe('app dialog keyboard behaviour', () => {
     return w
   }
   function press(key: string, shiftKey = false) {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key, shiftKey, bubbles: true, cancelable: true }))
+    window.dispatchEvent(new KeyboardEvent('keydown', {
+      key,
+      shiftKey,
+      bubbles: true,
+      cancelable: true,
+    }))
   }
 
   it('focuses cancel for dangerous actions and keeps Tab inside the dialog', async () => {
@@ -258,9 +277,23 @@ describe.each(['listening', 'reading'] as const)('%s expired draft prompt', (kin
 it('clearing mock history does not touch another account after a switch', async () => {
   const Page = (await import('../src/pages/mock/history.vue')).default
   auth.currentUser.value = 'bob'
-  saveMockRecord({ id: 'cam21-test1', label: 'B', kind: 'listening', score: 30, total: 40, band: 7 })
+  saveMockRecord({
+    id: 'cam21-test1',
+    label: 'B',
+    kind: 'listening',
+    score: 30,
+    total: 40,
+    band: 7,
+  })
   auth.currentUser.value = 'alice'
-  saveMockRecord({ id: 'cam21-test1', label: 'A', kind: 'listening', score: 30, total: 40, band: 7 })
+  saveMockRecord({
+    id: 'cam21-test1',
+    label: 'A',
+    kind: 'listening',
+    score: 30,
+    total: 40,
+    band: 7,
+  })
   useHost()
   const page = await show(Page, '/mock/history')
   const clearing = page.state.handleClear()
@@ -274,7 +307,15 @@ it('clearing mock history does not touch another account after a switch', async 
 
 it('the retry banner stays while entries are still unwritten for an attempt marked as written', () => {
   const records = useMistakes()
-  const entry = (key: string) => [{ module: 'mock_reading' as const, key, title: key, detail: '', hint: '' }]
+  const entry = (key: string) => [
+    {
+      module: 'mock_reading' as const,
+      key,
+      title: key,
+      detail: '',
+      hint: '',
+    },
+  ]
   const saver = useMockMistakeSave()
   saver.save('attempt-1', entry('first'))
   expect(saver.failed.value).toBe(false)
@@ -295,8 +336,12 @@ it('the retry banner stays while entries are still unwritten for an attempt mark
 it('old guest daily bookmarks stored under a null owner become visible and migrate on login', () => {
   const date = '2026-11-09'
   localStorage.setItem('myielts_page_bookmarks_v1', JSON.stringify({
-    [`/reading/daily:${JSON.stringify([date, null])}`]: [{ id: 'old', y: 800, createdAt: 1 }],
-    [`/reading/daily:${JSON.stringify([date, 'device-1'])}`]: [{ id: 'dup', y: 820, createdAt: 2 }],
+    [`/reading/daily:${JSON.stringify([date, null])}`]: [
+      { id: 'old', y: 800, createdAt: 1 },
+    ],
+    [`/reading/daily:${JSON.stringify([date, 'device-1'])}`]: [
+      { id: 'dup', y: 820, createdAt: 2 },
+    ],
   }))
   reloadPageBookmarks()
   adoptLegacyGuestPageBookmarks('device-1')
@@ -305,8 +350,12 @@ it('old guest daily bookmarks stored under a null owner become visible and migra
   expect(getPageBookmarks(`/reading/daily:${JSON.stringify([date, null])}`)).toEqual([])
   // 登录时游客书签（含残留的 null 版）一并迁到账号名下
   localStorage.setItem('myielts_page_bookmarks_v1', JSON.stringify({
-    [`/reading/daily:${JSON.stringify([date, null])}`]: [{ id: 'old', y: 100, createdAt: 1 }],
-    [`/reading/daily:${JSON.stringify([date, 'device-1'])}`]: [{ id: 'g', y: 900, createdAt: 2 }],
+    [`/reading/daily:${JSON.stringify([date, null])}`]: [
+      { id: 'old', y: 100, createdAt: 1 },
+    ],
+    [`/reading/daily:${JSON.stringify([date, 'device-1'])}`]: [
+      { id: 'g', y: 900, createdAt: 2 },
+    ],
   }))
   reloadPageBookmarks()
   migrateGuestPageBookmarks('device-1', 'alice')

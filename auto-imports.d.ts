@@ -16,6 +16,7 @@ declare global {
   const DAILY_STUDY_GOAL_MINUTES_MIN: typeof import('./src/composables/useStudyTimer').DAILY_STUDY_GOAL_MINUTES_MIN
   const DEFAULT_DAILY_STUDY_GOAL_MINUTES: typeof import('./src/composables/useStudyTimer').DEFAULT_DAILY_STUDY_GOAL_MINUTES
   const EffectScope: typeof import('vue').EffectScope
+  const MAX_PASSWORD_BYTES: typeof import('./src/composables/useAuth').MAX_PASSWORD_BYTES
   const MEDIA_BASE: typeof import('./src/composables/useAudio').MEDIA_BASE
   const MIN_NEW_PASSWORD_LENGTH: typeof import('./src/composables/useAuth').MIN_NEW_PASSWORD_LENGTH
   const MISTAKE_MODULE_LABEL: typeof import('./src/composables/useStudyData').MISTAKE_MODULE_LABEL
@@ -26,6 +27,7 @@ declare global {
   const accountNotice: typeof import('./src/composables/useAuth').accountNotice
   const accountNotices: typeof import('./src/composables/useAuth').accountNotices
   const addPageBookmark: typeof import('./src/composables/usePageBookmark').addPageBookmark
+  const adoptLegacyGuestPageBookmarks: typeof import('./src/composables/usePageBookmark').adoptLegacyGuestPageBookmarks
   const aiSettingsKey: typeof import('./src/composables/useAISettings').aiSettingsKey
   const aiSettingsState: typeof import('./src/composables/useAISettings').aiSettingsState
   const alertDialog: typeof import('./src/composables/useDialog').alertDialog
@@ -37,6 +39,8 @@ declare global {
   const asyncComputed: typeof import('@vueuse/core').asyncComputed
   const attemptModuleLabel: typeof import('./src/composables/useStats').attemptModuleLabel
   const autoResetRef: typeof import('@vueuse/core').autoResetRef
+  const chooseDialog: typeof import('./src/composables/useDialog').chooseDialog
+  const claimLegacyAISettings: typeof import('./src/composables/useAISettings').claimLegacyAISettings
   const clearMockHistory: typeof import('./src/composables/useMockHistory').clearMockHistory
   const clearQuarantinedKeys: typeof import('./src/composables/syncClient').clearQuarantinedKeys
   const collectSyncData: typeof import('./src/composables/syncClient').collectSyncData
@@ -72,6 +76,7 @@ declare global {
   const deviceTimerKey: typeof import('./src/composables/useStudyTimer').deviceTimerKey
   const dialogQueue: typeof import('./src/composables/useDialog').dialogQueue
   const diffWords: typeof import('./src/composables/useWordDiff').diffWords
+  const discardLegacyAISettings: typeof import('./src/composables/useAISettings').discardLegacyAISettings
   const dismissAccountNotice: typeof import('./src/composables/useAuth').dismissAccountNotice
   const downloadMediaFile: typeof import('./src/composables/useAudio').downloadMediaFile
   const eagerComputed: typeof import('@vueuse/core').eagerComputed
@@ -105,6 +110,7 @@ declare global {
   const gradeEssayWithAI: typeof import('./src/composables/useAISettings').gradeEssayWithAI
   const gradeSchedule: typeof import('./src/composables/useSpacedRepetition').gradeSchedule
   const gradeSpeakingWithAI: typeof import('./src/composables/useAISettings').gradeSpeakingWithAI
+  const guessProviderFromKey: typeof import('./src/composables/useAISettings').guessProviderFromKey
   const h: typeof import('vue').h
   const handleRejectedKeys: typeof import('./src/composables/syncClient').handleRejectedKeys
   const hasAISettings: typeof import('./src/composables/useAISettings').hasAISettings
@@ -124,10 +130,12 @@ declare global {
   const isRecorderBusy: typeof import('./src/composables/useRecorder').isRecorderBusy
   const isRef: typeof import('vue').isRef
   const isShallow: typeof import('vue').isShallow
+  const isUnanswered: typeof import('./src/composables/useMockHistory').isUnanswered
   const isValidEssayGrade: typeof import('./src/composables/useAISettings').isValidEssayGrade
   const isValidSpeakingGrade: typeof import('./src/composables/useAISettings').isValidSpeakingGrade
   const jumpToPageBookmark: typeof import('./src/composables/usePageBookmark').jumpToPageBookmark
   const knownRate: typeof import('./src/composables/useStats').knownRate
+  const legacyAISettingsInfo: typeof import('./src/composables/useAISettings').legacyAISettingsInfo
   const legacyTimerSeconds: typeof import('./src/composables/useStudyTimer').legacyTimerSeconds
   const loadVocabularyDetails: typeof import('./src/composables/useVocabularyDetails').loadVocabularyDetails
   const loadWordInfoWithFallback: typeof import('./src/composables/useWordInfo').loadWordInfoWithFallback
@@ -138,6 +146,7 @@ declare global {
   const migrateGuestPageBookmarks: typeof import('./src/composables/usePageBookmark').migrateGuestPageBookmarks
   const migrateMistakes: typeof import('./src/composables/useStudyData').migrateMistakes
   const modelSupportsReasoningEffort: typeof import('./src/composables/useAISettings').modelSupportsReasoningEffort
+  const newPasswordProblem: typeof import('./src/composables/useAuth').newPasswordProblem
   const nextTick: typeof import('vue').nextTick
   const normalizeTask2Grade: typeof import('./src/composables/useAISettings').normalizeTask2Grade
   const nsKey: typeof import('./src/composables/useStudyData').nsKey
@@ -476,7 +485,7 @@ declare global {
   export type { DeckStores, DeckItem, QueuePlan } from './src/composables/useDeckStore'
   import('./src/composables/useDeckStore')
   // @ts-ignore
-  export type { DialogOptions, DialogRequest } from './src/composables/useDialog'
+  export type { DialogResult, DialogOptions, DialogRequest } from './src/composables/useDialog'
   import('./src/composables/useDialog')
   // @ts-ignore
   export type { ExamDraft } from './src/composables/useExamRecovery'
@@ -526,6 +535,7 @@ declare module 'vue' {
     readonly DAILY_STUDY_GOAL_MINUTES_MIN: UnwrapRef<typeof import('./src/composables/useStudyTimer')['DAILY_STUDY_GOAL_MINUTES_MIN']>
     readonly DEFAULT_DAILY_STUDY_GOAL_MINUTES: UnwrapRef<typeof import('./src/composables/useStudyTimer')['DEFAULT_DAILY_STUDY_GOAL_MINUTES']>
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
+    readonly MAX_PASSWORD_BYTES: UnwrapRef<typeof import('./src/composables/useAuth')['MAX_PASSWORD_BYTES']>
     readonly MEDIA_BASE: UnwrapRef<typeof import('./src/composables/useAudio')['MEDIA_BASE']>
     readonly MIN_NEW_PASSWORD_LENGTH: UnwrapRef<typeof import('./src/composables/useAuth')['MIN_NEW_PASSWORD_LENGTH']>
     readonly MISTAKE_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['MISTAKE_MODULE_LABEL']>
@@ -536,6 +546,7 @@ declare module 'vue' {
     readonly accountNotice: UnwrapRef<typeof import('./src/composables/useAuth')['accountNotice']>
     readonly accountNotices: UnwrapRef<typeof import('./src/composables/useAuth')['accountNotices']>
     readonly addPageBookmark: UnwrapRef<typeof import('./src/composables/usePageBookmark')['addPageBookmark']>
+    readonly adoptLegacyGuestPageBookmarks: UnwrapRef<typeof import('./src/composables/usePageBookmark')['adoptLegacyGuestPageBookmarks']>
     readonly aiSettingsKey: UnwrapRef<typeof import('./src/composables/useAISettings')['aiSettingsKey']>
     readonly aiSettingsState: UnwrapRef<typeof import('./src/composables/useAISettings')['aiSettingsState']>
     readonly alertDialog: UnwrapRef<typeof import('./src/composables/useDialog')['alertDialog']>
@@ -547,6 +558,8 @@ declare module 'vue' {
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly attemptModuleLabel: UnwrapRef<typeof import('./src/composables/useStats')['attemptModuleLabel']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
+    readonly chooseDialog: UnwrapRef<typeof import('./src/composables/useDialog')['chooseDialog']>
+    readonly claimLegacyAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['claimLegacyAISettings']>
     readonly clearMockHistory: UnwrapRef<typeof import('./src/composables/useMockHistory')['clearMockHistory']>
     readonly clearQuarantinedKeys: UnwrapRef<typeof import('./src/composables/syncClient')['clearQuarantinedKeys']>
     readonly collectSyncData: UnwrapRef<typeof import('./src/composables/syncClient')['collectSyncData']>
@@ -582,6 +595,7 @@ declare module 'vue' {
     readonly deviceTimerKey: UnwrapRef<typeof import('./src/composables/useStudyTimer')['deviceTimerKey']>
     readonly dialogQueue: UnwrapRef<typeof import('./src/composables/useDialog')['dialogQueue']>
     readonly diffWords: UnwrapRef<typeof import('./src/composables/useWordDiff')['diffWords']>
+    readonly discardLegacyAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['discardLegacyAISettings']>
     readonly dismissAccountNotice: UnwrapRef<typeof import('./src/composables/useAuth')['dismissAccountNotice']>
     readonly downloadMediaFile: UnwrapRef<typeof import('./src/composables/useAudio')['downloadMediaFile']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
@@ -615,6 +629,7 @@ declare module 'vue' {
     readonly gradeEssayWithAI: UnwrapRef<typeof import('./src/composables/useAISettings')['gradeEssayWithAI']>
     readonly gradeSchedule: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['gradeSchedule']>
     readonly gradeSpeakingWithAI: UnwrapRef<typeof import('./src/composables/useAISettings')['gradeSpeakingWithAI']>
+    readonly guessProviderFromKey: UnwrapRef<typeof import('./src/composables/useAISettings')['guessProviderFromKey']>
     readonly h: UnwrapRef<typeof import('vue')['h']>
     readonly handleRejectedKeys: UnwrapRef<typeof import('./src/composables/syncClient')['handleRejectedKeys']>
     readonly hasAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['hasAISettings']>
@@ -634,10 +649,12 @@ declare module 'vue' {
     readonly isRecorderBusy: UnwrapRef<typeof import('./src/composables/useRecorder')['isRecorderBusy']>
     readonly isRef: UnwrapRef<typeof import('vue')['isRef']>
     readonly isShallow: UnwrapRef<typeof import('vue')['isShallow']>
+    readonly isUnanswered: UnwrapRef<typeof import('./src/composables/useMockHistory')['isUnanswered']>
     readonly isValidEssayGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['isValidEssayGrade']>
     readonly isValidSpeakingGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['isValidSpeakingGrade']>
     readonly jumpToPageBookmark: UnwrapRef<typeof import('./src/composables/usePageBookmark')['jumpToPageBookmark']>
     readonly knownRate: UnwrapRef<typeof import('./src/composables/useStats')['knownRate']>
+    readonly legacyAISettingsInfo: UnwrapRef<typeof import('./src/composables/useAISettings')['legacyAISettingsInfo']>
     readonly legacyTimerSeconds: UnwrapRef<typeof import('./src/composables/useStudyTimer')['legacyTimerSeconds']>
     readonly loadVocabularyDetails: UnwrapRef<typeof import('./src/composables/useVocabularyDetails')['loadVocabularyDetails']>
     readonly loadWordInfoWithFallback: UnwrapRef<typeof import('./src/composables/useWordInfo')['loadWordInfoWithFallback']>
@@ -648,6 +665,7 @@ declare module 'vue' {
     readonly migrateGuestPageBookmarks: UnwrapRef<typeof import('./src/composables/usePageBookmark')['migrateGuestPageBookmarks']>
     readonly migrateMistakes: UnwrapRef<typeof import('./src/composables/useStudyData')['migrateMistakes']>
     readonly modelSupportsReasoningEffort: UnwrapRef<typeof import('./src/composables/useAISettings')['modelSupportsReasoningEffort']>
+    readonly newPasswordProblem: UnwrapRef<typeof import('./src/composables/useAuth')['newPasswordProblem']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
     readonly normalizeTask2Grade: UnwrapRef<typeof import('./src/composables/useAISettings')['normalizeTask2Grade']>
     readonly nsKey: UnwrapRef<typeof import('./src/composables/useStudyData')['nsKey']>
