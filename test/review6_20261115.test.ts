@@ -25,7 +25,11 @@ beforeEach(() => {
   window.dispatchEvent(new StorageEvent('storage', { key: null }))
   auth.currentUser.value = 'alice'
   setToken('token', 'alice')
-  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ok: true, data: null }) })))
+  vi.stubGlobal('fetch', vi.fn(async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ ok: true, data: null }),
+  })))
 })
 afterEach(() => {
   wrappers.splice(0).forEach(w => w.unmount())
@@ -56,7 +60,11 @@ describe('1. the new version never deletes the old table, so no check-then-delet
       const r = set.call(this, key, value)
       if (key !== LEGACY && n < 5) {
         n++
-        const items = [A, B, ...Array.from({ length: n }, (_, i) => ({ id: `new${i}`, y: 3000 + i * 100, createdAt: 10 + i }))]
+        const items = [
+          A,
+          B,
+          ...Array.from({ length: n }, (_, i) => ({ id: `new${i}`, y: 3000 + i * 100, createdAt: 10 + i })),
+        ]
         set.call(this, LEGACY, JSON.stringify({ '/x': items }))
       }
       return r
@@ -66,7 +74,15 @@ describe('1. the new version never deletes the old table, so no check-then-delet
     vi.restoreAllMocks()
     reloadPageBookmarks()
     expect(legacyRemovals).toEqual([])
-    expect(getPageBookmarks('/x').map(b => b.id)).toEqual(['a', 'b', 'new0', 'new1', 'new2', 'new3', 'new4'])
+    expect(getPageBookmarks('/x').map(b => b.id)).toEqual([
+      'a',
+      'b',
+      'new0',
+      'new1',
+      'new2',
+      'new3',
+      'new4',
+    ])
   })
 })
 
@@ -143,7 +159,12 @@ describe('3. other tabs follow a delete that only wrote a record', () => {
 describe('4. clearing a saved key and switching provider keeps it cleared', () => {
   it('composable: an empty key is recorded for the old address', () => {
     const saved = { openai: 'sk-fake-old' }
-    const form: AISettings = { baseUrl: OPENAI, apiKey: '', model: 'm', apiKeys: { ...saved } }
+    const form: AISettings = {
+      baseUrl: OPENAI,
+      apiKey: '',
+      model: 'm',
+      apiKeys: { ...saved },
+    }
     const toHive = switchProviderSettings(form, hive, saved)
     expect(toHive.apiKeys?.openai).toBe('')
     expect(switchProviderSettings(toHive, openai, saved).apiKey).toBe('')
@@ -151,10 +172,24 @@ describe('4. clearing a saved key and switching provider keeps it cleared', () =
 
   it('settings page: clear OpenAI key, switch to Hive, save, switch back — still empty', async () => {
     localStorage.setItem(aiSettingsKey('alice'), JSON.stringify({ baseUrl: OPENAI, apiKey: 'sk-fake-old', model: 'gpt-4o-mini' }))
-    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/settings', component: { template: '<p />' } }] })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/settings',
+          component: { template: '<p />' },
+        },
+      ],
+    })
     await router.push('/settings')
     const Page = (await import('../src/pages/settings.vue')).default
-    const w = mount(Page, { attachTo: document.body, global: { plugins: [router], stubs: { RouterLink: true } } })
+    const w = mount(Page, {
+      attachTo: document.body,
+      global: {
+        plugins: [router],
+        stubs: { RouterLink: true },
+      },
+    })
     wrappers.push(w)
     await flushPromises()
     const key = w.get('input[placeholder="sk-..."]')
@@ -170,7 +205,12 @@ describe('4. clearing a saved key and switching provider keeps it cleared', () =
 
   it('a pasted new key is still dropped (not saved under the old address)', () => {
     const saved = { openai: 'sk-fake-old' }
-    const form: AISettings = { baseUrl: OPENAI, apiKey: 'sk-fake-pasted', model: 'm', apiKeys: { ...saved } }
+    const form: AISettings = {
+      baseUrl: OPENAI,
+      apiKey: 'sk-fake-pasted',
+      model: 'm',
+      apiKeys: { ...saved },
+    }
     expect(switchProviderSettings(form, hive, saved).apiKeys?.openai).toBe('sk-fake-old')
   })
 })
