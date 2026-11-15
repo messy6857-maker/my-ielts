@@ -14,7 +14,10 @@ beforeEach(() => {
   sessionStorage.clear()
   auth.currentUser.value = 'alice'
   setToken('token', 'alice')
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
 })
 afterEach(() => {
   wrappers.splice(0).forEach(w => w.unmount())
@@ -31,10 +34,23 @@ function seed(vocabulary: number, typing: number) {
   return m
 }
 async function open() {
-  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/mistakes', component: { template: '<p />' } }] })
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      {
+        path: '/mistakes',
+        component: { template: '<p />' },
+      },
+    ],
+  })
   await router.push('/mistakes')
   const Page = (await import('../src/pages/mistakes.vue')).default
-  const w = mount(Page, { global: { plugins: [router], stubs: { RouterLink: true } } })
+  const w = mount(Page, {
+    global: {
+      plugins: [router],
+      stubs: { RouterLink: true },
+    },
+  })
   wrappers.push(w)
   await flushPromises()
   return w

@@ -94,7 +94,12 @@ const filteredGrouped = computed(() => {
 // 筛选条件或账号变化时回到第一批。
 const PAGE_SIZE = 100
 const visibleLimit = ref(PAGE_SIZE)
-watch([filterModule, filterTestId, filterPart, currentUser], () => {
+watch([
+  filterModule,
+  filterTestId,
+  filterPart,
+  currentUser,
+], () => {
   visibleLimit.value = PAGE_SIZE
 })
 const pagedGrouped = computed(() => {
@@ -105,7 +110,12 @@ const pagedGrouped = computed(() => {
       break
     const items = group.items.slice(0, left)
     left -= items.length
-    out.push({ module: group.module, label: group.label, total: group.items.length, items })
+    out.push({
+      module: group.module,
+      label: group.label,
+      total: group.items.length,
+      items,
+    })
   }
   return out
 })
