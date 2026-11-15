@@ -221,14 +221,20 @@ function migrateLegacyTable(): void {
     for (const item of items) {
       if (isDone(path, item.id, legacyList) || isDeleted(path, item.id))
         continue
+      // 先记“已迁移”再写单条 key：删除时据此知道它来自旧表（旧版页签可能已把它挤出旧表），
+      // 写入和删除无论怎么交错都会留下删除记录。单条 key 写不进去（存储满）就撤回标记，下次再迁，期间照常从旧表显示
+      if (!markDone(path, item.id))
+        continue
       try {
         const key = itemKey(path, item.id)
         if (localStorage.getItem(key) === null)
           localStorage.setItem(key, JSON.stringify(item))
-        markDone(path, item.id)
       }
       catch {
-        // 存储满：留到下次再迁，期间照常从旧表显示
+        try {
+          localStorage.removeItem(doneKey(path, item.id))
+        }
+        catch {}
       }
     }
   }
@@ -288,12 +294,14 @@ function writeItem(path: string, item: PageBookmarkItem): boolean {
   }
 }
 /**
- * 删除单条书签。旧表里也有这一条时，先写“已删除”记录再删单条 key：别的页签迁移时把旧条目写回来，
+ * 删除单条书签。它来自旧表时（旧表里有、或记过“已迁移”），先写“已删除”记录再删单条 key：别的页签迁移时把旧条目写回来，
  * 也会被这条记录挡住（从不改写旧表）。记录写不进去（存储满）时先在本页签隐藏、之后自动重试，
  * 并返回 false 让界面提示刷新后可能还会出现。
  */
 function deleteItem(path: string, id: string): boolean {
+  // 来自旧表：旧表现在还有它，或迁移时记过“已迁移”（旧版页签整表写回时可能已把它从旧表里挤掉）
   const fromLegacy = !!readLegacyTable()[path]?.some(b => b.id === id)
+    || isDone(path, id, readMigratedList())
   const recorded = !fromLegacy || isDeleted(path, id) || markDeleted(path, id)
   try {
     localStorage.removeItem(itemKey(path, id))
