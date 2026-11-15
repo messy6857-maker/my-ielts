@@ -279,9 +279,9 @@ describe('upgrading while an old-version tab is still open', () => {
     reloadPageBookmarks()
     vi.restoreAllMocks()
     expect(getPageBookmarks('/x').map(b => b.id)).toEqual(['a', 'b', 'c'])
-    // 旧表有变化，这次没删；下一次读取把 c 也迁过去，然后才删旧表
+    // 下一次读取把 c 也迁过去；旧表只读保留，c 还在里面
     reloadPageBookmarks()
-    expect(localStorage.getItem(LEGACY_BOOKMARKS)).toBeNull()
+    expect(localStorage.getItem(LEGACY_BOOKMARKS)).toContain('"c"')
     expect(Object.keys(localStorage).filter(k => k.startsWith(ITEM_PREFIX)).sort()).toEqual([
       `${ITEM_PREFIX}%2Fx|a`,
       `${ITEM_PREFIX}%2Fx|b`,
@@ -298,7 +298,6 @@ describe('upgrading while an old-version tab is still open', () => {
       ],
     })
     reloadPageBookmarks()
-    expect(localStorage.getItem(LEGACY_BOOKMARKS)).toBeNull()
     // 新页签删掉 a
     removePageBookmark('/x', 'a')
     // 旧页签内存里还是 a、b，再加一条 d，整表写回
@@ -311,7 +310,6 @@ describe('upgrading while an old-version tab is still open', () => {
     })
     window.dispatchEvent(new StorageEvent('storage', { key: LEGACY_BOOKMARKS }))
     expect(getPageBookmarks('/x').map(b => b.id)).toEqual(['b', 'd'])
-    expect(localStorage.getItem(LEGACY_BOOKMARKS)).toBeNull()
     reloadPageBookmarks()
     expect(getPageBookmarks('/x').map(b => b.id)).toEqual(['b', 'd'])
   })

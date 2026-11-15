@@ -292,8 +292,10 @@ describe('bookmark storage', () => {
       '/vocabulary': 300,
     }))
     reloadPageBookmarks()
-    expect(localStorage.getItem(LEGACY_BOOKMARKS)).toBeNull()
+    // 旧表只读保留（旧版页签可能还会写它），每条都记了“已处理”
+    expect(localStorage.getItem(LEGACY_BOOKMARKS)).not.toBeNull()
     expect(Object.keys(localStorage).filter(k => k.startsWith(ITEM_PREFIX))).toHaveLength(3)
+    expect(Object.keys(localStorage).filter(k => k.startsWith('myielts_page_bookmark_v2_done:'))).toHaveLength(3)
     expect(getPageBookmarks('/reading/daily').map(b => b.id)).toEqual(['a', 'b'])
     expect(getPageBookmarks('/vocabulary').map(b => b.y)).toEqual([300])
   })
@@ -320,6 +322,5 @@ describe('bookmark storage', () => {
     vi.restoreAllMocks()
     reloadPageBookmarks()
     expect(getPageBookmarks('/reading/daily').map(b => b.id)).toEqual(['a'])
-    expect(localStorage.getItem(LEGACY_BOOKMARKS)).toBeNull()
   })
 })
