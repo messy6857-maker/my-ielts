@@ -151,7 +151,7 @@ export function markMissed(input: string, answer: string): DiffChar[] {
 /** 输入最接近的那个正确写法（标错字母时用它对照） */
 export function closestSpelling(input: string, word: CorpusWord): string {
   let best = word.word
-  let bestScore = -1
+  let bestScore = Number.NEGATIVE_INFINITY
   for (const s of word.accepted) {
     const score = markMissed(input, s).filter(c => c.ok).length - s.length
     if (score > bestScore) {
