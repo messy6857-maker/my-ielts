@@ -48,7 +48,9 @@ describe('a migrated bookmark the old tab already dropped from the old table sta
       // 刚记下 a “已迁移”、还没写单条 key：旧版页签把 a 移出旧表，另一个页签删掉了 a
       if (!injected && key === `${DONE_PREFIX}%2Fx|a`) {
         injected = true
-        set.call(this, LEGACY, JSON.stringify({ '/x': [B] }))
+        set.call(this, LEGACY, JSON.stringify({
+          '/x': [B],
+        }))
         removePageBookmark('/x', 'a')
       }
       return r
