@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
 import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { setToken } from '../src/composables/syncClient'
+import { aiSettingsKey } from '../src/composables/useAISettings'
 import { accountNotice, useAuth } from '../src/composables/useAuth'
 import { bandScore } from '../src/pages/mock/types'
 import { readDraft, saveDraft } from '../src/utils/drafts'
@@ -259,7 +260,7 @@ it('a failed MP3 playback invokes the TTS fallback once, including a later error
 it('does not attach a late AI grade to a different account', async () => {
   const Page = (await import('../src/pages/writing/AIGradePanel.vue')).default
   localStorage.setItem(
-    'myielts_ai_settings_v1',
+    aiSettingsKey(useAuth().currentUser.value),
     JSON.stringify({
       baseUrl: 'https://example.test/v1',
       apiKey: 'test',
@@ -396,7 +397,7 @@ it('speech scoring becomes enabled at exactly ten words', async () => {
   const Page = (await import('../src/pages/speaking/AIGradeSpeaking.vue'))
     .default
   localStorage.setItem(
-    'myielts_ai_settings_v1',
+    aiSettingsKey(useAuth().currentUser.value),
     JSON.stringify({
       baseUrl: 'https://example.test/v1',
       apiKey: 'test',

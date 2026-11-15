@@ -4,7 +4,7 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { onSyncApplied } from '~/composables/syncClient'
 import { useAuth } from '~/composables/useAuth'
 import { confirmDialog } from '~/composables/useDialog'
-import { clearMockHistory, getMockHistory } from '~/composables/useMockHistory'
+import { clearMockHistory, getMockHistory, isUnanswered } from '~/composables/useMockHistory'
 
 const records = ref<MockRecord[]>([])
 const { currentUser } = useAuth()
@@ -82,7 +82,7 @@ async function handleClear() {
             }}<span class="text-sm text-gray-500 font-normal">/{{ r.total }}</span>
           </div>
           <div class="text-sm text-purple-600 dark:text-purple-400">
-            {{ r.band.toFixed(1) }} 分
+            {{ isUnanswered(r) ? '未作答' : `预估 Band ${r.band.toFixed(1)}` }}
           </div>
         </div>
       </div>

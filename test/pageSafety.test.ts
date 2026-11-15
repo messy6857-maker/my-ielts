@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { defineComponent, h, nextTick } from 'vue'
 import { createMemoryHistory, createRouter, RouterView } from 'vue-router'
 import { setToken } from '../src/composables/syncClient'
+import { aiSettingsKey } from '../src/composables/useAISettings'
 import { useAuth } from '../src/composables/useAuth'
 import { readDraft } from '../src/utils/drafts'
 import { readValue } from '../src/utils/storage'
@@ -173,7 +174,7 @@ it('word browsing declarations execute inside setup and audio errors are visible
 it('a late AI response is discarded after the essay changes', async () => {
   const Page = (await import('../src/pages/writing/AIGradePanel.vue')).default
   localStorage.setItem(
-    'myielts_ai_settings_v1',
+    aiSettingsKey(useAuth().currentUser.value),
     JSON.stringify({
       baseUrl: 'https://example.test/v1',
       apiKey: 'local-test',
@@ -239,7 +240,7 @@ it('a late AI response is discarded after the essay changes', async () => {
 })
 it('speech AI grading is disabled below ten words', async () => {
   localStorage.setItem(
-    'myielts_ai_settings_v1',
+    aiSettingsKey(useAuth().currentUser.value),
     JSON.stringify({
       baseUrl: 'https://example.test/v1',
       apiKey: 'local-test',
@@ -274,12 +275,12 @@ it.each(['reading', 'listening'])(
       const stay = router.push('/outside')
       await flushPromises()
       expect(dialogQueue.value).toHaveLength(1)
-      settleDialog(dialogQueue.value[0].id, false)
+      settleDialog(dialogQueue.value[0].id, 'cancel')
       await stay
       expect(router.currentRoute.value.path).toBe(`/mock/${kind}-test`)
       const leave = router.push('/outside')
       await flushPromises()
-      settleDialog(dialogQueue.value[0].id, true)
+      settleDialog(dialogQueue.value[0].id, 'confirm')
       await leave
       expect(router.currentRoute.value.path).toBe('/outside')
       expect(confirm).not.toHaveBeenCalled()

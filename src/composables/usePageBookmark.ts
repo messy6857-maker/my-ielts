@@ -145,6 +145,20 @@ function anchorTop(anchor: BookmarkAnchor): number | undefined {
 export function migrateGuestPageBookmarks(guestId: string, username: string): void {
   if (!guestId || !username || guestId === username)
     return
+  // 11-09 有一版用 [日期, null] 存游客书签；它们同样是本设备游客的，一并迁过去
+  moveDailyBookmarks(owner => owner === guestId || owner === null, username)
+}
+/**
+ * 兼容旧游客书签：11-09 有一版游客 scope 是 [日期, null]，之后改成 [日期, 设备 id]，
+ * 旧书签还在本机却显示不出来。把它们并入本设备游客的 scope（按位置去重）。没有旧书签时什么都不做。
+ */
+export function adoptLegacyGuestPageBookmarks(guestId: string): void {
+  if (!guestId)
+    return
+  moveDailyBookmarks(owner => owner === null, guestId)
+}
+/** 把 scope 第二项满足 match 的 daily 书签按日期并入 [日期, to]，按位置去重后删掉原 scope */
+function moveDailyBookmarks(match: (owner: unknown) => boolean, to: string): void {
   const map = pageBookmarksState.value
   let changed = false
   const next: PageBookmarks = { ...map }
@@ -159,9 +173,9 @@ export function migrateGuestPageBookmarks(guestId: string, username: string): vo
     catch {
       continue
     }
-    if (!Array.isArray(scope) || scope.length !== 2 || scope[1] !== guestId)
+    if (!Array.isArray(scope) || scope.length !== 2 || scope[1] === to || !match(scope[1]))
       continue
-    const targetPath = `/reading/daily:${JSON.stringify([scope[0], username])}`
+    const targetPath = `/reading/daily:${JSON.stringify([scope[0], to])}`
     const target = next[targetPath] ?? []
     const merged = [...target]
     for (const item of items) {

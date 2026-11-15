@@ -85,8 +85,18 @@ const USERS_KEY = 'myielts_users_v1'
 const SESSION_KEY = 'myielts_session_v1'
 // 服务器托管账号在本地用户表中的标记（仅用于会话恢复，不做本地密码校验）
 const SERVER_MARKER_HASH = 'server-managed'
-// 新注册密码至少 8 位；登录仍接受旧的 4 位密码，老账号不受影响
+// 新注册密码规则（与同步服务器一致）：至少 8 个字符，按 Unicode 码点计数（一个 emoji、一个汉字都算 1 个），
+// 且 UTF-8 编码后不超过 72 字节（bcrypt 只取前 72 字节，超出部分会被忽略）。登录仍接受旧的短密码。
 export const MIN_NEW_PASSWORD_LENGTH = 8
+export const MAX_PASSWORD_BYTES = 72
+/** 新密码不合规时返回提示，合规返回 null */
+export function newPasswordProblem(password: string): string | null {
+  if ([...password].length < MIN_NEW_PASSWORD_LENGTH)
+    return `密码至少 ${MIN_NEW_PASSWORD_LENGTH} 个字符（一个 emoji 或汉字算 1 个）`
+  if (new TextEncoder().encode(password).length > MAX_PASSWORD_BYTES)
+    return '密码太长：最多 72 字节（约 72 个英文字符或 24 个汉字）'
+  return null
+}
 const beforeLogout = new Set<() => unknown | Promise<unknown>>()
 export function onBeforeLogout(cb: () => unknown | Promise<unknown>) {
   beforeLogout.add(cb)
@@ -268,8 +278,9 @@ export const useAuth = createGlobalState(() => {
         message: '用户名需为 2-20 位字母、数字、下划线或中文',
       }
     }
-    if (password.length < MIN_NEW_PASSWORD_LENGTH)
-      return { ok: false, message: `密码至少 ${MIN_NEW_PASSWORD_LENGTH} 位` }
+    const passwordProblem = newPasswordProblem(password)
+    if (passwordProblem)
+      return { ok: false, message: passwordProblem }
     let r: Awaited<ReturnType<typeof apiRegister>>
     try {
       r = await apiRegister(username, password)
@@ -391,8 +402,9 @@ export const useAuth = createGlobalState(() => {
         message: '用户名需为 2-20 位字母、数字、下划线或中文',
       }
     }
-    if (password.length < MIN_NEW_PASSWORD_LENGTH)
-      return { ok: false, message: `密码至少 ${MIN_NEW_PASSWORD_LENGTH} 位` }
+    const passwordProblem = newPasswordProblem(password)
+    if (passwordProblem)
+      return { ok: false, message: passwordProblem }
     const users = readUsers()
     if (users[username])
       return { ok: false, message: '用户名已存在，换一个吧' }

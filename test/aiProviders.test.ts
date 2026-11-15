@@ -1,11 +1,14 @@
 import type { AISettings } from '../src/composables/useAISettings'
+import { useAuth } from '../src/composables/useAuth'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   AI_PROVIDERS,
+  aiSettingsKey,
   getAISettings,
   getModelOption,
   getProviderForBaseUrl,
   getProviderIdForBaseUrl,
+  guessProviderFromKey,
   MODEL_STRENGTH_LABELS,
   modelSupportsReasoningEffort,
   saveAISettings,
@@ -140,7 +143,7 @@ describe('各服务商的 Key 分开记', () => {
       expect(loaded.apiKeys?.openai).toBe('sk-openai-1')
     })
     it('兼容旧版：只有单个 Key、没有分服务商 map 时，Key 记到当前服务商名下', () => {
-      localStorage.setItem('myielts_ai_settings_v1', JSON.stringify({
+      localStorage.setItem(aiSettingsKey(useAuth().currentUser.value), JSON.stringify({
         baseUrl: openai.baseUrl,
         apiKey: 'sk-openai-old',
         model: 'gpt-6.1-sol',
@@ -159,6 +162,14 @@ describe('只填 Key 自动识别', () => {
     expect(getModelOption('openai', 'gpt-4o-mini')).not.toBeNull()
     expect(getModelOption('deepseek', 'deepseek-flash')).not.toBeNull()
     expect(getModelOption('hive', 'deepseek-ai/deepseek-v4.1-flash-1017')).not.toBeNull()
+  })
+  it('只按 Key 格式在本机识别，认不出就返回 null', () => {
+    expect(guessProviderFromKey(`sk-proj-${'a'.repeat(40)}`)?.provider).toBe('openai')
+    expect(guessProviderFromKey(`sk-${'b'.repeat(20)}T3BlbkFJ${'c'.repeat(20)}`)?.provider).toBe('openai')
+    expect(guessProviderFromKey(`sk-${'0123456789abcdef'.repeat(2)}`)?.provider).toBe('deepseek')
+    expect(guessProviderFromKey(`sk-${'0123456789ABCDEF'.repeat(2)}`)).toBeNull()
+    expect(guessProviderFromKey('hive-or-unknown-key')).toBeNull()
+    expect(guessProviderFromKey('')).toBeNull()
   })
   it('每家都有默认模型可设（识别成功后直接用第一项）', () => {
     for (const p of AI_PROVIDERS)
