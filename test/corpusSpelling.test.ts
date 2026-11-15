@@ -17,14 +17,18 @@ describe('corpus words and checking', () => {
     expect(words.filter(w => w.chapter === 'ch3')).toHaveLength(raw['Chapter3 特别名词'].rows.length)
     expect(words.filter(w => w.chapter === 'ch4')).toHaveLength(raw['Chapter4 形容词副词'].rows.length)
     expect(new Set(words.map(w => w.id)).size).toBe(words.length)
-    expect(byWord('acknowledgement')).toMatchObject({ id: 'ch2-0', accepted: ['acknowledgement', 'acknowledgment'], meaning: '承认；谢礼' })
+    expect(byWord('acknowledgement')).toMatchObject({
+      id: 'ch2-0',
+      accepted: ['acknowledgement', 'acknowledgment'],
+      meaning: '承认；谢礼',
+    })
     expect(byWord('accommodation')).toMatchObject({ chapter: 'ch3', note: '双 c 双 m' })
     expect(byWord('convenient')).toMatchObject({ id: 'ch4-convenient', pos: 'adj.' })
     // 一格里有两种写法
     expect(byWord('annex').accepted).toEqual(['annex', 'annexe'])
   })
 
-  it('British and American spellings both count; case and spaces are ignored', () => {
+  it('british and American spellings both count; case and spaces are ignored', () => {
     const w = byWord('aluminium')
     expect(matchSpelling('Aluminium ', w)).toBe('aluminium')
     expect(matchSpelling('aluminum', w)).toBe('aluminum')
@@ -33,7 +37,9 @@ describe('corpus words and checking', () => {
   })
 
   it('marks exactly the letters that were missed or wrong', () => {
-    const marked = (input: string, answer: string) => markMissed(input, answer).map(c => c.ok ? c.char : `[${c.char}]`).join('')
+    const marked = (input: string, answer: string) => markMissed(input, answer).map(c => c.ok
+      ? c.char
+      : `[${c.char}]`).join('')
     expect(marked('acommodation', 'accommodation')).toBe('ac[c]ommodation')
     expect(marked('acomodation', 'accommodation')).toBe('ac[c]om[m]odation')
     expect(marked('Rythm', 'rhythm')).toBe('r[h]ythm')
@@ -56,7 +62,10 @@ describe('the practice page', () => {
     localStorage.clear()
     window.dispatchEvent(new StorageEvent('storage', { key: null }))
     useAuth().currentUser.value = null
-    vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+    vi.stubGlobal('speechSynthesis', {
+      cancel: vi.fn(),
+      speak: vi.fn(),
+    })
     vi.stubGlobal('SpeechSynthesisUtterance', class {
       constructor(public text: string) {}
     })
@@ -70,16 +79,31 @@ describe('the practice page', () => {
     localStorage.clear()
   })
   async function open() {
-    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { template: '<p />' } }] })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/:p(.*)*',
+          component: { template: '<p />' },
+        },
+      ],
+    })
     await router.push('/listening/corpus-spelling')
     const Page = (await import('../src/pages/listening/corpus-spelling.vue')).default
-    const w = mount(Page, { attachTo: document.body, global: { plugins: [router] } })
+    const w = mount(Page, {
+      attachTo: document.body,
+      global: {
+        plugins: [router],
+      },
+    })
     wrappers.push(w)
     await flushPromises()
     return w
   }
   const state = (w: any) => w.vm.$.setupState
-  const button = (w: any, text: string | RegExp) => w.findAll('button').find((b: any) => typeof text === 'string' ? b.text() === text : text.test(b.text()))
+  const button = (w: any, text: string | RegExp) => w.findAll('button').find((b: any) => typeof text === 'string'
+    ? b.text() === text
+    : text.test(b.text()))
   async function answer(w: any, text: string) {
     await w.find('input[aria-label="拼写"]').setValue(text)
     await w.find('form').trigger('submit')
@@ -113,7 +137,10 @@ describe('the practice page', () => {
     await w.find('button[data-size="10"]').trigger('click')
     await button(w, '开始').trigger('click')
     const s = state(w)
-    s.queue = [byWord('accommodation'), byWord('rhythm')]
+    s.queue = [
+      byWord('accommodation'),
+      byWord('rhythm'),
+    ]
     s.roundSize = 2
     await s.enter()
     await answer(w, 'acommodation')
@@ -121,7 +148,9 @@ describe('the practice page', () => {
     const marked = w.findAll('[data-answer] span').filter((x: any) => x.classes().includes('underline')).map((x: any) => x.text())
     expect(marked).toEqual(['c'])
     expect(w.text()).toContain('注意：双 c 双 m')
-    expect(useMistakes().mistakes.value.map(m => [m.module, m.key, m.count])).toEqual([['corpus', `corpus:${byWord('accommodation').id}`, 1]])
+    expect(useMistakes().mistakes.value.map(m => [m.module, m.key, m.count])).toEqual([
+      ['corpus', `corpus:${byWord('accommodation').id}`, 1],
+    ])
     await next(w)
     await answer(w, 'rhythm')
     await next(w)
@@ -148,8 +177,13 @@ describe('the practice page', () => {
     expect(s.queue).toHaveLength(words.filter(x => x.chapter === 'ch3').length)
     await button(w, '提示').trigger('click')
     expect(w.find('[data-hint]').text()).toBe(`注意：${s.current.note}`)
-    expect(JSON.parse(localStorage.getItem(nsKey('corpus_spelling_v1'))!)).toEqual({ chapters: ['ch3'], size: 0 })
-    s.queue = [byWord('convenient')]
+    expect(JSON.parse(localStorage.getItem(nsKey('corpus_spelling_v1'))!)).toEqual({
+      chapters: ['ch3'],
+      size: 0,
+    })
+    s.queue = [
+      byWord('convenient'),
+    ]
     s.index = 0
     await s.enter()
     await button(w, '提示').trigger('click')
@@ -161,7 +195,9 @@ describe('the practice page', () => {
     const w = await open()
     await button(w, '开始').trigger('click')
     const s = state(w)
-    s.queue = [byWord('aluminium')]
+    s.queue = [
+      byWord('aluminium'),
+    ]
     s.roundSize = 1
     s.index = 0
     await s.enter()

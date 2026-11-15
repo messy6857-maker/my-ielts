@@ -58,7 +58,10 @@ export function buildCorpusWords(data: RawCorpus): CorpusWord[] {
       id: `ch2-${i}`,
       chapter: 'ch2',
       word: british[0],
-      accepted: unique([...british, ...american]),
+      accepted: unique([
+        ...british,
+        ...american,
+      ]),
       meaning,
       pos: '',
       note: american.length
@@ -71,7 +74,15 @@ export function buildCorpusWords(data: RawCorpus): CorpusWord[] {
     const meaning = cell(r[2])
     if (!words.length || !meaning)
       return
-    out.push({ id: `ch3-${i}`, chapter: 'ch3', word: words[0], accepted: unique(words), meaning, pos: '', note: cell(r[1]) })
+    out.push({
+      id: `ch3-${i}`,
+      chapter: 'ch3',
+      word: words[0],
+      accepted: unique(words),
+      meaning,
+      pos: '',
+      note: cell(r[1]),
+    })
   })
   data['Chapter4 形容词副词']?.rows.forEach((r) => {
     const words = spellings(r[0])
@@ -79,7 +90,15 @@ export function buildCorpusWords(data: RawCorpus): CorpusWord[] {
     if (!words.length || !meaning)
       return
     // 自测卡片用整格内容作 id（ch4-<词>）
-    out.push({ id: `ch4-${cell(r[0])}`, chapter: 'ch4', word: words[0], accepted: unique(words), meaning, pos: cell(r[1]), note: '' })
+    out.push({
+      id: `ch4-${cell(r[0])}`,
+      chapter: 'ch4',
+      word: words[0],
+      accepted: unique(words),
+      meaning,
+      pos: cell(r[1]),
+      note: '',
+    })
   })
   return out
 }
