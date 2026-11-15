@@ -309,8 +309,14 @@ export function claimLegacyAISettings(onConflict: 'legacy' | 'current' = 'curren
     ? keysOfSettings(current)
     : {}
   const apiKeys: Record<string, string> = onConflict === 'legacy'
-    ? { ...currentKeys, ...legacyKeys }
-    : { ...legacyKeys, ...currentKeys }
+    ? {
+        ...currentKeys,
+        ...legacyKeys,
+      }
+    : {
+        ...legacyKeys,
+        ...currentKeys,
+      }
   const currentConfigured = !!current
     && typeof current.baseUrl === 'string' && !!current.baseUrl.trim()
     && typeof current.model === 'string' && !!current.model.trim()
@@ -318,7 +324,11 @@ export function claimLegacyAISettings(onConflict: 'legacy' | 'current' = 'curren
   const chosen: Partial<AISettings> = currentConfigured
     ? current!
     : legacy
-  const merged: AISettings = { ...DEFAULTS, ...chosen, apiKeys }
+  const merged: AISettings = {
+    ...DEFAULTS,
+    ...chosen,
+    apiKeys,
+  }
   merged.apiKey = apiKeys[getProviderIdForBaseUrl(merged.baseUrl)] ?? ''
   try {
     localStorage.setItem(currentKey(), JSON.stringify(merged))

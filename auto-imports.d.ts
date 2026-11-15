@@ -78,6 +78,7 @@ declare global {
   const diffWords: typeof import('./src/composables/useWordDiff').diffWords
   const discardLegacyAISettings: typeof import('./src/composables/useAISettings').discardLegacyAISettings
   const dismissAccountNotice: typeof import('./src/composables/useAuth').dismissAccountNotice
+  const dismissDialogsNotOn: typeof import('./src/composables/useDialog').dismissDialogsNotOn
   const downloadMediaFile: typeof import('./src/composables/useAudio').downloadMediaFile
   const eagerComputed: typeof import('@vueuse/core').eagerComputed
   const effectScope: typeof import('vue').effectScope
@@ -136,6 +137,7 @@ declare global {
   const jumpToPageBookmark: typeof import('./src/composables/usePageBookmark').jumpToPageBookmark
   const knownRate: typeof import('./src/composables/useStats').knownRate
   const legacyAISettingsInfo: typeof import('./src/composables/useAISettings').legacyAISettingsInfo
+  const legacyClaimConflicts: typeof import('./src/composables/useAISettings').legacyClaimConflicts
   const legacyTimerSeconds: typeof import('./src/composables/useStudyTimer').legacyTimerSeconds
   const loadVocabularyDetails: typeof import('./src/composables/useVocabularyDetails').loadVocabularyDetails
   const loadWordInfoWithFallback: typeof import('./src/composables/useWordInfo').loadWordInfoWithFallback
@@ -476,7 +478,7 @@ declare global {
   export type { ApiResult, RejectedReason, RejectedEntry } from './src/composables/syncClient'
   import('./src/composables/syncClient')
   // @ts-ignore
-  export type { AISettings, ModelStrength, AIModelOption, AIProvider, AICorrection, AIGradeResult, AISpeakingResult, AIDetectResult } from './src/composables/useAISettings'
+  export type { AISettings, ModelStrength, AIModelOption, AIProvider, LegacyClaimConflict, AICorrection, AIGradeResult, AISpeakingResult, AIDetectResult } from './src/composables/useAISettings'
   import('./src/composables/useAISettings')
   // @ts-ignore
   export type { AccountNotice, AccountRecord, AuthResult } from './src/composables/useAuth'
@@ -597,6 +599,7 @@ declare module 'vue' {
     readonly diffWords: UnwrapRef<typeof import('./src/composables/useWordDiff')['diffWords']>
     readonly discardLegacyAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['discardLegacyAISettings']>
     readonly dismissAccountNotice: UnwrapRef<typeof import('./src/composables/useAuth')['dismissAccountNotice']>
+    readonly dismissDialogsNotOn: UnwrapRef<typeof import('./src/composables/useDialog')['dismissDialogsNotOn']>
     readonly downloadMediaFile: UnwrapRef<typeof import('./src/composables/useAudio')['downloadMediaFile']>
     readonly eagerComputed: UnwrapRef<typeof import('@vueuse/core')['eagerComputed']>
     readonly effectScope: UnwrapRef<typeof import('vue')['effectScope']>
@@ -655,6 +658,7 @@ declare module 'vue' {
     readonly jumpToPageBookmark: UnwrapRef<typeof import('./src/composables/usePageBookmark')['jumpToPageBookmark']>
     readonly knownRate: UnwrapRef<typeof import('./src/composables/useStats')['knownRate']>
     readonly legacyAISettingsInfo: UnwrapRef<typeof import('./src/composables/useAISettings')['legacyAISettingsInfo']>
+    readonly legacyClaimConflicts: UnwrapRef<typeof import('./src/composables/useAISettings')['legacyClaimConflicts']>
     readonly legacyTimerSeconds: UnwrapRef<typeof import('./src/composables/useStudyTimer')['legacyTimerSeconds']>
     readonly loadVocabularyDetails: UnwrapRef<typeof import('./src/composables/useVocabularyDetails')['loadVocabularyDetails']>
     readonly loadWordInfoWithFallback: UnwrapRef<typeof import('./src/composables/useWordInfo')['loadWordInfoWithFallback']>

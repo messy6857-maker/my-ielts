@@ -39,7 +39,10 @@ beforeEach(() => {
   setToken('token', 'alice')
   accountNotice.value = ''
   reloadPageBookmarks()
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+  })
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
   vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {})
@@ -58,18 +61,27 @@ async function show(Page: any, path: string, withDialog = false) {
     history: createMemoryHistory(),
     routes: [
       { path: path.split('?')[0], component: Page },
-      { path: '/outside', component: { template: '<p>outside</p>' } },
+      {
+        path: '/outside',
+        component: { template: '<p>outside</p>' },
+      },
     ],
   })
   await router.push(path)
   await router.isReady()
   const root = mount(defineComponent({
-    render: () => h('div', [h(RouterView), withDialog
-      ? h(AppDialog)
-      : null]),
+    render: () => h('div', [
+      h(RouterView),
+      withDialog
+        ? h(AppDialog)
+        : null,
+    ]),
   }), {
     attachTo: document.body,
-    global: { plugins: [router], stubs },
+    global: {
+      plugins: [router],
+      stubs,
+    },
   })
   wrappers.push(root)
   await flushPromises()
@@ -159,7 +171,14 @@ describe.each(['listening', 'reading'] as const)('%s expired draft changed in an
 
 describe('dialogs close when their page is left', () => {
   it('leaving mock history closes its clear dialog without clearing', async () => {
-    saveMockRecord({ id: 'cam21-test1', label: 'A', kind: 'listening', score: 30, total: 40, band: 7 })
+    saveMockRecord({
+      id: 'cam21-test1',
+      label: 'A',
+      kind: 'listening',
+      score: 30,
+      total: 40,
+      band: 7,
+    })
     const Page = (await import('../src/pages/mock/history.vue')).default
     const page = await show(Page, '/mock/history', true)
     const clearing = page.state.handleClear()
@@ -226,7 +245,12 @@ describe('claiming the old shared AI setting merges keys', () => {
     setCurrent({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-new-2222', model: 'gpt-4o-mini' })
     setLegacy({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-old-1111', model: 'gpt-4o-mini' })
     expect(legacyClaimConflicts()).toEqual([
-      { provider: 'openai', label: 'OpenAI', legacyTail: '1111', currentTail: '2222' },
+      {
+        provider: 'openai',
+        label: 'OpenAI',
+        legacyTail: '1111',
+        currentTail: '2222',
+      },
     ])
     expect(claimLegacyAISettings('current')).toBe(true)
     expect(getAISettings().apiKey).toBe('sk-new-2222')
@@ -246,7 +270,9 @@ describe('bookmarks from two tabs', () => {
     addPageBookmark('/reading/daily:["2026-11-14","alice"]', 100)
     // 另一个页签（它的内存列表与本页无关）在别的日期加了书签并写入存储
     const stored = JSON.parse(localStorage.getItem('myielts_page_bookmarks_v1')!)
-    stored['/reading/daily:["2026-11-15","alice"]'] = [{ id: 'other-tab', y: 500, createdAt: 2 }]
+    stored['/reading/daily:["2026-11-15","alice"]'] = [
+      { id: 'other-tab', y: 500, createdAt: 2 },
+    ]
     localStorage.setItem('myielts_page_bookmarks_v1', JSON.stringify(stored))
     addPageBookmark('/reading/daily:["2026-11-14","alice"]', 900)
     const saved = JSON.parse(localStorage.getItem('myielts_page_bookmarks_v1')!)
@@ -264,7 +290,11 @@ describe('bookmarks from two tabs', () => {
   })
 
   it('follows changes saved by other tabs', () => {
-    localStorage.setItem('myielts_page_bookmarks_v1', JSON.stringify({ '/x': [{ id: 'a', y: 1, createdAt: 1 }] }))
+    localStorage.setItem('myielts_page_bookmarks_v1', JSON.stringify({
+      '/x': [
+        { id: 'a', y: 1, createdAt: 1 },
+      ],
+    }))
     window.dispatchEvent(new StorageEvent('storage', { key: 'myielts_page_bookmarks_v1' }))
     expect(pageBookmarksState.value['/x'].map(b => b.id)).toEqual(['a'])
   })
