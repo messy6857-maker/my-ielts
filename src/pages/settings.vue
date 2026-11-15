@@ -252,15 +252,19 @@ const reasoningEffortInput = computed({
   get: () => reasoningEffortForProvider(selectedProvider.value?.id ?? '', form.value.reasoningEffort),
   set: (value) => { form.value.reasoningEffort = value },
 })
+/** 已保存到存储里的各地址 Key（切地址时没保存的新 Key 不顶替它们） */
+function savedAIKeys(): Record<string, string> {
+  return getAISettings().apiKeys ?? {}
+}
 /** 点服务商预设：填地址；当前模型不在该服务商列表里时换成它的第一个模型；
  *  Key 也跟着换到该服务商存过的（没填过就是空），当前 Key 先存回旧服务商名下。 */
 function selectProvider(provider: (typeof AI_PROVIDERS)[number]) {
-  form.value = switchProviderSettings(form.value, provider)
+  form.value = switchProviderSettings(form.value, provider, savedAIKeys())
 }
 /** 手动改 API 地址：和点预设同一套切换逻辑，Key 换成新地址存过的（没有就清空），不带着旧 Key 去测试或保存 */
 function onBaseUrlInput(event: Event) {
   const baseUrl = (event.target as HTMLInputElement).value
-  form.value = rebindKeyForBaseUrl({ ...form.value, baseUrl }, form.value.baseUrl)
+  form.value = rebindKeyForBaseUrl({ ...form.value, baseUrl }, form.value.baseUrl, savedAIKeys())
 }
 function onModelSelect(value: string) {
   if (value === '__custom__')

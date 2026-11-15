@@ -245,8 +245,14 @@ function keyForSlot(apiKeys: Record<string, string> | undefined, slot: string): 
  * API 地址变了（点服务商预设、手动改地址都走这里）：表单里的 Key 先存回原地址的槽位，
  * 再换成新地址存过的 Key，没有就清空——Key 不会跟着跑到别的地址上去测试或保存。
  * Key 为空时只记到预设或已有槽位，逐字输入地址时不会留下一堆半截地址的空槽位。
+ * savedKeys 是已保存到存储里的 Key 表：原地址已经保存过 Key、而表单里是还没保存的另一个 Key
+ * （比如先粘贴了新 Key 再去改地址）时，这个新 Key 直接清掉，不顶替原地址已保存的 Key。
  */
-export function rebindKeyForBaseUrl(current: AISettings, previousBaseUrl: string): AISettings {
+export function rebindKeyForBaseUrl(
+  current: AISettings,
+  previousBaseUrl: string,
+  savedKeys: Record<string, string> = {},
+): AISettings {
   const oldSlot = keySlotForBaseUrl(previousBaseUrl)
   const newSlot = keySlotForBaseUrl(current.baseUrl)
   if (oldSlot === newSlot)
@@ -258,7 +264,10 @@ export function rebindKeyForBaseUrl(current: AISettings, previousBaseUrl: string
   const isPreset = AI_PROVIDERS.some(p => p.id === oldSlot)
   // 填了 Key 就存回原地址（包括还没保存过的自定义地址，切走再切回来还在）；
   // 空 Key 只记到预设或已有的槽位（表示清空），不给逐字输入的半截地址留空槽
-  if (oldSlot !== SHARED_CUSTOM_SLOT && (key || isPreset || oldSlot in apiKeys))
+  const saved = keyForSlot(savedKeys, oldSlot).trim()
+  if (saved && key !== saved)
+    apiKeys[oldSlot] = saved
+  else if (oldSlot !== SHARED_CUSTOM_SLOT && (key || isPreset || oldSlot in apiKeys))
     apiKeys[oldSlot] = key
   return {
     ...current,
@@ -270,9 +279,13 @@ export function rebindKeyForBaseUrl(current: AISettings, previousBaseUrl: string
  * 切服务商：先把当前 Key 存到旧服务商名下，再把新服务商存过的 Key（没填过就是空）取出来；
  *  当前模型在新服务商列表里就保留，否则换成它的第一个模型。
  */
-export function switchProviderSettings(current: AISettings, provider: AIProvider): AISettings {
+export function switchProviderSettings(
+  current: AISettings,
+  provider: AIProvider,
+  savedKeys: Record<string, string> = {},
+): AISettings {
   return {
-    ...rebindKeyForBaseUrl({ ...current, baseUrl: provider.baseUrl }, current.baseUrl),
+    ...rebindKeyForBaseUrl({ ...current, baseUrl: provider.baseUrl }, current.baseUrl, savedKeys),
     model: provider.models.some(m => m.id === current.model.trim())
       ? current.model.trim()
       : provider.models[0].id,
