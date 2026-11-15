@@ -64,7 +64,10 @@ function parseItemKey(key: string): { path: string, id: string } | null {
   if (sep < 0)
     return null
   try {
-    return { path: decodeURIComponent(rest.slice(0, sep)), id: decodeURIComponent(rest.slice(sep + 1)) }
+    return {
+      path: decodeURIComponent(rest.slice(0, sep)),
+      id: decodeURIComponent(rest.slice(sep + 1)),
+    }
   }
   catch {
     return null
@@ -146,7 +149,10 @@ function readStoredBookmarks(): PageBookmarks | null {
     if (!parsedKey)
       continue
     try {
-      const item = normalizeItem({ ...JSON.parse(localStorage.getItem(key) ?? 'null'), id: parsedKey.id })
+      const item = normalizeItem({
+        ...JSON.parse(localStorage.getItem(key) ?? 'null'),
+        id: parsedKey.id,
+      })
       if (item)
         (out[parsedKey.path] ??= []).push(item)
     }
@@ -308,7 +314,9 @@ function moveDailyBookmarks(match: (owner: unknown) => boolean, to: string): voi
     if (!Array.isArray(scope) || scope.length !== 2 || scope[1] === to || !match(scope[1]))
       continue
     const targetPath = `/reading/daily:${JSON.stringify([scope[0], to])}`
-    const merged = [...(next[targetPath] ?? [])]
+    const merged = [
+      ...(next[targetPath] ?? []),
+    ]
     // 逐条迁：先写到目标，写成功（或目标已有同位置书签）才删原条目；写失败的留在原处，不会丢
     for (const item of items) {
       const dup = merged.some(b => (

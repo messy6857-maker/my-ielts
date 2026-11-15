@@ -135,6 +135,7 @@ declare global {
   const isValidEssayGrade: typeof import('./src/composables/useAISettings').isValidEssayGrade
   const isValidSpeakingGrade: typeof import('./src/composables/useAISettings').isValidSpeakingGrade
   const jumpToPageBookmark: typeof import('./src/composables/usePageBookmark').jumpToPageBookmark
+  const keySlotForBaseUrl: typeof import('./src/composables/useAISettings').keySlotForBaseUrl
   const knownRate: typeof import('./src/composables/useStats').knownRate
   const legacyAISettingsInfo: typeof import('./src/composables/useAISettings').legacyAISettingsInfo
   const legacyClaimConflicts: typeof import('./src/composables/useAISettings').legacyClaimConflicts
@@ -150,6 +151,7 @@ declare global {
   const modelSupportsReasoningEffort: typeof import('./src/composables/useAISettings').modelSupportsReasoningEffort
   const newPasswordProblem: typeof import('./src/composables/useAuth').newPasswordProblem
   const nextTick: typeof import('vue').nextTick
+  const normalizeBaseUrl: typeof import('./src/composables/useAISettings').normalizeBaseUrl
   const normalizeTask2Grade: typeof import('./src/composables/useAISettings').normalizeTask2Grade
   const nsKey: typeof import('./src/composables/useStudyData').nsKey
   const onActivated: typeof import('vue').onActivated
@@ -478,7 +480,7 @@ declare global {
   export type { ApiResult, RejectedReason, RejectedEntry } from './src/composables/syncClient'
   import('./src/composables/syncClient')
   // @ts-ignore
-  export type { AISettings, ModelStrength, AIModelOption, AIProvider, LegacyClaimConflict, AICorrection, AIGradeResult, AISpeakingResult, AIDetectResult } from './src/composables/useAISettings'
+  export type { AISettings, ModelStrength, AIModelOption, AIProvider, LegacyClaimConflict, LegacyClaimResult, AICorrection, AIGradeResult, AISpeakingResult, AIDetectResult } from './src/composables/useAISettings'
   import('./src/composables/useAISettings')
   // @ts-ignore
   export type { AccountNotice, AccountRecord, AuthResult } from './src/composables/useAuth'
@@ -656,6 +658,7 @@ declare module 'vue' {
     readonly isValidEssayGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['isValidEssayGrade']>
     readonly isValidSpeakingGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['isValidSpeakingGrade']>
     readonly jumpToPageBookmark: UnwrapRef<typeof import('./src/composables/usePageBookmark')['jumpToPageBookmark']>
+    readonly keySlotForBaseUrl: UnwrapRef<typeof import('./src/composables/useAISettings')['keySlotForBaseUrl']>
     readonly knownRate: UnwrapRef<typeof import('./src/composables/useStats')['knownRate']>
     readonly legacyAISettingsInfo: UnwrapRef<typeof import('./src/composables/useAISettings')['legacyAISettingsInfo']>
     readonly legacyClaimConflicts: UnwrapRef<typeof import('./src/composables/useAISettings')['legacyClaimConflicts']>
@@ -671,6 +674,7 @@ declare module 'vue' {
     readonly modelSupportsReasoningEffort: UnwrapRef<typeof import('./src/composables/useAISettings')['modelSupportsReasoningEffort']>
     readonly newPasswordProblem: UnwrapRef<typeof import('./src/composables/useAuth')['newPasswordProblem']>
     readonly nextTick: UnwrapRef<typeof import('vue')['nextTick']>
+    readonly normalizeBaseUrl: UnwrapRef<typeof import('./src/composables/useAISettings')['normalizeBaseUrl']>
     readonly normalizeTask2Grade: UnwrapRef<typeof import('./src/composables/useAISettings')['normalizeTask2Grade']>
     readonly nsKey: UnwrapRef<typeof import('./src/composables/useStudyData')['nsKey']>
     readonly onActivated: UnwrapRef<typeof import('vue')['onActivated']>

@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import PageBookmark from '../src/components/PageBookmark.vue'
 import { setToken } from '../src/composables/syncClient'
 import {
+  AI_PROVIDERS,
   aiSettingsKey,
   claimLegacyAISettings,
   getAISettings,
@@ -12,7 +13,6 @@ import {
   legacyClaimConflicts,
   normalizeBaseUrl,
   switchProviderSettings,
-  AI_PROVIDERS,
 } from '../src/composables/useAISettings'
 import { useAuth } from '../src/composables/useAuth'
 import { dialogQueue, registerDialogHost, settleDialog } from '../src/composables/useDialog'
@@ -110,8 +110,18 @@ describe('custom API addresses keep their own keys', () => {
   })
 
   it('an unbound old shared custom key is never treated as a conflict or used for a preset', () => {
-    setCurrentAI({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-fake-openai', model: 'gpt-4o-mini', apiKeys: { custom: 'sk-fake-c1' } })
-    setLegacyAI({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-fake-openai', model: 'gpt-4o-mini', apiKeys: { custom: 'sk-fake-c2' } })
+    setCurrentAI({
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: 'sk-fake-openai',
+      model: 'gpt-4o-mini',
+      apiKeys: { custom: 'sk-fake-c1' },
+    })
+    setLegacyAI({
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: 'sk-fake-openai',
+      model: 'gpt-4o-mini',
+      apiKeys: { custom: 'sk-fake-c2' },
+    })
     expect(legacyClaimConflicts()).toEqual([])
     expect(claimLegacyAISettings()).toBe('claimed')
     expect(getAISettings().apiKey).toBe('sk-fake-openai')
@@ -131,7 +141,10 @@ describe('claim only applies the choices the user confirmed', () => {
     expect(shown.map(c => c.provider)).toEqual(['openai'])
     // 弹窗开着时，另一页签给当前身份存了 DeepSeek Key
     const current = storedCurrentAI()
-    setCurrentAI({ ...current, apiKeys: { ...current.apiKeys, deepseek: 'sk-fake-new-deepseek' } })
+    setCurrentAI({
+      ...current,
+      apiKeys: { ...current.apiKeys, deepseek: 'sk-fake-new-deepseek' },
+    })
     expect(claimLegacyAISettings({ openai: 'legacy' }, shown)).toBe('changed')
     // 什么都没改：新 Key 还在，旧设置也还在
     expect(storedCurrentAI().apiKeys.deepseek).toBe('sk-fake-new-deepseek')
@@ -163,10 +176,24 @@ describe('claim only applies the choices the user confirmed', () => {
       model: 'gpt-4o-mini',
       apiKeys: { deepseek: 'sk-fake-old-deepseek' },
     })
-    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/settings', component: { template: '<p />' } }] })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/settings',
+          component: { template: '<p />' },
+        },
+      ],
+    })
     await router.push('/settings')
     const Page = (await import('../src/pages/settings.vue')).default
-    const w = mount(Page, { attachTo: document.body, global: { plugins: [router], stubs: { RouterLink: true } } })
+    const w = mount(Page, {
+      attachTo: document.body,
+      global: {
+        plugins: [router],
+        stubs: { RouterLink: true },
+      },
+    })
     wrappers.push(w)
     await flushPromises()
     offHost = registerDialogHost()
@@ -175,7 +202,10 @@ describe('claim only applies the choices the user confirmed', () => {
     await nextTick()
     expect(dialogQueue.value).toHaveLength(1)
     const current = storedCurrentAI()
-    setCurrentAI({ ...current, apiKeys: { ...current.apiKeys, deepseek: 'sk-fake-new-deepseek' } })
+    setCurrentAI({
+      ...current,
+      apiKeys: { ...current.apiKeys, deepseek: 'sk-fake-new-deepseek' },
+    })
     settleDialog(dialogQueue.value[0].id, 'confirm')
     await flushPromises()
     // 第二次询问：说明设置刚变过，并列出两处冲突
@@ -225,9 +255,22 @@ describe('bookmark storage', () => {
   })
 
   it('the bookmark button tells the user when saving failed', async () => {
-    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/vocabulary', component: { template: '<p />' } }] })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/vocabulary',
+          component: { template: '<p />' },
+        },
+      ],
+    })
     await router.push('/vocabulary')
-    const w = mount(PageBookmark, { attachTo: document.body, global: { plugins: [router] } })
+    const w = mount(PageBookmark, {
+      attachTo: document.body,
+      global: {
+        plugins: [router],
+      },
+    })
     wrappers.push(w)
     await flushPromises()
     const set = Storage.prototype.setItem
@@ -243,7 +286,10 @@ describe('bookmark storage', () => {
 
   it('the old whole-table storage is migrated to one key per bookmark', () => {
     localStorage.setItem(LEGACY_BOOKMARKS, JSON.stringify({
-      '/reading/daily': [{ id: 'a', y: 100, createdAt: 1 }, { id: 'b', y: 900, createdAt: 2 }],
+      '/reading/daily': [
+        { id: 'a', y: 100, createdAt: 1 },
+        { id: 'b', y: 900, createdAt: 2 },
+      ],
       '/vocabulary': 300,
     }))
     reloadPageBookmarks()
@@ -255,7 +301,10 @@ describe('bookmark storage', () => {
 
   it('a migration that cannot finish keeps the old table and shows everything once', () => {
     localStorage.setItem(LEGACY_BOOKMARKS, JSON.stringify({
-      '/reading/daily': [{ id: 'a', y: 100, createdAt: 1 }, { id: 'b', y: 900, createdAt: 2 }],
+      '/reading/daily': [
+        { id: 'a', y: 100, createdAt: 1 },
+        { id: 'b', y: 900, createdAt: 2 },
+      ],
     }))
     const set = Storage.prototype.setItem
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {

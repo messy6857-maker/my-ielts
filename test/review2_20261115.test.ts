@@ -245,8 +245,18 @@ describe('claiming the old shared AI setting merges keys', () => {
     setCurrent({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-new-2222', model: 'gpt-4o-mini' })
     setLegacy({ baseUrl: 'https://api.openai.com/v1', apiKey: 'sk-old-1111', model: 'gpt-4o-mini' })
     const conflicts = legacyClaimConflicts()
-    expect(conflicts.map(({ provider, label, legacyTail, currentTail }) => ({ provider, label, legacyTail, currentTail }))).toEqual([
-      { provider: 'openai', label: 'OpenAI', legacyTail: '1111', currentTail: '2222' },
+    expect(conflicts.map(({ provider, label, legacyTail, currentTail }) => ({
+      provider,
+      label,
+      legacyTail,
+      currentTail,
+    }))).toEqual([
+      {
+        provider: 'openai',
+        label: 'OpenAI',
+        legacyTail: '1111',
+        currentTail: '2222',
+      },
     ])
     expect(claimLegacyAISettings({ openai: 'current' }, conflicts)).toBe('claimed')
     expect(getAISettings().apiKey).toBe('sk-new-2222')
