@@ -19,7 +19,14 @@ import {
 const DAY = 86400000
 const NOW = new Date(2026, 10, 15, 15, 0, 0).getTime()
 function word(id: number, w: string, meaning: string, chapter = 'c1', pos = 'n.'): DungeonWord {
-  return { id, word: w, variants: [w], pos, meaning, chapter }
+  return {
+    id,
+    word: w,
+    variants: [w],
+    pos,
+    meaning,
+    chapter,
+  }
 }
 const WORDS = [
   word(1, 'atmosphere', '大气层'),
@@ -31,10 +38,23 @@ const WORDS = [
   word(7, 'Atmosphere', '大气层（重复）', 'c2'),
 ]
 function ctx(extra: Partial<DungeonContext> = {}): DungeonContext {
-  return { schedules: {}, mistakes: [], now: NOW, ...extra }
+  return {
+    schedules: {},
+    mistakes: [],
+    now: NOW,
+    ...extra,
+  }
 }
 function mistake(key: string, title: string, count: number, lastAt: number, module = key.split(':')[0]) {
-  return { key, module, title, detail: '', count, firstAt: lastAt, lastAt } as any
+  return {
+    key,
+    module,
+    title,
+    detail: '',
+    count,
+    firstAt: lastAt,
+    lastAt,
+  } as any
 }
 /** 可复现的随机数 */
 function seeded(seed = 1) {
@@ -48,19 +68,75 @@ function seeded(seed = 1) {
 describe('word sources', () => {
   it('flattens chapters and skips entries without a word or meaning', () => {
     const flat = flattenVocabulary({
-      c1: { words: [[{ id: 1, word: ['colour', 'color'], pos: 'n.', meaning: '颜色' }, { id: 2, word: [], pos: '', meaning: 'x' }], [{ id: 3, word: ['x'], pos: '', meaning: ' ' }]] },
+      c1: {
+        words: [
+          [
+            {
+              id: 1,
+              word: ['colour', 'color'],
+              pos: 'n.',
+              meaning: '颜色',
+            },
+            {
+              id: 2,
+              word: [],
+              pos: '',
+              meaning: 'x',
+            },
+          ],
+          [
+            {
+              id: 3,
+              word: ['x'],
+              pos: '',
+              meaning: ' ',
+            },
+          ],
+        ],
+      },
     })
-    expect(flat).toEqual([{ id: 1, word: 'colour', variants: ['colour', 'color'], pos: 'n.', meaning: '颜色', chapter: 'c1' }])
+    expect(flat).toEqual([
+      {
+        id: 1,
+        word: 'colour',
+        variants: ['colour', 'color'],
+        pos: 'n.',
+        meaning: '颜色',
+        chapter: 'c1',
+      },
+    ])
   })
 
   it('today = graded in self-test today or added to the mistake book today', () => {
     const c = ctx({
       schedules: {
-        'vocab:1': { ease: 2.5, interval: 1, dueAt: NOW - 3600000 + DAY, reps: 1, lapses: 0 }, // 一小时前评“认识”
-        'vocab:2': { ease: 2.5, interval: 3, dueAt: NOW + DAY, reps: 2, lapses: 0 }, // 两天前评的
-        'vocab:3': { ease: 2.3, interval: 0, dueAt: NOW - 60000, reps: 0, lapses: 1 }, // 一分钟前评“不认识”
+        'vocab:1': {
+          ease: 2.5,
+          interval: 1,
+          dueAt: NOW - 3600000 + DAY,
+          reps: 1,
+          lapses: 0,
+        }, // 一小时前评“认识”
+        'vocab:2': {
+          ease: 2.5,
+          interval: 3,
+          dueAt: NOW + DAY,
+          reps: 2,
+          lapses: 0,
+        }, // 两天前评的
+        'vocab:3': {
+          ease: 2.3,
+          interval: 0,
+          dueAt: NOW - 60000,
+          reps: 0,
+          lapses: 1,
+        }, // 一分钟前评“不认识”
       },
-      mistakes: [mistake('typing:oxygen', 'oxygen', 1, NOW - 1000), mistake('typing:glacier', 'glacier', 2, NOW - 2 * DAY), mistake('dictation:x', 'erode', 1, NOW)],
+      mistakes: [
+        mistake('typing:oxygen', 'oxygen', 1, NOW - 1000),
+        mistake('typing:glacier', 'glacier', 2, NOW - 2 * DAY),
+        mistake('dictation:x', 'erode', 1, NOW),
+      ],
     })
     const s = sourceWords(WORDS, c)
     expect(s.today.map(w => w.word)).toEqual(['atmosphere', 'lithosphere', 'oxygen'])
@@ -69,11 +145,35 @@ describe('word sources', () => {
   })
 
   it('sources can be combined with chapters; the same word in two chapters appears once', () => {
-    const c = ctx({ mistakes: [mistake('flashcard:5', 'glacier', 1, NOW - 5 * DAY)] })
-    expect(buildPool(WORDS, { today: false, mistakes: false, due: false, chapters: [] }, c)).toEqual([])
-    expect(buildPool(WORDS, { today: false, mistakes: true, due: false, chapters: [] }, c).map(w => w.id)).toEqual([5])
-    expect(buildPool(WORDS, { today: false, mistakes: true, due: false, chapters: ['c1'] }, c).map(w => w.id)).toEqual([1, 2, 3, 4, 5])
-    expect(buildPool(WORDS, { today: false, mistakes: false, due: false, chapters: ['c1', 'c2'] }, c).map(w => w.id)).toEqual([1, 2, 3, 4, 5, 6])
+    const c = ctx({
+      mistakes: [
+        mistake('flashcard:5', 'glacier', 1, NOW - 5 * DAY),
+      ],
+    })
+    expect(buildPool(WORDS, {
+      today: false,
+      mistakes: false,
+      due: false,
+      chapters: [],
+    }, c)).toEqual([])
+    expect(buildPool(WORDS, {
+      today: false,
+      mistakes: true,
+      due: false,
+      chapters: [],
+    }, c).map(w => w.id)).toEqual([5])
+    expect(buildPool(WORDS, {
+      today: false,
+      mistakes: true,
+      due: false,
+      chapters: ['c1'],
+    }, c).map(w => w.id)).toEqual([1, 2, 3, 4, 5])
+    expect(buildPool(WORDS, {
+      today: false,
+      mistakes: false,
+      due: false,
+      chapters: ['c1', 'c2'],
+    }, c).map(w => w.id)).toEqual([1, 2, 3, 4, 5, 6])
   })
 })
 
@@ -94,7 +194,10 @@ describe('building a run', () => {
   it('the boss is the most-missed selected word; much-missed words become elites needing both question types', () => {
     const pool = many.slice(0, 6)
     const c = ctx({
-      mistakes: [mistake(`flashcard:${pool[2].id}`, pool[2].word, 7, NOW), mistake(`typing:${pool[4].word}`, pool[4].word, 3, NOW)],
+      mistakes: [
+        mistake(`flashcard:${pool[2].id}`, pool[2].word, 7, NOW),
+        mistake(`typing:${pool[4].word}`, pool[4].word, 3, NOW),
+      ],
     })
     const run = buildRun(pool, many, c, seeded(7))
     const boss = run.at(-1)!
@@ -111,7 +214,11 @@ describe('building a run', () => {
   })
 
   it('with no mistakes the boss is the longest word', () => {
-    const pool = [word(1, 'cat', '猫'), word(2, 'hippopotamus', '河马'), word(3, 'dog', '狗')]
+    const pool = [
+      word(1, 'cat', '猫'),
+      word(2, 'hippopotamus', '河马'),
+      word(3, 'dog', '狗'),
+    ]
     expect(buildRun(pool, pool, ctx(), seeded(3)).at(-1)!.word.word).toBe('hippopotamus')
   })
 
@@ -128,7 +235,14 @@ describe('building a run', () => {
   })
 
   it('spelling check ignores case and extra spaces and accepts variants', () => {
-    const w: DungeonWord = { id: 1, word: 'ice cap', variants: ['ice cap', 'icecap'], pos: '', meaning: '', chapter: '' }
+    const w: DungeonWord = {
+      id: 1,
+      word: 'ice cap',
+      variants: ['ice cap', 'icecap'],
+      pos: '',
+      meaning: '',
+      chapter: '',
+    }
     expect(checkSpelling('  Ice   Cap ', w)).toBe(true)
     expect(checkSpelling('icecap', w)).toBe(true)
     expect(checkSpelling('ice caps', w)).toBe(false)
@@ -150,7 +264,10 @@ describe('the game page', () => {
     localStorage.clear()
     window.dispatchEvent(new StorageEvent('storage', { key: null }))
     auth.currentUser.value = null
-    vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+    vi.stubGlobal('speechSynthesis', {
+      cancel: vi.fn(),
+      speak: vi.fn(),
+    })
     vi.stubGlobal('SpeechSynthesisUtterance', class {
       constructor(public text: string) {}
     })
@@ -165,7 +282,12 @@ describe('the game page', () => {
     localStorage.clear()
   })
   async function open() {
-    const w = mount(GamePage, { attachTo: document.body, global: { stubs: { RouterLink: true } } })
+    const w = mount(GamePage, {
+      attachTo: document.body,
+      global: {
+        stubs: { RouterLink: true },
+      },
+    })
     wrappers.push(w)
     for (let i = 0; w.text().includes('正在加载词库') && i < 200; i++) {
       await new Promise(resolve => setTimeout(resolve, 10))
@@ -184,12 +306,16 @@ describe('the game page', () => {
     const s = state(w)
     const m = s.monster
     if (s.question === 'choice') {
-      const target = correct ? m.word.word : m.options.find((o: any) => o !== m.word).word
+      const target = correct
+        ? m.word.word
+        : m.options.find((o: any) => o !== m.word).word
       const button = w.findAll('button').find((b: any) => b.text().replace(/^\d/, '').trim() === target)
       await button.trigger('click')
     }
     else {
-      await w.find('input[aria-label="拼写"]').setValue(correct ? m.word.word.toUpperCase() : 'zzzz')
+      await w.find('input[aria-label="拼写"]').setValue(correct
+        ? m.word.word.toUpperCase()
+        : 'zzzz')
       await w.find('form').trigger('submit')
     }
     await nextTick()
@@ -242,7 +368,9 @@ describe('the game page', () => {
     const expected: string[] = []
     for (let i = 0; i < 3; i++) {
       const m = s.monster
-      expected.push(s.question === 'choice' ? `flashcard:${m.word.id}` : `typing:${m.word.word}`)
+      expected.push(s.question === 'choice'
+        ? `flashcard:${m.word.id}`
+        : `typing:${m.word.word}`)
       await play(w, false)
       expect(s.result).toBe('wrong')
       expect(s.hearts).toBe(2 - i)
@@ -265,7 +393,13 @@ describe('the game page', () => {
     const s = state(w)
     const first = s.monster.word
     const second = s.monsters[1].word
-    schedules.set(first.id, { ease: 2.5, interval: 2, dueAt: Date.now() - 1000, reps: 2, lapses: 0 })
+    schedules.set(first.id, {
+      ease: 2.5,
+      interval: 2,
+      dueAt: Date.now() - 1000,
+      reps: 2,
+      lapses: 0,
+    })
     for (let guard = 0; s.room === 0 && guard < 3; guard++) {
       await play(w, true)
       await continueButton(w).trigger('click')
@@ -306,6 +440,8 @@ describe('the game page', () => {
     expect(w.text()).toContain('选中 1 个词，这局 1 个房间')
     await startButton(w).trigger('click')
     const s = state(w)
-    expect(s.monsters.map((m: any) => [m.kind, m.word.word])).toEqual([['boss', 'atmosphere']])
+    expect(s.monsters.map((m: any) => [m.kind, m.word.word])).toEqual([
+      ['boss', 'atmosphere'],
+    ])
   })
 })

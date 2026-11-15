@@ -171,17 +171,32 @@ function recordWord(m: Monster, wrongKind: QuestionKind | null) {
     return
   const detail = `${m.word.pos} ${m.word.meaning}`.trim()
   // 认错释义记到“单词自测”，拼错记到“打字练习”，和那两处的错题合并计数
-  if (wrongKind === 'choice')
-    addMistake('flashcard', { key: `flashcard:${m.word.id}`, title: m.word.word, detail, hint: `${m.word.word}: ${m.word.meaning}` })
-  else
-    addMistake('typing', { key: `typing:${m.word.word}`, title: m.word.word, detail, hint: `${m.word.word}: ${m.word.meaning}` })
+  if (wrongKind === 'choice') {
+    addMistake('flashcard', {
+      key: `flashcard:${m.word.id}`,
+      title: m.word.word,
+      detail,
+      hint: `${m.word.word}: ${m.word.meaning}`,
+    })
+  }
+  else {
+    addMistake('typing', {
+      key: `typing:${m.word.word}`,
+      title: m.word.word,
+      detail,
+      hint: `${m.word.word}: ${m.word.meaning}`,
+    })
+  }
 }
 
 function finish(next: 'won' | 'lost') {
   managedAudio.dispose()
   if (score.value > best.value.score || maxCombo.value > best.value.combo) {
     newRecord.value = score.value > best.value.score
-    best.value = { score: Math.max(best.value.score, score.value), combo: Math.max(best.value.combo, maxCombo.value) }
+    best.value = {
+      score: Math.max(best.value.score, score.value),
+      combo: Math.max(best.value.combo, maxCombo.value),
+    }
     saveValue(nsKey(BEST_KEY), best.value)
   }
   stage.value = next

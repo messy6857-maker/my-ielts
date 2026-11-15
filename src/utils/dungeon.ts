@@ -44,7 +44,12 @@ export const START_HEARTS = 3
 export const ELITE_WRONG_COUNT = 3
 const DAY = 86400000
 /** 词汇类错题：这些模块的错题能对应到词库里的词 */
-const WORD_MISTAKE_MODULES = new Set(['flashcard', 'typing', 'vocabulary', 'legacy_vocabulary'])
+const WORD_MISTAKE_MODULES = new Set([
+  'flashcard',
+  'typing',
+  'vocabulary',
+  'legacy_vocabulary',
+])
 
 export const MONSTER_LABEL: Record<MonsterKind, string> = {
   slime: '史莱姆',
@@ -74,7 +79,14 @@ export function flattenVocabulary(all: Record<string, RawChapter>): DungeonWord[
       const variants = (item.word ?? []).map(w => String(w).trim()).filter(Boolean)
       if (!variants.length || !String(item.meaning ?? '').trim())
         continue
-      out.push({ id: item.id, word: variants[0], variants, pos: item.pos ?? '', meaning: item.meaning, chapter })
+      out.push({
+        id: item.id,
+        word: variants[0],
+        variants,
+        pos: item.pos ?? '',
+        meaning: item.meaning,
+        chapter,
+      })
     }
   }
   return out
@@ -195,7 +207,10 @@ function shuffle<T>(list: T[], rng: Rng): T[] {
 }
 /** 不放回地按权重抽 n 个 */
 function weightedSample<T>(list: T[], weight: (item: T) => number, n: number, rng: Rng): T[] {
-  const rest = list.map(item => ({ item, w: Math.max(0.0001, weight(item)) }))
+  const rest = list.map(item => ({
+    item,
+    w: Math.max(0.0001, weight(item)),
+  }))
   const out: T[] = []
   while (out.length < n && rest.length) {
     let roll = rng() * rest.reduce((sum, r) => sum + r.w, 0)
@@ -214,11 +229,18 @@ function weightedSample<T>(list: T[], weight: (item: T) => number, n: number, rn
 
 /** 选择题的干扰项：优先同词性，释义和拼写都不能和正确答案撞 */
 export function pickOptions(word: DungeonWord, allWords: DungeonWord[], rng: Rng): DungeonWord[] {
-  const taken = new Set([norm(word.word)])
-  const meanings = new Set([word.meaning.trim()])
+  const taken = new Set([
+    norm(word.word),
+  ])
+  const meanings = new Set([
+    word.meaning.trim(),
+  ])
   const distractors: DungeonWord[] = []
   const usable = (w: DungeonWord) => !taken.has(norm(w.word)) && !meanings.has(w.meaning.trim())
-  for (const candidates of [allWords.filter(w => w.pos === word.pos), allWords]) {
+  for (const candidates of [
+    allWords.filter(w => w.pos === word.pos),
+    allWords,
+  ]) {
     for (const w of shuffle(candidates, rng)) {
       if (distractors.length >= 3)
         break
@@ -243,22 +265,33 @@ export function buildRun(pool: DungeonWord[], allWords: DungeonWord[], ctx: Dung
   const count = (w: DungeonWord) => counts.get(w) ?? 0
   const chosen = weightedSample(pool, w => 1 + Math.min(count(w), 5), ROOMS_PER_RUN, rng)
   const boss = chosen.reduce((best, w) => {
-    if (count(w) !== count(best))
-      return count(w) > count(best) ? w : best
-    return w.word.length > best.word.length ? w : best
+    if (count(w) !== count(best)) {
+      return count(w) > count(best)
+        ? w
+        : best
+    }
+    return w.word.length > best.word.length
+      ? w
+      : best
   })
   const rest = shuffle(chosen.filter(w => w !== boss), rng)
   const monsters: Monster[] = rest.map((word) => {
     const elite = count(word) >= ELITE_WRONG_COUNT
     const kind: MonsterKind = elite
       ? 'elite'
-      : (rng() < 0.5 ? 'slime' : 'bat')
+      : (rng() < 0.5
+          ? 'slime'
+          : 'bat')
     return {
       kind,
       word,
       phases: elite
         ? ['choice', 'spell']
-        : [kind === 'slime' ? 'choice' : 'spell'],
+        : [
+            kind === 'slime'
+              ? 'choice'
+              : 'spell',
+          ],
       options: pickOptions(word, allWords, rng),
       wrongCount: count(word),
     }
@@ -282,5 +315,7 @@ export function checkSpelling(input: string, word: DungeonWord): boolean {
 /** 答对一题的得分：基础 100，连击每层 +10（最多 +100），Boss 翻倍。combo 是答对这题之后的连击数 */
 export function phaseScore(combo: number, kind: MonsterKind): number {
   const base = 100 + Math.min(Math.max(combo - 1, 0), 10) * 10
-  return kind === 'boss' ? base * 2 : base
+  return kind === 'boss'
+    ? base * 2
+    : base
 }
