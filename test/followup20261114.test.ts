@@ -1,8 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import {
   aiSettingsKey,
+  claimLegacyAISettings,
+  discardLegacyAISettings,
   getAISettings,
   hasAISettings,
+  legacyAISettingsInfo,
   saveAISettings,
 } from '../src/composables/useAISettings'
 import { useAuth } from '../src/composables/useAuth'
@@ -45,11 +48,28 @@ it('aI settings are kept per account and never treated as study data', () => {
     expect(isStudyKey(aiSettingsKey(user))).toBe(false)
 })
 
-it('the old shared AI setting moves to the first identity that reads it', () => {
-  localStorage.setItem('myielts_ai_settings_v1', JSON.stringify(aiSettings('sk-old')))
-  expect(getAISettings().apiKey).toBe('sk-old')
-  expect(localStorage.getItem('myielts_ai_settings_v1')).toBeNull()
+it('the old shared AI setting is not given to anyone until it is claimed', () => {
+  localStorage.setItem('myielts_ai_settings_v1', JSON.stringify(aiSettings('sk-old-1234')))
+  // 读设置不会把旧 Key 自动归给当前身份，也不会删掉旧数据
+  expect(hasAISettings()).toBe(false)
+  auth.currentUser.value = null
+  expect(hasAISettings()).toBe(false)
+  expect(legacyAISettingsInfo()).toEqual({ keyTail: '1234', baseUrl: 'https://api.openai.com/v1' })
+  // 认领后只归认领者，旧数据删除
   auth.currentUser.value = 'bob'
+  expect(claimLegacyAISettings()).toBe(true)
+  expect(getAISettings().apiKey).toBe('sk-old-1234')
+  expect(localStorage.getItem('myielts_ai_settings_v1')).toBeNull()
+  expect(legacyAISettingsInfo()).toBeNull()
+  auth.currentUser.value = 'alice'
+  expect(hasAISettings()).toBe(false)
+  expect(claimLegacyAISettings()).toBe(false)
+})
+
+it('the old shared AI setting can be deleted without claiming it', () => {
+  localStorage.setItem('myielts_ai_settings_v1', JSON.stringify(aiSettings('sk-old-1234')))
+  discardLegacyAISettings()
+  expect(legacyAISettingsInfo()).toBeNull()
   expect(hasAISettings()).toBe(false)
 })
 
@@ -99,7 +119,7 @@ it('dialogs resolve through the in-app host when it is mounted', async () => {
   const second = confirmDialog('second?')
   expect(dialogQueue.value.map(d => d.message)).toEqual(['first?', 'second?'])
   expect(dialogQueue.value[0].danger).toBe(true)
-  settleDialog(dialogQueue.value[0].id, true)
+  settleDialog(dialogQueue.value[0].id, 'confirm')
   expect(await first).toBe(true)
   off()
   expect(await second).toBe(false)

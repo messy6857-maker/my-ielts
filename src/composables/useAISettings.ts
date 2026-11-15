@@ -14,7 +14,10 @@ export interface AISettings {
   /** 各服务商的 Key（按服务商 id 存）：切换服务商时密钥框跟着换，没填过就是空 */
   apiKeys?: Record<string, string>
 }
-/** 旧版全局 key（所有账号共用）；首次读取时归当前账号（或游客）所有并删除 */
+/**
+ * 旧版全局 key（所有账号共用）。旧数据里没有“属于谁”的信息，所以不会自动归给任何人：
+ * 设置页提示当前用户认领（复制到自己名下并删除旧数据）或直接删除。
+ */
 const LEGACY_KEY = 'myielts_ai_settings_v1'
 /** 按账号的 key。故意不用 accountKey 的 myielts_u_ 前缀，确保永远不会被当成学习数据同步或导出备份 */
 export function aiSettingsKey(user: string | null): string {
@@ -23,19 +26,64 @@ export function aiSettingsKey(user: string | null): string {
     : `${LEGACY_KEY}:guest`
 }
 function currentKey(): string {
-  const key = aiSettingsKey(useAuth().currentUser.value)
+  return aiSettingsKey(useAuth().currentUser.value)
+}
+function readLegacyRaw(): string | null {
   try {
-    const legacy = localStorage.getItem(LEGACY_KEY)
-    if (legacy !== null) {
-      if (localStorage.getItem(key) === null)
-        localStorage.setItem(key, legacy)
-      localStorage.removeItem(LEGACY_KEY)
+    return localStorage.getItem(LEGACY_KEY)
+  }
+  catch {
+    return null
+  }
+}
+/** 旧版共用设置的概况（只给出 Key 末 4 位，帮用户认出是不是自己的）；没有或读不出时返回 null */
+export function legacyAISettingsInfo(): { keyTail: string, baseUrl: string } | null {
+  const raw = readLegacyRaw()
+  if (!raw)
+    return null
+  try {
+    const parsed = JSON.parse(raw) as Partial<AISettings>
+    const keys = [
+      typeof parsed.apiKey === 'string'
+        ? parsed.apiKey
+        : '',
+      ...Object.values(parsed.apiKeys ?? {}),
+    ].map(k => String(k).trim()).filter(Boolean)
+    if (!keys.length)
+      return null
+    return {
+      keyTail: keys[0].slice(-4),
+      baseUrl: typeof parsed.baseUrl === 'string'
+        ? parsed.baseUrl
+        : '',
     }
   }
   catch {
-    /* 存储不可用时按无设置处理 */
+    return null
   }
-  return key
+}
+/** 把旧版共用设置认领到当前身份名下（覆盖当前身份已有的设置），成功后删除旧数据 */
+export function claimLegacyAISettings(): boolean {
+  const raw = readLegacyRaw()
+  if (!raw || !legacyAISettingsInfo())
+    return false
+  try {
+    localStorage.setItem(currentKey(), raw)
+    localStorage.removeItem(LEGACY_KEY)
+    return true
+  }
+  catch {
+    return false
+  }
+}
+/** 删除旧版共用设置（不是自己的，或不再需要） */
+export function discardLegacyAISettings(): void {
+  try {
+    localStorage.removeItem(LEGACY_KEY)
+  }
+  catch {
+    /* 忽略 */
+  }
 }
 const DEFAULTS: AISettings = {
   baseUrl: 'https://api-cdn.thehive.ai/api/v3',
@@ -763,40 +811,38 @@ export async function translateWithAI(
     throw new Error('AI 返回为空，请重试')
   return result
 }
-// 只给 Key 自动识别服务商：后端按顺序试 OpenAI / DeepSeek / Hive，返回命中的那家。
-// 前端拿到 provider 后按 AI_PROVIDERS 里的第一个模型设默认值，用户可再改。
+// 识别服务商：只看 Key 的格式在本机判断，不发任何网络请求。
+// 以前是后端拿同一个 Key 依次去试 OpenAI / DeepSeek / Hive，会把一家的 Key 发给另外两家，现已停用。
+// 认不出格式时请用户手动选服务商，再用“测试连接”只向选定的那一家验证。
 export interface AIDetectResult {
   provider: string
   label: string
   baseUrl: string
 }
+/** 按 Key 格式推测服务商；认不出返回 null */
+export function guessProviderFromKey(apiKey: string): AIDetectResult | null {
+  const key = apiKey.trim()
+  let id: string | null = null
+  // OpenAI：项目/服务账号/管理 Key 带固定前缀；旧版用户 Key 中间含 T3BlbkFJ（"OpenAI" 的 base64）
+  if (/^sk-(?:proj|svcacct|admin)-[\w-]{20,}$/.test(key) || /^sk-\w*T3BlbkFJ\w*$/.test(key))
+    id = 'openai'
+  // DeepSeek：sk- 加 32 位十六进制
+  else if (/^sk-[0-9a-f]{32}$/.test(key))
+    id = 'deepseek'
+  const provider = id
+    ? AI_PROVIDERS.find(p => p.id === id)
+    : undefined
+  return provider
+    ? { provider: provider.id, label: provider.label, baseUrl: provider.baseUrl }
+    : null
+}
 export async function detectAIProvider(apiKey: string): Promise<AIDetectResult> {
-  const token = getToken(useAuth().currentUser.value)
-  if (!token)
-    throw new Error('请先登录（AI 中转需要登录态）')
   if (!apiKey.trim())
     throw new Error('请先填写 API Key')
-  let res: Response
-  let body: any
-  try {
-    res = await fetch(`${SYNC_API_BASE}/ai/detect`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        apiKey: apiKey.trim(),
-      }),
-    })
-    body = await res.json().catch(() => null)
-  }
-  catch {
-    throw new Error('识别请求失败，请检查网络连接')
-  }
-  if (!res.ok || !body?.ok)
-    throw new Error(body?.message || `识别失败（${res.status}）`)
-  return { provider: body.provider, label: body.label, baseUrl: body.baseUrl }
+  const result = guessProviderFromKey(apiKey)
+  if (!result)
+    throw new Error('从格式认不出这个 Key 属于哪家，请手动选择服务商，再点“测试连接”验证')
+  return result
 }
 // 测试连接：发一个极短请求验证 Key/地址/模型可用
 export async function testAIConnection(

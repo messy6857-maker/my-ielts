@@ -2,7 +2,7 @@
 import type { AttemptCount, AttemptRecord } from '../composables/useStats'
 import { onSyncApplied } from '../composables/syncClient'
 import { useGoBack } from '../composables/useGoBack'
-import { getMockHistory } from '../composables/useMockHistory'
+import { getMockHistory, isUnanswered } from '../composables/useMockHistory'
 import {
   useCheckin,
   useWordSchedule,
@@ -120,9 +120,11 @@ function mockStats(kind: 'listening' | 'reading') {
   const list = mockHistory.value.filter(m => m.kind === kind)
   const score = list.reduce((s, m) => s + m.score, 0)
   const total = list.reduce((s, m) => s + m.total, 0)
+  // 预估 Band 平均值不计空白交卷（未作答）的记录；正确率仍按全部记录的原始得分算
+  const graded = list.filter(m => !isUnanswered(m))
   const band
-    = list.length > 0
-      ? (list.reduce((s, m) => s + m.band, 0) / list.length).toFixed(1)
+    = graded.length > 0
+      ? (graded.reduce((s, m) => s + m.band, 0) / graded.length).toFixed(1)
       : null
   return {
     count: list.length,
@@ -408,7 +410,7 @@ const last14Checkin = computed(() => {
           <div class="text-sm space-y-3">
             <p class="text-gray-700 dark:text-gray-300">
               听力：{{ listeningMock.count }} 次 · 平均正确率
-              {{ listeningMock.accuracy ?? "—" }}% · 平均分
+              {{ listeningMock.accuracy ?? "—" }}% · 预估平均 Band
               {{ listeningMock.band ?? "—" }}
               <span v-if="listeningMock.latest">
                 · 最近 {{ listeningMock.latest.label }}
@@ -418,7 +420,7 @@ const last14Checkin = computed(() => {
             </p>
             <p class="text-gray-700 dark:text-gray-300">
               阅读：{{ readingMock.count }} 次 · 平均正确率
-              {{ readingMock.accuracy ?? "—" }}% · 平均分
+              {{ readingMock.accuracy ?? "—" }}% · 预估平均 Band
               {{ readingMock.band ?? "—" }}
               <span v-if="readingMock.latest">
                 · 最近 {{ readingMock.latest.label }}

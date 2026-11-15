@@ -10,7 +10,13 @@ export interface MockRecord {
   score: number // 得分
   total: number // 总分
   band: number // 换算分
+  /** 作答了几题（新记录才有；0 表示整卷空白交卷，显示“未作答”） */
+  answered?: number
   date: string // ISO
+}
+/** 整卷空白交卷：只有新记录能判断（旧记录没有 answered 字段，照常显示分数） */
+export function isUnanswered(r: Pick<MockRecord, 'answered'>): boolean {
+  return r.answered === 0
 }
 function owner() {
   return useAuth().currentUser.value

@@ -127,7 +127,7 @@ async function onSubmit() {
               type="password"
               :autocomplete="mode === 'register' ? 'new-password' : 'current-password'"
               :minlength="mode === 'register' ? 8 : 4"
-              :placeholder="mode === 'register' ? '至少 8 位' : '至少 4 位'"
+              :placeholder="mode === 'register' ? '至少 8 个字符，最多 72 字节' : '至少 4 位'"
               class="block w-full border border-gray-300 rounded-lg bg-gray-50 p-2.5 text-sm text-gray-900 dark:border-gray-600 focus:border-blue-500 dark:bg-gray-700 dark:text-white focus:ring-blue-500"
             >
           </div>

@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 
 import ListeningTabs from '~/components/ListeningTabs.vue'
 import { resolveMediaUrl } from '~/composables/useAudio'
-import { confirmDialog } from '~/composables/useDialog'
+import { chooseDialog, confirmDialog } from '~/composables/useDialog'
 import { useGoBack } from '~/composables/useGoBack'
 import { useMockMistakeSave } from '~/composables/useMockMistakeSave'
 import { useStudyTimer } from '~/composables/useStudyTimer'
@@ -216,29 +216,44 @@ function startTest() {
   // M-Opt-#4：0 秒草稿不再 1 秒后自动交卷，给二选一：直接交卷查看成绩，
   // 或放弃草稿、全新开始。
   if (saved && saved.timeLeft <= 0) {
-    if (!recovery.begin(saved))
-      return
     expiredPromptOpen = true
     const pair = testPair.value
-    confirmDialog(
+    const user = useAuth().currentUser.value
+    chooseDialog(
       '该草稿剩余时间已到（0 秒）。可以直接交卷查看成绩，或放弃草稿、全新开始。',
       { confirmText: '直接交卷', cancelText: '放弃草稿，重新开始' },
-    ).then((submitNow) => {
+    ).then((choice) => {
       expiredPromptOpen = false
-      // 弹窗期间换了套题、已经开考或换了账号：这次选择作废
-      if (testPair.value !== pair || started.value || recovery.mismatch())
+      // 按 Esc / 点遮罩关掉弹窗：什么都不做，草稿原样保留，可再点“开始测试”重新选
+      if (choice === 'dismiss')
         return
-      if (submitNow) {
-        answers.value = saved.answers ?? {}
-        activePart.value = saved.extra?.active ?? 0
-        started.value = true
-        submitted.value = false
-        studyTimer.start()
-        submit()
+      // 弹窗期间换了账号、换了套题、已经开考，或这份草稿已被别处改动/交卷：这次选择作废
+      const current = recovery.draft.value
+      if (
+        useAuth().currentUser.value !== user
+        || testPair.value !== pair
+        || started.value
+        || !current
+        || current.submitted
+        || current.versionId !== saved.versionId
+        || current.attemptId !== saved.attemptId
+        || recovery.mismatch()
+      ) {
         return
       }
-      if (recovery.clear())
-        beginTest(null)
+      if (!recovery.begin(current))
+        return
+      if (choice === 'cancel') {
+        if (recovery.clear())
+          beginTest(null)
+        return
+      }
+      answers.value = current.answers ?? {}
+      activePart.value = current.extra?.active ?? 0
+      started.value = true
+      submitted.value = false
+      studyTimer.start()
+      submit()
     })
     return
   }
@@ -264,11 +279,23 @@ function beginTest(saved: ExamDraft | null) {
 // 放弃当前草稿并重新开始：清掉本会话草稿后立刻全新开考，
 // 避免清完仍留在开始屏、下次刷新又被其他页签快照顶回来。
 async function discardDraftAndStart() {
+  // 记下弹窗打开时选中的那份草稿；确认时若已换成别的草稿（或被交卷/删除），不再退役
+  const target = recovery.draft.value
+  const pair = testPair.value
   if (
     !(await confirmDialog(
       '放弃所选的这一次作答并重新开始？同一 attempt 的副本将退役，其他独立作答不受影响。',
       { danger: true, confirmText: '放弃并重新开始' },
     ))
+  ) {
+    return
+  }
+  const current = recovery.draft.value
+  if (
+    started.value
+    || testPair.value !== pair
+    || current?.versionId !== target?.versionId
+    || current?.attemptId !== target?.attemptId
   ) {
     return
   }
@@ -398,6 +425,9 @@ const correctCount = computed(() =>
 )
 
 const band = computed(() => listeningBandScore(correctCount.value, scoredTotal.value))
+/** 作答了几题（空白交卷时成绩单显示“未作答”，不显示换算分） */
+const answeredCount = computed(() =>
+  Object.values(answers.value).filter(v => String(v ?? '').trim() !== '').length)
 
 function setAnswer(qid: string, val: string) {
   if (recovery.mismatch())
@@ -551,6 +581,7 @@ async function submit() {
     score,
     total,
     band: listeningBandScore(score, total),
+    answered: answeredCount.value,
   })
   if (!result)
     return
@@ -843,9 +874,19 @@ async function submit() {
           v-if="submitted"
           class="mb-8 border border-gray-200 rounded-2xl bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800"
         >
-          <p class="mb-2 text-5xl text-blue-600 font-black dark:text-blue-400">
-            {{ band.toFixed(1) }}
-          </p>
+          <template v-if="answeredCount === 0">
+            <p class="mb-2 text-4xl text-gray-500 font-black dark:text-gray-400">
+              未作答
+            </p>
+          </template>
+          <template v-else>
+            <p class="text-sm text-gray-500 dark:text-gray-400">
+              预估 Band（按公开换算表估算，仅供参考）
+            </p>
+            <p class="mb-2 text-5xl text-blue-600 font-black dark:text-blue-400">
+              {{ band.toFixed(1) }}
+            </p>
+          </template>
           <p class="text-gray-600 dark:text-gray-400">
             答对 {{ correctCount }} / {{ scoredTotal }} 分
           </p>

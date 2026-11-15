@@ -174,10 +174,12 @@ export function useMockMistakeSave() {
   const { addMistake } = useMistakes()
   const failed = computed(() => {
     void revision.value
+    // 还有待写条目就要显示重试：同一次作答先写成功一批（已标记写过）、
+    // 后来合并进来的条目写失败时，任务仍在，但“写过”标记为真——不能只看标记。
     return [
       ...readPending(currentUser.value).values(),
     ]
-      .some(task => !hasWrittenMockMistakes(task.attemptId))
+      .some(task => task.entries.length > 0 || !hasWrittenMockMistakes(task.attemptId))
   })
 
   function writeMistakes(task: Pending) {

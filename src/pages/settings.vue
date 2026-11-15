@@ -10,10 +10,14 @@ import {
 import {
   AI_PROVIDERS,
   aiSettingsState,
+  claimLegacyAISettings,
   detectAIProvider,
+  discardLegacyAISettings,
   getAISettings,
   getModelOption,
   getProviderForBaseUrl,
+  hasAISettings,
+  legacyAISettingsInfo,
   MODEL_STRENGTH_LABELS,
   modelSupportsReasoningEffort,
   reasoningEffortForProvider,
@@ -22,6 +26,7 @@ import {
   testAIConnection,
 } from '../composables/useAISettings'
 import { useAuth } from '../composables/useAuth'
+import { confirmDialog } from '../composables/useDialog'
 import { useGoBack } from '../composables/useGoBack'
 import { useDailyStudyGoal } from '../composables/useStudyTimer'
 import { useSync } from '../composables/useSync'
@@ -145,13 +150,41 @@ const { goBack } = useGoBack('/')
 const form = ref({
   ...getAISettings(),
 })
-// AI 设置按账号分开保存：切换账号/退出时换成该身份自己的设置
-watch(currentUser, () => {
+// 旧版（所有账号共用）的 AI 设置：不知道属于谁，由当前用户认领或删除
+const legacyAI = ref(legacyAISettingsInfo())
+const legacyMsg = ref('')
+function reloadAIForm() {
   form.value = {
     ...getAISettings(),
   }
   aiSettingsState.value = getAISettings()
-})
+  legacyAI.value = legacyAISettingsInfo()
+}
+// AI 设置按账号分开保存：切换账号/退出时换成该身份自己的设置
+watch(currentUser, reloadAIForm)
+async function claimLegacyAI() {
+  const who = currentUser.value
+    ? `账号「${currentUser.value}」`
+    : '游客'
+  const ok = await confirmDialog(
+    hasAISettings()
+      ? `把这份旧设置认领给${who}？会覆盖${who}现在的 AI 设置，认领后其他账号和游客都看不到它。`
+      : `把这份旧设置认领给${who}？认领后其他账号和游客都看不到它。`,
+    { confirmText: '认领' },
+  )
+  if (!ok)
+    return
+  legacyMsg.value = claimLegacyAISettings()
+    ? ''
+    : '认领失败：旧设置已不存在或无法保存'
+  reloadAIForm()
+}
+async function discardLegacyAI() {
+  if (!(await confirmDialog('删除这份旧版共用的 AI 设置？删除后无法恢复。', { danger: true, confirmText: '删除' })))
+    return
+  discardLegacyAISettings()
+  reloadAIForm()
+}
 let detectRevision = 0
 const saved = ref(false)
 const testing = ref(false)
@@ -242,7 +275,7 @@ onUnmounted(() => {
   detectRevision++
 })
 
-/** 只填 Key 自动识别：后端真去试这个 Key 属于哪家，命中后自动填地址、设该家默认模型。 */
+/** 按 Key 格式识别服务商（本机判断，不发请求），命中后自动填地址、设该家默认模型。 */
 async function onDetect() {
   const key = form.value.apiKey.trim()
   if (detecting.value || !key)
@@ -414,11 +447,44 @@ async function onDetect() {
         🤖 AI 批改 / 口语评分
       </h3>
       <p class="mb-5 text-sm text-gray-500 dark:text-gray-400">
-        只填自己的 Key、点“自动识别服务商”，地址和模型会自动填好；也可以手动选服务商、挑模型。
+        填好自己的 Key 后可点“按格式识别服务商”（只在本机看 Key 的格式，不会把 Key 发给任何服务商）；认不出时请手动选服务商、挑模型，再点“测试连接”验证。
         可用于大小作文批改、口语转写评分和每日阅读翻译。
         三项都要填齐（API 地址、密钥、模型）才会启用；未配置时口语页会提示并提供本地 4 项自评清单。
         Key 只保存在本机浏览器，请求经 VPS 中转（浏览器直连第三方会被 CORS 拦截）。
         注意：每个服务商各记一个 Key，切换服务商时密钥框跟着换（没填过就是空）；Key 按账号分开保存（游客单独一份），换账号或退出后不会被别人看到或使用，也不会同步到云端或写进备份。
+      </p>
+      <div
+        v-if="legacyAI"
+        role="status"
+        class="mb-5 border border-amber-300 rounded-lg bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-900/30 dark:text-amber-200"
+      >
+        <p>
+          这台设备上有一份旧版本保存的 AI 设置（Key 末 4 位：{{ legacyAI.keyTail }}）。旧版本所有账号共用一份设置，无法判断属于谁，所以没有自动分给任何人。
+          如果是你的，可以认领到当前身份；不是你的请删除。
+        </p>
+        <div class="mt-2 flex flex-wrap gap-2">
+          <button
+            type="button"
+            class="rounded bg-amber-600 px-3 py-1 text-white hover:bg-amber-700"
+            @click="claimLegacyAI"
+          >
+            认领到当前身份
+          </button>
+          <button
+            type="button"
+            class="border border-amber-400 rounded px-3 py-1 dark:border-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/50"
+            @click="discardLegacyAI"
+          >
+            删除旧设置
+          </button>
+        </div>
+      </div>
+      <p
+        v-if="legacyMsg"
+        role="alert"
+        class="mb-5 text-sm text-red-600 dark:text-red-400"
+      >
+        {{ legacyMsg }}
       </p>
 
       <div class="mb-4">
@@ -479,7 +545,7 @@ async function onDetect() {
           :disabled="detecting || !form.apiKey.trim()"
           @click="onDetect"
         >
-          {{ detecting ? "识别中…" : "🔍 自动识别服务商" }}
+          {{ detecting ? "识别中…" : "🔍 按格式识别服务商" }}
         </button>
         <span
           v-if="detectMsg"

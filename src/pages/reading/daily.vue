@@ -6,7 +6,7 @@ import { getToken } from '../../composables/syncClient'
 import { translateWithAI } from '../../composables/useAISettings'
 import { speechLanguage } from '../../composables/useAudioGroup'
 import { useAuth } from '../../composables/useAuth'
-import { migrateGuestPageBookmarks } from '../../composables/usePageBookmark'
+import { adoptLegacyGuestPageBookmarks, migrateGuestPageBookmarks } from '../../composables/usePageBookmark'
 import { stopAllAudio } from '../../composables/useSingleAudio'
 import { getDeviceId } from '../../composables/useStudyTimer'
 import { SYNC_API_BASE } from '../../sync-config'
@@ -19,6 +19,8 @@ const { currentUser } = useAuth()
 // 不同设备/浏览器互不干扰）。Item 6：登录后把本设备游客的书签迁到账号名下（见下方 watch/onMounted），
 // 免得游客时期记的书签登录后看不见；迁移按日期合并去重。
 const guestId = getDeviceId()
+// 旧版游客书签（scope 里账号是 null）并入本设备游客，否则看不见
+adoptLegacyGuestPageBookmarks(guestId)
 
 interface WordNote {
   word: string
