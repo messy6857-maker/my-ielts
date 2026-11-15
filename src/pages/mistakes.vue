@@ -89,6 +89,36 @@ const filteredGrouped = computed(() => {
   }))
 })
 
+// 分批显示：错题多时一次渲染全部会让页面卡顿（每条十几个元素，上千条就是上万个元素）。
+// 每组都显示标题和总数，组内先显示 PAGE_SIZE 条，其余点本组的“再显示”；筛选、复习、清空仍针对全部错题。
+// 筛选条件或账号变化时回到第一批。
+const PAGE_SIZE = 50
+const groupLimits = ref<Partial<Record<MistakeModule, number>>>({})
+watch([
+  filterModule,
+  filterTestId,
+  filterPart,
+  currentUser,
+], () => {
+  groupLimits.value = {}
+})
+const pagedGrouped = computed(() => filteredGrouped.value.map((group) => {
+  const limit = groupLimits.value[group.module] ?? PAGE_SIZE
+  return {
+    module: group.module,
+    label: group.label,
+    total: group.items.length,
+    items: group.items.slice(0, limit),
+    hidden: Math.max(0, group.items.length - limit),
+  }
+}))
+function showMore(module: MistakeModule) {
+  groupLimits.value = { ...groupLimits.value, [module]: (groupLimits.value[module] ?? PAGE_SIZE) + PAGE_SIZE }
+}
+function showAll(module: MistakeModule, total: number) {
+  groupLimits.value = { ...groupLimits.value, [module]: total }
+}
+
 const mockTestOptions = computed(() => {
   const ids = new Set<string>()
   for (const item of allMistakes()) {
@@ -466,10 +496,10 @@ function detailLines(detail: string) {
         >
           当前筛选没有错题，试试换成「全部」或其它套卷。
         </div>
-        <template v-for="group in filteredGrouped" :key="group.module">
+        <template v-for="group in pagedGrouped" :key="group.module">
           <div class="mb-2 mt-6 flex items-center justify-between">
             <h4 class="text-lg text-gray-900 font-bold dark:text-white">
-              {{ group.label }}（{{ group.items.length }}）
+              {{ group.label }}（{{ group.total }}）
             </h4>
             <button
               class="text-sm text-gray-400 underline hover:text-gray-600"
@@ -561,6 +591,21 @@ function detailLines(detail: string) {
                 </tr>
               </tbody>
             </table>
+          </div>
+          <div
+            v-if="group.hidden > 0"
+            class="mt-3 flex flex-wrap items-center justify-center gap-3 text-sm"
+          >
+            <span class="text-gray-500 dark:text-gray-400">本组还有 {{ group.hidden }} 条未显示</span>
+            <button
+              class="border border-gray-300 rounded-lg px-4 py-2 dark:border-gray-600 dark:text-white"
+              @click="showMore(group.module)"
+            >
+              再显示 {{ Math.min(PAGE_SIZE, group.hidden) }} 条
+            </button>
+            <button class="text-gray-500 underline dark:text-gray-400" @click="showAll(group.module, group.total)">
+              全部显示
+            </button>
           </div>
         </template>
       </div>
