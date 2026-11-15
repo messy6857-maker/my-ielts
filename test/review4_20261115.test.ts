@@ -1,7 +1,7 @@
+import type { AISettings } from '../src/composables/useAISettings'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import type { AISettings } from '../src/composables/useAISettings'
 import { setToken } from '../src/composables/syncClient'
 import {
   AI_PROVIDERS,
