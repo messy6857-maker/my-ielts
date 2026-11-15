@@ -89,6 +89,34 @@ const filteredGrouped = computed(() => {
   }))
 })
 
+// 分批显示：错题多时一次渲染全部会让页面卡顿好几秒（每条十几个元素，上千条就是上万个元素）。
+// 按分组顺序先显示前 PAGE_SIZE 条，其余点“再显示”；组标题的数量、筛选、复习仍针对全部错题。
+// 筛选条件或账号变化时回到第一批。
+const PAGE_SIZE = 100
+const visibleLimit = ref(PAGE_SIZE)
+watch([filterModule, filterTestId, filterPart, currentUser], () => {
+  visibleLimit.value = PAGE_SIZE
+})
+const pagedGrouped = computed(() => {
+  let left = visibleLimit.value
+  const out: Array<{ module: MistakeModule, label: string, total: number, items: MistakeItem[] }> = []
+  for (const group of filteredGrouped.value) {
+    if (left <= 0)
+      break
+    const items = group.items.slice(0, left)
+    left -= items.length
+    out.push({ module: group.module, label: group.label, total: group.items.length, items })
+  }
+  return out
+})
+const hiddenCount = computed(() => Math.max(0, filteredItems.value.length - visibleLimit.value))
+function showMore() {
+  visibleLimit.value += PAGE_SIZE
+}
+function showAll() {
+  visibleLimit.value = filteredItems.value.length
+}
+
 const mockTestOptions = computed(() => {
   const ids = new Set<string>()
   for (const item of allMistakes()) {
@@ -466,10 +494,10 @@ function detailLines(detail: string) {
         >
           当前筛选没有错题，试试换成「全部」或其它套卷。
         </div>
-        <template v-for="group in filteredGrouped" :key="group.module">
+        <template v-for="group in pagedGrouped" :key="group.module">
           <div class="mb-2 mt-6 flex items-center justify-between">
             <h4 class="text-lg text-gray-900 font-bold dark:text-white">
-              {{ group.label }}（{{ group.items.length }}）
+              {{ group.label }}（{{ group.total }}）
             </h4>
             <button
               class="text-sm text-gray-400 underline hover:text-gray-600"
@@ -563,6 +591,21 @@ function detailLines(detail: string) {
             </table>
           </div>
         </template>
+        <div
+          v-if="hiddenCount > 0"
+          class="mt-4 flex flex-wrap items-center justify-center gap-3 text-sm"
+        >
+          <span class="text-gray-500 dark:text-gray-400">还有 {{ hiddenCount }} 条未显示</span>
+          <button
+            class="border border-gray-300 rounded-lg px-4 py-2 dark:border-gray-600 dark:text-white"
+            @click="showMore"
+          >
+            再显示 {{ Math.min(PAGE_SIZE, hiddenCount) }} 条
+          </button>
+          <button class="text-gray-500 underline dark:text-gray-400" @click="showAll">
+            全部显示
+          </button>
+        </div>
       </div>
     </div>
   </div>
