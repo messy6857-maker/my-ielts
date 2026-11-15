@@ -210,6 +210,11 @@ await step('单词地牢：从导航进入，选章节开局，一路作答到�
   for (let i = 0; i < 40; i++) {
     if (await page.getByRole('button', { name: '再来一局' }).count())
       break
+    if (await page.locator('button[data-relic]').count()) {
+      await page.keyboard.press('1')
+      await sleep(50)
+      continue
+    }
     const input = page.locator('input[aria-label="拼写"]')
     if (await input.count()) {
       await input.fill('zzzz')
@@ -231,6 +236,18 @@ await step('单词地牢：从导航进入，选章节开局，一路作答到�
   await page.reload()
   await page.getByRole('button', { name: '进入地牢' }).waitFor({ timeout: 20000 })
   assert.equal(await page.locator('button[aria-pressed="true"]').count(), 1)
+  // 每日地牢、词单编辑、考点词库
+  await page.locator('[data-daily] button').click()
+  await page.getByText('每日地牢 · 房间 1 /').waitFor()
+  await page.reload()
+  await page.getByRole('button', { name: '进入地牢' }).waitFor({ timeout: 20000 })
+  await page.getByRole('button', { name: '编辑词单' }).click()
+  await page.locator('input[type="search"]').fill('atmos')
+  await page.locator('button[data-search-result]').first().click()
+  await page.getByText('我的词单（1）').waitFor()
+  await page.locator('button[data-deck="reading538"]').click()
+  await page.getByRole('button', { name: '进入地牢' }).click()
+  await page.getByText('房间 1 / 10').waitFor()
   assert.deepEqual(errors, [])
   await ctx.close()
 })
