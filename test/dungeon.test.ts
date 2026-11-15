@@ -405,7 +405,11 @@ describe('reading and listening words, synonyms', () => {
 
   it('listening words with synonyms can become mimics; their boss needs all three question types', () => {
     // 听力词要会拼写：拼写题、同义替换题都会出
-    const L = R.slice(0, 5).map(w => ({ ...w, key: w.key.replace('reading538', 'listening179'), deck: 'listening179' as const }))
+    const L = R.slice(0, 5).map(w => ({
+      ...w,
+      key: w.key.replace('reading538', 'listening179'),
+      deck: 'listening179' as const,
+    }))
     const kinds = new Set<string>()
     for (let seed = 1; seed < 40; seed++) {
       const run = buildRun(L, L, ctx(), seeded(seed))
@@ -426,7 +430,11 @@ describe('reading and listening words, synonyms', () => {
     const kinds = new Set<string>()
     for (let seed = 1; seed < 30; seed++) {
       for (const floor of [1, 3, 8]) {
-        const c = ctx({ mistakes: [mistake('reading538:类-1', 'rword0', 5, NOW, 'reading')] })
+        const c = ctx({
+          mistakes: [
+            mistake('reading538:类-1', 'rword0', 5, NOW, 'reading'),
+          ],
+        })
         const run = buildFloor(words, words, c, seeded(seed * 10 + floor), floor, new Set())
         for (const m of run) {
           kinds.add(m.kind)
@@ -440,7 +448,9 @@ describe('reading and listening words, synonyms', () => {
     expect(kinds.has('mimic')).toBe(true)
     // 精英怪和 Boss 要连续答对认词和同义替换两题；没有同义词的词只出认词题
     const boss = buildFloor([R[5]], words, ctx(), seeded(1), 5, new Set())
-    expect(boss.map(m => m.phases)).toEqual([['choice']])
+    expect(boss.map(m => m.phases)).toEqual([
+      ['choice'],
+    ])
   })
 })
 

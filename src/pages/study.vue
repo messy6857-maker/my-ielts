@@ -24,7 +24,10 @@ interface Deck {
 const vocabularySchedules = useWordSchedule()
 const vocabularyDaily = useDailyGoal()
 const decks = ['reading538', 'listening179', 'corpus'] as const
-const stores = Object.fromEntries(decks.map(ns => [ns, useDeckStore(ns)])) as Record<(typeof decks)[number], ReturnType<typeof useDeckStore>>
+const stores = Object.fromEntries(decks.map(ns => [
+  ns,
+  useDeckStore(ns),
+])) as Record<(typeof decks)[number], ReturnType<typeof useDeckStore>>
 
 const CARD_DESC = '先凭感觉自评认识 / 模糊 / 不认识，按记忆曲线安排复习'
 const DECKS: Deck[] = [

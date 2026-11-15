@@ -606,7 +606,12 @@ export function buildRun(pool: DungeonWord[], allWords: DungeonWord[], ctx: Dung
     }
     else if (elite) {
       phases = spelling
-        ? [synonymOptions.length && rng() < 0.5 ? 'synonym' : 'choice', 'spell']
+        ? [
+            synonymOptions.length && rng() < 0.5
+              ? 'synonym'
+              : 'choice',
+            'spell',
+          ]
         : recognize
     }
     return {

@@ -25,15 +25,31 @@ afterEach(() => {
 })
 
 async function mountAt(component: any, path: string) {
-  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: blank }] })
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/:p(.*)*', component: blank },
+    ],
+  })
   await router.push(path)
-  const w = mount(component, { attachTo: document.body, global: { plugins: [router] } })
+  const w = mount(component, {
+    attachTo: document.body,
+    global: {
+      plugins: [router],
+    },
+  })
   wrappers.push(w)
   await flushPromises()
   return w
 }
 function seed() {
-  const due = { ease: 2.5, interval: 1, dueAt: Date.now() - 1000, reps: 1, lapses: 0 }
+  const due = {
+    ease: 2.5,
+    interval: 1,
+    dueAt: Date.now() - 1000,
+    reps: 1,
+    lapses: 0,
+  }
   const later = { ...due, dueAt: Date.now() + DAY }
   const vocab = useWordSchedule()
   vocab.set(1, due)
@@ -59,7 +75,12 @@ describe('背单词 hub', () => {
     expect(deck('reading538').find('[data-goal]').text()).toContain('不要求拼写')
     expect(deck('listening179').find('[data-goal]').text()).toContain('能拼对')
     const links = (id: string) => deck(id).findAll('a').map((a: any) => a.attributes('href'))
-    expect(links('vocabulary')).toEqual(['/vocabulary/flashcard', '/vocabulary/flashcard?review=due', '/vocabulary?practice=1', '/vocabulary/typing'])
+    expect(links('vocabulary')).toEqual([
+      '/vocabulary/flashcard',
+      '/vocabulary/flashcard?review=due',
+      '/vocabulary?practice=1',
+      '/vocabulary/typing',
+    ])
     expect(links('reading538')).toEqual(['/reading/flashcard'])
     expect(links('listening179')).toEqual(['/listening/flashcard', '/listening/179practice'])
     expect(links('corpus')).toEqual(['/listening/corpus-flashcard'])
@@ -83,7 +104,13 @@ describe('背单词 hub', () => {
   })
 
   it('the menu has one 背单词 entry, lit on the hub and on every self-test page', async () => {
-    for (const [path, lit] of [['/study', true], ['/reading/flashcard', true], ['/game', true], ['/listening/179practice', true], ['/reading', false]] as const) {
+    for (const [path, lit] of [
+      ['/study', true],
+      ['/reading/flashcard', true],
+      ['/game', true],
+      ['/listening/179practice', true],
+      ['/reading', false],
+    ] as const) {
       const w = await mountAt(TheHeader, path)
       const links = w.findAll('a').filter((a: any) => a.text().includes('背单词'))
       expect(links.length).toBeGreaterThan(0)
@@ -108,7 +135,10 @@ describe('old entry buttons are gone; self-tests return to the hub', () => {
   })
 
   it('the vocabulary list opens in practice mode when coming from 拼写练习', async () => {
-    vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn() })
+    vi.stubGlobal('speechSynthesis', {
+      cancel: vi.fn(),
+      speak: vi.fn(),
+    })
     vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {})
     const Page = (await import('../src/pages/vocabulary/index.vue')).default
     const w = await mountAt(Page, '/vocabulary?practice=1')
