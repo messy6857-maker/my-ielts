@@ -10,6 +10,10 @@ import Pages from 'vite-plugin-pages'
 
 export default defineConfig({
   base: '',
+  // 每次构建的版本号：新版页签打开时写进 localStorage，还开着的旧版页签据此提示刷新
+  define: {
+    __APP_BUILD__: JSON.stringify(Date.now()),
+  },
   server: {
     host: '0.0.0.0',
     port: 3333,
