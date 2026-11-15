@@ -415,7 +415,7 @@ function optionClass(option: DungeonWord) {
             <span v-if="monster.wrongCount > 0" class="text-xs text-gray-500 font-normal dark:text-gray-400">错过 {{ monster.wrongCount }} 次</span>
           </div>
           <div class="mt-1 text-sm" :aria-label="`还要答对 ${monster.phases.length - phase - (result === 'right' ? 1 : 0)} 题`">
-            <span v-for="(p, i) in monster.phases" :key="i">{{ i < phase || (i === phase && result === 'right') ? '▫️' : '🟥' }}</span>
+            <span v-for="n in monster.phases.length" :key="n">{{ n - 1 < phase || (n - 1 === phase && result === 'right') ? '▫️' : '🟥' }}</span>
           </div>
         </div>
 

@@ -297,7 +297,7 @@ describe('the game page', () => {
   }
   const state = (w: any) => w.vm.$.setupState
   const startButton = (w: any) => w.findAll('button').find((b: any) => b.text() === '进入地牢')
-  const continueButton = (w: any) => w.findAll('button').find((b: any) => /^(继续|查看结果)$/.test(b.text()))
+  const continueButton = (w: any) => w.findAll('button').find((b: any) => /^(?:继续|查看结果)$/.test(b.text()))
   async function pickFirstChapter(w: any) {
     await w.find('button[aria-pressed]').trigger('click')
   }
