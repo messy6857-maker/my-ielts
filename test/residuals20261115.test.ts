@@ -13,6 +13,7 @@ import {
 const LEGACY_BOOKMARKS = 'myielts_page_bookmarks_v1'
 const SEEN = 'myielts_page_bookmark_v1_seen'
 const DONE_PREFIX = 'myielts_page_bookmark_v2_done:'
+const DEL_PREFIX = 'myielts_page_bookmark_v2_del:'
 const DAY = 24 * 60 * 60 * 1000
 const A = { id: 'a', y: 100, createdAt: 1 }
 const B = { id: 'b', y: 900, createdAt: 2 }
@@ -25,7 +26,7 @@ function oldTabWrites(items: object[]) {
 function blockDoneMarkers() {
   const set = Storage.prototype.setItem
   vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
-    if (key.startsWith(DONE_PREFIX))
+    if (key.startsWith(DONE_PREFIX) || key.startsWith(DEL_PREFIX))
       throw new DOMException('full', 'QuotaExceededError')
     return set.call(this, key, value)
   })
@@ -48,59 +49,26 @@ afterEach(() => {
   localStorage.clear()
 })
 
-describe('the old bookmark table is retired after 30 quiet days', () => {
-  it('kept while recent, removed once unchanged for 30 days', () => {
+describe('the old bookmark table is never removed', () => {
+  it('kept no matter how long it stays unchanged, and the old timer record is cleaned up', () => {
+    localStorage.setItem(SEEN, JSON.stringify({ print: 'x', since: 0 }))
     oldTabWrites([A, B])
     reloadPageBookmarks()
-    expect(localStorage.getItem(LEGACY_BOOKMARKS)).not.toBeNull()
-    vi.setSystemTime(Date.now() + 29 * DAY)
+    vi.setSystemTime(Date.now() + 365 * DAY)
     reloadPageBookmarks()
     expect(localStorage.getItem(LEGACY_BOOKMARKS)).not.toBeNull()
-    vi.setSystemTime(Date.now() + 2 * DAY)
-    reloadPageBookmarks()
-    expect(localStorage.getItem(LEGACY_BOOKMARKS)).toBeNull()
     expect(localStorage.getItem(SEEN)).toBeNull()
     expect(getPageBookmarks('/x').map(b => b.id)).toEqual(['a', 'b'])
   })
 
-  it('any change by an old tab restarts the 30 days', () => {
-    oldTabWrites([A, B])
-    reloadPageBookmarks()
-    vi.setSystemTime(Date.now() + 20 * DAY)
-    oldTabWrites([A, B, C])
-    reloadPageBookmarks()
-    vi.setSystemTime(Date.now() + 20 * DAY)
-    reloadPageBookmarks()
-    expect(localStorage.getItem(LEGACY_BOOKMARKS)).not.toBeNull()
-    vi.setSystemTime(Date.now() + 11 * DAY)
-    reloadPageBookmarks()
-    expect(localStorage.getItem(LEGACY_BOOKMARKS)).toBeNull()
-    expect(getPageBookmarks('/x').map(b => b.id)).toEqual(['a', 'b', 'c'])
-  })
-
-  it('an old tab writing after retirement loses nothing and resurrects nothing', () => {
+  it('an old tab writing at any later time loses nothing and resurrects nothing', () => {
     oldTabWrites([A, B])
     reloadPageBookmarks()
     removePageBookmark('/x', 'a')
-    vi.setSystemTime(Date.now() + 31 * DAY)
-    reloadPageBookmarks()
-    vi.setSystemTime(Date.now() + 1 * DAY)
-    reloadPageBookmarks()
-    expect(localStorage.getItem(LEGACY_BOOKMARKS)).toBeNull()
-    // 很久没刷新的旧版页签写回整表（还带着 a，并新增 c）
+    vi.setSystemTime(Date.now() + 60 * DAY)
     oldTabWrites([A, B, C])
     window.dispatchEvent(new StorageEvent('storage', { key: LEGACY_BOOKMARKS }))
     expect(getPageBookmarks('/x').map(b => b.id)).toEqual(['b', 'c'])
-  })
-
-  it('not retired while some entries could not be migrated', () => {
-    oldTabWrites([A, B])
-    blockDoneMarkers()
-    reloadPageBookmarks()
-    vi.setSystemTime(Date.now() + 60 * DAY)
-    reloadPageBookmarks()
-    expect(localStorage.getItem(LEGACY_BOOKMARKS)).not.toBeNull()
-    expect(getPageBookmarks('/x').map(b => b.id)).toEqual(['a', 'b'])
   })
 })
 
@@ -121,7 +89,7 @@ describe('deleting never rewrites the old table, even when storage is full', () 
     // 存储恢复后下一次读取补写标记
     vi.restoreAllMocks()
     reloadPageBookmarks()
-    expect(localStorage.getItem(`${DONE_PREFIX}%2Fx|a`)).toBe('1')
+    expect(localStorage.getItem(`${DEL_PREFIX}%2Fx|a`)).toBe('1')
     expect(getPageBookmarks('/x').map(b => b.id)).toEqual(['b', 'c'])
   })
 

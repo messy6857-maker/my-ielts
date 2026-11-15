@@ -124,7 +124,7 @@ await step('旧版页签持续整表写入，同时两个新版页签迁移并�
   await ctx.close()
 })
 
-await step('旧表在 30 天内不被删除，新版从不改写旧表', async () => {
+await step('新版从不删除或改写旧表，删除旧表来源的书签只写删除记录，其他页签跟着更新', async () => {
   const ctx = await browser.newContext()
   const old = await ctx.newPage()
   await old.goto(STATIC)
@@ -135,6 +135,11 @@ await step('旧表在 30 天内不被删除，新版从不改写旧表', async (
   await sleep(200)
   assert.equal(await p1.evaluate(LEGACY => localStorage.getItem(LEGACY), LEGACY), table)
   assert.equal(await bookmarkCount(p1), 1)
+  const p2 = await openApp(ctx)
+  assert.equal(await bookmarkCount(p2), 1)
+  await p1.click('button[aria-label="删除书签 1"]')
+  await sleep(300)
+  assert.equal(await bookmarkCount(p2), 0)
   await ctx.close()
 })
 
@@ -174,6 +179,14 @@ await step('设置页：先粘贴新 Key 再逐字输入地址，Key 被清空�
   await address.fill('')
   await address.pressSequentially('https://c.example.com/v1', { delay: 5 })
   assert.equal(await key.inputValue(), 'sk-fake-c')
+  // 清空已保存的 Key，切到 Hive 保存，再切回来：仍是空的
+  await page.getByRole('button', { name: 'OpenAI', exact: true }).click()
+  assert.equal(await key.inputValue(), 'sk-fake-saved')
+  await key.fill('')
+  await page.getByRole('button', { name: 'Hive', exact: true }).click()
+  await page.getByRole('button', { name: '保存', exact: true }).click()
+  await page.getByRole('button', { name: 'OpenAI', exact: true }).click()
+  assert.equal(await key.inputValue(), '')
   await ctx.close()
 })
 

@@ -246,7 +246,8 @@ function keyForSlot(apiKeys: Record<string, string> | undefined, slot: string): 
  * 再换成新地址存过的 Key，没有就清空——Key 不会跟着跑到别的地址上去测试或保存。
  * Key 为空时只记到预设或已有槽位，逐字输入地址时不会留下一堆半截地址的空槽位。
  * savedKeys 是已保存到存储里的 Key 表：原地址已经保存过 Key、而表单里是还没保存的另一个 Key
- * （比如先粘贴了新 Key 再去改地址）时，这个新 Key 直接清掉，不顶替原地址已保存的 Key。
+ * （比如先粘贴了新 Key 再去改地址）时，这个新 Key 直接清掉，不顶替原地址已保存的 Key；
+ * 把 Key 清空则照常记下（保存后原地址就没有 Key 了）。
  */
 export function rebindKeyForBaseUrl(
   current: AISettings,
@@ -265,7 +266,8 @@ export function rebindKeyForBaseUrl(
   // 填了 Key 就存回原地址（包括还没保存过的自定义地址，切走再切回来还在）；
   // 空 Key 只记到预设或已有的槽位（表示清空），不给逐字输入的半截地址留空槽
   const saved = keyForSlot(savedKeys, oldSlot).trim()
-  if (saved && key !== saved)
+  // 没保存过的另一个 Key（比如先粘贴新 Key 再改地址）不顶替已保存的；清空 Key 是明确操作，照常记下
+  if (saved && key && key !== saved)
     apiKeys[oldSlot] = saved
   else if (oldSlot !== SHARED_CUSTOM_SLOT && (key || isPreset || oldSlot in apiKeys))
     apiKeys[oldSlot] = key
