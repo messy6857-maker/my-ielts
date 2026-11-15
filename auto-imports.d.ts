@@ -195,6 +195,7 @@ declare global {
   const readingBookmarkAnchor: typeof import('./src/composables/usePageBookmark').readingBookmarkAnchor
   const readonly: typeof import('vue').readonly
   const reasoningEffortForProvider: typeof import('./src/composables/useAISettings').reasoningEffortForProvider
+  const rebindKeyForBaseUrl: typeof import('./src/composables/useAISettings').rebindKeyForBaseUrl
   const recordAttempt: typeof import('./src/composables/useStats').recordAttempt
   const ref: typeof import('vue').ref
   const refAutoReset: typeof import('@vueuse/core').refAutoReset
@@ -718,6 +719,7 @@ declare module 'vue' {
     readonly readingBookmarkAnchor: UnwrapRef<typeof import('./src/composables/usePageBookmark')['readingBookmarkAnchor']>
     readonly readonly: UnwrapRef<typeof import('vue')['readonly']>
     readonly reasoningEffortForProvider: UnwrapRef<typeof import('./src/composables/useAISettings')['reasoningEffortForProvider']>
+    readonly rebindKeyForBaseUrl: UnwrapRef<typeof import('./src/composables/useAISettings')['rebindKeyForBaseUrl']>
     readonly recordAttempt: UnwrapRef<typeof import('./src/composables/useStats')['recordAttempt']>
     readonly ref: UnwrapRef<typeof import('vue')['ref']>
     readonly refAutoReset: UnwrapRef<typeof import('@vueuse/core')['refAutoReset']>

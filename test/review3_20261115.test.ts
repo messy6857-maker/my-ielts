@@ -92,21 +92,20 @@ describe('custom API addresses keep their own keys', () => {
     expect(getAISettings().apiKey).toBe('sk-fake-old')
   })
 
-  it('the old shared custom slot is bound to the custom address saved with it', () => {
+  it('the old shared custom slot is never bound to an address; the saved key is', () => {
     setCurrentAI({
       baseUrl: 'https://a.example.com/v1',
-      apiKey: '',
+      apiKey: 'sk-fake-a',
       model: 'm',
       apiKeys: { custom: 'sk-fake-shared', openai: 'sk-fake-openai' },
     })
     const loaded = getAISettings()
-    expect(loaded.apiKeys?.['custom:https://a.example.com/v1']).toBe('sk-fake-shared')
-    expect(loaded.apiKeys?.custom).toBeUndefined()
-    // 切到预设再切回来，Key 仍跟着这个地址；预设的 Key 不受影响
+    expect(loaded.apiKeys?.['custom:https://a.example.com/v1']).toBe('sk-fake-a')
+    // 切到预设：A 的 Key 留在 A 名下，预设用自己的 Key；来源不明的 custom 槽不被使用
     const openai = AI_PROVIDERS.find(p => p.id === 'openai')!
-    const switched = switchProviderSettings({ ...loaded, apiKey: 'sk-fake-shared' }, openai)
+    const switched = switchProviderSettings(loaded, openai)
     expect(switched.apiKey).toBe('sk-fake-openai')
-    expect(switched.apiKeys?.['custom:https://a.example.com/v1']).toBe('sk-fake-shared')
+    expect(switched.apiKeys?.['custom:https://a.example.com/v1']).toBe('sk-fake-a')
   })
 
   it('an unbound old shared custom key is never treated as a conflict or used for a preset', () => {

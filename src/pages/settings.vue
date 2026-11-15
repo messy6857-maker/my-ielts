@@ -22,6 +22,7 @@ import {
   MODEL_STRENGTH_LABELS,
   modelSupportsReasoningEffort,
   reasoningEffortForProvider,
+  rebindKeyForBaseUrl,
   saveAISettings,
   switchProviderSettings,
   testAIConnection,
@@ -255,6 +256,11 @@ const reasoningEffortInput = computed({
  *  Key 也跟着换到该服务商存过的（没填过就是空），当前 Key 先存回旧服务商名下。 */
 function selectProvider(provider: (typeof AI_PROVIDERS)[number]) {
   form.value = switchProviderSettings(form.value, provider)
+}
+/** 手动改 API 地址：和点预设同一套切换逻辑，Key 换成新地址存过的（没有就清空），不带着旧 Key 去测试或保存 */
+function onBaseUrlInput(event: Event) {
+  const baseUrl = (event.target as HTMLInputElement).value
+  form.value = rebindKeyForBaseUrl({ ...form.value, baseUrl }, form.value.baseUrl)
 }
 function onModelSelect(value: string) {
   if (value === '__custom__')
@@ -546,9 +552,10 @@ async function onDetect() {
       <label class="mb-4 block">
         <span class="mb-1 block text-sm font-medium dark:text-gray-200">API 地址</span>
         <input
-          v-model="form.baseUrl"
+          :value="form.baseUrl"
           placeholder="https://api-cdn.thehive.ai/api/v3"
           class="w-full border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          @input="onBaseUrlInput"
         >
         <span class="mt-1 block text-xs text-gray-400">地址不带 /chat/completions；中转只允许 Hive、OpenAI、DeepSeek 官方三个域名<span v-if="selectedProvider">；{{ selectedProvider.label }} 的 Key 去 {{ selectedProvider.keyHint }} 拿</span></span>
       </label>
