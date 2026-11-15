@@ -217,8 +217,9 @@ export function keySlotForBaseUrl(baseUrl: string): string {
     : SHARED_CUSTOM_SLOT
 }
 /**
- * 一份设置的 Key 表（槽位 → Key），并把旧版共用的 custom 槽绑定到这份设置选中的自定义地址：
- * 只有当前地址是自定义地址时才知道它属于谁；否则原样留在 custom 槽，不会被当成任何地址的 Key。
+ * 一份设置的 Key 表（槽位 → Key）。只有设置里的 apiKey 能确认属于它的 baseUrl，记到该地址的槽位；
+ * 旧版所有自定义地址共用的 custom 槽说不清是哪个地址的，原样留着，不绑定到任何地址、也不会被使用。
+ * 槽位里用户明确保存的空值保留（apiKey 为空时不改它）。
  */
 function boundApiKeys(settings: Partial<AISettings>): Record<string, string> {
   const keys: Record<string, string> = {}
@@ -230,29 +231,45 @@ function boundApiKeys(settings: Partial<AISettings>): Record<string, string> {
     ? settings.baseUrl
     : ''
   const slot = keySlotForBaseUrl(baseUrl)
-  if (slot.startsWith(`${SHARED_CUSTOM_SLOT}:`) && SHARED_CUSTOM_SLOT in keys) {
-    if (!keys[slot])
-      keys[slot] = keys[SHARED_CUSTOM_SLOT]
-    delete keys[SHARED_CUSTOM_SLOT]
-  }
-  if (typeof settings.apiKey === 'string' && settings.apiKey.trim())
+  if (slot !== SHARED_CUSTOM_SLOT && typeof settings.apiKey === 'string' && settings.apiKey.trim())
     keys[slot] = settings.apiKey.trim()
   return keys
+}
+/** 某槽位存的 Key；没绑定地址的旧 custom 槽永远不拿来用 */
+function keyForSlot(apiKeys: Record<string, string> | undefined, slot: string): string {
+  if (slot === SHARED_CUSTOM_SLOT)
+    return ''
+  return apiKeys?.[slot] ?? ''
+}
+/**
+ * API 地址变了（点服务商预设、手动改地址都走这里）：表单里的 Key 先存回原地址的槽位，
+ * 再换成新地址存过的 Key，没有就清空——Key 不会跟着跑到别的地址上去测试或保存。
+ * 原地址是还没保存过的自定义地址（比如正在逐字输入的半截地址）时不存回，免得留下一堆无用槽位。
+ */
+export function rebindKeyForBaseUrl(current: AISettings, previousBaseUrl: string): AISettings {
+  const oldSlot = keySlotForBaseUrl(previousBaseUrl)
+  const newSlot = keySlotForBaseUrl(current.baseUrl)
+  if (oldSlot === newSlot)
+    return current
+  const apiKeys = {
+    ...(current.apiKeys ?? {}),
+  }
+  const isPreset = AI_PROVIDERS.some(p => p.id === oldSlot)
+  if (oldSlot !== SHARED_CUSTOM_SLOT && (isPreset || oldSlot in apiKeys))
+    apiKeys[oldSlot] = current.apiKey.trim()
+  return {
+    ...current,
+    apiKeys,
+    apiKey: keyForSlot(apiKeys, newSlot),
+  }
 }
 /**
  * 切服务商：先把当前 Key 存到旧服务商名下，再把新服务商存过的 Key（没填过就是空）取出来；
  *  当前模型在新服务商列表里就保留，否则换成它的第一个模型。
  */
 export function switchProviderSettings(current: AISettings, provider: AIProvider): AISettings {
-  const apiKeys = {
-    ...(current.apiKeys ?? {}),
-  }
-  apiKeys[keySlotForBaseUrl(current.baseUrl)] = current.apiKey.trim()
   return {
-    ...current,
-    apiKeys,
-    baseUrl: provider.baseUrl,
-    apiKey: apiKeys[provider.id] ?? '',
+    ...rebindKeyForBaseUrl({ ...current, baseUrl: provider.baseUrl }, current.baseUrl),
     model: provider.models.some(m => m.id === current.model.trim())
       ? current.model.trim()
       : provider.models[0].id,
@@ -395,7 +412,7 @@ export function claimLegacyAISettings(
   const currentConfigured = !!current
     && typeof current.baseUrl === 'string' && !!current.baseUrl.trim()
     && typeof current.model === 'string' && !!current.model.trim()
-    && !!currentKeys[keySlotForBaseUrl(current.baseUrl)]
+    && !!keyForSlot(currentKeys, keySlotForBaseUrl(current.baseUrl))
   const chosen: Partial<AISettings> = currentConfigured
     ? current!
     : legacy
@@ -404,7 +421,7 @@ export function claimLegacyAISettings(
     ...chosen,
     apiKeys,
   }
-  merged.apiKey = apiKeys[keySlotForBaseUrl(merged.baseUrl)] ?? ''
+  merged.apiKey = keyForSlot(apiKeys, keySlotForBaseUrl(merged.baseUrl))
   try {
     localStorage.setItem(currentKey(), JSON.stringify(merged))
     localStorage.removeItem(LEGACY_KEY)
@@ -438,7 +455,9 @@ export function saveAISettings(s: AISettings) {
   const apiKeys = {
     ...(s.apiKeys ?? {}),
   }
-  apiKeys[keySlotForBaseUrl(s.baseUrl)] = s.apiKey.trim()
+  const slot = keySlotForBaseUrl(s.baseUrl)
+  if (slot !== SHARED_CUSTOM_SLOT)
+    apiKeys[slot] = s.apiKey.trim()
   localStorage.setItem(currentKey(), JSON.stringify({ ...s, apiKeys }))
 }
 export function hasAISettings(): boolean {
