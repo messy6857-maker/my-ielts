@@ -13,14 +13,15 @@ declare module 'vue' {
   export interface GlobalComponents {
     AppDialog: typeof import('./src/components/AppDialog.vue')['default']
     ImageViewer: typeof import('./src/components/ImageViewer.vue')['default']
-    KeywordFlashcard: typeof import('./src/components/KeywordFlashcard.vue')['default']
     ListeningTabs: typeof import('./src/components/ListeningTabs.vue')['default']
     PageBookmark: typeof import('./src/components/PageBookmark.vue')['default']
     ReadingTabs: typeof import('./src/components/ReadingTabs.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    StudyCardSession: typeof import('./src/components/StudyCardSession.vue')['default']
     TextHighlights: typeof import('./src/components/TextHighlights.vue')['default']
     TheFooter: typeof import('./src/components/TheFooter.vue')['default']
     TheHeader: typeof import('./src/components/TheHeader.vue')['default']
+    VocabCardHints: typeof import('./src/components/VocabCardHints.vue')['default']
   }
 }

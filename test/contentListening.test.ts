@@ -128,5 +128,5 @@ it('l8: every empty-type 179 word is a phrase, and both views label it 短语', 
   expect(empty).toHaveLength(17)
   expect(empty.every(w => w.word.includes(' '))).toBe(true)
   expect(readFileSync('src/pages/listening/keyword.vue', 'utf8')).toContain('{{ w.type || \'短语\' }}')
-  expect(readFileSync('src/pages/listening/flashcard.vue', 'utf8')).toContain('pos: w.type || \'短语\'')
+  expect(readFileSync('src/utils/studyDeck.ts', 'utf8')).toContain('pos: w.type || \'短语\'')
 })

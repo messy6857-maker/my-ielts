@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { WordSchedule } from '../composables/useSpacedRepetition'
-import { useDeckStore } from '../composables/useDeckStore'
-import { useDailyGoal, useWordSchedule } from '../composables/useSpacedRepetition'
-import { countDueSchedules } from '../utils/todayTasks'
+import type { WordSchedule } from '../../composables/useSpacedRepetition'
+import { useDeckStore } from '../../composables/useDeckStore'
+import { useDailyGoal, useWordSchedule } from '../../composables/useSpacedRepetition'
+import { countDueSchedules } from '../../utils/todayTasks'
 
 // 背单词：各词库的自测卡片、拼写练习和单词地牢的统一入口。
 // 各词库的记录、每日新词目标仍各自独立，这里只汇总显示、跳到对应页面。
@@ -40,7 +40,7 @@ const DECKS: Deck[] = [
     dailyCount: () => vocabularyDaily.dailyCount.value,
     goal: () => vocabularyDaily.goal.value,
     modes: [
-      { label: '卡片自测', desc: `按章节学新词。${CARD_DESC}`, to: '/vocabulary/flashcard' },
+      { label: '卡片自测', desc: `按章节学新词。${CARD_DESC}`, to: '/study/learn?deck=vocabulary' },
       { label: '到期复习', desc: '全部章节里已到期的词一起复习', to: '/vocabulary/flashcard?review=due' },
       { label: '拼写练习', desc: '在词表里听发音逐个拼写', to: '/vocabulary?practice=1' },
       { label: '跟打练习', desc: '看着单词和释义打一遍，熟悉拼写', to: '/vocabulary/typing' },
@@ -55,7 +55,7 @@ const DECKS: Deck[] = [
     dailyCount: () => stores.reading538.dailyCount.value,
     goal: () => stores.reading538.goal.value,
     modes: [
-      { label: '卡片自测', desc: `${CARD_DESC}，重点记同义替换`, to: '/reading/flashcard' },
+      { label: '卡片自测', desc: `${CARD_DESC}，重点记同义替换`, to: '/study/learn?deck=reading538' },
     ],
   },
   {
@@ -67,7 +67,7 @@ const DECKS: Deck[] = [
     dailyCount: () => stores.listening179.dailyCount.value,
     goal: () => stores.listening179.goal.value,
     modes: [
-      { label: '卡片自测', desc: `${CARD_DESC}，重点记同义替换`, to: '/listening/flashcard' },
+      { label: '卡片自测', desc: `${CARD_DESC}，重点记同义替换`, to: '/study/learn?deck=listening179' },
       { label: '拼写和同义替换练习', desc: '逐行写出单词和它的同义替换', to: '/listening/179practice' },
     ],
   },
@@ -80,7 +80,7 @@ const DECKS: Deck[] = [
     dailyCount: () => stores.corpus.dailyCount.value,
     goal: () => stores.corpus.goal.value,
     modes: [
-      { label: '卡片自测', desc: CARD_DESC, to: '/listening/corpus-flashcard' },
+      { label: '卡片自测', desc: CARD_DESC, to: '/study/learn?deck=corpus' },
       { label: '拼写练习', desc: '听发音、看释义把词拼出来，英式美式都算对，拼错标出错的字母', to: '/listening/corpus-spelling' },
     ],
   },

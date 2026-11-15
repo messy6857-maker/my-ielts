@@ -7,7 +7,7 @@ import { useAuth } from '../src/composables/useAuth'
 import { useDeckStore } from '../src/composables/useDeckStore'
 import { useDailyGoal, useWordSchedule } from '../src/composables/useSpacedRepetition'
 import IndexPage from '../src/pages/index.vue'
-import StudyPage from '../src/pages/study.vue'
+import StudyPage from '../src/pages/study/index.vue'
 
 const DAY = 86400000
 const wrappers: any[] = []
@@ -76,14 +76,14 @@ describe('背单词 hub', () => {
     expect(deck('listening179').find('[data-goal]').text()).toContain('能拼对')
     const links = (id: string) => deck(id).findAll('a').map((a: any) => a.attributes('href'))
     expect(links('vocabulary')).toEqual([
-      '/vocabulary/flashcard',
+      '/study/learn?deck=vocabulary',
       '/vocabulary/flashcard?review=due',
       '/vocabulary?practice=1',
       '/vocabulary/typing',
     ])
-    expect(links('reading538')).toEqual(['/reading/flashcard'])
-    expect(links('listening179')).toEqual(['/listening/flashcard', '/listening/179practice'])
-    expect(links('corpus')).toEqual(['/listening/corpus-flashcard', '/listening/corpus-spelling'])
+    expect(links('reading538')).toEqual(['/study/learn?deck=reading538'])
+    expect(links('listening179')).toEqual(['/study/learn?deck=listening179', '/listening/179practice'])
+    expect(links('corpus')).toEqual(['/study/learn?deck=corpus', '/listening/corpus-spelling'])
     expect(w.find('[data-game]').attributes('href')).toBe('/game')
   })
 
@@ -106,7 +106,7 @@ describe('背单词 hub', () => {
   it('the menu has one 背单词 entry, lit on the hub and on every self-test page', async () => {
     for (const [path, lit] of [
       ['/study', true],
-      ['/reading/flashcard', true],
+      ['/study/learn', true],
       ['/game', true],
       ['/listening/179practice', true],
       ['/reading', false],
@@ -129,8 +129,7 @@ describe('old entry buttons are gone; self-tests return to the hub', () => {
     expect(source('src/pages/listening/keyword.vue')).not.toContain('/listening/flashcard')
     expect(source('src/pages/listening/keyword.vue')).not.toContain('179practice')
     expect(source('src/pages/listening/corpus.vue')).not.toContain('corpus-flashcard')
-    for (const p of ['src/pages/reading/flashcard.vue', 'src/pages/listening/flashcard.vue', 'src/pages/listening/corpus-flashcard.vue'])
-      expect(source(p)).toContain('back-to="/study"')
+    expect(source('src/components/StudyCardSession.vue')).toContain('useGoBack(\'/study\')')
     expect(source('src/pages/vocabulary/flashcard.vue')).toContain('router.push(\'/study\')')
   })
 

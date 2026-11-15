@@ -78,12 +78,10 @@ const route = useRoute()
 // 各词库的自测、练习和单词地牢都从“背单词”进入，在这些页面里也高亮“背单词”
 const STUDY_PATHS = new Set([
   '/study',
+  '/study/learn',
   '/game',
   '/vocabulary/flashcard',
   '/vocabulary/typing',
-  '/reading/flashcard',
-  '/listening/flashcard',
-  '/listening/corpus-flashcard',
   '/listening/corpus-spelling',
   '/listening/179practice',
 ])
