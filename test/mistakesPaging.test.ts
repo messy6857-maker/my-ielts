@@ -12,6 +12,8 @@ const wrappers: any[] = []
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
+  // 通知各数据模块存储已清空，重新读取（否则内存里还是上一个用例的错题）
+  window.dispatchEvent(new StorageEvent('storage', { key: null }))
   auth.currentUser.value = 'alice'
   setToken('token', 'alice')
   vi.stubGlobal('speechSynthesis', {
@@ -25,10 +27,11 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function seed(vocabulary: number, typing: number) {
+function seed(dictation: number, typing: number) {
   const m = useMistakes()
-  for (let i = 0; i < vocabulary; i++)
-    m.addMistake('vocabulary', { key: `vocabulary:w${i}`, title: `w${i}` })
+  // 注意：vocabulary: 开头的键会被当成旧版词汇错题归到别的组，这里用听写错题
+  for (let i = 0; i < dictation; i++)
+    m.addMistake('dictation', { key: `dictation:cam18-test1:part1:${i}`, title: `sentence ${i}` })
   for (let i = 0; i < typing; i++)
     m.addMistake('typing', { key: `typing:t${i}`, title: `t${i}` })
   return m
@@ -96,7 +99,7 @@ describe('mistakes page shows mistakes in batches', () => {
     await nextTick()
     expect(rows(w)).toBe(100)
     expect(w.text()).toContain('还有 70 条未显示')
-    ;(w.vm as any).$.setupState.filterModule = 'vocabulary'
+    ;(w.vm as any).$.setupState.filterModule = 'dictation'
     await nextTick()
     expect(rows(w)).toBe(80)
     expect(w.text()).not.toContain('未显示')
