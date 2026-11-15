@@ -33,7 +33,9 @@ function blockDoneMarkers() {
 
 beforeEach(() => {
   localStorage.clear()
-  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.useFakeTimers({
+    toFake: ['Date'],
+  })
   vi.setSystemTime(new Date('2026-11-15T00:00:00Z'))
   reloadPageBookmarks()
 })
@@ -130,12 +132,27 @@ describe('deleting never rewrites the old table, even when storage is full', () 
   })
 
   it('the bookmark button tells the user when a delete could not be saved', async () => {
-    localStorage.setItem(LEGACY_BOOKMARKS, JSON.stringify({ '/vocabulary': [A] }))
+    localStorage.setItem(LEGACY_BOOKMARKS, JSON.stringify({
+      '/vocabulary': [A],
+    }))
     reloadPageBookmarks()
     localStorage.removeItem(`${DONE_PREFIX}%2Fvocabulary|a`)
-    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/vocabulary', component: { template: '<p />' } }] })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/vocabulary',
+          component: { template: '<p />' },
+        },
+      ],
+    })
     await router.push('/vocabulary')
-    const w = mount(PageBookmark, { attachTo: document.body, global: { plugins: [router] } })
+    const w = mount(PageBookmark, {
+      attachTo: document.body,
+      global: {
+        plugins: [router],
+      },
+    })
     wrappers.push(w)
     await nextTick()
     blockDoneMarkers()
@@ -155,9 +172,15 @@ describe('outdated tabs are told to refresh', () => {
     const mine = Number(localStorage.getItem('myielts_app_build'))
     expect(mine).toBeGreaterThan(0)
     expect(m.appOutdated.value).toBe(false)
-    window.dispatchEvent(new StorageEvent('storage', { key: 'myielts_app_build', newValue: String(mine - 1) }))
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'myielts_app_build',
+      newValue: String(mine - 1),
+    }))
     expect(m.appOutdated.value).toBe(false)
-    window.dispatchEvent(new StorageEvent('storage', { key: 'myielts_app_build', newValue: String(mine + 1) }))
+    window.dispatchEvent(new StorageEvent('storage', {
+      key: 'myielts_app_build',
+      newValue: String(mine + 1),
+    }))
     expect(m.appOutdated.value).toBe(true)
   })
   it('a tab opened from an older cached build is flagged at once and does not lower the stored build', async () => {

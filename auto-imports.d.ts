@@ -35,6 +35,7 @@ declare global {
   const apiPull: typeof import('./src/composables/syncClient').apiPull
   const apiPush: typeof import('./src/composables/syncClient').apiPush
   const apiRegister: typeof import('./src/composables/syncClient').apiRegister
+  const appOutdated: typeof import('./src/composables/useAppUpdate').appOutdated
   const applySyncData: typeof import('./src/composables/syncClient').applySyncData
   const asyncComputed: typeof import('@vueuse/core').asyncComputed
   const attemptModuleLabel: typeof import('./src/composables/useStats').attemptModuleLabel
@@ -208,6 +209,7 @@ declare global {
   const registerDialogHost: typeof import('./src/composables/useDialog').registerDialogHost
   const rejectedKeysOf: typeof import('./src/composables/syncClient').rejectedKeysOf
   const rejectedReasonsOf: typeof import('./src/composables/syncClient').rejectedReasonsOf
+  const reloadApp: typeof import('./src/composables/useAppUpdate').reloadApp
   const reloadPageBookmarks: typeof import('./src/composables/usePageBookmark').reloadPageBookmarks
   const removeJson: typeof import('./src/composables/useAuth').removeJson
   const removePageBookmark: typeof import('./src/composables/usePageBookmark').removePageBookmark
@@ -228,6 +230,7 @@ declare global {
   const shallowReadonly: typeof import('vue').shallowReadonly
   const shallowRef: typeof import('vue').shallowRef
   const speechLanguage: typeof import('./src/composables/useAudioGroup').speechLanguage
+  const startAppUpdateWatch: typeof import('./src/composables/useAppUpdate').startAppUpdateWatch
   const stopAllAudio: typeof import('./src/composables/useSingleAudio').stopAllAudio
   const storageFailures: typeof import('./src/composables/useAuth').storageFailures
   const studyDay: typeof import('./src/composables/useStudyData').studyDay
@@ -559,6 +562,7 @@ declare module 'vue' {
     readonly apiPull: UnwrapRef<typeof import('./src/composables/syncClient')['apiPull']>
     readonly apiPush: UnwrapRef<typeof import('./src/composables/syncClient')['apiPush']>
     readonly apiRegister: UnwrapRef<typeof import('./src/composables/syncClient')['apiRegister']>
+    readonly appOutdated: UnwrapRef<typeof import('./src/composables/useAppUpdate')['appOutdated']>
     readonly applySyncData: UnwrapRef<typeof import('./src/composables/syncClient')['applySyncData']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly attemptModuleLabel: UnwrapRef<typeof import('./src/composables/useStats')['attemptModuleLabel']>
@@ -732,6 +736,7 @@ declare module 'vue' {
     readonly registerDialogHost: UnwrapRef<typeof import('./src/composables/useDialog')['registerDialogHost']>
     readonly rejectedKeysOf: UnwrapRef<typeof import('./src/composables/syncClient')['rejectedKeysOf']>
     readonly rejectedReasonsOf: UnwrapRef<typeof import('./src/composables/syncClient')['rejectedReasonsOf']>
+    readonly reloadApp: UnwrapRef<typeof import('./src/composables/useAppUpdate')['reloadApp']>
     readonly reloadPageBookmarks: UnwrapRef<typeof import('./src/composables/usePageBookmark')['reloadPageBookmarks']>
     readonly removeJson: UnwrapRef<typeof import('./src/composables/useAuth')['removeJson']>
     readonly removePageBookmark: UnwrapRef<typeof import('./src/composables/usePageBookmark')['removePageBookmark']>
@@ -750,6 +755,7 @@ declare module 'vue' {
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>
     readonly speechLanguage: UnwrapRef<typeof import('./src/composables/useAudioGroup')['speechLanguage']>
+    readonly startAppUpdateWatch: UnwrapRef<typeof import('./src/composables/useAppUpdate')['startAppUpdateWatch']>
     readonly stopAllAudio: UnwrapRef<typeof import('./src/composables/useSingleAudio')['stopAllAudio']>
     readonly storageFailures: UnwrapRef<typeof import('./src/composables/useAuth')['storageFailures']>
     readonly studyDay: UnwrapRef<typeof import('./src/composables/useStudyData')['studyDay']>

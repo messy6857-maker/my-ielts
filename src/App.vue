@@ -1,6 +1,7 @@
 <script setup>
 import AppDialog from './components/AppDialog.vue'
 import { onSyncApplied } from './composables/syncClient'
+import { appOutdated, reloadApp, startAppUpdateWatch } from './composables/useAppUpdate'
 import {
   accountNotices,
   dismissAccountNotice,
@@ -8,7 +9,6 @@ import {
   storageFailures,
   useAuth,
 } from './composables/useAuth'
-import { appOutdated, reloadApp, startAppUpdateWatch } from './composables/useAppUpdate'
 import { initSingleAudio, stopAllAudio } from './composables/useSingleAudio'
 
 // 全站单音频：同一时间只播放一个音频，点新的自动暂停旧的
