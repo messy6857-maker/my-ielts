@@ -39,7 +39,12 @@ afterEach(() => {
 describe('an unsaved new key is cleared when the address changes, never replacing a saved key', () => {
   it('composable: pasted key then address change keeps the saved key of the old address', () => {
     const saved = { openai: 'sk-fake-saved-openai' }
-    const form: AISettings = { baseUrl: OPENAI, apiKey: 'sk-fake-pasted', model: 'm', apiKeys: { ...saved } }
+    const form: AISettings = {
+      baseUrl: OPENAI,
+      apiKey: 'sk-fake-pasted',
+      model: 'm',
+      apiKeys: { ...saved },
+    }
     const next = rebindKeyForBaseUrl({ ...form, baseUrl: CUSTOM_B }, OPENAI, saved)
     expect(next.apiKey).toBe('')
     expect(next.apiKeys?.openai).toBe('sk-fake-saved-openai')
@@ -52,7 +57,12 @@ describe('an unsaved new key is cleared when the address changes, never replacin
 
   it('composable: the saved key itself still goes along normally', () => {
     const saved = { openai: 'sk-fake-saved-openai', hive: 'sk-fake-hive' }
-    const form: AISettings = { baseUrl: OPENAI, apiKey: 'sk-fake-saved-openai', model: 'm', apiKeys: { ...saved } }
+    const form: AISettings = {
+      baseUrl: OPENAI,
+      apiKey: 'sk-fake-saved-openai',
+      model: 'm',
+      apiKeys: { ...saved },
+    }
     const toHive = switchProviderSettings(form, hive, saved)
     expect(toHive.apiKey).toBe('sk-fake-hive')
     expect(switchProviderSettings(toHive, openai, saved).apiKey).toBe('sk-fake-saved-openai')
@@ -60,7 +70,12 @@ describe('an unsaved new key is cleared when the address changes, never replacin
 
   it('composable: an address without a saved key still keeps the key typed for it', () => {
     const saved = { openai: 'sk-fake-saved-openai' }
-    let s: AISettings = { baseUrl: CUSTOM_B, apiKey: 'sk-fake-b', model: 'm', apiKeys: { ...saved } }
+    let s: AISettings = {
+      baseUrl: CUSTOM_B,
+      apiKey: 'sk-fake-b',
+      model: 'm',
+      apiKeys: { ...saved },
+    }
     s = switchProviderSettings(s, openai, saved)
     expect(s.apiKey).toBe('sk-fake-saved-openai')
     s = rebindKeyForBaseUrl({ ...s, baseUrl: CUSTOM_B }, s.baseUrl, saved)
@@ -69,10 +84,24 @@ describe('an unsaved new key is cleared when the address changes, never replacin
 
   it('settings page: paste a key, then type an address — the key box clears and saving keeps the saved OpenAI key', async () => {
     localStorage.setItem(aiSettingsKey('alice'), JSON.stringify({ baseUrl: OPENAI, apiKey: 'sk-fake-saved-openai', model: 'gpt-4o-mini' }))
-    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/settings', component: { template: '<p />' } }] })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/settings',
+          component: { template: '<p />' },
+        },
+      ],
+    })
     await router.push('/settings')
     const Page = (await import('../src/pages/settings.vue')).default
-    const w = mount(Page, { attachTo: document.body, global: { plugins: [router], stubs: { RouterLink: true } } })
+    const w = mount(Page, {
+      attachTo: document.body,
+      global: {
+        plugins: [router],
+        stubs: { RouterLink: true },
+      },
+    })
     wrappers.push(w)
     await flushPromises()
     const address = w.get('input[placeholder="https://api-cdn.thehive.ai/api/v3"]')
