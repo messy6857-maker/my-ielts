@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7.1.0
         with:
           node-version: 24
@@ -38,6 +40,15 @@ jobs:
           npx playwright install --with-deps chromium > /dev/null 2>&1
           for i in $(seq 1 30); do curl -sf http://localhost:4173/ > /dev/null && break; sleep 1; done
           node e2e-browser.mjs http://localhost:4173/ 2>&1 | tee $RUNNER_TEMP/e2e.log
+        continue-on-error: true
+      - name: e2e against old build (should fail)
+        run: |
+          git worktree add $RUNNER_TEMP/old fe2c02c > /dev/null 2>&1
+          cd $RUNNER_TEMP/old && pnpm install --frozen-lockfile > /dev/null 2>&1 && pnpm build > /dev/null 2>&1
+          (pnpm preview --port 4174 --strictPort > $RUNNER_TEMP/preview-old.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://localhost:4174/ > /dev/null && break; sleep 1; done
+          cd $RUNNER_TEMP/e2e && node e2e-browser.mjs http://localhost:4174/ 2>&1 | grep -E "^(PASS|FAIL)" | cut -c1-200
+          git -C $GITHUB_WORKSPACE worktree remove --force $RUNNER_TEMP/old
         continue-on-error: true
       - name: Commit regenerated lockfile and type declarations
         run: |
