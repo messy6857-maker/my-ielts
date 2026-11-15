@@ -1,21 +1,32 @@
 <script setup lang="ts">
-import type { DungeonSelection, DungeonWord, Monster, QuestionKind } from '../utils/dungeon'
+import type { DungeonDeck, DungeonSelection, DungeonWord, Monster, QuestionKind, Relic, RelicId, Rng } from '../utils/dungeon'
 import { resolveAudioUrl } from '../composables/useAudio'
 import { useAudioGroup } from '../composables/useAudioGroup'
-import { gradeSchedule, useWordSchedule } from '../composables/useSpacedRepetition'
+import { useDeckStore } from '../composables/useDeckStore'
+import { gradeSchedule, useCheckin, useWordSchedule } from '../composables/useSpacedRepetition'
 import { recordAttempt } from '../composables/useStats'
-import { nsKey, useMistakes } from '../composables/useStudyData'
+import { nsKey, studyDay, useMistakes } from '../composables/useStudyData'
 import {
   buildPool,
   buildRun,
   checkSpelling,
+  DAILY_SOURCE_LABEL,
+  dailyPool,
+  DECK_LABEL,
+  flattenListening,
+  flattenReading,
   flattenVocabulary,
+  isSynonym,
   MONSTER_ICON,
   MONSTER_LABEL,
+  offerRelics,
   phaseScore,
+  RELIC_EVERY,
   ROOMS_PER_RUN,
+  seededRng,
   sourceWords,
   START_HEARTS,
+  TIMED_SECONDS,
 } from '../utils/dungeon'
 import { readValue, saveValue } from '../utils/storage'
 import { getVocabularyChapterMeta, listVocabularyChapters, loadAllVocabulary } from './vocabulary/loadVocabulary'
@@ -25,6 +36,11 @@ import { getVocabularyChapterMeta, listVocabularyChapters, loadAllVocabulary } f
 const managedAudio = useAudioGroup()
 const { mistakes, addMistake } = useMistakes()
 const scheduleStore = useWordSchedule()
+const deckStores = {
+  reading538: useDeckStore('reading538'),
+  listening179: useDeckStore('listening179'),
+}
+const checkin = useCheckin()
 const { currentUser } = useAuth()
 
 const allWords = shallowRef<DungeonWord[]>([])
@@ -34,7 +50,16 @@ async function loadWords() {
   loading.value = true
   loadError.value = false
   try {
-    allWords.value = flattenVocabulary(await loadAllVocabulary())
+    const [vocabulary, reading, listening] = await Promise.all([
+      loadAllVocabulary(),
+      import('./reading/reading538words'),
+      import('./listening/listening179.json'),
+    ])
+    allWords.value = [
+      ...flattenVocabulary(vocabulary),
+      ...flattenReading(reading.default as any),
+      ...flattenListening(listening.default as any),
+    ]
   }
   catch {
     loadError.value = true
@@ -48,15 +73,22 @@ loadWords()
 // ---------- 进门前：选词源 ----------
 const SELECTION_KEY = 'dungeon_selection_v1'
 const BEST_KEY = 'dungeon_best_v1'
+const LIST_KEY = 'dungeon_wordlist_v1'
+const DAILY_KEY = 'dungeon_daily_v1'
 const chapters = listVocabularyChapters()
+const extraDecks: DungeonDeck[] = ['reading538', 'listening179']
 function readSelection(): DungeonSelection {
   const saved = readValue<Partial<DungeonSelection> | null>(nsKey(SELECTION_KEY), null)
   return {
     today: saved?.today ?? true,
     mistakes: saved?.mistakes ?? false,
     due: saved?.due ?? false,
+    custom: saved?.custom ?? false,
     chapters: Array.isArray(saved?.chapters)
       ? saved.chapters.filter(c => chapters.includes(c))
+      : [],
+    decks: Array.isArray(saved?.decks)
+      ? saved.decks.filter(d => extraDecks.includes(d))
       : [],
   }
 }
@@ -67,129 +99,308 @@ function readBest(): Best {
   return { score: Number(saved?.score) || 0, combo: Number(saved?.combo) || 0 }
 }
 const best = ref<Best>(readBest())
+function readCustomKeys(): string[] {
+  const saved = readValue<unknown>(nsKey(LIST_KEY), [])
+  return Array.isArray(saved)
+    ? saved.filter((k): k is string => typeof k === 'string')
+    : []
+}
+const customKeys = ref<string[]>(readCustomKeys())
+interface DailyResult { date: string, score: number, won: boolean }
+function readDaily(): DailyResult | null {
+  const saved = readValue<Partial<DailyResult> | null>(nsKey(DAILY_KEY), null)
+  return saved && saved.date === studyDay()
+    ? { date: saved.date, score: Number(saved.score) || 0, won: !!saved.won }
+    : null
+}
+const dailyResult = ref<DailyResult | null>(readDaily())
 
 /** 进入页面（或回到选词页）时的时间：到期、今天学的都按它算 */
 const now = ref(Date.now())
-const context = computed(() => ({
-  schedules: scheduleStore.schedules.value,
-  mistakes: mistakes.value,
-  now: now.value,
-}))
+const context = computed(() => {
+  const schedules = { ...scheduleStore.schedules.value }
+  for (const w of allWords.value) {
+    if (w.deck === 'vocabulary')
+      continue
+    const schedule = deckStores[w.deck].getSchedule(w.id)
+    if (schedule)
+      schedules[w.key] = schedule
+  }
+  return {
+    schedules,
+    mistakes: mistakes.value,
+    customKeys: customKeys.value,
+    now: now.value,
+  }
+})
 const sources = computed(() => sourceWords(allWords.value, context.value))
 const pool = computed(() => buildPool(allWords.value, selection.value, context.value))
+const daily = computed(() => dailyPool(allWords.value, context.value))
+const deckCounts = computed(() => {
+  const counts: Record<string, number> = {}
+  for (const w of allWords.value)
+    counts[w.deck] = (counts[w.deck] ?? 0) + 1
+  return counts
+})
 function toggleChapter(chapter: string) {
   const list = selection.value.chapters
   selection.value.chapters = list.includes(chapter)
     ? list.filter(c => c !== chapter)
     : [...list, chapter]
 }
+function toggleDeck(deck: DungeonDeck) {
+  const list = selection.value.decks
+  selection.value.decks = list.includes(deck)
+    ? list.filter(d => d !== deck)
+    : [...list, deck]
+}
 function chapterLabel(chapter: string) {
   return getVocabularyChapterMeta(chapter)?.label || chapter.replace(/^\d+_/, '')
 }
 
-// ---------- 游戏中 ----------
-type Stage = 'setup' | 'playing' | 'won' | 'lost'
-const stage = ref<Stage>('setup')
-// 换账号：回到选词页，用新账号的选择和最高分
-watch(currentUser, () => {
-  selection.value = readSelection()
-  best.value = readBest()
-  stage.value = 'setup'
+// ---------- 我的词单 ----------
+const editorOpen = ref(false)
+const search = ref('')
+const SEARCH_LIMIT = 30
+const searchResults = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  if (!q)
+    return []
+  const starts: DungeonWord[] = []
+  const contains: DungeonWord[] = []
+  for (const w of allWords.value) {
+    const text = w.word.toLowerCase()
+    if (text.startsWith(q))
+      starts.push(w)
+    else if (text.includes(q) || w.meaning.includes(q))
+      contains.push(w)
+  }
+  return [
+    ...starts,
+    ...contains,
+  ].slice(0, SEARCH_LIMIT)
 })
+function saveCustomKeys(keys: string[]) {
+  customKeys.value = keys
+  saveValue(nsKey(LIST_KEY), keys)
+}
+function toggleCustom(w: DungeonWord) {
+  saveCustomKeys(customKeys.value.includes(w.key)
+    ? customKeys.value.filter(k => k !== w.key)
+    : [...customKeys.value, w.key])
+}
+function clearCustom() {
+  saveCustomKeys([])
+}
+
+// ---------- 游戏中 ----------
+type Stage = 'setup' | 'playing' | 'relic' | 'won' | 'lost'
+const stage = ref<Stage>('setup')
 const monsters = ref<Monster[]>([])
 const room = ref(0)
 const phase = ref(0)
 const hearts = ref(START_HEARTS)
+const maxHearts = ref(START_HEARTS)
 const score = ref(0)
 const combo = ref(0)
 const maxCombo = ref(0)
 const defeated = ref(0)
 /** 当前题目的结果：null 还没答 */
 const result = ref<null | 'right' | 'wrong'>(null)
-const picked = ref<DungeonWord | null>(null)
+const picked = ref<DungeonWord | string | null>(null)
 const spelling = ref('')
 const hintShown = ref(false)
-/** 这只怪物身上是否用过提示 / 答错过（决定这个词记成认识、模糊还是不认识） */
+const timedOut = ref(false)
+const shieldSaved = ref(false)
+/** 这只怪物身上是否用过提示（决定这个词记成认识还是模糊） */
 let monsterHinted = false
 const missed = ref<Monster[]>([])
 const newRecord = ref(false)
 const spellInput = ref<HTMLInputElement | null>(null)
 const continueButton = ref<HTMLButtonElement | null>(null)
+// 遗物
+const relics = ref<Relic[]>([])
+const offered = ref<Relic[]>([])
+const shieldReady = ref(false)
+const has = (id: RelicId) => relics.value.some(r => r.id === id)
+// 每日地牢
+const isDaily = ref(false)
+let runRng: Rng = Math.random
 
 const monster = computed<Monster | undefined>(() => monsters.value[room.value])
 const question = computed<QuestionKind | undefined>(() => monster.value?.phases[phase.value])
-
-function playWord() {
+/** 选择题显示的选项；有侦察之眼时去掉最后一个错误选项 */
+const wordOptions = computed<DungeonWord[]>(() => {
   const m = monster.value
   if (!m)
+    return []
+  if (!has('scout') || m.options.length < 3)
+    return m.options
+  const drop = [...m.options].reverse().find(o => o !== m.word)
+  return m.options.filter(o => o !== drop)
+})
+const synonymOptions = computed<string[]>(() => {
+  const m = monster.value
+  if (!m)
+    return []
+  if (!has('scout') || m.synonymOptions.length < 3)
+    return m.synonymOptions
+  const drop = [...m.synonymOptions].reverse().find(o => !isSynonym(o, m.word))
+  return m.synonymOptions.filter(o => o !== drop)
+})
+
+function playWord() {
+  const w = monster.value?.word
+  if (!w)
     return
-  managedAudio.play(resolveAudioUrl(`vocabulary/audio/${m.word.chapter}/${m.word.word}.mp3`), m.word.word)
+  let url: string
+  if (w.deck === 'vocabulary')
+    url = resolveAudioUrl(`vocabulary/audio/${w.chapter}/${w.word}.mp3`)
+  else if (w.deck === 'listening179')
+    url = resolveAudioUrl(`179_audios/${w.word}.mp3`)
+  else
+    url = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(w.word)}&type=1`
+  managedAudio.play(url, w.word)
 }
+
+// 限时拼写的倒计时
+const timeLeft = ref(0)
+let timerId: ReturnType<typeof setInterval> | null = null
+let deadline = 0
+function stopTimer() {
+  if (timerId !== null)
+    clearInterval(timerId)
+  timerId = null
+}
+function startTimer() {
+  stopTimer()
+  const total = TIMED_SECONDS + (has('hourglass')
+    ? 5
+    : 0)
+  deadline = Date.now() + total * 1000
+  timeLeft.value = total
+  timerId = setInterval(() => {
+    timeLeft.value = Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+    if (Date.now() >= deadline)
+      timeUp()
+  }, 200)
+}
+
 async function enterQuestion() {
+  stopTimer()
   result.value = null
   picked.value = null
   spelling.value = ''
   hintShown.value = false
+  timedOut.value = false
+  shieldSaved.value = false
   await nextTick()
-  if (question.value === 'spell') {
+  if (question.value === 'spell' || question.value === 'timed') {
     playWord()
     spellInput.value?.focus()
   }
+  if (question.value === 'timed')
+    startTimer()
 }
-function start() {
-  now.value = Date.now()
-  const run = buildRun(pool.value, allWords.value, context.value)
+function begin(run: Monster[], rng: Rng, asDaily: boolean) {
   if (!run.length)
     return
-  saveValue(nsKey(SELECTION_KEY), selection.value)
+  runRng = rng
+  isDaily.value = asDaily
   monsters.value = run
   room.value = 0
   phase.value = 0
   hearts.value = START_HEARTS
+  maxHearts.value = START_HEARTS
   score.value = 0
   combo.value = 0
   maxCombo.value = 0
   defeated.value = 0
   missed.value = []
+  relics.value = []
+  offered.value = []
+  shieldReady.value = false
   newRecord.value = false
   monsterHinted = false
+  editorOpen.value = false
   stage.value = 'playing'
   enterQuestion()
+}
+function start() {
+  now.value = Date.now()
+  saveValue(nsKey(SELECTION_KEY), selection.value)
+  begin(buildRun(pool.value, allWords.value, context.value), Math.random, false)
+}
+/** 每日地牢：用日期当随机种子，同一天、同一批词每次都是同一局 */
+function startDaily() {
+  now.value = Date.now()
+  const rng = seededRng(`daily:${studyDay()}`)
+  begin(buildRun(daily.value.pool, allWords.value, context.value, rng), rng, true)
+}
+function restart() {
+  if (isDaily.value)
+    startDaily()
+  else
+    start()
 }
 
 /** 一只怪物打完（击败或答错放跑）：记一次复习结果 */
 function recordWord(m: Monster, wrongKind: QuestionKind | null) {
-  const grade = wrongKind
-    ? 0
-    : (monsterHinted ? 3 : 5)
-  // 只更新已经在自测里学过的词；没学过的词不建复习记录，在单词自测里仍算新词
-  const previous = scheduleStore.get(m.word.id)
-  if (previous)
-    scheduleStore.set(m.word.id, gradeSchedule(previous, grade))
-  recordAttempt('vocabulary', grade)
-  if (!wrongKind)
+  const w = m.word
+  let grade: 0 | 3 | 5 = 5
+  if (wrongKind)
+    grade = 0
+  else if (monsterHinted)
+    grade = 3
+  const detail = `${w.pos} ${w.meaning}`.trim()
+  // 只更新已经在自测里学过的词；没学过的词不建复习记录，在自测里仍算新词
+  if (w.deck === 'vocabulary') {
+    const previous = scheduleStore.get(w.id)
+    if (previous)
+      scheduleStore.set(w.id, gradeSchedule(previous, grade))
+    recordAttempt('vocabulary', grade)
+    if (!wrongKind)
+      return
+    // 认错释义记到“单词自测”，拼错记到“打字练习”，和那两处的错题合并计数
+    if (wrongKind === 'choice') {
+      addMistake('flashcard', {
+        key: `flashcard:${w.id}`,
+        title: w.word,
+        detail,
+        hint: `${w.word}: ${w.meaning}`,
+      })
+    }
+    else {
+      addMistake('typing', {
+        key: `typing:${w.word}`,
+        title: w.word,
+        detail,
+        hint: `${w.word}: ${w.meaning}`,
+      })
+    }
     return
-  const detail = `${m.word.pos} ${m.word.meaning}`.trim()
-  // 认错释义记到“单词自测”，拼错记到“打字练习”，和那两处的错题合并计数
-  if (wrongKind === 'choice') {
-    addMistake('flashcard', {
-      key: `flashcard:${m.word.id}`,
-      title: m.word.word,
-      detail,
-      hint: `${m.word.word}: ${m.word.meaning}`,
-    })
   }
-  else {
-    addMistake('typing', {
-      key: `typing:${m.word.word}`,
-      title: m.word.word,
+  const deck = deckStores[w.deck]
+  const previous = deck.getSchedule(w.id)
+  if (previous)
+    deck.setSchedule(w.id, gradeSchedule(previous, grade))
+  recordAttempt(w.deck, grade)
+  // 阅读、听力考点词：和各自自测里的错题用同一条记录
+  if (wrongKind) {
+    const module = w.deck === 'reading538'
+      ? 'reading'
+      : 'listening'
+    addMistake(module, {
+      key: w.key,
+      title: w.word,
       detail,
-      hint: `${m.word.word}: ${m.word.meaning}`,
+      hint: w.synonyms.slice(0, 4).join(' / '),
     })
   }
 }
 
 function finish(next: 'won' | 'lost') {
+  stopTimer()
   managedAudio.dispose()
   if (score.value > best.value.score || maxCombo.value > best.value.combo) {
     newRecord.value = score.value > best.value.score
@@ -199,12 +410,24 @@ function finish(next: 'won' | 'lost') {
     }
     saveValue(nsKey(BEST_KEY), best.value)
   }
+  if (isDaily.value) {
+    const previous = readDaily()
+    dailyResult.value = {
+      date: studyDay(),
+      score: Math.max(previous?.score ?? 0, score.value),
+      won: next === 'won' || !!previous?.won,
+    }
+    saveValue(nsKey(DAILY_KEY), dailyResult.value)
+    // 通关每日地牢算今天打卡
+    if (next === 'won')
+      checkin.checkin()
+  }
   stage.value = next
 }
-/** 进下一题 / 下一个房间 / 结算 */
+/** 进下一题 / 下一个房间 / 选遗物 / 结算 */
 function advance() {
   const m = monster.value
-  if (!m || result.value === null)
+  if (stage.value !== 'playing' || !m || result.value === null)
     return
   if (result.value === 'right' && phase.value + 1 < m.phases.length) {
     phase.value++
@@ -222,6 +445,29 @@ function advance() {
   room.value++
   phase.value = 0
   monsterHinted = false
+  result.value = null
+  // 每打完 RELIC_EVERY 个房间，三选一拿一件遗物
+  if (room.value % RELIC_EVERY === 0) {
+    offered.value = offerRelics(relics.value.map(r => r.id), runRng)
+    if (offered.value.length) {
+      stage.value = 'relic'
+      return
+    }
+  }
+  enterQuestion()
+}
+function chooseRelic(relic: Relic) {
+  if (stage.value !== 'relic' || !offered.value.includes(relic))
+    return
+  relics.value = [...relics.value, relic]
+  offered.value = []
+  if (relic.id === 'heart') {
+    maxHearts.value++
+    hearts.value++
+  }
+  if (relic.id === 'shield')
+    shieldReady.value = true
+  stage.value = 'playing'
   enterQuestion()
 }
 function answer(correct: boolean) {
@@ -229,11 +475,12 @@ function answer(correct: boolean) {
   const kind = question.value
   if (!m || !kind || result.value !== null)
     return
+  stopTimer()
   if (correct) {
     result.value = 'right'
     combo.value++
     maxCombo.value = Math.max(maxCombo.value, combo.value)
-    score.value += phaseScore(combo.value, m.kind)
+    score.value += phaseScore(combo.value, m.kind, has('drum'))
     if (phase.value + 1 >= m.phases.length) {
       defeated.value++
       recordWord(m, null)
@@ -242,17 +489,36 @@ function answer(correct: boolean) {
   else {
     result.value = 'wrong'
     combo.value = 0
-    hearts.value--
+    if (shieldReady.value) {
+      shieldReady.value = false
+      shieldSaved.value = true
+    }
+    else {
+      hearts.value--
+    }
     missed.value.push(m)
     recordWord(m, kind)
   }
   nextTick(() => continueButton.value?.focus())
 }
+function timeUp() {
+  if (stage.value !== 'playing' || question.value !== 'timed' || result.value !== null)
+    return
+  timedOut.value = true
+  answer(false)
+}
 function choose(option: DungeonWord) {
-  if (result.value !== null)
+  if (result.value !== null || question.value !== 'choice')
     return
   picked.value = option
   answer(option === monster.value?.word)
+}
+function chooseSynonym(option: string) {
+  const m = monster.value
+  if (!m || result.value !== null || question.value !== 'synonym')
+    return
+  picked.value = option
+  answer(isSynonym(option, m.word))
 }
 function submitSpelling() {
   const m = monster.value
@@ -269,13 +535,36 @@ function showHint() {
   spellInput.value?.focus()
 }
 function backToSetup() {
+  stopTimer()
   now.value = Date.now()
+  dailyResult.value = readDaily()
   stage.value = 'setup'
 }
+// 换账号：回到选词页，用新账号的选择、词单和记录
+watch(currentUser, () => {
+  stopTimer()
+  selection.value = readSelection()
+  best.value = readBest()
+  customKeys.value = readCustomKeys()
+  dailyResult.value = readDaily()
+  stage.value = 'setup'
+})
 
-// 键盘：选择题按 1-4；出结果后按回车继续
+// 键盘：选择题按 1-4；出结果后按回车继续；选遗物按 1-3
 function onKeydown(event: KeyboardEvent) {
-  if (stage.value !== 'playing' || event.repeat || event.ctrlKey || event.metaKey || event.altKey)
+  if (event.repeat || event.ctrlKey || event.metaKey || event.altKey)
+    return
+  if (stage.value === 'relic') {
+    const relic = /^[1-3]$/.test(event.key)
+      ? offered.value[Number(event.key) - 1]
+      : undefined
+    if (relic) {
+      event.preventDefault()
+      chooseRelic(relic)
+    }
+    return
+  }
+  if (stage.value !== 'playing')
     return
   if (result.value !== null) {
     if (event.key === 'Enter') {
@@ -284,23 +573,30 @@ function onKeydown(event: KeyboardEvent) {
     }
     return
   }
-  if (question.value === 'choice' && /^[1-4]$/.test(event.key)) {
-    const option = monster.value?.options[Number(event.key) - 1]
-    if (option) {
-      event.preventDefault()
-      choose(option)
-    }
+  if (!/^[1-4]$/.test(event.key))
+    return
+  const index = Number(event.key) - 1
+  if (question.value === 'choice' && wordOptions.value[index]) {
+    event.preventDefault()
+    choose(wordOptions.value[index])
+  }
+  else if (question.value === 'synonym' && synonymOptions.value[index]) {
+    event.preventDefault()
+    chooseSynonym(synonymOptions.value[index])
   }
 }
 onMounted(() => window.addEventListener('keydown', onKeydown))
-onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+onBeforeUnmount(() => {
+  stopTimer()
+  window.removeEventListener('keydown', onKeydown)
+})
 
-function optionClass(option: DungeonWord) {
+function optionClass(isAnswer: boolean, isPicked: boolean) {
   if (result.value === null)
     return 'border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-700'
-  if (option === monster.value?.word)
+  if (isAnswer)
     return 'border-green-500 bg-green-50 dark:bg-green-900'
-  if (option === picked.value)
+  if (isPicked)
     return 'border-red-500 bg-red-50 dark:bg-red-900'
   return 'border-gray-200 opacity-60 dark:border-gray-700'
 }
@@ -334,17 +630,34 @@ function optionClass(option: DungeonWord) {
 
       <!-- 选词源 -->
       <div v-else-if="stage === 'setup'" class="text-gray-900 dark:text-white">
+        <!-- 每日地牢 -->
+        <div class="mb-5 flex flex-wrap items-center justify-between gap-3 border border-orange-300 rounded-lg bg-orange-50 p-4 dark:border-orange-700 dark:bg-gray-700" data-daily>
+          <div>
+            <div class="font-bold">
+              📅 每日地牢
+              <span v-if="dailyResult?.won" class="ml-2 text-sm text-green-600 dark:text-green-400">今日已通关 · {{ dailyResult.score }} 分</span>
+              <span v-else-if="dailyResult" class="ml-2 text-sm text-gray-500 dark:text-gray-300">今日最高 {{ dailyResult.score }} 分，还没通关</span>
+            </div>
+            <div class="text-sm text-gray-600 dark:text-gray-300">
+              今天的固定关卡，打{{ DAILY_SOURCE_LABEL[daily.from] }}（{{ daily.pool.length }} 个），通关算今天打卡
+            </div>
+          </div>
+          <button class="rounded-lg bg-orange-500 px-5 py-2 text-white font-bold" @click="startDaily">
+            {{ dailyResult ? '再打一次' : '挑战' }}
+          </button>
+        </div>
+
         <p class="mb-4 text-sm text-gray-600 dark:text-gray-300">
-          选好要打的词，它们会变成怪物：一局最多 {{ ROOMS_PER_RUN }} 个房间，{{ START_HEARTS }} 颗心，答错扣一颗。答对算一次复习，答错记进错词本。
+          也可以自己选词：一局最多 {{ ROOMS_PER_RUN }} 个房间，{{ START_HEARTS }} 颗心，答错扣一颗，每 {{ RELIC_EVERY }} 个房间选一件遗物。答对算一次复习，答错记进错词本。
         </p>
         <h4 class="mb-2 font-bold">
           打哪些词（可以多选）
         </h4>
         <div class="mb-4 flex flex-col gap-2">
-          <label class="flex items-center gap-2">
+          <label class="flex flex-wrap items-center gap-2">
             <input v-model="selection.today" type="checkbox" data-source="today">
             今天学的词（{{ sources.today.length }}）
-            <span class="text-xs text-gray-500 dark:text-gray-400">今天在单词自测里学过或记进错词本的词</span>
+            <span class="text-xs text-gray-500 dark:text-gray-400">今天在自测里学过或记进错词本的词</span>
           </label>
           <label class="flex items-center gap-2">
             <input v-model="selection.mistakes" type="checkbox" data-source="mistakes">
@@ -354,7 +667,64 @@ function optionClass(option: DungeonWord) {
             <input v-model="selection.due" type="checkbox" data-source="due">
             到期复习（{{ sources.due.length }}）
           </label>
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="flex items-center gap-2">
+              <input v-model="selection.custom" type="checkbox" data-source="custom">
+              我的词单（{{ sources.custom.length }}）
+            </label>
+            <button class="text-sm text-blue-600 underline dark:text-blue-400" @click="editorOpen = !editorOpen">
+              {{ editorOpen ? '收起' : '编辑词单' }}
+            </button>
+          </div>
         </div>
+
+        <!-- 词单编辑 -->
+        <div v-if="editorOpen" class="mb-4 border border-gray-200 rounded-lg p-3 dark:border-gray-700" data-editor>
+          <input
+            v-model="search"
+            type="search"
+            aria-label="搜索单词或释义"
+            placeholder="搜索单词或中文释义，点一下加入词单"
+            class="mb-2 w-full border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+          >
+          <ul v-if="searchResults.length" class="mb-2 max-h-60 overflow-auto text-sm">
+            <li v-for="w in searchResults" :key="w.key">
+              <button
+                data-search-result
+                class="w-full flex items-center gap-2 rounded px-2 py-1 text-left hover:bg-gray-50 dark:hover:bg-gray-700"
+                :aria-pressed="customKeys.includes(w.key)"
+                @click="toggleCustom(w)"
+              >
+                <span class="w-4">{{ customKeys.includes(w.key) ? '✓' : '+' }}</span>
+                <span class="font-medium">{{ w.word }}</span>
+                <span class="flex-1 truncate text-gray-500 dark:text-gray-400">{{ w.pos }} {{ w.meaning }}</span>
+                <span class="text-xs text-gray-400">{{ DECK_LABEL[w.deck] }}</span>
+              </button>
+            </li>
+          </ul>
+          <p v-else-if="search.trim()" class="mb-2 text-sm text-gray-500 dark:text-gray-400">
+            没有找到匹配的词
+          </p>
+          <div v-if="sources.custom.length" class="flex flex-wrap items-center gap-2 text-sm">
+            <button
+              v-for="w in sources.custom"
+              :key="w.key"
+              data-list-word
+              class="border border-gray-300 rounded-full px-2 py-0.5 dark:border-gray-600"
+              :title="`移出词单：${w.word}`"
+              @click="toggleCustom(w)"
+            >
+              {{ w.word }} ×
+            </button>
+            <button class="text-red-600 underline dark:text-red-400" @click="clearCustom">
+              清空词单
+            </button>
+          </div>
+          <p v-else class="text-sm text-gray-500 dark:text-gray-400">
+            词单还是空的
+          </p>
+        </div>
+
         <div class="mb-2 flex flex-wrap items-center gap-3">
           <h4 class="font-bold">
             按章节选
@@ -366,10 +736,11 @@ function optionClass(option: DungeonWord) {
             清空
           </button>
         </div>
-        <div class="mb-5 flex flex-wrap gap-2">
+        <div class="mb-4 flex flex-wrap gap-2">
           <button
             v-for="chapter in chapters"
             :key="chapter"
+            data-chapter
             :aria-pressed="selection.chapters.includes(chapter)"
             class="border rounded-full px-3 py-1 text-sm"
             :class="selection.chapters.includes(chapter)
@@ -378,6 +749,24 @@ function optionClass(option: DungeonWord) {
             @click="toggleChapter(chapter)"
           >
             {{ chapterLabel(chapter) }}
+          </button>
+        </div>
+        <h4 class="mb-2 font-bold">
+          考点词（带同义替换题）
+        </h4>
+        <div class="mb-5 flex flex-wrap gap-2">
+          <button
+            v-for="deck in extraDecks"
+            :key="deck"
+            :data-deck="deck"
+            :aria-pressed="selection.decks.includes(deck)"
+            class="border rounded-full px-3 py-1 text-sm"
+            :class="selection.decks.includes(deck)
+              ? 'border-blue-600 bg-blue-600 text-white'
+              : 'border-gray-300 dark:border-gray-600'"
+            @click="toggleDeck(deck)"
+          >
+            {{ DECK_LABEL[deck] }}（{{ deckCounts[deck] ?? 0 }}）
           </button>
         </div>
         <div class="flex flex-wrap items-center gap-4">
@@ -396,15 +785,56 @@ function optionClass(option: DungeonWord) {
         </div>
       </div>
 
+      <!-- 选遗物 -->
+      <div v-else-if="stage === 'relic'" class="text-center text-gray-900 dark:text-white">
+        <h4 class="mb-1 text-lg font-bold">
+          发现宝箱！选一件遗物
+        </h4>
+        <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+          已通过 {{ room }} / {{ monsters.length }} 个房间
+        </p>
+        <div class="grid gap-3 sm:grid-cols-3">
+          <button
+            v-for="(relic, i) in offered"
+            :key="relic.id"
+            :data-relic="relic.id"
+            class="border border-gray-300 rounded-lg p-4 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
+            @click="chooseRelic(relic)"
+          >
+            <div class="text-3xl" aria-hidden="true">
+              {{ relic.icon }}
+            </div>
+            <div class="mt-1 font-bold">
+              {{ relic.name }}
+            </div>
+            <div class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+              {{ relic.desc }}
+            </div>
+            <div class="mt-1 text-xs text-gray-400">
+              {{ i + 1 }}
+            </div>
+          </button>
+        </div>
+      </div>
+
       <!-- 战斗 -->
       <div v-else-if="stage === 'playing' && monster" class="text-gray-900 dark:text-white">
-        <div class="mb-4 flex flex-wrap items-center justify-between gap-2 text-sm">
-          <span>房间 {{ room + 1 }} / {{ monsters.length }}</span>
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span>{{ isDaily ? '每日地牢 · ' : '' }}房间 {{ room + 1 }} / {{ monsters.length }}</span>
           <span :aria-label="`剩余 ${hearts} 颗心`">
-            <span v-for="i in START_HEARTS" :key="i">{{ i <= hearts ? '❤️' : '🖤' }}</span>
+            <span v-for="i in maxHearts" :key="i">{{ i <= hearts ? '❤️' : '🖤' }}</span>
           </span>
           <span>得分 {{ score }}</span>
           <span :class="combo >= 3 ? 'text-orange-500 font-bold' : ''">连击 {{ combo }}</span>
+        </div>
+        <div v-if="relics.length" class="mb-2 text-sm" aria-label="已有遗物">
+          <span
+            v-for="relic in relics"
+            :key="relic.id"
+            class="mr-1"
+            :class="relic.id === 'shield' && !shieldReady ? 'opacity-30' : ''"
+            :title="`${relic.name}：${relic.desc}`"
+          >{{ relic.icon }}</span>
         </div>
         <div class="mb-4 border border-gray-200 rounded-lg p-4 text-center dark:border-gray-700">
           <div class="text-5xl" aria-hidden="true">
@@ -427,10 +857,11 @@ function optionClass(option: DungeonWord) {
           </p>
           <div class="grid gap-2 sm:grid-cols-2">
             <button
-              v-for="(option, i) in monster.options"
-              :key="option.word"
+              v-for="(option, i) in wordOptions"
+              :key="option.key"
+              data-option
               class="border rounded-lg px-4 py-3 text-left"
-              :class="optionClass(option)"
+              :class="optionClass(option === monster.word, option === picked)"
               :disabled="result !== null"
               @click="choose(option)"
             >
@@ -438,13 +869,43 @@ function optionClass(option: DungeonWord) {
             </button>
           </div>
         </div>
-        <!-- 拼写题：听发音拼出来 -->
+        <!-- 同义替换题 -->
+        <div v-else-if="question === 'synonym'">
+          <p class="mb-3 text-center">
+            选出 <span class="text-lg font-bold">{{ monster.word.word }}</span> 的同义替换
+          </p>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <button
+              v-for="(option, i) in synonymOptions"
+              :key="option"
+              data-option
+              class="border rounded-lg px-4 py-3 text-left"
+              :class="optionClass(isSynonym(option, monster.word), option === picked)"
+              :disabled="result !== null"
+              @click="chooseSynonym(option)"
+            >
+              <span class="mr-2 text-xs text-gray-400">{{ i + 1 }}</span>{{ option }}
+            </button>
+          </div>
+        </div>
+        <!-- 拼写题：听发音拼出来；限时题还给释义，但要在倒计时内拼完 -->
         <form v-else class="text-center" @submit.prevent="submitSpelling">
+          <p v-if="question === 'timed'" class="mb-2 text-lg font-bold" :class="timeLeft <= 5 ? 'text-red-600 dark:text-red-400' : ''" role="timer">
+            ⏱ {{ timeLeft }} 秒
+          </p>
           <p class="mb-3">
-            听发音，把这个词拼出来
+            <template v-if="question === 'timed'">
+              限时拼写：<span class="text-sm text-gray-500 italic dark:text-gray-400">{{ monster.word.pos }}</span> {{ monster.word.meaning }}
+            </template>
+            <template v-else>
+              听发音，把这个词拼出来
+            </template>
             <button type="button" class="ml-2 border border-gray-300 rounded-lg px-3 py-1 text-sm dark:border-gray-600" @click="playWord">
               🔊 再听一次
             </button>
+          </p>
+          <p v-if="has('letter')" class="mb-2 text-sm text-gray-600 dark:text-gray-300">
+            📜 首字母 {{ monster.word.word[0] }}，共 {{ monster.word.word.length }} 个字符
           </p>
           <p v-if="hintShown" class="mb-3 text-sm text-gray-600 dark:text-gray-300">
             提示：{{ monster.word.pos }} {{ monster.word.meaning }}，首字母 {{ monster.word.word[0] }}
@@ -463,19 +924,21 @@ function optionClass(option: DungeonWord) {
             <button type="submit" class="rounded-lg bg-blue-600 px-5 py-2 text-white disabled:opacity-50" :disabled="!spelling.trim()">
               攻击
             </button>
-            <button v-if="!hintShown" type="button" class="border border-gray-300 rounded-lg px-4 py-2 text-sm dark:border-gray-600" @click="showHint">
+            <button v-if="question === 'spell' && !hintShown" type="button" class="border border-gray-300 rounded-lg px-4 py-2 text-sm dark:border-gray-600" @click="showHint">
               提示（连击清零）
             </button>
           </div>
         </form>
 
-        <div v-if="result !== null" class="mt-4 text-center" role="status">
+        <div v-if="result !== null" class="mt-4 text-center" data-result>
           <p v-if="result === 'right'" class="text-green-600 font-bold dark:text-green-400">
             {{ phase + 1 >= monster.phases.length ? '击败！' : '命中！还差一击' }}
           </p>
           <p v-else class="text-red-600 dark:text-red-400">
-            <span class="font-bold">答错了，怪物逃走了。</span>
+            <span class="font-bold">{{ timedOut ? '时间到，怪物逃走了。' : '答错了，怪物逃走了。' }}</span>
             正确答案：{{ monster.word.word }}（{{ monster.word.pos }} {{ monster.word.meaning }}）
+            <span v-if="question === 'synonym'">同义替换：{{ monster.word.synonyms.join(' / ') }}</span>
+            <span v-if="shieldSaved" class="block text-gray-600 dark:text-gray-300">🛡️ 免死金牌挡下了这一击，没有扣心</span>
           </p>
           <button ref="continueButton" class="mt-3 rounded-lg bg-blue-600 px-5 py-2 text-white" @click="advance">
             {{ hearts <= 0 ? '查看结果' : '继续' }}
@@ -498,22 +961,25 @@ function optionClass(option: DungeonWord) {
         <p v-if="newRecord" class="mt-1 text-orange-500 font-bold">
           新的最高分！
         </p>
+        <p v-if="isDaily" class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+          {{ stage === 'won' ? '每日地牢已通关，今天已打卡 ✓' : '每日地牢还没通关，可以再打一次' }}
+        </p>
         <div v-if="missed.length" class="mx-auto mt-4 max-w-md text-left text-sm">
           <p class="mb-1 text-gray-600 dark:text-gray-300">
             这些词已记进错词本：
           </p>
           <ul class="list-disc pl-5">
-            <li v-for="m in missed" :key="m.word.word">
+            <li v-for="m in missed" :key="m.word.key">
               {{ m.word.word }} <span class="text-gray-500 dark:text-gray-400">{{ m.word.pos }} {{ m.word.meaning }}</span>
             </li>
           </ul>
         </div>
         <div class="mt-5 flex flex-wrap justify-center gap-3">
-          <button class="rounded-lg bg-blue-600 px-5 py-2 text-white" @click="start">
+          <button class="rounded-lg bg-blue-600 px-5 py-2 text-white" @click="restart">
             再来一局
           </button>
           <button class="border border-gray-300 rounded-lg px-5 py-2 dark:border-gray-600" @click="backToSetup">
-            重新选词
+            {{ isDaily ? '返回' : '重新选词' }}
           </button>
         </div>
       </div>
