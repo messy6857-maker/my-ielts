@@ -130,11 +130,14 @@ describe('word sources', () => {
     expect(flat).toEqual([
       {
         id: 1,
+        key: 'vocab:1',
+        deck: 'vocabulary',
         word: 'colour',
         variants: ['colour', 'color'],
         pos: 'n.',
         meaning: '颜色',
         chapter: 'c1',
+        synonyms: [],
       },
     ])
   })
@@ -182,30 +185,10 @@ describe('word sources', () => {
         mistake('flashcard:5', 'glacier', 1, NOW - 5 * DAY),
       ],
     })
-    expect(buildPool(WORDS, {
-      today: false,
-      mistakes: false,
-      due: false,
-      chapters: [],
-    }, c)).toEqual([])
-    expect(buildPool(WORDS, {
-      today: false,
-      mistakes: true,
-      due: false,
-      chapters: [],
-    }, c).map(w => w.id)).toEqual([5])
-    expect(buildPool(WORDS, {
-      today: false,
-      mistakes: true,
-      due: false,
-      chapters: ['c1'],
-    }, c).map(w => w.id)).toEqual([1, 2, 3, 4, 5])
-    expect(buildPool(WORDS, {
-      today: false,
-      mistakes: false,
-      due: false,
-      chapters: ['c1', 'c2'],
-    }, c).map(w => w.id)).toEqual([1, 2, 3, 4, 5, 6])
+    expect(buildPool(WORDS, { ...NONE, mistakes: false, chapters: [] }, c)).toEqual([])
+    expect(buildPool(WORDS, { ...NONE, mistakes: true, chapters: [] }, c).map(w => w.id)).toEqual([5])
+    expect(buildPool(WORDS, { ...NONE, mistakes: true, chapters: ['c1'] }, c).map(w => w.id)).toEqual([1, 2, 3, 4, 5])
+    expect(buildPool(WORDS, { ...NONE, mistakes: false, chapters: ['c1', 'c2'] }, c).map(w => w.id)).toEqual([1, 2, 3, 4, 5, 6])
   })
 })
 
@@ -270,12 +253,8 @@ describe('building a run', () => {
 
   it('spelling check ignores case and extra spaces and accepts variants', () => {
     const w: DungeonWord = {
-      id: 1,
-      word: 'ice cap',
+      ...word(1, 'ice cap', 'x'),
       variants: ['ice cap', 'icecap'],
-      pos: '',
-      meaning: '',
-      chapter: '',
     }
     expect(checkSpelling('  Ice   Cap ', w)).toBe(true)
     expect(checkSpelling('icecap', w)).toBe(true)
