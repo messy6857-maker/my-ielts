@@ -244,7 +244,7 @@ function keyForSlot(apiKeys: Record<string, string> | undefined, slot: string): 
 /**
  * API 地址变了（点服务商预设、手动改地址都走这里）：表单里的 Key 先存回原地址的槽位，
  * 再换成新地址存过的 Key，没有就清空——Key 不会跟着跑到别的地址上去测试或保存。
- * 原地址是还没保存过的自定义地址（比如正在逐字输入的半截地址）时不存回，免得留下一堆无用槽位。
+ * Key 为空时只记到预设或已有槽位，逐字输入地址时不会留下一堆半截地址的空槽位。
  */
 export function rebindKeyForBaseUrl(current: AISettings, previousBaseUrl: string): AISettings {
   const oldSlot = keySlotForBaseUrl(previousBaseUrl)
@@ -254,9 +254,12 @@ export function rebindKeyForBaseUrl(current: AISettings, previousBaseUrl: string
   const apiKeys = {
     ...(current.apiKeys ?? {}),
   }
+  const key = current.apiKey.trim()
   const isPreset = AI_PROVIDERS.some(p => p.id === oldSlot)
-  if (oldSlot !== SHARED_CUSTOM_SLOT && (isPreset || oldSlot in apiKeys))
-    apiKeys[oldSlot] = current.apiKey.trim()
+  // 填了 Key 就存回原地址（包括还没保存过的自定义地址，切走再切回来还在）；
+  // 空 Key 只记到预设或已有的槽位（表示清空），不给逐字输入的半截地址留空槽
+  if (oldSlot !== SHARED_CUSTOM_SLOT && (key || isPreset || oldSlot in apiKeys))
+    apiKeys[oldSlot] = key
   return {
     ...current,
     apiKeys,
