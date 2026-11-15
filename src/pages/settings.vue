@@ -18,6 +18,7 @@ import {
   getProviderForBaseUrl,
   hasAISettings,
   legacyAISettingsInfo,
+  legacyClaimConflicts,
   MODEL_STRENGTH_LABELS,
   modelSupportsReasoningEffort,
   reasoningEffortForProvider,
@@ -26,7 +27,7 @@ import {
   testAIConnection,
 } from '../composables/useAISettings'
 import { useAuth } from '../composables/useAuth'
-import { confirmDialog } from '../composables/useDialog'
+import { chooseDialog, confirmDialog } from '../composables/useDialog'
 import { useGoBack } from '../composables/useGoBack'
 import { useDailyStudyGoal } from '../composables/useStudyTimer'
 import { useSync } from '../composables/useSync'
@@ -166,15 +167,34 @@ async function claimLegacyAI() {
   const who = currentUser.value
     ? `账号「${currentUser.value}」`
     : '游客'
-  const ok = await confirmDialog(
-    hasAISettings()
-      ? `把这份旧设置认领给${who}？会覆盖${who}现在的 AI 设置，认领后其他账号和游客都看不到它。`
-      : `把这份旧设置认领给${who}？认领后其他账号和游客都看不到它。`,
-    { confirmText: '认领' },
-  )
-  if (!ok)
-    return
-  legacyMsg.value = claimLegacyAISettings()
+  // 只有同一服务商两边各有一个不同的 Key 时才需要选；其余服务商的 Key 都合并保留
+  const conflicts = legacyClaimConflicts()
+  let prefer: 'legacy' | 'current' = 'current'
+  if (conflicts.length) {
+    const lines = conflicts
+      .map(c => `${c.label}：旧设置末 4 位 ${c.legacyTail}，${who}现在的末 4 位 ${c.currentTail}`)
+      .join('\n')
+    const choice = await chooseDialog(
+      `把这份旧设置认领给${who}。以下服务商两边各有一个不同的 Key：\n${lines}\n要保留哪一个？其他服务商的 Key 都会合并保留。`,
+      { confirmText: '用旧设置的 Key', cancelText: '保留现在的 Key' },
+    )
+    if (choice === 'dismiss')
+      return
+    prefer = choice === 'confirm'
+      ? 'legacy'
+      : 'current'
+  }
+  else {
+    const ok = await confirmDialog(
+      hasAISettings()
+        ? `把这份旧设置认领给${who}？会与${who}现在的 AI 设置合并，各服务商的 Key 都保留；认领后其他账号和游客都看不到它。`
+        : `把这份旧设置认领给${who}？认领后其他账号和游客都看不到它。`,
+      { confirmText: '认领' },
+    )
+    if (!ok)
+      return
+  }
+  legacyMsg.value = claimLegacyAISettings(prefer)
     ? ''
     : '认领失败：旧设置已不存在或无法保存'
   reloadAIForm()
