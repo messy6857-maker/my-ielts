@@ -403,10 +403,16 @@ describe('reading and listening words, synonyms', () => {
     ], seeded())).toEqual([])
   })
 
-  it('words with synonyms can become mimics; the boss then needs all three question types', () => {
+  it('listening words with synonyms can become mimics; their boss needs all three question types', () => {
+    // 听力词要会拼写：拼写题、同义替换题都会出
+    const L = R.slice(0, 5).map(w => ({
+      ...w,
+      key: w.key.replace('reading538', 'listening179'),
+      deck: 'listening179' as const,
+    }))
     const kinds = new Set<string>()
     for (let seed = 1; seed < 40; seed++) {
-      const run = buildRun(R.slice(0, 5), R, ctx(), seeded(seed))
+      const run = buildRun(L, L, ctx(), seeded(seed))
       run.slice(0, -1).forEach(m => kinds.add(m.kind))
       for (const m of run.filter(m => m.kind === 'mimic'))
         expect(m.phases).toEqual(['synonym'])
@@ -416,6 +422,35 @@ describe('reading and listening words, synonyms', () => {
     // 词汇表的词没有同义替换题
     const plain = buildRun(WORDS.slice(0, 4), WORDS, ctx(), seeded(2))
     expect(plain.every(m => !m.phases.includes('synonym') && m.synonymOptions.length === 0)).toBe(true)
+  })
+
+  it('reading key words never ask for spelling: only meaning and synonym questions, on any floor', () => {
+    const many = Array.from({ length: 30 }, (_, i) => reading(i + 1, `rword${i}`, `释义${i}`, [`syn${i}a`, `syn${i}b`]))
+    const words = [...many, R[5]]
+    const kinds = new Set<string>()
+    for (let seed = 1; seed < 30; seed++) {
+      for (const floor of [1, 3, 8]) {
+        const c = ctx({
+          mistakes: [
+            mistake('reading538:类-1', 'rword0', 5, NOW, 'reading'),
+          ],
+        })
+        const run = buildFloor(words, words, c, seeded(seed * 10 + floor), floor, new Set())
+        for (const m of run) {
+          kinds.add(m.kind)
+          expect(m.phases.every(q => q === 'choice' || q === 'synonym')).toBe(true)
+        }
+        expect(run.at(-1)!.phases.length).toBeGreaterThanOrEqual(1)
+      }
+    }
+    expect(kinds.has('bat')).toBe(false)
+    expect(kinds.has('archer')).toBe(false)
+    expect(kinds.has('mimic')).toBe(true)
+    // 精英怪和 Boss 要连续答对认词和同义替换两题；没有同义词的词只出认词题
+    const boss = buildFloor([R[5]], words, ctx(), seeded(1), 5, new Set())
+    expect(boss.map(m => m.phases)).toEqual([
+      ['choice'],
+    ])
   })
 })
 

@@ -44,7 +44,8 @@ const storedSwitches = (() => {
     return null
   }
 })()
-const isTrainingModel = ref(storedSwitches?.training ?? false)
+// 从“背单词”的拼写练习进来（?practice=1）直接打开练习模式
+const isTrainingModel = ref(useRoute()?.query?.practice === '1' || (storedSwitches?.training ?? false))
 const isShowMeaning = ref(storedSwitches?.meaning ?? true)
 const isAutoPlayWordAudio = ref(storedSwitches?.autoplay ?? true)
 const isOnlyShowErrors = ref(false)
@@ -547,12 +548,6 @@ function copyAllError() {
                 class="ms-3 whitespace-nowrap text-sm text-gray-900 font-medium dark:text-gray-300"
               >练习模式</span>
             </label>
-            <router-link
-              to="/vocabulary/flashcard"
-              class="inline-flex shrink-0 items-center rounded-lg bg-amber-500 px-3 py-2 text-sm text-white font-medium hover:bg-amber-600 sm:px-4 focus:outline-none focus:ring-4 focus:ring-amber-300"
-            >
-              自测卡片
-            </router-link>
             <label
               v-if="isTrainingModel"
               class="inline-flex cursor-pointer items-center"

@@ -190,18 +190,43 @@ await step('设置页：先粘贴新 Key 再逐字输入地址，Key 被清空�
   await ctx.close()
 })
 
-await step('单词地牢：从导航进入，选章节开局，一路作答到结算，没有报错', async () => {
+await step('背单词：从导航进入，各词库的自测都能打开，返回回到背单词', async () => {
   const ctx = await launched.newContext({ viewport: { width: 1280, height: 900 } })
   const page = await ctx.newPage()
   const errors = []
   page.on('pageerror', e => errors.push(e.message))
   await page.goto(`${BASE}#/grammar`)
-  const nav = page.locator('a[href="#/game"]').first()
+  const nav = page.locator('a[href="#/study"]').first()
   await nav.waitFor({ timeout: 20000 })
   // 导航图标确实画出来了（图标名写错的话宽度为 0）
-  const icon = await nav.locator('[class*="i-carbon-game-console"]').first().boundingBox()
+  const icon = await nav.locator('[class*="i-carbon-book"]').first().boundingBox()
   assert.ok(icon && icon.width > 0, '导航图标没有显示')
+  assert.equal(await page.locator('a[href="#/game"]').count(), 0)
   await nav.click()
+  await page.locator('[data-deck="reading538"]').waitFor()
+  for (const [deck, label, title] of [['reading538', '卡片自测', '阅读 376 自测'], ['listening179', '卡片自测', '听力 179 自测'], ['corpus', '卡片自测', '听力王语料库自测']]) {
+    await page.locator(`[data-deck="${deck}"] a`).filter({ hasText: label }).first().click()
+    await page.getByText(title).first().waitFor({ timeout: 20000 })
+    // 在自测页里导航仍高亮“背单词”
+    assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).includes('text-primary-700'))
+    await page.getByRole('button', { name: /返回背单词/ }).first().click()
+    await page.getByRole('button', { name: '退出', exact: true }).click()
+    await page.locator('[data-deck="reading538"]').waitFor()
+  }
+  await page.locator('[data-deck="vocabulary"] a').filter({ hasText: '拼写练习' }).click()
+  await page.locator('input[id="1"]').waitFor({ timeout: 20000 })
+  assert.equal(await page.getByRole('link', { name: '自测卡片' }).count(), 0)
+  assert.deepEqual(errors, [])
+  await ctx.close()
+})
+
+await step('单词地牢：从背单词进入，选章节开局，一路作答到结算，没有报错', async () => {
+  const ctx = await launched.newContext({ viewport: { width: 1280, height: 900 } })
+  const page = await ctx.newPage()
+  const errors = []
+  page.on('pageerror', e => errors.push(e.message))
+  await page.goto(`${BASE}#/study`)
+  await page.locator('[data-game]').click()
   await page.getByRole('button', { name: '进入地牢' }).waitFor({ timeout: 20000 })
   assert.ok(await page.getByRole('button', { name: '进入地牢' }).isDisabled())
   await page.locator('button[data-chapter]').first().click()

@@ -97,7 +97,7 @@ function cancelExit() {
 }
 function confirmExit() {
   showExitModal.value = false
-  router.push('/vocabulary')
+  router.push('/study')
 }
 const {
   streak: checkinStreak,
@@ -885,7 +885,7 @@ onUnmounted(() => {
       <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-3">
           <button
-            title="返回词表"
+            title="返回背单词"
             class="shrink-0 border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm text-gray-600 dark:border-gray-600 dark:bg-gray-800 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
             @click="handleBack"
           >
@@ -1054,7 +1054,7 @@ onUnmounted(() => {
             class="rounded-lg bg-gray-200 px-6 py-2.5 text-sm text-gray-700 font-medium dark:bg-gray-700 hover:bg-gray-300 dark:text-gray-200"
             @click="handleBack"
           >
-            返回词表
+            返回背单词
           </button>
         </div>
       </div>

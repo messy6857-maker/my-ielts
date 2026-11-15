@@ -843,7 +843,7 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
           </button>
         </div>
         <h4 class="mb-2 font-bold">
-          考点词（带同义替换题）
+          考点词（带同义替换题；阅读考点词只考认词和同义替换，不考拼写）
         </h4>
         <div class="mb-5 flex flex-wrap gap-2">
           <button

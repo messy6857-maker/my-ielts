@@ -37,20 +37,6 @@ const filteredWs = computed(() => {
     </div>
     <div class="items-center sm:flex">
       <div class="flex items-center">
-        <button
-          type="button"
-          class="rounded-lg bg-blue-700 px-5 py-2.5 text-sm text-white font-medium dark:bg-blue-600 hover:bg-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-          @click="$router.push('179practice')"
-        >
-          练习
-        </button>
-        <button
-          type="button"
-          class="ml-2 rounded-lg bg-green-700 px-5 py-2.5 text-sm text-white font-medium dark:bg-green-600 hover:bg-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 dark:hover:bg-green-700"
-          @click="$router.push('/listening/flashcard')"
-        >
-          自测卡片
-        </button>
         <!-- <input type="text" name="email" class="ml-3 block w-full border border-gray-300 rounded-lg bg-gray-50 p-2.5 text-gray-900 dark:border-gray-600 focus:border-primary-500 dark:bg-gray-700 sm:text-sm dark:text-white focus:ring-primary-500 dark:focus:border-primary-500 dark:focus:ring-primary-500 dark:placeholder-gray-400" placeholder="关键词"> -->
         <div class="relative ml-2 flex-1">
           <div

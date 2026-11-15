@@ -8,6 +8,8 @@ function createDeck(ns: string) {
   const store = useRecordMap<WordSchedule>(`${ns}_sr_v1`)
   const daily = useDailyStore(ns)
   return {
+    /** 全部复习记录（键为 <ns>:<id>） */
+    schedules: store.state,
     getSchedule: (id: string | number) => store.state.value[`${ns}:${id}`],
     setSchedule: (id: string | number, value: WordSchedule) =>
       store.set(`${ns}:${id}`, value),
