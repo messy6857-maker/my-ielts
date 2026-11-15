@@ -1,1 +1,0 @@
-import{O as e,z as t}from"./runtime-core.esm-bundler-CNLcF0G_.js";function n(n,r=``){let i=t(r);try{let e=localStorage.getItem(n);e!==null&&(i.value=e)}catch{}return e(i,e=>{try{localStorage.setItem(n,e)}catch{}}),i}export{n as t};
