@@ -1,5 +1,5 @@
-import { ref, shallowRef } from 'vue'
 import type { MnemonicHint } from './mnemonics'
+import { ref, shallowRef } from 'vue'
 
 // 词汇表卡片的附加内容（巧记、音标、同义词词性和释义）：各自懒加载一次，失败可重试。
 // 从原单词自测页抽出来，统一卡片里的词汇表卡片共用。

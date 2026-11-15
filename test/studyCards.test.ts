@@ -14,7 +14,11 @@ beforeEach(() => {
   localStorage.clear()
   window.dispatchEvent(new StorageEvent('storage', { key: null }))
   useAuth().currentUser.value = null
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn(), getVoices: () => [] })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+    getVoices: () => [],
+  })
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
   vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 404 })))
@@ -27,9 +31,22 @@ afterEach(() => {
 })
 
 async function mountLearn(query: string) {
-  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { template: '<p />' } }] })
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      {
+        path: '/:p(.*)*',
+        component: { template: '<p />' },
+      },
+    ],
+  })
   await router.push(`/study/learn?${query}`)
-  const w = mount(LearnPage, { attachTo: document.body, global: { plugins: [router] } })
+  const w = mount(LearnPage, {
+    attachTo: document.body,
+    global: {
+      plugins: [router],
+    },
+  })
   wrappers.push(w)
   for (let i = 0; i < 5; i++) {
     await flushPromises()
@@ -41,15 +58,54 @@ const button = (w: any, text: string) => w.findAll('button').find((b: any) => b.
 
 describe('card builders keep each deck’s own fields', () => {
   it('reading cards carry pos, synonyms and remark; phrases get a 短语 label', () => {
-    const [a, b] = readingCards([{ title: 'T', words: [[1, 'consult', ['v.'], ['查阅', '咨询'], ['refer to'], '备注'], [2, 'in charge of', [], ['负责'], [], '']] as any }])
-    expect(a).toMatchObject({ key: 'reading538:T-1', pos: 'v.', meaning: '查阅；咨询', synonyms: ['refer to'], remark: '备注' })
+    const [a, b] = readingCards([
+      {
+        title: 'T',
+        words: [
+          [
+            1,
+            'consult',
+            ['v.'],
+            ['查阅', '咨询'],
+            ['refer to'],
+            '备注',
+          ],
+          [
+            2,
+            'in charge of',
+            [],
+            ['负责'],
+            [],
+            '',
+          ],
+        ] as any,
+      },
+    ])
+    expect(a).toMatchObject({
+      key: 'reading538:T-1',
+      pos: 'v.',
+      meaning: '查阅；咨询',
+      synonyms: ['refer to'],
+      remark: '备注',
+    })
     expect(b.pos).toBe('短语')
     expect(mistakeKey(a)).toBe('reading538:T-1')
     expect(mistakeHint(a)).toBe('refer to')
   })
   it('listening cards use the 179 index as id', () => {
-    const [c] = listeningCards([{ index: 7, word: 'fee', meaning: '费用', replace: ['charge'] }])
-    expect(c).toMatchObject({ key: 'listening179:7', pos: '短语', synonyms: ['charge'] })
+    const [c] = listeningCards([
+      {
+        index: 7,
+        word: 'fee',
+        meaning: '费用',
+        replace: ['charge'],
+      },
+    ])
+    expect(c).toMatchObject({
+      key: 'listening179:7',
+      pos: '短语',
+      synonyms: ['charge'],
+    })
   })
 })
 
@@ -92,7 +148,13 @@ describe('学新词 writes back to each deck’s original records', () => {
   })
 
   it('an existing old-format schedule is shown as a review card, not a new word', async () => {
-    const due = { ease: 2.5, interval: 1, dueAt: Date.now() - 1000, reps: 1, lapses: 0 }
+    const due = {
+      ease: 2.5,
+      interval: 1,
+      dueAt: Date.now() - 1000,
+      reps: 1,
+      lapses: 0,
+    }
     useDeckStore('listening179').setSchedule(0, due as any)
     const { w } = await mountLearn('deck=listening179')
     expect(w.text()).toContain('复习 1（到期 1）')

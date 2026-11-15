@@ -28,10 +28,16 @@ watch(() => route.query.deck, (value) => {
   deck.value = parseDeck(value)
 })
 watch(deck, (value) => {
-  if (route.query.deck !== value)
-    router.replace({ query: { ...route.query, deck: value } })
+  if (route.query.deck !== value) {
+    router.replace({
+      query: { ...route.query, deck: value },
+    })
+  }
 })
-const stores = Object.fromEntries(DECK_IDS.map(d => [d, useStudyDeck(d)])) as Record<DeckId, ReturnType<typeof useStudyDeck>>
+const stores = Object.fromEntries(DECK_IDS.map(d => [
+  d,
+  useStudyDeck(d),
+])) as Record<DeckId, ReturnType<typeof useStudyDeck>>
 const store = computed(() => stores[deck.value])
 
 // 词汇表的章节（和原单词自测记同一个偏好）

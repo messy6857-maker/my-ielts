@@ -44,7 +44,14 @@ const colors = [
   'text-teal-600 dark:text-teal-400',
   'text-indigo-600 dark:text-indigo-400',
 ]
-const dots = ['bg-blue-500', 'bg-purple-500', 'bg-pink-500', 'bg-orange-500', 'bg-teal-500', 'bg-indigo-500']
+const dots = [
+  'bg-blue-500',
+  'bg-purple-500',
+  'bg-pink-500',
+  'bg-orange-500',
+  'bg-teal-500',
+  'bg-indigo-500',
+]
 
 const showPre = ref(false)
 const showPreAnswer = ref(false)

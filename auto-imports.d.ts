@@ -416,6 +416,7 @@ declare global {
   const useStepper: typeof import('@vueuse/core').useStepper
   const useStorage: typeof import('@vueuse/core').useStorage
   const useStorageAsync: typeof import('@vueuse/core').useStorageAsync
+  const useStudyDeck: typeof import('./src/composables/useStudyDeck').useStudyDeck
   const useStudyTimer: typeof import('./src/composables/useStudyTimer').useStudyTimer
   const useStyleTag: typeof import('@vueuse/core').useStyleTag
   const useSupported: typeof import('@vueuse/core').useSupported
@@ -516,6 +517,9 @@ declare global {
   // @ts-ignore
   export type { MistakeModule, ProgressModule, MistakeItem, ModuleProgress } from './src/composables/useStudyData'
   import('./src/composables/useStudyData')
+  // @ts-ignore
+  export type { StudyDeckStore } from './src/composables/useStudyDeck'
+  import('./src/composables/useStudyDeck')
   // @ts-ignore
   export type { SyncStatus } from './src/composables/useSync'
   import('./src/composables/useSync')
@@ -940,6 +944,7 @@ declare module 'vue' {
     readonly useStepper: UnwrapRef<typeof import('@vueuse/core')['useStepper']>
     readonly useStorage: UnwrapRef<typeof import('@vueuse/core')['useStorage']>
     readonly useStorageAsync: UnwrapRef<typeof import('@vueuse/core')['useStorageAsync']>
+    readonly useStudyDeck: UnwrapRef<typeof import('./src/composables/useStudyDeck')['useStudyDeck']>
     readonly useStudyTimer: UnwrapRef<typeof import('./src/composables/useStudyTimer')['useStudyTimer']>
     readonly useStyleTag: UnwrapRef<typeof import('@vueuse/core')['useStyleTag']>
     readonly useSupported: UnwrapRef<typeof import('@vueuse/core')['useSupported']>

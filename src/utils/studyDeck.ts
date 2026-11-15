@@ -3,7 +3,12 @@ import type { MistakeModule, ProgressModule } from '../composables/useStudyData'
 import { buildCorpusWords } from './corpusSpelling'
 
 export type DeckId = 'vocabulary' | 'reading538' | 'listening179' | 'corpus'
-export const DECK_IDS: DeckId[] = ['vocabulary', 'reading538', 'listening179', 'corpus']
+export const DECK_IDS: DeckId[] = [
+  'vocabulary',
+  'reading538',
+  'listening179',
+  'corpus',
+]
 
 export interface DeckMeta {
   name: string
@@ -15,10 +20,30 @@ export interface DeckMeta {
   progressModule: ProgressModule
 }
 export const DECK_META: Record<DeckId, DeckMeta> = {
-  vocabulary: { name: '词汇表', mistakeModule: 'flashcard', attemptNs: 'vocabulary', progressModule: 'flashcard' },
-  reading538: { name: '阅读考点词', mistakeModule: 'reading', attemptNs: 'reading538', progressModule: 'reading_flashcard' },
-  listening179: { name: '听力 179', mistakeModule: 'listening', attemptNs: 'listening179', progressModule: 'listening_flashcard' },
-  corpus: { name: '听力语料库', mistakeModule: 'corpus', attemptNs: 'corpus', progressModule: 'corpus_flashcard' },
+  vocabulary: {
+    name: '词汇表',
+    mistakeModule: 'flashcard',
+    attemptNs: 'vocabulary',
+    progressModule: 'flashcard',
+  },
+  reading538: {
+    name: '阅读考点词',
+    mistakeModule: 'reading',
+    attemptNs: 'reading538',
+    progressModule: 'reading_flashcard',
+  },
+  listening179: {
+    name: '听力 179',
+    mistakeModule: 'listening',
+    attemptNs: 'listening179',
+    progressModule: 'listening_flashcard',
+  },
+  corpus: {
+    name: '听力语料库',
+    mistakeModule: 'corpus',
+    attemptNs: 'corpus',
+    progressModule: 'corpus_flashcard',
+  },
 }
 
 export interface StudyCard {
@@ -107,7 +132,9 @@ export function listeningCards(list: Array<{ index: number, word: string, type?:
     word: w.word,
     pos: w.type || '短语',
     meaning: w.meaning,
-    synonyms: Array.isArray(w.replace) ? w.replace : [],
+    synonyms: Array.isArray(w.replace)
+      ? w.replace
+      : [],
   }))
 }
 
@@ -117,7 +144,14 @@ export function corpusCards(data: Parameters<typeof buildCorpusWords>[0]): Study
     word: w.word,
     pos: w.pos,
     meaning: w.meaning,
-    note: [w.chapter === 'ch3' && w.note ? `注意：${w.note}` : w.note, w.accepted.length > 1 && w.chapter !== 'ch2' ? `也可写作 ${w.accepted.slice(1).join(' / ')}` : '']
+    note: [
+      w.chapter === 'ch3' && w.note
+        ? `注意：${w.note}`
+        : w.note,
+      w.accepted.length > 1 && w.chapter !== 'ch2'
+        ? `也可写作 ${w.accepted.slice(1).join(' / ')}`
+        : '',
+    ]
       .filter(Boolean)
       .join('；'),
   }))

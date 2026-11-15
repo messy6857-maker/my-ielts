@@ -7,8 +7,8 @@ import { useAudioGroup } from '../composables/useAudioGroup'
 import { useGoBack } from '../composables/useGoBack'
 import { gradeSchedule } from '../composables/useSpacedRepetition'
 import { decrementAttempt, recordAttempt } from '../composables/useStats'
-import { useStudyDeck } from '../composables/useStudyDeck'
 import { studyDay } from '../composables/useStudyData'
+import { useStudyDeck } from '../composables/useStudyDeck'
 import { formatClock, formatDuration, useStudyTimer } from '../composables/useStudyTimer'
 import { loadVocabularyDetails } from '../composables/useVocabularyDetails'
 import { loadWordInfoWithFallback } from '../composables/useWordInfo'
@@ -70,7 +70,10 @@ interface GradeHistoryEntry {
 }
 
 const managedAudio = useAudioGroup()
-const stores = Object.fromEntries(DECK_IDS.map(d => [d, useStudyDeck(d)])) as Record<DeckId, ReturnType<typeof useStudyDeck>>
+const stores = Object.fromEntries(DECK_IDS.map(d => [
+  d,
+  useStudyDeck(d),
+])) as Record<DeckId, ReturnType<typeof useStudyDeck>>
 const { addMistake, decrementMistake, patchMistakeHint } = useMistakes()
 const { streak: checkinStreak, weekDots: checkinWeekDots, checkin: doCheckin } = useCheckin()
 const { goBack } = useGoBack('/study')
@@ -89,7 +92,9 @@ const studying = ref<SessionCard | null>(null)
 const lastGrade = ref<0 | 3 | 5 | null>(null)
 const gradeHistory = ref<GradeHistoryEntry[]>([])
 
-const current = computed(() => studying.value ? null : (queue.value[0] ?? null))
+const current = computed(() => studying.value
+  ? null
+  : (queue.value[0] ?? null))
 const remaining = computed(() => queue.value.length)
 
 function playAudio(card?: StudyCard | null) {
@@ -97,12 +102,19 @@ function playAudio(card?: StudyCard | null) {
   if (!c)
     return
   const path = audioPath(c)
-  managedAudio.play('local' in path ? resolveAudioUrl(path.local) : path.remote, c.word.replace(/\*/g, ''))
+  managedAudio.play('local' in path
+    ? resolveAudioUrl(path.local)
+    : path.remote, c.word.replace(/\*/g, ''))
 }
 
 function buildQueue() {
   const plan = props.build()
-  queue.value = plan.items.map(({ card, isNew }) => ({ ...card, attempts: 0, isNew, counted: false }))
+  queue.value = plan.items.map(({ card, isNew }) => ({
+    ...card,
+    attempts: 0,
+    isNew,
+    counted: false,
+  }))
   initialTotal.value = queue.value.length
   reviewCount.value = plan.reviewCount
   dueCount.value = plan.dueCount
@@ -140,7 +152,10 @@ function grade(g: 0 | 3 | 5) {
     grade: g,
     prevSchedule,
     postSchedule: JSON.parse(JSON.stringify(nextSchedule)),
-    aliasSchedules: aliases.map(id => ({ id, previous: store.getSchedule(id) })),
+    aliasSchedules: aliases.map(id => ({
+      id,
+      previous: store.getSchedule(id),
+    })),
     prevBest: bestGrade.value[card.key],
     prevAttempts: card.attempts,
     countedNew,
@@ -520,13 +535,13 @@ defineExpose({ restart })
             看到这个词，第一感觉是？
           </p>
           <div class="grid grid-cols-3 gap-3">
-            <button class="border border-red-200 rounded-xl bg-red-50 py-4 text-red-700 font-bold disabled:opacity-50 dark:border-red-800 dark:bg-red-900/20 hover:bg-red-100 dark:text-red-300" :disabled="!ready" @click="grade(0)">
+            <button class="border border-red-200 rounded-xl bg-red-50 py-4 text-red-700 font-bold dark:border-red-800 dark:bg-red-900/20 hover:bg-red-100 dark:text-red-300 disabled:opacity-50" :disabled="!ready" @click="grade(0)">
               不认识
             </button>
-            <button class="border border-yellow-200 rounded-xl bg-yellow-50 py-4 text-yellow-700 font-bold disabled:opacity-50 dark:border-yellow-800 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:text-yellow-300" :disabled="!ready" @click="grade(3)">
+            <button class="border border-yellow-200 rounded-xl bg-yellow-50 py-4 text-yellow-700 font-bold dark:border-yellow-800 dark:bg-yellow-900/20 hover:bg-yellow-100 dark:text-yellow-300 disabled:opacity-50" :disabled="!ready" @click="grade(3)">
               模糊
             </button>
-            <button class="border border-green-200 rounded-xl bg-green-50 py-4 text-green-700 font-bold disabled:opacity-50 dark:border-green-800 dark:bg-green-900/20 hover:bg-green-100 dark:text-green-300" :disabled="!ready" @click="grade(5)">
+            <button class="border border-green-200 rounded-xl bg-green-50 py-4 text-green-700 font-bold dark:border-green-800 dark:bg-green-900/20 hover:bg-green-100 dark:text-green-300 disabled:opacity-50" :disabled="!ready" @click="grade(5)">
               认识
             </button>
           </div>
