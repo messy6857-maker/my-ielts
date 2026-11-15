@@ -152,6 +152,7 @@ const form = ref({
 })
 // 旧版（所有账号共用）的 AI 设置：不知道属于谁，由当前用户认领或删除
 const legacyAI = ref(legacyAISettingsInfo())
+const legacyMsg = ref('')
 function reloadAIForm() {
   form.value = {
     ...getAISettings(),
@@ -173,8 +174,9 @@ async function claimLegacyAI() {
   )
   if (!ok)
     return
-  if (!claimLegacyAISettings())
-    testMsg.value = '认领失败：旧设置已不存在或无法保存'
+  legacyMsg.value = claimLegacyAISettings()
+    ? ''
+    : '认领失败：旧设置已不存在或无法保存'
   reloadAIForm()
 }
 async function discardLegacyAI() {
@@ -477,6 +479,13 @@ async function onDetect() {
           </button>
         </div>
       </div>
+      <p
+        v-if="legacyMsg"
+        role="alert"
+        class="mb-5 text-sm text-red-600 dark:text-red-400"
+      >
+        {{ legacyMsg }}
+      </p>
 
       <div class="mb-4">
         <span class="mb-1 block text-sm font-medium dark:text-gray-200">服务商</span>

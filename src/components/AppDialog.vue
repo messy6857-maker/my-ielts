@@ -59,9 +59,15 @@ function onKey(event: KeyboardEvent) {
     return
   event.preventDefault()
   const index = items.indexOf(document.activeElement as HTMLElement)
-  const next = index === -1
-    ? (event.shiftKey ? items.length - 1 : 0)
-    : (index + (event.shiftKey ? -1 : 1) + items.length) % items.length
+  const step = event.shiftKey
+    ? -1
+    : 1
+  let next = (index + step + items.length) % items.length
+  if (index === -1) {
+    next = event.shiftKey
+      ? items.length - 1
+      : 0
+  }
   items[next].focus()
 }
 

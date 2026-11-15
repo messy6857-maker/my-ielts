@@ -146,7 +146,7 @@ describe('dialog outcomes', () => {
   })
 })
 
-describe('AppDialog keyboard behaviour', () => {
+describe('app dialog keyboard behaviour', () => {
   async function mountDialog() {
     const w = mount(AppDialog, { attachTo: document.body })
     wrappers.push(w)

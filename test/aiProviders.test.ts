@@ -1,5 +1,4 @@
 import type { AISettings } from '../src/composables/useAISettings'
-import { useAuth } from '../src/composables/useAuth'
 import { beforeEach, describe, expect, it } from 'vitest'
 import {
   AI_PROVIDERS,
@@ -14,6 +13,7 @@ import {
   saveAISettings,
   switchProviderSettings,
 } from '../src/composables/useAISettings'
+import { useAuth } from '../src/composables/useAuth'
 
 describe('aI 服务商预设', () => {
   it('三个预设地址都能被识别（忽略尾斜杠与大小写）', () => {
