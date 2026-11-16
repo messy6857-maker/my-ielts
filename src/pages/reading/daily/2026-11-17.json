@@ -1,0 +1,312 @@
+{
+  "date": "2026-11-17",
+  "newsReadings": [
+    {
+      "title": "One Light-Day from Home: Voyager 1 Reaches a Distance No Machine Has Travelled Before",
+      "source": "NASA, 10 November 2026; NASA Science, 'Shine Bright for Voyager's Light-Day'",
+      "passage": "On Wednesday 18 November 2026, at 05:16 Eastern Standard Time, NASA's Voyager 1 spacecraft will cross a boundary that no human-made object has ever reached. At that moment it will be one light-day from Earth — 25.9 billion kilometres away, a distance so immense that light itself, travelling at nearly 300,000 kilometres per second, needs a full 24 hours to cover it. Voyager 1, launched in 1977 on a mission originally intended to last only a few years, will thus become the most distant artefact humanity has ever placed in the universe.\n\nA light-day is a measure of distance, not of time, and the crossing will not be marked by any physical change in the space around the spacecraft. Voyager 1 will not notice the instant it passes the milestone. It entered interstellar space in 2012, when it crossed the heliopause — the outer edge of the Sun's protective bubble — and it has been travelling through the thin gas and dust between the stars ever since. The significance of the one-light-day mark is therefore symbolic and practical rather than physical: it is a measure of how far, and for how long, a machine built in the 1970s has continued to journey away from home.\n\nThe practical consequence is a profound delay in communication. From 18 November onwards, every radio command sent from Earth will take more than a day to reach the spacecraft, and any reply will take more than a day to return. A single exchange of instruction and response will therefore occupy roughly 48 hours. Engineers at NASA's Jet Propulsion Laboratory must consequently plan each command days in advance, and a single error in a command can cost days before it can be corrected. Operating a spacecraft across such a gulf demands a patience that has no parallel in any other field of engineering.\n\nThat Voyager 1 still functions at all is itself remarkable. The spacecraft is powered by the heat of decaying plutonium, a supply that weakens a little every year, and mission controllers have switched off instruments one by one to conserve what remains. Its cameras were turned off in 1990, shortly after they captured the famous 'Pale Blue Dot' photograph of Earth as a tiny speck of light suspended in a sunbeam. Yet the instruments that remain continue to measure magnetic fields, charged particles and cosmic rays in interstellar space, sending back data that no other mission can obtain.\n\nTo mark the milestone, NASA has invited the public to take part in an event called 'Shine Bright for Voyager's Light-Day'. After sunset on Tuesday 17 November, people around the world are being asked to point a flashlight, glow stick or smartphone towards the sky and flash 'V-G-R' — Voyager's call sign — in Morse code: three short flashes and one long one for V, two long flashes and one short one for G, and short-long-short for R. NASA has also created a web page that flashes the code automatically. The gesture is deliberately symbolic. No light from Earth could ever reach the spacecraft in any way it could detect — its cameras have been off for 36 years — but the agency describes the event as a 'symbolic wave of golden light encircling the planet'. On Thursday 19 November, NASA's Jet Propulsion Laboratory will host a public discussion with mission members about the status of both Voyager spacecraft and the challenges of keeping them operating for so long over such vast distances.\n\nThe milestone is, in the end, a reminder that exploration is measured in decades rather than news cycles. A probe launched when disco dominated the charts and before the personal computer existed is still, nearly half a century later, expanding the frontier of human knowledge. Its instruments continue to report from a region of space no other human object has visited, and every day it travels a further 1.4 million kilometres from the planet that built it. That it does so on dwindling power, across a communications delay of more than a day, makes the achievement all the more extraordinary — and a fitting subject for a moment of collective celebration on the night before it arrives.",
+      "notes": [
+        {
+          "word": "artefact",
+          "pos": "n.",
+          "meaning": "人工制品；手工艺品"
+        },
+        {
+          "word": "immense",
+          "pos": "adj.",
+          "meaning": "巨大的；广阔的"
+        },
+        {
+          "word": "heliopause",
+          "pos": "n.",
+          "meaning": "日球层顶；太阳风层顶"
+        },
+        {
+          "word": "interstellar",
+          "pos": "adj.",
+          "meaning": "星际的；恒星之间的"
+        },
+        {
+          "word": "profound",
+          "pos": "adj.",
+          "meaning": "深刻的；深远的"
+        },
+        {
+          "word": "consequently",
+          "pos": "adv.",
+          "meaning": "因此；所以"
+        },
+        {
+          "word": "parallel",
+          "pos": "n.",
+          "meaning": "类似物；可比的事物"
+        },
+        {
+          "word": "decaying",
+          "pos": "adj.",
+          "meaning": "衰变的；腐烂的"
+        },
+        {
+          "word": "conserve",
+          "pos": "v.",
+          "meaning": "保存；节约"
+        },
+        {
+          "word": "suspended",
+          "pos": "adj.",
+          "meaning": "悬浮的；悬挂的"
+        },
+        {
+          "word": "symbolic",
+          "pos": "adj.",
+          "meaning": "象征性的"
+        },
+        {
+          "word": "encircling",
+          "pos": "adj.",
+          "meaning": "环绕的"
+        },
+        {
+          "word": "dwindling",
+          "pos": "adj.",
+          "meaning": "逐渐减少的"
+        },
+        {
+          "word": "frontier",
+          "pos": "n.",
+          "meaning": "前沿；边疆"
+        },
+        {
+          "word": "collective",
+          "pos": "adj.",
+          "meaning": "集体的；共同的"
+        }
+      ],
+      "questions": [
+        {
+          "q": "When exactly will Voyager 1 reach one light-day from Earth?",
+          "options": [
+            "After sunset on 17 November 2026",
+            "At 05:16 EST on 18 November 2026",
+            "At noon EST on 19 November 2026",
+            "In November 2035"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What does the term 'one light-day' measure?",
+          "options": [
+            "The time light takes to travel for one day",
+            "The distance light travels in 24 hours",
+            "The age of the Voyager 1 spacecraft",
+            "The time needed for a signal to return to Earth"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Why must engineers at the Jet Propulsion Laboratory plan commands days in advance?",
+          "options": [
+            "Because the spacecraft's instruments frequently break down",
+            "Because a command and its reply together take about 48 hours",
+            "Because NASA only allows one command per week",
+            "Because the spacecraft is too far away to receive signals at all"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Voyager 1's cameras were switched off in 1990, shortly after it took the 'Pale Blue Dot' photograph.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The one-light-day crossing will expose Voyager 1 to a new region of space with different physical conditions.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The 'Shine Bright' event is intended as a practical way of sending a signal that Voyager 1 can detect.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What is the main purpose of the final paragraph?",
+          "options": [
+            "To explain how Voyager 1's instruments work",
+            "To argue that the mission should be ended soon",
+            "To reflect on the long-term significance of the mission",
+            "To criticise NASA for spending money on celebrations"
+          ],
+          "answer": 2
+        }
+      ]
+    },
+    {
+      "title": "A Super El Niño Is Coming — and Its Greatest Danger May Be to Health",
+      "source": "Phys.org, 16 November 2026; commentary in Nature",
+      "passage": "A potentially historic El Niño weather event could trigger far-reaching consequences for global food security and public health, according to researchers writing in the journal Nature. In a commentary published this week, Eoin McLaughlin, a professor at Heriot-Watt University in Edinburgh, and Matthias Beck, a professor at University College Cork, warn that the developing 2026–27 El Niño could be among the strongest in more than a century, with consequences extending well beyond extreme weather. Their article, entitled 'The super El Niño is more than a climate shock — it's a health one, too', argues that food shortages and disease outbreaks must be addressed together, rather than treated as separate emergencies.\n\nEl Niño is a recurring climate phenomenon associated with unusually warm ocean temperatures in the tropical Pacific. It can disrupt weather patterns across the globe, contributing to droughts in some regions, flooding in others, and extreme temperatures in many places at once. The phenomenon occurs every few years and varies greatly in strength. Most events are manageable: societies have learned to anticipate them and to adjust. A very strong event, however, can overwhelm the systems on which people depend, and it is precisely such an event that the researchers believe is now developing.\n\nThe central argument of the commentary is that the consequences of extreme weather cannot be considered in isolation. When a harvest fails, the effects do not stop at empty markets. Malnutrition weakens resistance to disease, while flooding can contaminate water supplies and create conditions in which illness spreads rapidly. Food insecurity and disease outbreaks can therefore place overlapping pressures on the same vulnerable populations, at the same time, while the health systems meant to protect them are already stretched to their limits. Treating a drought as an agricultural problem and an outbreak as a medical problem, the authors contend, misses the way the two crises reinforce each other.\n\nThis year's event is particularly worrying, McLaughlin argues, because food systems are already under severe pressure. Ongoing wars in Ukraine and Iran, together with shortages of fertilisers, have strained global supplies before the climate shock has even arrived. In such circumstances, a powerful El Niño does not merely add one more difficulty to a stable situation; it strikes systems that are already fragile. 'El Niño is a naturally occurring climate phenomenon that can be monitored and forecast months in advance,' McLaughlin said. 'Countries have developed ways to adjust to El Niños, but when a very strong El Niño occurs, it can overwhelm food and health systems.'\n\nBeck makes a similar point about the way governments respond. 'Major natural disasters can have drastic adverse impacts on food supplies and human health,' he said. 'We need to move beyond responding to individual disasters and recognise how climate shocks can trigger wider humanitarian emergencies. Governments and international organisations must prepare for these interconnected risks before they escalate.' The warning, in other words, is not only about the weather itself, but about the habit of dealing with each disaster as though it were self-contained — a flood here, a failed harvest there — while the connections between them go unaddressed.\n\nThe analysis reinforces the need for coordinated international preparedness. Because El Niño can be forecast months ahead, there is time to act: to build up food reserves, to strengthen health services in the regions most at risk, and to plan joint responses that cover food and health together rather than in separate departments. By recognising the connections between climate disruption, food security and public health, policymakers can better anticipate the consequences of extreme weather and strengthen protections for vulnerable communities.\n\nWhether the 2026–27 El Niño proves as powerful as the researchers fear remains to be seen, and forecasts of its peak strength carry inevitable uncertainty. What is not in doubt, the commentary argues, is the logic of preparation. A climate event that can be seen coming months in advance is precisely the kind of threat for which early action is possible — and for which failure to act, if the warnings prove correct, would be hardest to excuse. The super El Niño, on this view, is a test not only of weather forecasting, but of whether governments can think across the boundaries that separate food policy from health policy before the two crises arrive together.",
+      "notes": [
+        {
+          "word": "trigger",
+          "pos": "v.",
+          "meaning": "引发；触发"
+        },
+        {
+          "word": "far-reaching",
+          "pos": "adj.",
+          "meaning": "影响深远的"
+        },
+        {
+          "word": "commentary",
+          "pos": "n.",
+          "meaning": "评论文章；评论"
+        },
+        {
+          "word": "recurring",
+          "pos": "adj.",
+          "meaning": "反复出现的；周期性的"
+        },
+        {
+          "word": "disrupt",
+          "pos": "v.",
+          "meaning": "扰乱；打乱"
+        },
+        {
+          "word": "in isolation",
+          "pos": "phrase",
+          "meaning": "孤立地；单独地"
+        },
+        {
+          "word": "contaminate",
+          "pos": "v.",
+          "meaning": "污染；玷污"
+        },
+        {
+          "word": "overlapping",
+          "pos": "adj.",
+          "meaning": "重叠的；交叠的"
+        },
+        {
+          "word": "vulnerable",
+          "pos": "adj.",
+          "meaning": "脆弱的；易受伤害的"
+        },
+        {
+          "word": "reinforce",
+          "pos": "v.",
+          "meaning": "加强；强化"
+        },
+        {
+          "word": "fertiliser",
+          "pos": "n.",
+          "meaning": "肥料；化肥"
+        },
+        {
+          "word": "fragile",
+          "pos": "adj.",
+          "meaning": "脆弱的；不稳固的"
+        },
+        {
+          "word": "drastic",
+          "pos": "adj.",
+          "meaning": "剧烈的；严厉的"
+        },
+        {
+          "word": "adverse",
+          "pos": "adj.",
+          "meaning": "不利的；有害的"
+        },
+        {
+          "word": "escalate",
+          "pos": "v.",
+          "meaning": "升级；恶化"
+        },
+        {
+          "word": "inevitable",
+          "pos": "adj.",
+          "meaning": "不可避免的；必然的"
+        }
+      ],
+      "questions": [
+        {
+          "q": "According to the commentary, how strong might the 2026–27 El Niño be?",
+          "options": [
+            "The weakest ever recorded",
+            "Average in strength",
+            "Among the strongest in more than a century",
+            "Stronger than any previous El Niño"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "What is the main argument of the Nature commentary?",
+          "options": [
+            "El Niño events are becoming less frequent",
+            "Food shortages and disease outbreaks should be addressed together",
+            "Governments should stop spending money on weather forecasting",
+            "Fertiliser shortages are the main cause of El Niño"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Why is this year's El Niño particularly worrying, according to McLaughlin?",
+          "options": [
+            "Because it cannot be forecast in advance",
+            "Because food systems are already strained by wars and fertiliser shortages",
+            "Because it will be the first El Niño ever recorded",
+            "Because it will mainly affect wealthy countries"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "El Niño is caused by unusually cold ocean temperatures in the tropical Pacific.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The researchers believe that food insecurity and disease outbreaks can reinforce each other.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The commentary states that the 2026–27 El Niño will definitely be the strongest ever recorded.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What does Beck say governments must do?",
+          "options": [
+            "Wait until disasters happen before responding",
+            "Treat each disaster as a separate problem",
+            "Prepare for interconnected risks before they escalate",
+            "Focus only on the agricultural effects of El Niño"
+          ],
+          "answer": 2
+        }
+      ]
+    }
+  ]
+}
