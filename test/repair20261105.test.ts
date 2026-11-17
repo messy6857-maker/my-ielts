@@ -789,3 +789,33 @@ it('a dictation answer survives the current sentence dropping out of the pool', 
   expect(s.currentDictationIdx).toBe(idx)
   expect(s.dictationInput).toBe('some typed answer')
 })
+
+it('daily reading: note words and looked-up words go into 我的词表 (base form for vocabulary words)', async () => {
+  auth.currentUser.value = null
+  const { readLists, saveLists } = await import('../src/utils/wordLists')
+  const loader = await import('../src/pages/vocabulary/loadVocabulary')
+  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, json: async () => ({}) })))
+  const P = (await import('../src/pages/reading/daily.vue')).default
+  const { s, w } = await page(P)
+  await until(() => !!s.daily && !s.dailyLoading)
+  const note = s.daily.newsReadings[0].notes[0]
+  // 没有词表时，加词会建一个“我的词单”
+  const add = w.find('[data-add-note]')
+  expect(add.text()).toBe('＋ 词表')
+  await add.trigger('click')
+  await until(() => readLists().length === 1)
+  expect(readLists()[0]).toMatchObject({ name: '我的词单', words: [{ word: note.word.trim(), meaning: note.meaning }] })
+  await until(() => w.find('[data-add-note]').text() === '✓ 已在词表')
+  // 两个词表时可以选加到哪个；查词卡片里的词库词用原形
+  saveLists([...readLists(), { id: 'b', name: '写作词', updatedAt: 1, words: [] }])
+  const all = await loader.loadAllVocabulary()
+  const base = (Object.values(all)[0] as any).words[0][0].word[0] as string
+  s.wordList.choose('b')
+  await s.openWordPopup(`${base[0].toUpperCase()}${base.slice(1)}s`, [], new DOMRect(0, 0, 10, 10))
+  await until(() => !s.translatePopup.loading)
+  await w.find('[data-add-word]').trigger('click')
+  await until(() => readLists().find(l => l.id === 'b')!.words.length === 1)
+  expect(readLists().find(l => l.id === 'b')!.words[0].word).toBe(base)
+  await until(() => w.find('[data-add-word]').text() === '已在词表里')
+  expect(w.find('[data-exam-hint] a, [data-exam-hint] router-link-stub').exists()).toBe(true)
+})
