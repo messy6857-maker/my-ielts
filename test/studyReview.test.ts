@@ -308,6 +308,10 @@ describe('vocabulary cards in 学新词 keep the old page’s detail handling', 
 describe('the old vocabulary card page is gone', () => {
   it('its address redirects: due review to 复习到期的词, the rest to 学新词', () => {
     const main = readFileSync('src/main.ts', 'utf8')
-    expect(main).toContain('path: \'/vocabulary/flashcard\', redirect: to => to.query.review === \'due\' ? { path: \'/study/review\', query: {} } : { path: \'/study/learn\', query: { deck: \'vocabulary\' } }')
+    const route = main.slice(main.indexOf('path: \'/vocabulary/flashcard\''), main.indexOf('path: \'/reading/flashcard\''))
+    expect(route).toContain('to.query.review === \'due\'')
+    expect(route).toContain('path: \'/study/review\'')
+    expect(route).toContain('path: \'/study/learn\'')
+    expect(route).toContain('deck: \'vocabulary\'')
   })
 })

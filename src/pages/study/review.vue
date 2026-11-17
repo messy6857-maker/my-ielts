@@ -130,6 +130,15 @@ const selectedDue = computed(() => selected.value
   .sort((a, b) => a.dueAt - b.dueAt))
 const roundSize = computed(() => Math.min(selectedDue.value.length, limit.value))
 const totalDue = computed(() => DECK_IDS.reduce((n, d) => n + dueByDeck.value[d].length, 0))
+const previewText = computed(() => {
+  if (totalDue.value === 0)
+    return '今天没有到期要复习的词，可以去学点新词。'
+  if (roundSize.value === 0)
+    return '先勾上要复习的词库。'
+  return selectedDue.value.length > roundSize.value
+    ? `这一轮复习 ${roundSize.value} 个，选中的词库一共 ${selectedDue.value.length} 个到期，剩下的可以再来一轮。`
+    : `这一轮复习 ${roundSize.value} 个。`
+})
 
 function build(): StudyPlan {
   now.value = Date.now()
@@ -248,17 +257,7 @@ onMounted(load)
           </div>
 
           <p class="mb-4 text-sm text-gray-600 dark:text-gray-300" data-preview>
-            <template v-if="totalDue === 0">
-              今天没有到期要复习的词，可以去学点新词。
-            </template>
-            <template v-else-if="roundSize === 0">
-              先勾上要复习的词库。
-            </template>
-            <template v-else>
-              这一轮复习 {{ roundSize }} 个<template v-if="selectedDue.length > roundSize">
-                ，选中的词库一共 {{ selectedDue.length }} 个到期，剩下的可以再来一轮
-              </template>。
-            </template>
+            {{ previewText }}
           </p>
 
           <button
