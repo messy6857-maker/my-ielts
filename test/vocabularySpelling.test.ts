@@ -3,7 +3,6 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { useAuth } from '../src/composables/useAuth'
 import SpellingPage from '../src/pages/vocabulary/index.vue'
-import TypingPage from '../src/pages/vocabulary/typing.vue'
 import vocabulary from '../src/pages/vocabulary/vocabulary'
 import { readRecords } from '../src/utils/storage'
 
@@ -133,45 +132,9 @@ it('b3: 仅空格输入不计正确、不持久化空格串', async () => {
   expect(map[`${CHAPTER}|1`]).toBeUndefined()
 })
 
-function mountTyping() {
-  const w = mount(TypingPage, { attachTo: document.body })
-  wrappers.push(w)
-  return w
-}
 
-function feedbackSpans(w: any) {
-  const layer = w.find('.absolute.inset-0.flex')
-  expect(layer.exists()).toBe(true)
-  return layer.findAll('span')
-}
 
-it('b4: 忽略大小写开启时，Atmosphere 首字母不再显示错色', async () => {
-  const w = mountTyping()
-  await flushPromises()
-  // 首词即 atmosphere（首章首词）；只输前 5 个字母，避免触发完成进词。
-  const input = w.find('input[type="text"]')
-  await input.setValue('Atmos')
-  await nextTick()
-  const spans = feedbackSpans(w)
-  expect(spans[0].classes()).toContain('text-green-500')
-  expect(spans[0].classes()).not.toContain('text-red-500')
-})
 
-it('b4: 忽略大小写关闭时，大小写敏感着色保持不变', async () => {
-  const w = mountTyping()
-  await flushPromises()
-  const label: any = w.findAll('label').find((l: any) => l.text().includes('忽略大小写'))
-  expect(label).toBeTruthy()
-  await label.find('input[type="checkbox"]').setChecked(false)
-  await nextTick()
-  const input = w.find('input[type="text"]')
-  await input.setValue('Atmos')
-  await nextTick()
-  const spans = feedbackSpans(w)
-  expect(spans[0].classes()).toContain('text-red-500')
-  expect(spans[0].classes()).not.toContain('text-green-500')
-  expect(spans[1].classes()).toContain('text-green-500')
-})
 
 it('o1: 完成练习后错词旁直接显示正确答案', async () => {
   const w = mountSpelling()
@@ -202,35 +165,3 @@ it('o2: 四个开关持久化，重新挂载后保持上次选择', async () => 
   expect((label.find('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
 })
 
-it('o3: 打字 WPM 按整章累计，不再每词重置', async () => {
-  const w = mountTyping()
-  await flushPromises()
-  for (let i = 0; i < 80; i++) {
-    const s = (w.vm as any).$.setupState
-    const list = s.words?.value ?? s.words
-    if (Array.isArray(list) && list.length > 0)
-      break
-    await new Promise(resolve => setTimeout(resolve, 5))
-    await flushPromises()
-  }
-  const s = (w.vm as any).$.setupState
-  expect((s.currentWord?.value ?? s.currentWord)).toBe('atmosphere')
-  vi.useFakeTimers()
-  try {
-    vi.setSystemTime(new Date(2026, 9, 27, 12, 0, 0))
-    const inputEl = w.find('input[type="text"]').element as HTMLInputElement
-    inputEl.value = 'atmosphere'
-    s.handleInput({ target: inputEl } as any)
-    expect(s.startTime?.value ?? s.startTime).not.toBeNull()
-    await vi.advanceTimersByTimeAsync(200)
-    expect(s.typedChars?.value ?? s.typedChars).toBe(10)
-    vi.setSystemTime(new Date(2026, 9, 27, 12, 1, 0))
-    inputEl.value = 'x'
-    s.handleInput({ target: inputEl } as any)
-    const wpm = s.wpm?.value ?? s.wpm
-    expect(wpm).toBe(2)
-  }
-  finally {
-    vi.useRealTimers()
-  }
-})

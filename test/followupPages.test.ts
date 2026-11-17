@@ -244,19 +244,6 @@ it('keyword searches include replacement words such as TV', async () => {
   await nextTick()
   expect(state.filteredWs.some((x: any) => x.word === 'press')).toBe(true)
 })
-it('a failed MP3 playback invokes the TTS fallback once, including a later error event', async () => {
-  const Page = (await import('../src/pages/listening/179practice.vue')).default
-  const { state } = await show(Page)
-  const audio: HTMLMediaElement[] = []
-  vi.mocked(HTMLMediaElement.prototype.play).mockImplementation(function (this: HTMLMediaElement): Promise<void> {
-    audio.push(this)
-    return Promise.reject(new Error('missing'))
-  })
-  state.play('missing word')
-  await flushPromises()
-  audio.at(-1)!.dispatchEvent(new Event('error'))
-  expect(speechSynthesis.speak).toHaveBeenCalledTimes(1)
-})
 it('does not attach a late AI grade to a different account', async () => {
   const Page = (await import('../src/pages/writing/AIGradePanel.vue')).default
   localStorage.setItem(

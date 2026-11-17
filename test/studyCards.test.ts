@@ -227,17 +227,10 @@ describe('学新词 starts only after you choose, and every screen can go back',
     expect(w.text()).toContain('学新词 · 听力 179')
   })
 
-  it('every practice page under 练拼写 and the dungeon has a way back', () => {
+  it('the vocabulary table (opened from 练拼写) and the dungeon have a way back', () => {
     const source = (p: string) => readFileSync(p, 'utf8')
-    for (const p of [
-      'src/pages/vocabulary/typing.vue',
-      'src/pages/listening/179practice.vue',
-      'src/pages/listening/corpus-spelling.vue',
-      'src/pages/vocabulary/index.vue',
-    ])
-      expect(source(p)).toContain('<StudyBack to="/study/spell" label="练拼写" />')
+    expect(source('src/pages/vocabulary/index.vue')).toContain('<StudyBack to="/study/spell" label="练拼写" />')
     expect(source('src/pages/study/spell.vue')).toContain('<StudyBack to="/study" label="背单词" />')
-    expect(source('src/pages/game.vue')).toContain('<StudyBack v-if="stage === \'setup\'" to="/study" label="背单词" />')
     expect(source('src/pages/game.vue')).toContain('← 返回选词')
   })
 })

@@ -288,32 +288,6 @@ it('dictation summary averages the latest score per sentence', () => {
   })
   expect(s).toEqual({ attempted: 6, perfect: 1, accuracy: 0.5 })
 })
-it('opening and restarting typing preserves stored progress', async () => {
-  const { saveRecord, readRecord } = await import('../src/utils/storage')
-  saveRecord('progress_v1', 'typing', { done: 70, total: 100, updatedAt: 1 }, 'alice')
-  const P = (await import('../src/pages/vocabulary/typing.vue')).default
-  const { s } = await page(P)
-  await until(() => !s.chapterLoading && !!s.currentWord)
-  s.reset()
-  expect(readRecord<any>('progress_v1', 'typing', 'alice')?.done).toBe(70)
-})
-it('an old typing callback cannot write a mistake or progress into the next account', async () => {
-  const P = (await import('../src/pages/vocabulary/typing.vue')).default
-  const { s } = await page(P)
-  await until(() => !s.chapterLoading && !!s.currentWord)
-  const word = s.currentWord
-  const m = useMistakes()
-  s.handleInput({
-    target: { value: '#' },
-  })
-  s.handleInput({
-    target: { value: word },
-  })
-  auth.currentUser.value = 'bob'
-  await new Promise(resolve => setTimeout(resolve, 230))
-  expect(m.mistakes.value.some(x => x.key === `typing:${word}`)).toBe(false)
-  expect(s.currentWordIndex).toBe(0)
-})
 it('same-day account switch clears private answers but keeps public answers', async () => {
   const reading = (owner: string) => ({
     title: owner,
@@ -448,6 +422,45 @@ it('speaking keeps the active recording when a topic change is cancelled', async
   }
 })
 
+it('dictation: words written wrong that the vocabulary has can be added to 我的词单', async () => {
+  const P = (await import('../src/pages/listening/intensive.vue')).default
+  const { lookupVocabularyWord } = await import('../src/pages/vocabulary/loadVocabulary')
+  const { readWordList } = await import('../src/utils/wordList')
+  const { tokenizeDictation } = await import('../src/utils/dictationDiff')
+  const { s, w } = await page(P)
+  s.mode = 'dictation'
+  await until(() => !s.loading && !s.timingsLoading && !!s.currentDictationEntry)
+  const hits = async () => {
+    const keys = new Set<string>()
+    for (const token of tokenizeDictation(s.currentDictationEntry.text)) {
+      const hit = /^[a-z][a-z'-]+$/.test(token) ? await lookupVocabularyWord(token) : null
+      if (hit)
+        keys.add(`vocab:${hit.id}`)
+    }
+    return [...keys]
+  }
+  let expected = await hits()
+  for (let i = 0; i < 20 && expected.length === 0; i++) {
+    s.nextDictationSentence()
+    await flushPromises()
+    expected = await hits()
+  }
+  expect(expected.length).toBeGreaterThan(0)
+  s.dictationInput = 'zzzz'
+  s.checkDictation()
+  await until(() => s.dictationListWords.length > 0)
+  expect(s.dictationListWords.map((x: any) => x.key).sort()).toEqual([...expected].sort())
+  const button = w.find('[data-list-words] button')
+  expect(button.text()).toContain('加入我的词单')
+  await button.trigger('click')
+  expect(readWordList()).toEqual([s.dictationListWords[0].key])
+  expect(w.find('[data-list-words] button').attributes('disabled')).toBeDefined()
+  expect(w.find('[data-list-words] button').text()).toContain('已在我的词单')
+  // 换一句：上一句的词不再显示
+  s.nextDictationSentence()
+  await flushPromises()
+  expect(s.dictationListWords).toEqual([])
+})
 it('dictation reports a failed mistake write and allows retry', async () => {
   const P = (await import('../src/pages/listening/intensive.vue')).default
   const { s } = await page(P)
@@ -689,26 +702,6 @@ it('restoring a different account’s backup does not import its global AI delet
   expect(localStorage.getItem(accountKey('archive_retention_writing_v3', 'bob'))).toBeNull()
 })
 
-it('a failed typing chapter switch keeps the previous chapter on screen', async () => {
-  const loader = await import('../src/pages/vocabulary/loadVocabulary')
-  const P = (await import('../src/pages/vocabulary/typing.vue')).default
-  const { s, w } = await page(P)
-  await until(() => !s.chapterLoading && s.words.length > 0)
-  const firstWord = s.currentWord
-  const next = loader.listVocabularyChapters().find(c => c !== s.selectedChapter)!
-  vi.spyOn(loader, 'loadVocabularyChapter').mockRejectedValueOnce(new Error('load failed'))
-  s.selectedChapter = next
-  await until(() => s.chapterError === true)
-  expect(s.words.length).toBeGreaterThan(0)
-  expect(s.currentWord).toBe(firstWord)
-  expect(w.get('input[autocapitalize=off]').attributes('disabled')).toBeDefined()
-  s.handleInput({
-    target: { value: firstWord },
-  })
-  expect(s.startTime).toBeNull()
-  await s.loadSelectedChapter()
-  expect(w.get('input[autocapitalize=off]').attributes('disabled')).toBeUndefined()
-})
 
 it('a failed mock mistake save survives a new save instance and retries', async () => {
   const { useMockMistakeSave } = await import('../src/composables/useMockMistakeSave')

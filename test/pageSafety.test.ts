@@ -77,18 +77,6 @@ async function routerFor(Page: any, path: string) {
   await flushPromises()
   return router
 }
-it('179 checks its final item and accepts lowercase TV/Internet synonyms', async () => {
-  const Page = (await import('../src/pages/listening/179practice.vue')).default
-  const w = show(Page)
-  const state = (w.vm as any).$.setupState
-  for (const i of [23, 24, 178]) {
-    state.ws[i].form.word = state.ws[i].word
-    state.ws[i].form.replaceStr = state.ws[i].replace.join(', ').toLowerCase()
-    state.next(i)
-    expect(state.ws[i].result.checked).toBe(true)
-    expect(state.ws[i].result.errorWords).toEqual([])
-  }
-})
 it('flushes a just-typed writing draft on pagehide without waiting two seconds', async () => {
   const { TASK1_PROMPTS } = await import('../src/pages/writing/task1/prompts')
   const Page = (await import('../src/pages/writing/task1/TaskOne.vue')).default

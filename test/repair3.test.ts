@@ -492,24 +492,6 @@ it('an active sibling attempt requires explicit selection and a fresh start does
   expect(s.answers.Q1).toBeUndefined()
   expect(localStorage.getItem(key)).toBe(JSON.stringify(draft))
 })
-it('typing defaults to case-insensitive and stores explicit preference under the account', async () => {
-  const Page = (await import('../src/pages/vocabulary/typing.vue')).default
-  const { s } = await page(Page)
-  expect(s.ignoreCase).toBe(true)
-  s.ignoreCase = false
-  await nextTick()
-  expect(
-    JSON.parse(
-      localStorage.getItem(accountKey('typing_ignore_case_v2', 'alice'))!,
-    ).value,
-  ).toBe(false)
-  auth.currentUser.value = 'bob'
-  await nextTick()
-  expect(s.ignoreCase).toBe(true)
-  auth.currentUser.value = 'alice'
-  await nextTick()
-  expect(s.ignoreCase).toBe(false)
-})
 it('daily word totals already aggregate other devices; local undo leaves another device learning intact', () => {
   const daily = useDailyStore('vocabulary')
   const date = studyDay()

@@ -14,6 +14,8 @@ import {
   summarizeDictationPart,
 } from '../../utils/dictationProgress'
 import { transcriptSentenceEntries } from '../../utils/text'
+import { addToWordList, readWordList } from '../../utils/wordList'
+import { lookupVocabularyWord } from '../vocabulary/loadVocabulary'
 import { loadTestTimings, prefersOriginalAudio, shouldUseTtsFallback } from './timings/loadTimings'
 
 const mediaError = ref('')
@@ -395,6 +397,11 @@ const dictationPerfect = ref(false)
 const dictationAccuracy = ref(0)
 const dictationAddedMistake = ref(false)
 const dictationMistakeError = ref(false)
+// 核对后可以加入“我的词单”的词（没写对、词库里有的）
+interface ListWord { key: string, word: string, meaning: string }
+const dictationListWords = ref<ListWord[]>([])
+const wordListKeys = ref<string[]>(readWordList())
+let listWordSeq = 0
 const partSummary = ref({ attempted: 0, perfect: 0, accuracy: 0 })
 // A-13: surfaced when a dictation progress save fails, so a lost write is
 // visible instead of silent.
@@ -457,7 +464,37 @@ function refreshPartSummary() {
   partSummary.value = summarizeDictationPart(progress)
 }
 
+// 核对后，没写对的词里词库有的那些：可以加入“我的词单”，之后在练拼写或单词地牢里练
+async function findListWords(tokens: DiffToken[]) {
+  const seq = ++listWordSeq
+  dictationListWords.value = []
+  const owner = currentUser.value
+  const found = new Map<string, ListWord>()
+  try {
+    for (const tok of tokens) {
+      if ((tok.mark !== 'wrong' && tok.mark !== 'missing') || !tok.expected || !/^[a-z][a-z'-]+$/.test(tok.expected))
+        continue
+      const hit = await lookupVocabularyWord(tok.expected)
+      if (hit && hit.word)
+        found.set(`vocab:${hit.id}`, { key: `vocab:${hit.id}`, word: hit.word, meaning: hit.meaning })
+    }
+  }
+  catch {
+    // 词库没加载出来：这次不显示，不影响听写
+  }
+  if (seq !== listWordSeq || owner !== currentUser.value)
+    return
+  wordListKeys.value = readWordList()
+  dictationListWords.value = [...found.values()]
+}
+function addListWord(word: ListWord) {
+  addToWordList([word.key])
+  wordListKeys.value = readWordList()
+}
+
 function resetDictationUi() {
+  listWordSeq++
+  dictationListWords.value = []
   dictationTokens.value = null
   dictationChecked.value = false
   dictationPerfect.value = false
@@ -497,6 +534,7 @@ function checkDictation() {
   const expected = entry.text
   const result = diffDictation(expected, dictationInput.value)
   dictationTokens.value = result.tokens
+  findListWords(result.tokens)
   dictationChecked.value = true
   dictationPerfect.value = result.perfect
   dictationAccuracy.value = result.accuracy
@@ -958,6 +996,23 @@ const testLabel = computed(
           <p class="text-xs text-gray-500 dark:text-gray-400">
             原文：{{ currentDictationEntry.text }}
           </p>
+          <div v-if="dictationListWords.length" class="text-sm" data-list-words>
+            <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">
+              没写对的词里，词库有这些。加入我的词单后，可以在背单词的练拼写或单词地牢里练：
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <button
+                v-for="w in dictationListWords"
+                :key="w.key"
+                class="border border-blue-300 rounded-lg px-2 py-1 text-blue-700 dark:border-blue-800 dark:text-blue-300 disabled:border-gray-200 disabled:text-gray-400 dark:disabled:border-gray-700"
+                :disabled="wordListKeys.includes(w.key)"
+                :title="w.meaning"
+                @click="addListWord(w)"
+              >
+                {{ wordListKeys.includes(w.key) ? `${w.word} 已在我的词单` : `＋ ${w.word} 加入我的词单` }}
+              </button>
+            </div>
+          </div>
           <button
             v-if="!dictationPerfect"
             class="border border-red-300 rounded-lg px-3 py-1.5 text-sm text-red-700 dark:border-red-800 dark:text-red-300 disabled:opacity-50"

@@ -18,12 +18,8 @@ const router = useRouter()
 // 自测卡片/179 练习归属考点词，语料库自测归属语料库
 const activeKey = computed(() => {
   const p = route.path
-  if (
-    p === '/listening/keyword'
-    || p === '/listening/179practice'
-  ) {
+  if (p === '/listening/keyword')
     return 'keyword'
-  }
   if (p === '/listening/corpus')
     return 'corpus'
   if (p === '/listening/intensive')
