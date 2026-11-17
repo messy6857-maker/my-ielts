@@ -38,12 +38,7 @@ const MODES = [
   <div class="px-4 pt-6 2xl:px-0">
     <div class="mx-auto max-w-2xl">
       <div class="mb-4 flex items-center gap-3">
-        <RouterLink
-          to="/study"
-          class="shrink-0 border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm text-gray-600 dark:border-gray-600 dark:bg-gray-800 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-        >
-          ← 返回背单词
-        </RouterLink>
+        <StudyBack to="/study" label="背单词" />
         <div>
           <h3 class="text-xl text-gray-900 font-bold dark:text-white">
             练拼写

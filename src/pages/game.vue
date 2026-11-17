@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DungeonDeck, DungeonMode, DungeonSelection, DungeonWord, Monster, QuestionKind, Relic, RelicId, Rng } from '../utils/dungeon'
+import { confirmDialog } from '../composables/useDialog'
 import { resolveAudioUrl } from '../composables/useAudio'
 import { useAudioGroup } from '../composables/useAudioGroup'
 import { useDeckStore } from '../composables/useDeckStore'
@@ -596,6 +597,11 @@ function showHint() {
   combo.value = 0
   spellInput.value?.focus()
 }
+// 打到一半想反悔：确认后回到选词页（已经答过的题照常记录）
+async function abandonRun() {
+  if (await confirmDialog('放弃这一局，回到选词页？已经答过的题照常记录。', { confirmText: '放弃这一局' }))
+    backToSetup()
+}
 function backToSetup() {
   stopTimer()
   now.value = Date.now()
@@ -670,10 +676,21 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
     <div
       class="mx-auto max-w-3xl border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
     >
-      <div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 class="text-xl text-gray-900 font-bold dark:text-white">
-          单词地牢
-        </h3>
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-3">
+          <StudyBack v-if="stage === 'setup'" to="/study" label="背单词" />
+          <button
+            v-else-if="stage === 'playing' || stage === 'relic'"
+            data-back
+            class="shrink-0 border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm text-gray-600 dark:border-gray-600 dark:bg-gray-800 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+            @click="abandonRun"
+          >
+            ← 返回选词
+          </button>
+          <h3 class="text-xl text-gray-900 font-bold dark:text-white">
+            单词地牢
+          </h3>
+        </div>
         <span v-if="best.combo > 0" class="text-sm text-gray-500 dark:text-gray-400">
           最长连击 {{ best.combo }}
         </span>

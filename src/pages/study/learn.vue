@@ -90,6 +90,7 @@ watch([deck, category], () => {
   load()
 }, { immediate: true })
 watch(currentUser, (user) => {
+  started.value = false
   deck.value = readChapterPreference(DECK_KEY, [...DECK_IDS], user, deck.value) as DeckId
   const next = readChapterPreference(CHAPTER_KEY, chapters, user)
   if (category.value !== next)
@@ -121,7 +122,16 @@ const goal = computed({
   get: () => store.value.goal(),
   set: (v: string | number) => store.value.setGoal(Number(v)),
 })
-const session = ref<{ restart: () => void } | null>(null)
+// 进来先选，点“开始”才出卡片；卡片页的返回键回到这个选择页
+const started = ref(false)
+const preview = computed(() => {
+  void version.value
+  return ready.value ? build() : null
+})
+function start() {
+  if (ready.value)
+    started.value = true
+}
 // 重置记忆：二次确认后清空这个词库的复习进度、自测进度和今日新词计数（错词本、打卡、统计不受影响）
 async function resetMemory() {
   const name = DECK_META[deck.value].name
@@ -141,7 +151,6 @@ async function resetMemory() {
     setProgress(DECK_META[deck.value].progressModule, 0, 0)
   }
   s.resetDaily()
-  session.value?.restart()
 }
 
 const SUBTITLE: Record<DeckId, string> = {
@@ -153,55 +162,110 @@ const SUBTITLE: Record<DeckId, string> = {
 </script>
 
 <template>
-  <div>
-    <p v-if="loadError" class="mx-4 mt-4 text-sm text-amber-700" role="alert">
-      词表加载失败。<button class="underline" @click="load">
-        重试
-      </button>
-    </p>
-    <StudyCardSession
-      ref="session"
-      :title="`学新词 · ${DECK_META[deck].name}`"
-      :subtitle="SUBTITLE[deck]"
-      :ready="ready"
-      :version="version"
-      :build="build"
-      @finished="onFinished"
-    >
-      <template #controls>
-        <div class="flex flex-wrap items-center gap-2">
-          <select v-model="deck" aria-label="词库" class="block border border-gray-300 rounded-lg bg-white p-2.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white">
-            <option v-for="d in DECK_IDS" :key="d" :value="d">
-              {{ DECK_META[d].name }}
-            </option>
-          </select>
-          <select v-if="deck === 'vocabulary'" v-model="category" aria-label="章节" class="block w-36 border border-gray-300 rounded-lg bg-white p-2.5 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+  <StudyCardSession
+    v-if="started"
+    :title="`学新词 · ${DECK_META[deck].name}`"
+    :subtitle="SUBTITLE[deck]"
+    :ready="ready"
+    :version="version"
+    :build="build"
+    back-label="选择"
+    @finished="onFinished"
+    @exit="started = false"
+  >
+    <template #plan>
+      ｜ {{ DECK_META[deck].name }}今日新词 {{ store.dailyCount() }} / {{ store.goal() }}
+    </template>
+  </StudyCardSession>
+  <div v-else class="px-4 pt-6 2xl:px-0" data-setup>
+    <div class="mx-auto max-w-2xl">
+      <div class="mb-4 flex items-center gap-3">
+        <StudyBack to="/study" label="背单词" />
+        <div>
+          <h3 class="text-xl text-gray-900 font-bold dark:text-white">
+            学新词
+          </h3>
+          <p class="text-sm text-gray-600 dark:text-gray-300">
+            选好再开始，下次进来默认是这次的选择。
+          </p>
+        </div>
+      </div>
+
+      <div class="border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6">
+        <div class="mb-2 text-sm text-gray-700 font-bold dark:text-gray-200">
+          词库
+        </div>
+        <div class="grid grid-cols-2 mb-2 gap-2 sm:grid-cols-4">
+          <button
+            v-for="d in DECK_IDS"
+            :key="d"
+            :data-deck-choice="d"
+            :aria-pressed="deck === d"
+            class="border rounded-lg px-3 py-2 text-sm font-medium"
+            :class="deck === d ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200'"
+            @click="deck = d"
+          >
+            {{ DECK_META[d].name }}
+          </button>
+        </div>
+        <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+          {{ SUBTITLE[deck] }}
+        </p>
+
+        <div v-if="deck === 'vocabulary'" class="mb-4">
+          <label class="mb-2 block text-sm text-gray-700 font-bold dark:text-gray-200" for="learn-chapter">章节</label>
+          <select id="learn-chapter" v-model="category" aria-label="章节" class="block w-full border border-gray-300 rounded-lg bg-white p-2.5 text-sm sm:w-60 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
             <option v-for="c in chapters" :key="c" :value="c">
               {{ c }}
             </option>
           </select>
+        </div>
+
+        <div class="mb-4">
+          <label class="mb-2 block text-sm text-gray-700 font-bold dark:text-gray-200" for="learn-goal">这个词库每天学几个新词</label>
           <input
+            id="learn-goal"
             v-model.lazy="goal"
             type="number"
             min="1"
             max="500"
             aria-label="每日新词目标"
-            title="这个词库每天学几个新词（下轮生效）"
-            class="block w-20 border border-gray-300 rounded-lg bg-white p-2.5 text-center text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            class="block w-24 border border-gray-300 rounded-lg bg-white p-2.5 text-center text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
           >
-          <span class="text-sm text-gray-500 dark:text-gray-400">个/天</span>
+        </div>
+
+        <p v-if="loadError" class="mb-3 text-sm text-amber-700" role="alert">
+          词表加载失败。<button class="underline" @click="load">
+            重试
+          </button>
+        </p>
+        <p v-else class="mb-4 text-sm text-gray-600 dark:text-gray-300" data-preview>
+          <template v-if="preview">
+            这一轮：复习 {{ preview.reviewCount }} 个到期的词，新词 {{ preview.newCount }} 个。今日新词 {{ store.dailyCount() }} / {{ store.goal() }}。
+          </template>
+          <template v-else>
+            词表加载中…
+          </template>
+        </p>
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <button
+            data-start
+            class="rounded-lg bg-blue-600 px-8 py-2.5 text-white font-bold disabled:opacity-50 hover:bg-blue-700"
+            :disabled="!ready"
+            @click="start"
+          >
+            开始
+          </button>
           <button
             title="重置记忆：这个词库全部单词回到新词，从 0 开始"
-            class="shrink-0 border border-red-300 rounded-lg bg-white px-3 py-2.5 text-sm text-red-600 dark:border-red-800 dark:bg-gray-800 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+            class="border border-red-300 rounded-lg bg-white px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:bg-gray-800 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
             @click="resetMemory"
           >
-            🔄 重置记忆
+            🔄 重置这个词库的记忆
           </button>
         </div>
-      </template>
-      <template #plan>
-        ｜ {{ DECK_META[deck].name }}今日新词 {{ store.dailyCount() }} / {{ store.goal() }}
-      </template>
-    </StudyCardSession>
+      </div>
+    </div>
   </div>
 </template>

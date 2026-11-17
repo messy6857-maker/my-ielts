@@ -2,7 +2,6 @@
 import type { CorpusChapter, CorpusWord, DiffChar } from '../../utils/corpusSpelling'
 import { resolveAudioUrl } from '../../composables/useAudio'
 import { useAudioGroup } from '../../composables/useAudioGroup'
-import { useGoBack } from '../../composables/useGoBack'
 import { nsKey, useMistakes } from '../../composables/useStudyData'
 import {
   buildCorpusWords,
@@ -22,7 +21,6 @@ defineOptions({ name: 'CorpusSpellingPage' })
 const managedAudio = useAudioGroup()
 const { addMistake } = useMistakes()
 const { currentUser } = useAuth()
-const { goBack } = useGoBack('/study')
 
 const allWords = buildCorpusWords(corpusData as any)
 const CHAPTERS: CorpusChapter[] = ['ch2', 'ch3', 'ch4']
@@ -180,12 +178,7 @@ watch(currentUser, () => {
   <div class="min-h-screen bg-gray-50 px-4 py-8 dark:bg-gray-900 lg:px-8 sm:px-6">
     <div class="mx-auto max-w-2xl text-gray-900 dark:text-white">
       <div class="mb-4 flex items-center gap-3">
-        <button
-          class="shrink-0 border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm text-gray-600 dark:border-gray-600 dark:bg-gray-800 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-          @click="goBack"
-        >
-          ← 返回背单词
-        </button>
+        <StudyBack to="/study/spell" label="练拼写" />
         <div>
           <h1 class="text-2xl font-extrabold">
             听力王语料库拼写练习

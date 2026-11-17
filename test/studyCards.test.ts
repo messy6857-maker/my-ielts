@@ -30,27 +30,22 @@ afterEach(() => {
   localStorage.clear()
 })
 
-async function mountLearn(query: string) {
-  const router = createRouter({
-    history: createMemoryHistory(),
-    routes: [
-      {
-        path: '/:p(.*)*',
-        component: { template: '<p />' },
-      },
-    ],
-  })
-  await router.push(`/study/learn?${query}`)
-  const w = mount(LearnPage, {
-    attachTo: document.body,
-    global: {
-      plugins: [router],
-    },
-  })
-  wrappers.push(w)
+async function settle() {
   for (let i = 0; i < 5; i++) {
     await flushPromises()
     await new Promise(r => setTimeout(r, 0))
+  }
+}
+// 学新词进来先是选择页；start 为 true 时顺手点“开始”进到卡片
+async function mountLearn(query: string, start = true) {
+  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { template: '<p />' } }] })
+  await router.push(`/study/learn?${query}`)
+  const w = mount(LearnPage, { attachTo: document.body, global: { plugins: [router] } })
+  wrappers.push(w)
+  await settle()
+  if (start) {
+    await w.find('[data-start]').trigger('click')
+    await settle()
   }
   return { w, router }
 }
@@ -135,9 +130,11 @@ describe('学新词 writes back to each deck’s original records', () => {
   })
 
   it('vocabulary deck uses sr_vocabulary_v1 and the vocabulary daily goal', async () => {
-    const { w } = await mountLearn('deck=vocabulary')
-    expect(w.text()).toContain('学新词 · 词汇表')
+    const { w } = await mountLearn('deck=vocabulary', false)
     expect(w.find('select[aria-label="章节"]').exists()).toBe(true)
+    await w.find('[data-start]').trigger('click')
+    await settle()
+    expect(w.text()).toContain('学新词 · 词汇表')
     await button(w, '认识').trigger('click')
     await flushPromises()
     const keys = Object.keys(useWordSchedule().schedules.value)
@@ -162,13 +159,13 @@ describe('学新词 writes back to each deck’s original records', () => {
   })
 
   it('switching deck rebuilds the round and updates the address', async () => {
-    const { w, router } = await mountLearn('deck=reading538')
-    await w.find('select[aria-label="词库"]').setValue('corpus')
-    for (let i = 0; i < 5; i++) {
-      await flushPromises()
-      await new Promise(r => setTimeout(r, 0))
-    }
+    const { w, router } = await mountLearn('deck=reading538', false)
+    expect(w.find('select[aria-label="章节"]').exists()).toBe(false)
+    await w.find('[data-deck-choice="corpus"]').trigger('click')
+    await settle()
     expect(router.currentRoute.value.query.deck).toBe('corpus')
+    await w.find('[data-start]').trigger('click')
+    await settle()
     expect(w.text()).toContain('学新词 · 听力语料库')
     expect(w.find('[data-word]').exists()).toBe(true)
   })
@@ -186,6 +183,44 @@ describe('学新词 writes back to each deck’s original records', () => {
   it('an unknown deck falls back to the vocabulary list', async () => {
     const { w } = await mountLearn('deck=nope')
     expect(w.text()).toContain('学新词 · 词汇表')
+  })
+})
+
+describe('学新词 starts only after you choose, and every screen can go back', () => {
+  it('opens on the choice screen: nothing is recorded and no card shows until 开始', async () => {
+    const { w } = await mountLearn('deck=reading538', false)
+    expect(w.find('[data-setup]').exists()).toBe(true)
+    expect(w.find('[data-card]').exists()).toBe(false)
+    expect(w.find('[data-back]').attributes('href')).toBe('/study')
+    expect(w.find('[data-deck-choice="reading538"]').attributes('aria-pressed')).toBe('true')
+    expect(w.find('[data-preview]').text()).toMatch(/新词 [1-9]\d* 个/)
+    expect(Object.keys(useDeckStore('reading538').schedules.value)).toHaveLength(0)
+    await w.find('[data-start]').trigger('click')
+    await settle()
+    expect(w.find('[data-setup]').exists()).toBe(false)
+    expect(w.find('[data-card]').exists()).toBe(true)
+  })
+
+  it('the card screen goes back to the choice screen, where another list can be picked', async () => {
+    const { w } = await mountLearn('deck=reading538')
+    await w.findAll('button').find((b: any) => b.text().includes('返回选择'))!.trigger('click')
+    await button(w, '退出').trigger('click')
+    await settle()
+    expect(w.find('[data-setup]').exists()).toBe(true)
+    await w.find('[data-deck-choice="listening179"]').trigger('click')
+    await settle()
+    await w.find('[data-start]').trigger('click')
+    await settle()
+    expect(w.text()).toContain('学新词 · 听力 179')
+  })
+
+  it('every practice page under 练拼写 and the dungeon has a way back', () => {
+    const source = (p: string) => readFileSync(p, 'utf8')
+    for (const p of ['src/pages/vocabulary/typing.vue', 'src/pages/listening/179practice.vue', 'src/pages/listening/corpus-spelling.vue', 'src/pages/vocabulary/index.vue'])
+      expect(source(p)).toContain('<StudyBack to="/study/spell" label="练拼写" />')
+    expect(source('src/pages/study/spell.vue')).toContain('<StudyBack to="/study" label="背单词" />')
+    expect(source('src/pages/game.vue')).toContain('<StudyBack v-if="stage === \'setup\'" to="/study" label="背单词" />')
+    expect(source('src/pages/game.vue')).toContain('← 返回选词')
   })
 })
 

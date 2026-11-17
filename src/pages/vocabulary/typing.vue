@@ -274,6 +274,9 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <div class="mx-4 mt-4">
+    <StudyBack to="/study/spell" label="练拼写" />
+  </div>
   <label class="m-4 flex gap-2 text-sm"><input
     v-model="ignoreCase"
     type="checkbox"
