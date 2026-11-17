@@ -357,7 +357,8 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.locator('header a[href="#/reading/daily"]').first().click()
   await page.getByText('📅 每日阅读').waitFor({ timeout: 20000 })
   assert.ok((await page.locator('a[href="#/reading/daily"]').first().getAttribute('class')).includes('text-primary-700'))
-  assert.ok(!(await page.locator('a[href="#/ielts"]').first().getAttribute('class')).includes('text-primary-700'))
+  // 没亮的入口是灰字（hover 时才变色）
+  assert.ok((await page.locator('a[href="#/ielts"]').first().getAttribute('class')).split(/\s+/).includes('text-gray-700'))
   await page.goto(`${BASE}#/`)
   await page.locator('[data-home-entry="/ielts"]').click()
   await page.locator('[data-entry="guide"]').click()

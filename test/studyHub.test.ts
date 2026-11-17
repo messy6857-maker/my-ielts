@@ -96,9 +96,10 @@ describe('背单词 hub', () => {
     const card = w.findAll('a').find((a: any) => a.attributes('href') === '/study' && a.text().includes('背单词'))
     expect(card).toBeTruthy()
     expect(w.findAll('a').some((a: any) => a.attributes('href') === '/vocabulary/typing')).toBe(false)
-    // 首页四个入口：背单词、雅思考试、错词本、学习统计
+    // 首页入口：背单词、每日阅读、雅思考试、错词本、学习统计
     expect(w.findAll('[data-home-entry]').map((a: any) => a.attributes('href'))).toEqual([
       '/study',
+      '/reading/daily',
       '/ielts',
       '/mistakes',
       '/stats',
