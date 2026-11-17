@@ -53,6 +53,8 @@ export interface StudyCard {
   /** 和原来各自测页相同的 id（复习进度、错题都按它记） */
   id: string | number
   word: string
+  /** 所有算对的拼写（词汇表的多种写法、语料库的英式美式）；第一个就是 word */
+  spellings: string[]
   pos: string
   meaning: string
   /** 词汇表的章节；其他词库为空 */
@@ -82,6 +84,7 @@ function card(deck: DeckId, id: string | number, fields: Partial<StudyCard> & Pi
     example: '',
     extra: '',
     hintWords: [],
+    spellings: [fields.word],
     ...fields,
   }
 }
@@ -103,6 +106,7 @@ export function vocabularyCards(
         continue
       out.push(card('vocabulary', w.id, {
         word,
+        spellings: w.word.filter(s => typeof s === 'string' && s.trim()),
         pos: w.pos ?? '',
         meaning: w.meaning ?? '',
         chapter: chapterOf(w.id) ?? chapter,
@@ -142,6 +146,7 @@ export function listeningCards(list: Array<{ index: number, word: string, type?:
 export function corpusCards(data: Parameters<typeof buildCorpusWords>[0]): StudyCard[] {
   return buildCorpusWords(data).map(w => card('corpus', w.id, {
     word: w.word,
+    spellings: w.accepted,
     pos: w.pos,
     meaning: w.meaning,
     note: [

@@ -87,18 +87,6 @@ it('l4: the marker filter does not eat real sentences mentioning Q or Part', () 
   ])
 })
 
-it('l5: 179 main-word comparison folds whitespace on both sides', () => {
-  const src = readFileSync('src/pages/listening/179practice.vue', 'utf8')
-  expect(src).toContain('cw.form.word.trim().toLowerCase().replace(/\\s+/g, \' \')')
-  expect(src).toContain('cw.word.trim().toLowerCase().replace(/\\s+/g, \' \')')
-})
-
-it('l6: 179 progress records each row studied (D-2, not furthest reached)', () => {
-  const src = readFileSync('src/pages/listening/179practice.vue', 'utf8')
-  expect(src).toContain('markListening179RowStudied(cw.index)')
-  expect(src).not.toContain('Math.max(getProgress(\'listening\').done, index + 1)')
-})
-
 it('l7: no 179 word lists itself as its own synonym', () => {
   for (const w of words179 as unknown as Array<{ word: string, replace: string[] }>) {
     expect(w.replace).not.toContain(w.word)

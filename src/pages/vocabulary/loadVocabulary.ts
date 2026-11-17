@@ -165,6 +165,51 @@ export async function lookupVocabularyMeaning(
   return null
 }
 
+export interface VocabularyWordHit {
+  id: number | string
+  word: string
+  meaning: string
+  pos: string
+}
+let wordIndexPromise: Promise<Map<string, VocabularyWordHit>> | null = null
+/**
+ * 按拼写找词库里的词条（返回词条 id，用来加入“我的词单”）；查不到返回 null。
+ * 先精确匹配，再试去词形还原；同一个词在多章出现时取第一处。
+ */
+export async function lookupVocabularyWord(word: string): Promise<VocabularyWordHit | null> {
+  const key = word.toLowerCase().trim()
+  if (!key)
+    return null
+  if (!wordIndexPromise) {
+    wordIndexPromise = loadAllVocabulary()
+      .then((all) => {
+        const map = new Map<string, VocabularyWordHit>()
+        for (const chapter of Object.values(all)) {
+          for (const w of chapter.words.flat()) {
+            const hit = {
+              id: w.id,
+              word: String(w.word?.[0] ?? ''),
+              meaning: w.meaning,
+              pos: w.pos,
+            }
+            for (const form of w.word ?? []) {
+              const k = String(form).toLowerCase().trim()
+              if (k && !map.has(k))
+                map.set(k, hit)
+            }
+          }
+        }
+        return map
+      })
+      .catch((error: unknown) => {
+        wordIndexPromise = null
+        throw error
+      })
+  }
+  const index = await wordIndexPromise
+  return index.get(key) ?? deinflect(key).map(base => index.get(base)).find(Boolean) ?? null
+}
+
 /** Empty chapter shells (no words) for select menus before payload loads. */
 export function emptyVocabularyShell(): Record<string, VocabularyChapter> {
   const result: Record<string, VocabularyChapter> = {}

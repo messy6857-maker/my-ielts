@@ -27,6 +27,10 @@ const router = createRouter({
     { path: '/reading/flashcard', redirect: '/study/learn?deck=reading538' },
     { path: '/listening/flashcard', redirect: '/study/learn?deck=listening179' },
     { path: '/listening/corpus-flashcard', redirect: '/study/learn?deck=corpus' },
+    // 各自的拼写练习页已合并到“练拼写”，旧地址带着词源和练法跳过去
+    { path: '/vocabulary/typing', redirect: '/study/spell?source=vocabulary&mode=typing' },
+    { path: '/listening/179practice', redirect: '/study/spell?source=listening179&mode=synonym' },
+    { path: '/listening/corpus-spelling', redirect: '/study/spell?source=corpus&mode=meaning' },
   ],
   // Hash 模式下切换路由浏览器不自动回顶：前进/新开回顶，后退恢复保存的位置（B1）。
   scrollBehavior(to, from, savedPosition) {

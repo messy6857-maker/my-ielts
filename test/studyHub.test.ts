@@ -8,7 +8,6 @@ import { useDeckStore } from '../src/composables/useDeckStore'
 import { useDailyGoal, useWordSchedule } from '../src/composables/useSpacedRepetition'
 import IndexPage from '../src/pages/index.vue'
 import StudyPage from '../src/pages/study/index.vue'
-import SpellPage from '../src/pages/study/spell.vue'
 
 const DAY = 86400000
 const wrappers: any[] = []
@@ -82,17 +81,6 @@ describe('背单词 hub', () => {
     expect(w.find('[data-entry="review"] [data-badge]').text()).toBe('3 个到期')
   })
 
-  it('练拼写 lists the spelling modes; reading keywords are not among them', async () => {
-    const w = await mountAt(SpellPage, '/study/spell')
-    expect(w.findAll('[data-spell]').map((a: any) => a.attributes('href'))).toEqual([
-      '/vocabulary?practice=1',
-      '/vocabulary/typing',
-      '/listening/179practice',
-      '/listening/corpus-spelling',
-    ])
-    expect(w.findAll('a').some((a: any) => a.attributes('href') === '/study')).toBe(true)
-  })
-
   it('nothing due: suggests learning new words', async () => {
     const w = await mountAt(StudyPage, '/study')
     expect(w.find('[data-summary]').text()).toContain('今天没有到期要复习的词')
@@ -116,7 +104,6 @@ describe('背单词 hub', () => {
       ['/study/spell', true],
       ['/study/review', true],
       ['/game', true],
-      ['/listening/179practice', true],
       ['/reading', false],
     ] as const) {
       const w = await mountAt(TheHeader, path)

@@ -82,9 +82,6 @@ const STUDY_PATHS = new Set([
   '/study/spell',
   '/game',
   '/study/review',
-  '/vocabulary/typing',
-  '/listening/corpus-spelling',
-  '/listening/179practice',
 ])
 function isActive(link: string) {
   return link === '/study'
