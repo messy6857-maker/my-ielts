@@ -44,14 +44,24 @@ const stores = Object.fromEntries(SPELL_DECKS.map(d => [
 
 // —— 选择 ——
 const chapters = listVocabularyChapters()
-const SIZES = [10, 20, 50, 0] as const
+// 一轮多少个：10 / 20 / 50 / 自定义数量 / 全部（0 表示全部）
+const SIZES = [10, 20, 50, 'custom', 0] as const
+type Size = (typeof SIZES)[number]
+function clampCount(value: unknown) {
+  const n = Math.round(Number(value))
+  return Number.isFinite(n) && n >= 1
+    ? Math.min(500, n)
+    : 30
+}
 const SETTINGS_KEY = 'study_spell_v1'
 interface Settings {
   source: SpellSource
   chapter: string
   corpus: CorpusChapterId[]
   mode: SpellMode
-  size: number
+  size: Size
+  /** 自定义数量 */
+  custom: number
 }
 const sourceIds = SPELL_SOURCES.map(s => s.id)
 const modeIds = SPELL_MODES.map(m => m.id)
@@ -77,6 +87,7 @@ function readSettings(): Settings {
     size: SIZES.includes(saved?.size as any)
       ? saved!.size!
       : 20,
+    custom: clampCount(saved?.custom),
   }
 }
 const settings = ref<Settings>(readSettings())
@@ -138,8 +149,11 @@ watch(() => settings.value.source, (source) => {
   if (source !== 'listening179' && settings.value.mode === 'synonym')
     settings.value.mode = 'meaning'
 }, { immediate: true })
-const roundCount = computed(() => settings.value.size > 0
-  ? Math.min(settings.value.size, pool.value.length)
+const roundLimit = computed(() => settings.value.size === 'custom'
+  ? settings.value.custom
+  : settings.value.size)
+const roundCount = computed(() => roundLimit.value > 0
+  ? Math.min(roundLimit.value, pool.value.length)
   : pool.value.length)
 
 // 词汇表里已经填过的拼写答案（和词表练习模式是同一份）
@@ -241,7 +255,7 @@ function startRound() {
   const answers = byChapter
     ? spelledAnswers()
     : {}
-  begin(pickSpellRound(pool.value, settings.value.size, byChapter
+  begin(pickSpellRound(pool.value, roundLimit.value, byChapter
     ? {
         answered: c => !!answers[`${c.chapter}|${c.id}`],
       }
@@ -474,7 +488,7 @@ const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.lab
             <div class="mb-2 text-sm text-gray-700 font-bold dark:text-gray-200">
               一轮多少个
             </div>
-            <div class="mb-4 flex flex-wrap gap-2">
+            <div class="mb-4 flex flex-wrap items-center gap-2">
               <button
                 v-for="n in SIZES"
                 :key="n"
@@ -484,8 +498,18 @@ const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.lab
                 :class="settings.size === n ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200'"
                 @click="settings.size = n"
               >
-                {{ n ? `${n} 个` : '全部' }}
+                {{ n === 'custom' ? '自定义数量' : n ? `${n} 个` : '全部' }}
               </button>
+              <input
+                v-if="settings.size === 'custom'"
+                :value="settings.custom"
+                type="number"
+                min="1"
+                max="500"
+                aria-label="自定义数量"
+                class="block w-24 border border-gray-300 rounded-lg bg-white p-2 text-center text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                @change="settings.custom = clampCount(($event.target as HTMLInputElement).value)"
+              >
             </div>
 
             <p class="mb-4 text-sm text-gray-600 dark:text-gray-300" data-preview>

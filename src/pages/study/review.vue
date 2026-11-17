@@ -97,8 +97,8 @@ type CountMode = '20' | '50' | 'all' | 'custom'
 const COUNT_MODES: Array<{ id: CountMode, label: string }> = [
   { id: '20', label: '20 个' },
   { id: '50', label: '50 个' },
-  { id: 'all', label: '全部' },
   { id: 'custom', label: '自定义数量' },
+  { id: 'all', label: '全部' },
 ]
 const MODE_KEY = 'study_review_count'
 const CUSTOM_KEY = 'study_review_custom'
