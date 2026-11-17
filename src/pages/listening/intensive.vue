@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DiffToken } from '../../utils/dictationDiff'
+import type { WordList } from '../../utils/wordLists'
 import type { SentenceTiming } from './timings/loadTimings'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { resolveMediaUrl } from '../../composables/useAudio'
@@ -13,8 +14,9 @@ import {
   saveDictationPartProgress,
   summarizeDictationPart,
 } from '../../utils/dictationProgress'
+import { loadWordLists } from '../../utils/loadStudyCards'
 import { transcriptSentenceEntries } from '../../utils/text'
-import { addToWordList, readWordList } from '../../utils/wordList'
+import { addEntriesToList, entryId, setTargetList, targetListId } from '../../utils/wordLists'
 import { lookupVocabularyWord } from '../vocabulary/loadVocabulary'
 import { loadTestTimings, prefersOriginalAudio, shouldUseTtsFallback } from './timings/loadTimings'
 
@@ -397,10 +399,11 @@ const dictationPerfect = ref(false)
 const dictationAccuracy = ref(0)
 const dictationAddedMistake = ref(false)
 const dictationMistakeError = ref(false)
-// 核对后可以加入“我的词单”的词（没写对、词库里有的）
-interface ListWord { key: string, word: string, meaning: string }
+// 核对后可以加入“我的词表”的词（没写对、词库里有的）；加到哪个词表可以选，记住上次选的
+interface ListWord { key: string, word: string, meaning: string, pos: string }
 const dictationListWords = ref<ListWord[]>([])
-const wordListKeys = ref<string[]>(readWordList())
+const wordLists = shallowRef<WordList[]>([])
+const targetList = ref('')
 let listWordSeq = 0
 const partSummary = ref({ attempted: 0, perfect: 0, accuracy: 0 })
 // A-13: surfaced when a dictation progress save fails, so a lost write is
@@ -464,7 +467,7 @@ function refreshPartSummary() {
   partSummary.value = summarizeDictationPart(progress)
 }
 
-// 核对后，没写对的词里词库有的那些：可以加入“我的词单”，之后在练拼写或单词地牢里练
+// 核对后，没写对的词里词库有的那些：可以加入“我的词表”，之后在背单词或单词地牢里练
 async function findListWords(tokens: DiffToken[]) {
   const seq = ++listWordSeq
   dictationListWords.value = []
@@ -475,23 +478,60 @@ async function findListWords(tokens: DiffToken[]) {
       if ((tok.mark !== 'wrong' && tok.mark !== 'missing') || !tok.expected || !/^[a-z][a-z'-]+$/.test(tok.expected))
         continue
       const hit = await lookupVocabularyWord(tok.expected)
-      if (hit && hit.word)
-        found.set(`vocab:${hit.id}`, { key: `vocab:${hit.id}`, word: hit.word, meaning: hit.meaning })
+      if (hit && hit.word) {
+        found.set(`vocab:${hit.id}`, {
+          key: `vocab:${hit.id}`,
+          word: hit.word,
+          meaning: hit.meaning,
+          pos: hit.pos ?? '',
+        })
+      }
     }
   }
   catch {
     // 词库没加载出来：这次不显示，不影响听写
   }
+  let lists: WordList[] = []
+  try {
+    lists = await loadWordLists()
+  }
+  catch {
+    // 词表读不出来：照样显示，加的时候新建“我的词单”
+  }
   if (seq !== listWordSeq || owner !== currentUser.value)
     return
-  wordListKeys.value = readWordList()
+  wordLists.value = lists
+  targetList.value = targetListId(lists)
   dictationListWords.value = [
     ...found.values(),
   ]
 }
-function addListWord(word: ListWord) {
-  addToWordList([word.key])
-  wordListKeys.value = readWordList()
+const targetWords = computed(() => new Set(wordLists.value.find(l => l.id === targetList.value)?.words.map(w => entryId(w.word)) ?? []))
+function inTarget(word: ListWord) {
+  return targetWords.value.has(entryId(word.word))
+}
+function chooseTarget(id: string) {
+  targetList.value = id
+  setTargetList(id)
+}
+async function addListWord(word: ListWord) {
+  const owner = currentUser.value
+  const lists = await loadWordLists()
+  if (owner !== currentUser.value)
+    return
+  const id = lists.some(l => l.id === targetList.value)
+    ? targetList.value
+    : ''
+  const { listId } = addEntriesToList(id, [
+    {
+      word: word.word,
+      meaning: word.meaning,
+      pos: word.pos,
+      synonyms: [],
+    },
+  ])
+  wordLists.value = await loadWordLists()
+  targetList.value = listId
 }
 
 function resetDictationUi() {
@@ -1000,18 +1040,29 @@ const testLabel = computed(
           </p>
           <div v-if="dictationListWords.length" class="text-sm" data-list-words>
             <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">
-              没写对的词里，词库有这些。加入我的词单后，可以在背单词的练拼写或单词地牢里练：
+              没写对的词里，词库有这些。加入我的词表后，可以在背单词或单词地牢里练：
             </p>
+            <label v-if="wordLists.length > 1" class="mb-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+              加到
+              <select
+                :value="targetList"
+                aria-label="加到哪个词表"
+                class="border border-gray-300 rounded bg-white px-2 py-1 text-xs dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                @change="chooseTarget(($event.target as HTMLSelectElement).value)"
+              >
+                <option v-for="l in wordLists" :key="l.id" :value="l.id">{{ l.name }}</option>
+              </select>
+            </label>
             <div class="flex flex-wrap gap-2">
               <button
                 v-for="w in dictationListWords"
                 :key="w.key"
                 class="border border-blue-300 rounded-lg px-2 py-1 text-blue-700 dark:border-blue-800 disabled:border-gray-200 dark:text-blue-300 disabled:text-gray-400 dark:disabled:border-gray-700"
-                :disabled="wordListKeys.includes(w.key)"
+                :disabled="inTarget(w)"
                 :title="w.meaning"
                 @click="addListWord(w)"
               >
-                {{ wordListKeys.includes(w.key) ? `${w.word} 已在我的词单` : `＋ ${w.word} 加入我的词单` }}
+                {{ inTarget(w) ? `${w.word} 已在词表里` : `＋ ${w.word} 加入我的词表` }}
               </button>
             </div>
           </div>

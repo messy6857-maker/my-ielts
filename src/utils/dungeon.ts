@@ -2,12 +2,13 @@
 import type { WordSchedule } from '../composables/useSpacedRepetition'
 import type { MistakeItem } from '../composables/useStudyData'
 
-/** 词来自哪个词库：词汇表、阅读考点词、听力 179 */
-export type DungeonDeck = 'vocabulary' | 'reading538' | 'listening179'
+/** 词来自哪个词库：词汇表、阅读考点词、听力 179、我的词表 */
+export type DungeonDeck = 'vocabulary' | 'reading538' | 'listening179' | 'custom'
 export const DECK_LABEL: Record<DungeonDeck, string> = {
   vocabulary: '词汇表',
   reading538: '阅读考点词',
   listening179: '听力 179',
+  custom: '我的词表',
 }
 /**
  * 各词库要不要会拼写：词汇表要会读会拼；听力词考试要填空，也要会拼；
@@ -17,10 +18,11 @@ export const DECK_NEEDS_SPELLING: Record<DungeonDeck, boolean> = {
   vocabulary: true,
   reading538: false,
   listening179: true,
+  custom: true,
 }
 export interface DungeonWord {
   id: number | string
-  /** 全局唯一，也是复习记录的键：vocab:<id> / reading538:<id> / listening179:<id> */
+  /** 全局唯一，也是复习记录的键：vocab:<id> / reading538:<id> / listening179:<id> / custom:<小写单词> */
   key: string
   deck: DungeonDeck
   /** 展示和判题用的主拼写 */
@@ -39,8 +41,9 @@ export interface DungeonSelection {
   today: boolean
   mistakes: boolean
   due: boolean
-  /** 自己勾选保存的词单 */
+  /** 我的词表里的一个词表（list 是词表 id） */
   custom: boolean
+  list?: string
   chapters: string[]
   /** 整个选中的词库（阅读考点词、听力 179） */
   decks: DungeonDeck[]
@@ -49,7 +52,7 @@ export interface DungeonContext {
   /** 各词库的复习记录合在一起，键就是 DungeonWord.key */
   schedules: Record<string, WordSchedule | undefined>
   mistakes: MistakeItem[]
-  /** “我的词单”里的词（DungeonWord.key） */
+  /** 选中的那个词表里的词（DungeonWord.key） */
   customKeys?: string[]
   now: number
 }
@@ -312,6 +315,32 @@ export function flattenListening(list: Array<{ index: number, word: string, type
   return out
 }
 
+/** 我的词表里的词（没有释义的出不了题，跳过）；id 和 key 跟学新词里的一样，进度共用 */
+export function flattenWordLists(entries: Array<{ word: string, meaning: string, pos: string, synonyms: string[] }>): DungeonWord[] {
+  const out: DungeonWord[] = []
+  const seen = new Set<string>()
+  for (const e of entries) {
+    const word = e.word.trim().replace(/\s+/g, ' ')
+    const id = word.toLowerCase()
+    const meaning = e.meaning.trim()
+    if (!word || !meaning || seen.has(id))
+      continue
+    seen.add(id)
+    out.push({
+      id,
+      key: `custom:${id}`,
+      deck: 'custom',
+      word,
+      variants: [word],
+      pos: e.pos,
+      meaning,
+      chapter: '',
+      synonyms: cleanSynonyms(e.synonyms, word),
+    })
+  }
+  return out
+}
+
 /** 本地今天 0 点 */
 export function startOfDay(now: number): number {
   const d = new Date(now)
@@ -332,7 +361,7 @@ function mistakeIndex(ctx: DungeonContext, pick: (m: MistakeItem) => number, mer
     : value)
   for (const m of ctx.mistakes) {
     const flash = /^flashcard:(.+)$/.exec(m.key)
-    if (/^(?:reading538|listening179):/.test(m.key))
+    if (/^(?:reading538|listening179|custom):/.test(m.key))
       put(byKey, m.key, pick(m))
     else if (!WORD_MISTAKE_MODULES.has(m.module))
       continue
@@ -381,7 +410,7 @@ export interface SourceWords {
   mistakes: DungeonWord[]
   /** 今天该复习的词 */
   due: DungeonWord[]
-  /** “我的词单” */
+  /** 选中的那个词表 */
   custom: DungeonWord[]
 }
 /** 各词源现在各有哪些词 */

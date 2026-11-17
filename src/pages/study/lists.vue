@@ -5,7 +5,6 @@ import { confirmDialog } from '../../composables/useDialog'
 import { loadSiteCards, loadWordLists } from '../../utils/loadStudyCards'
 import { DECK_META } from '../../utils/studyDeck'
 import {
-  DUNGEON_LIST_ID,
   entryFromCard,
   entryId,
   fillMeanings,
@@ -23,13 +22,8 @@ defineOptions({ name: 'StudyListsPage' })
 
 const { currentUser } = useAuth()
 const lists = ref<WordList[]>(readLists())
-/** 单词地牢的“我的词单”（只读，有词才出现） */
-const dungeonList = shallowRef<WordList | null>(null)
 const selectedId = ref('')
-const selected = computed(() => selectedId.value === DUNGEON_LIST_ID
-  ? dungeonList.value
-  : lists.value.find(l => l.id === selectedId.value) ?? null)
-const readOnly = computed(() => selectedId.value === DUNGEON_LIST_ID)
+const selected = computed(() => lists.value.find(l => l.id === selectedId.value) ?? null)
 const missing = computed(() => selected.value?.words.filter(w => !w.meaning).length ?? 0)
 
 const countText = computed(() => [
@@ -38,7 +32,6 @@ const countText = computed(() => [
     ? `，${missing.value} 个还没有释义`
     : '',
   '。',
-  readOnly.value ? '这个词表在单词地牢的选词页里编辑；听写核对后也可以往里加词。' : '',
 ].join(''))
 function persist() {
   saveLists(lists.value)
@@ -70,16 +63,17 @@ function ensureSite() {
     })
   return sitePromise
 }
-async function loadDungeonList() {
+// 以前单词地牢、听写里的“我的词单”第一次打开时搬成一个普通词表
+async function loadLists() {
   const owner = currentUser.value
   try {
-    const all = await loadWordLists()
-    if (owner === currentUser.value)
-      dungeonList.value = all.find(l => l.id === DUNGEON_LIST_ID) ?? null
+    await loadWordLists()
   }
   catch {
-    // 词库没加载出来：这次不显示“我的词单”，不影响自己的词表
+    // 网站词库没加载出来：旧词单这次先不搬，不影响自己的词表
   }
+  if (owner === currentUser.value)
+    lists.value = readLists()
 }
 
 // 打开一个词表时要清空的输入：粘贴框、提示、搜索词、显示多少个词
@@ -112,7 +106,7 @@ function rename(value: string) {
 }
 async function removeList() {
   const list = selected.value
-  if (!list || readOnly.value)
+  if (!list)
     return
   if (!(await confirmDialog(`确定删除词表“${list.name}”吗？里面的 ${list.words.length} 个词会从词表里移走，已经学过的进度还留着。`, { danger: true, confirmText: '删除' })))
     return
@@ -209,7 +203,7 @@ const results = computed(() => {
 })
 function addCard(card: StudyCard) {
   const list = selected.value
-  if (!list || readOnly.value)
+  if (!list)
     return
   update(mergeEntries(list.words, [
     entryFromCard(card),
@@ -223,7 +217,7 @@ watch(addMode, (mode) => {
 // —— 词表里的词 ——
 function setMeaning(index: number, value: string) {
   const list = selected.value
-  if (!list || readOnly.value)
+  if (!list)
     return
   update(list.words.map((w, i) => i === index
     ? {
@@ -234,18 +228,17 @@ function setMeaning(index: number, value: string) {
 }
 function removeWord(index: number) {
   const list = selected.value
-  if (!list || readOnly.value)
+  if (!list)
     return
   update(list.words.filter((_, i) => i !== index))
 }
 
 watch(currentUser, () => {
   lists.value = readLists()
-  dungeonList.value = null
   selectedId.value = ''
-  loadDungeonList()
+  loadLists()
 })
-onMounted(loadDungeonList)
+onMounted(loadLists)
 </script>
 
 <template>
@@ -260,7 +253,7 @@ onMounted(loadDungeonList)
               我的词表
             </h3>
             <p class="text-sm text-gray-600 dark:text-gray-300">
-              自己建词表，在学新词、复习、练拼写里当一个词库用。
+              自己建词表，在学新词、复习、练拼写和单词地牢里当一个词库用。
             </p>
           </div>
         </div>
@@ -276,12 +269,12 @@ onMounted(loadDungeonList)
             新建词表
           </button>
         </form>
-        <p v-if="!lists.length && !dungeonList" class="text-sm text-gray-600 dark:text-gray-300" data-empty>
+        <p v-if="!lists.length" class="text-sm text-gray-600 dark:text-gray-300" data-empty>
           还没有词表。先起个名字新建一个，再往里加词。
         </p>
         <div class="flex flex-col gap-3">
           <button
-            v-for="l in [...lists, ...(dungeonList ? [dungeonList] : [])]"
+            v-for="l in lists"
             :key="l.id"
             :data-list="l.id"
             class="block border border-gray-200 rounded-lg bg-white p-4 text-left shadow-sm dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -307,16 +300,12 @@ onMounted(loadDungeonList)
             ← 返回词表列表
           </button>
           <input
-            v-if="!readOnly"
             :value="selected.name"
             aria-label="词表名字"
             maxlength="40"
             class="block min-w-0 flex-1 border border-gray-300 rounded-lg bg-white p-2 text-lg font-bold dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             @change="rename(($event.target as HTMLInputElement).value)"
           >
-          <h3 v-else class="text-lg font-bold">
-            {{ selected.name }}
-          </h3>
         </div>
         <p class="mb-3 text-sm text-gray-600 dark:text-gray-300" data-count>
           {{ countText }}
@@ -338,12 +327,12 @@ onMounted(loadDungeonList)
           >
             用它练拼写
           </RouterLink>
-          <button v-if="!readOnly" class="ml-auto border border-red-300 rounded-lg px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:text-red-400" @click="removeList">
+          <button class="ml-auto border border-red-300 rounded-lg px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:text-red-400" @click="removeList">
             删除词表
           </button>
         </div>
 
-        <div v-if="!readOnly" class="mb-4 border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+        <div class="mb-4 border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800">
           <div class="mb-3 flex flex-wrap gap-2">
             <button
               v-for="m in ([['paste', '粘贴单词'], ['file', '上传文件'], ['site', '从网站词库里选']] as const)"
@@ -420,20 +409,17 @@ onMounted(loadDungeonList)
           >
             <span class="font-bold">{{ w.word }}</span>
             <span v-if="w.pos" class="text-sm text-gray-400 italic" style="font-family: times">{{ w.pos }}</span>
-            <span v-if="readOnly" class="min-w-0 flex-1 text-sm text-gray-600 dark:text-gray-300">{{ w.meaning }}</span>
-            <template v-else>
-              <input
-                :value="w.meaning"
-                :aria-label="`${w.word} 的释义`"
-                maxlength="200"
-                placeholder="还没有释义，在这里补上"
-                class="block min-w-0 flex-1 border border-gray-200 rounded bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                @change="setMeaning(i, ($event.target as HTMLInputElement).value)"
-              >
-              <button class="shrink-0 text-sm text-red-600 dark:text-red-400" :title="`从词表里移走 ${w.word}`" @click="removeWord(i)">
-                移走
-              </button>
-            </template>
+            <input
+              :value="w.meaning"
+              :aria-label="`${w.word} 的释义`"
+              maxlength="200"
+              placeholder="还没有释义，在这里补上"
+              class="block min-w-0 flex-1 border border-gray-200 rounded bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              @change="setMeaning(i, ($event.target as HTMLInputElement).value)"
+            >
+            <button class="shrink-0 text-sm text-red-600 dark:text-red-400" :title="`从词表里移走 ${w.word}`" @click="removeWord(i)">
+              移走
+            </button>
           </li>
         </ul>
         <button v-if="selected.words.length > shown" class="mt-3 text-sm underline" @click="shown += 200">
