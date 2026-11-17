@@ -18,7 +18,6 @@ declare module 'vue' {
     ListeningTabs: typeof import('./src/components/ListeningTabs.vue')['default']
     PageBookmark: typeof import('./src/components/PageBookmark.vue')['default']
     ReadingGuide: typeof import('./src/components/guide/ReadingGuide.vue')['default']
-    ReadingTabs: typeof import('./src/components/ReadingTabs.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SpeakingGuide: typeof import('./src/components/guide/SpeakingGuide.vue')['default']

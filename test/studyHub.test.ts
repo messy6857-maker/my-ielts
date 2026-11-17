@@ -108,7 +108,12 @@ describe('背单词 hub', () => {
   it('the menu has four entries; each stays lit on every page under it', async () => {
     const lit = async (path: string) => {
       const w = await mountAt(TheHeader, path)
-      const links = w.findAll('a').filter((a: any) => ['/', '/study', '/reading/daily', '/ielts'].includes(a.attributes('href')) && a.classes().includes('text-primary-700'))
+      const links = w.findAll('a').filter((a: any) => [
+        '/',
+        '/study',
+        '/reading/daily',
+        '/ielts',
+      ].includes(a.attributes('href')) && a.classes().includes('text-primary-700'))
       const labels = [
         ...new Set(links.map((a: any) => a.attributes('href'))),
       ]
