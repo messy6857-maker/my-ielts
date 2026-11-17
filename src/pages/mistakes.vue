@@ -302,6 +302,9 @@ function detailLines(detail: string) {
     <div
       class="border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
     >
+      <div class="mb-4">
+        <StudyBack to="/" label="首页" />
+      </div>
       <div class="items-center justify-between gap-3 lg:flex">
         <div class="mb-4 lg:mb-0">
           <h3 class="mb-2 text-xl text-gray-900 font-bold dark:text-white">

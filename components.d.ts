@@ -12,17 +12,22 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppDialog: typeof import('./src/components/AppDialog.vue')['default']
+    ExamTabs: typeof import('./src/components/ExamTabs.vue')['default']
     ImageViewer: typeof import('./src/components/ImageViewer.vue')['default']
+    ListeningGuide: typeof import('./src/components/guide/ListeningGuide.vue')['default']
     ListeningTabs: typeof import('./src/components/ListeningTabs.vue')['default']
     PageBookmark: typeof import('./src/components/PageBookmark.vue')['default']
+    ReadingGuide: typeof import('./src/components/guide/ReadingGuide.vue')['default']
     ReadingTabs: typeof import('./src/components/ReadingTabs.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SpeakingGuide: typeof import('./src/components/guide/SpeakingGuide.vue')['default']
     StudyBack: typeof import('./src/components/StudyBack.vue')['default']
     StudyCardSession: typeof import('./src/components/StudyCardSession.vue')['default']
     TextHighlights: typeof import('./src/components/TextHighlights.vue')['default']
     TheFooter: typeof import('./src/components/TheFooter.vue')['default']
     TheHeader: typeof import('./src/components/TheHeader.vue')['default']
     VocabCardHints: typeof import('./src/components/VocabCardHints.vue')['default']
+    WritingGuide: typeof import('./src/components/guide/WritingGuide.vue')['default']
   }
 }

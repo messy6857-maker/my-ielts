@@ -62,14 +62,6 @@ const entries = computed(() => [
     to: '/study/spell',
   },
   {
-    id: 'lists',
-    icon: '🗂️',
-    title: '我的词表',
-    desc: '自己建词表：粘贴或上传单词，也可以从网站词库里选。建好后在学新词、复习、练拼写里用。',
-    badge: '',
-    to: '/study/lists',
-  },
-  {
     id: 'game',
     icon: '🐉',
     title: '单词地牢',
@@ -112,6 +104,16 @@ const entries = computed(() => [
           <div class="mt-1 text-sm text-gray-600 dark:text-gray-300">
             {{ entry.desc }}
           </div>
+        </RouterLink>
+      </div>
+
+      <!-- 不是一件要做的事、但会用到的：查词汇表、管理自己的词表 -->
+      <div class="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm" data-more>
+        <RouterLink to="/vocabulary" class="text-blue-700 underline dark:text-blue-300">
+          📚 查词汇表
+        </RouterLink>
+        <RouterLink to="/study/lists" class="text-blue-700 underline dark:text-blue-300">
+          🗂️ 我的词表
         </RouterLink>
       </div>
     </div>

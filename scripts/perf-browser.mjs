@@ -181,15 +181,15 @@ if (process.env.TARGETED) {
       await setup.evaluate(seed)
     await setup.close()
     const tag = seeded ? '长期数据' : '空存储'
-    for (const [label, name] of [['阅读', '阅读'], ['错词本', '错词本'], ['首页', '首页'], ['词汇', '词汇'], ['听力', '听力']])
+    for (const [label, name] of [['雅思考试', '雅思考试'], ['首页', '首页'], ['背单词', '背单词']])
       await renderCost(ctx, '/grammar', label, `${tag}：语法页点“${name}”`)
     if (process.env.TARGETED === 'cost') {
       await ctx.close()
       continue
     }
-    await profileClick(ctx, '/grammar', '阅读', `${tag}：语法页点“阅读”`)
+    await profileClick(ctx, '/grammar', '雅思考试', `${tag}：语法页点“雅思考试”`)
     if (seeded) {
-      await profileClick(ctx, '/grammar', '错词本', `${tag}：语法页点“错词本”`)
+      await profileClick(ctx, '/grammar', '背单词', `${tag}：语法页点“背单词”`)
       await profileClick(ctx, '/grammar', '首页', `${tag}：语法页点“首页”`)
     }
     await ctx.close()

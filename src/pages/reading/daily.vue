@@ -652,13 +652,6 @@ function paragraphs(passage: string): string[] {
       <h2 class="text-2xl text-gray-900 font-bold dark:text-white">
         📅 每日阅读
       </h2>
-      <button
-        type="button"
-        class="border border-gray-300 rounded-lg px-4 py-1.5 text-sm text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-        @click="$router.push('/reading')"
-      >
-        ← 返回
-      </button>
     </div>
 
     <!-- 无数据 -->

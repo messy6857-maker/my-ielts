@@ -4,12 +4,11 @@ import { useRoute, useRouter } from 'vue-router'
 // 听力页签栏，从 listening.vue 抽出（与 ReadingTabs.vue 同结构）：
 // 样式与写作/阅读页签一致，只有当前页高亮，其余为白底。
 // 判定逻辑与 listening.vue 原有逻辑完全一致。
+// 听力的基本概念和做题技巧在“雅思考试 → 做题方法”，限时模考在“雅思考试 → 限时模考”
 const TABS = [
-  { key: 'basic', label: 'IELTS 听力基本概念', to: '/listening' },
   { key: 'keyword', label: '听力 179 考点词', to: '/listening/keyword' },
   { key: 'corpus', label: '雅思听力王语料库', to: '/listening/corpus' },
   { key: 'intensive', label: '🎧 精听练习', to: '/listening/intensive' },
-  { key: 'mock', label: '⏱ 限时模考', to: '/mock/listening-test' },
 ]
 
 const route = useRoute()
@@ -18,15 +17,11 @@ const router = useRouter()
 // 自测卡片/179 练习归属考点词，语料库自测归属语料库
 const activeKey = computed(() => {
   const p = route.path
-  if (p === '/listening/keyword')
-    return 'keyword'
   if (p === '/listening/corpus')
     return 'corpus'
   if (p === '/listening/intensive')
     return 'intensive'
-  if (p.startsWith('/mock/listening-test'))
-    return 'mock'
-  return 'basic'
+  return 'keyword'
 })
 
 function go(tab: (typeof TABS)[number]) {

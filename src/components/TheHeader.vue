@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { accountNotice } from '../composables/useAuth'
 
+// 顶部只留三个入口：首页（含错词本、学习统计）、背单词（含词汇表）、雅思考试（听说读写、语法、做题方法、模考、记录）
 const menus = reactive([
   {
     label: '首页',
@@ -8,49 +9,14 @@ const menus = reactive([
     link: '/',
   },
   {
-    label: '词汇',
-    icon: 'i-carbon-chart-histogram',
-    link: '/vocabulary',
-  },
-  {
-    label: '语法',
-    icon: 'i-carbon-load-balancer-vpc',
-    link: '/grammar',
-  },
-  {
-    label: '听力',
-    icon: 'i-carbon-headphones',
-    link: '/listening',
-  },
-  {
-    label: '口语',
-    icon: 'i-carbon-microphone',
-    link: '/speaking',
-  },
-  {
-    label: '阅读',
-    icon: 'i-carbon-white-paper',
-    link: '/reading',
-  },
-  {
-    label: '写作',
-    icon: 'i-carbon-edit',
-    link: '/writing',
-  },
-  {
-    label: '错词本',
-    icon: 'i-carbon-notebook',
-    link: '/mistakes',
-  },
-  {
     label: '背单词',
     icon: 'i-carbon-book',
     link: '/study',
   },
   {
-    label: '学习统计',
-    icon: 'i-carbon-dashboard',
-    link: '/stats',
+    label: '雅思考试',
+    icon: 'i-carbon-education',
+    link: '/ielts',
   },
 ])
 const showMobileMenu = ref(false)
@@ -75,19 +41,26 @@ watch(currentUser, (u, prev) => {
 })
 const router = useRouter()
 const route = useRoute()
-// 各词库的自测、练习和单词地牢都从“背单词”进入，在这些页面里也高亮“背单词”
-const STUDY_PATHS = new Set([
-  '/study',
-  '/study/learn',
-  '/study/spell',
-  '/study/lists',
-  '/game',
-  '/study/review',
-])
+// 每个入口下面的页面里也高亮这个入口
+const SECTION_PREFIXES: Record<string, string[]> = {
+  '/': ['/mistakes', '/stats'],
+  '/study': ['/study', '/game', '/vocabulary'],
+  '/ielts': [
+    '/ielts',
+    '/listening',
+    '/reading',
+    '/writing',
+    '/speaking',
+    '/grammar',
+    '/mock',
+    '/grading',
+  ],
+}
 function isActive(link: string) {
-  return link === '/study'
-    ? STUDY_PATHS.has(route.path)
-    : route.path === link
+  const path = route.path
+  if (link === '/' && path === '/')
+    return true
+  return (SECTION_PREFIXES[link] ?? []).some(prefix => path === prefix || path.startsWith(`${prefix}/`))
 }
 
 const syncDotClass = computed(() => {
@@ -169,8 +142,9 @@ async function onManualSync() {
                 >
                   <i class="mr-1 inline-block" :class="m.icon" /> {{ m.label }}
                   <span
-                    v-if="m.link === '/mistakes' && mistakeCount > 0"
+                    v-if="m.link === '/' && mistakeCount > 0"
                     class="ml-1 rounded-full bg-red-600 px-1.5 py-0.5 text-xs text-white font-bold"
+                    :title="`错词本 ${mistakeCount} 个`"
                   >{{ mistakeCount }}</span>
                 </router-link>
               </li>
@@ -300,8 +274,9 @@ async function onManualSync() {
           >
             <i class="mr-1 inline-block" :class="m.icon" /> {{ m.label }}
             <span
-              v-if="m.link === '/mistakes' && mistakeCount > 0"
+              v-if="m.link === '/' && mistakeCount > 0"
               class="ml-1 rounded-full bg-red-600 px-1.5 py-0.5 text-xs text-white font-bold"
+              :title="`错词本 ${mistakeCount} 个`"
             >{{ mistakeCount }}</span>
           </router-link>
         </li>

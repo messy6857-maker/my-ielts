@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { AttemptCount, AttemptRecord } from '../composables/useStats'
 import { onSyncApplied } from '../composables/syncClient'
-import { useGoBack } from '../composables/useGoBack'
 import { getMockHistory, isUnanswered } from '../composables/useMockHistory'
 import {
   useCheckin,
@@ -18,7 +17,6 @@ import {
 } from '../composables/useStats'
 import { formatDuration, useStudyTimer } from '../composables/useStudyTimer'
 
-const { goBack } = useGoBack('/')
 const { modules } = useProgress()
 const { mistakes, totalCount: mistakeTotal } = useMistakes()
 const { dates: checkinDates, streak } = useCheckin()
@@ -179,12 +177,9 @@ const last14Checkin = computed(() => {
 <template>
   <div class="px-4 pt-6 2xl:px-0">
     <div class="mx-auto max-w-screen-xl">
-      <button
-        class="mb-4 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-        @click="goBack"
-      >
-        ← 返回
-      </button>
+      <div class="mb-4">
+        <StudyBack to="/" label="首页" />
+      </div>
       <h1 class="mb-2 text-2xl text-gray-900 font-bold dark:text-white">
         📊 学习数据统计
       </h1>

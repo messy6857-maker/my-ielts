@@ -399,6 +399,21 @@ async function onDetect() {
 
     <section
       class="mb-6 border border-gray-200 rounded-xl p-5 dark:border-gray-700"
+      data-settings-lists
+    >
+      <h3 class="mb-2 font-bold">
+        我的词表
+      </h3>
+      <p class="mb-3 text-sm text-gray-500">
+        自己建的词表：粘贴、上传单词，或从网站词库里选。建好后在背单词的学新词、复习、练拼写和单词地牢里用。
+      </p>
+      <RouterLink to="/study/lists" class="inline-block border rounded px-3 py-2 text-sm">
+        管理我的词表 →
+      </RouterLink>
+    </section>
+
+    <section
+      class="mb-6 border border-gray-200 rounded-xl p-5 dark:border-gray-700"
     >
       <h3 class="mb-2 font-bold">
         学习记录与朗读
