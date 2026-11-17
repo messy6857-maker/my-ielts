@@ -310,15 +310,43 @@ describe('学新词: how far to learn each word', () => {
 
   it('关联词 on a vocabulary card lists synonyms and extension words with their meanings up front', async () => {
     const Hints = (await import('../src/components/VocabCardHints.vue')).default
-    const card = { key: 'vocabulary:1', deck: 'vocabulary', id: 1, word: 'big', spellings: ['big'], pos: 'adj.', meaning: '大的', chapter: 'c', synonyms: [], remark: '', note: '', example: 'A big house.', extra: 'huge adj. 巨大的', hintWords: [] }
-    const info = { word: 'big', examples: [], synonyms: ['large'] }
-    const focus = mount(Hints, { props: { card, phase: 'post', wordInfo: info, related: true } as any })
+    const card = {
+      key: 'vocabulary:1',
+      deck: 'vocabulary',
+      id: 1,
+      word: 'big',
+      spellings: ['big'],
+      pos: 'adj.',
+      meaning: '大的',
+      chapter: 'c',
+      synonyms: [],
+      remark: '',
+      note: '',
+      example: 'A big house.',
+      extra: 'huge adj. 巨大的',
+      hintWords: [],
+    }
+    const info = {
+      word: 'big',
+      examples: [],
+      synonyms: ['large'],
+    }
+    const focus = mount(Hints, {
+      props: {
+        card,
+        phase: 'post',
+        wordInfo: info,
+        related: true,
+      } as any,
+    })
     wrappers.push(focus)
     expect(focus.find('[data-related]').text()).toContain('large')
     expect(focus.find('[data-related]').text()).toContain('huge')
     expect(focus.find('[data-related]').text()).toContain('巨大的')
     expect(focus.text().match(/huge/g)).toHaveLength(1)
-    const plain = mount(Hints, { props: { card, phase: 'post', wordInfo: info } as any })
+    const plain = mount(Hints, {
+      props: { card, phase: 'post', wordInfo: info } as any,
+    })
     wrappers.push(plain)
     expect(plain.find('[data-related]').exists()).toBe(false)
     expect(plain.text()).toContain('拓展词汇')
