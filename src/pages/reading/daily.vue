@@ -207,33 +207,6 @@ function addNote(n: WordNote) {
     synonyms: [],
   })
 }
-/** 查词卡片里的词：词库里有就用词库的原形（travelled → travel），没有就用点的这个词 */
-async function addPopupWord() {
-  const popup = translatePopup.value
-  if (!popup || popup.kind !== 'word')
-    return
-  let word = popup.source.trim()
-  let meaning = popup.meaning
-  let pos = popup.pos
-  if (!popup.fromNote) {
-    try {
-      const hit = await lookupVocabularyWord(word)
-      if (hit?.word) {
-        word = hit.word
-        meaning = meaning || hit.meaning
-        pos = pos || hit.pos
-      }
-    }
-    catch {
-      // 词库没加载出来：照样加，用点的这个词
-    }
-  }
-  // 句首大写的普通词存成小写（全大写的缩写保持原样）
-  if (/^[A-Z][a-z'-]+$/.test(word) && !popup.fromNote)
-    word = word.toLowerCase()
-  await wordList.add({ word, meaning, pos, synonyms: [] })
-  popup.addedAs = word
-}
 const expandedNotes = ref(new Set<string>())
 function toggleNote(key: string) {
   if (expandedNotes.value.has(key))
@@ -351,6 +324,33 @@ interface TranslatePopupState {
   anchor: { left: number, top: number, bottom: number, right: number }
 }
 const translatePopup = ref<TranslatePopupState | null>(null)
+/** 查词卡片里的词：词库里有就用词库的原形（travelled → travel），没有就用点的这个词 */
+async function addPopupWord() {
+  const popup = translatePopup.value
+  if (!popup || popup.kind !== 'word')
+    return
+  let word = popup.source.trim()
+  let meaning = popup.meaning
+  let pos = popup.pos
+  if (!popup.fromNote) {
+    try {
+      const hit = await lookupVocabularyWord(word)
+      if (hit?.word) {
+        word = hit.word
+        meaning = meaning || hit.meaning
+        pos = pos || hit.pos
+      }
+    }
+    catch {
+      // 词库没加载出来：照样加，用点的这个词
+    }
+  }
+  // 句首大写的普通词存成小写（全大写的缩写保持原样）
+  if (/^[A-Z][a-z'-]+$/.test(word) && !popup.fromNote)
+    word = word.toLowerCase()
+  await wordList.add({ word, meaning, pos, synonyms: [] })
+  popup.addedAs = word
+}
 const translatePopupEl = ref<HTMLElement | null>(null)
 const popupStyle = ref({ left: '0px', top: '0px' })
 let translateSeq = 0

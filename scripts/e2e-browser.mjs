@@ -359,6 +359,10 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   assert.ok((await page.locator('a[href="#/reading/daily"]').first().getAttribute('class')).split(/\s+/).includes('text-primary-700'))
   // 没亮的入口是灰字（hover 时才变色）
   assert.ok((await page.locator('a[href="#/ielts"]').first().getAttribute('class')).split(/\s+/).includes('text-gray-700'))
+  // 每日阅读里的生词一键加进我的词表
+  await page.locator('[data-add-note]').first().click()
+  await page.locator('[data-add-note]').first().filter({ hasText: '✓ 已在词表' }).waitFor()
+  assert.ok(await page.evaluate(() => Object.keys(localStorage).some(k => k.includes('study_wordlists_v1'))))
   await page.goto(`${BASE}#/`)
   await page.locator('[data-home-entry="/ielts"]').click()
   await page.locator('[data-entry="guide"]').click()
