@@ -407,7 +407,7 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.getByText('4 个词。').waitFor()
   // 刷新后还在
   await page.reload()
-  await page.locator('[data-list]').first().click()
+  await page.locator('[data-list]').filter({ hasText: '测试词表' }).click()
   await page.getByText('4 个词。').waitFor()
   assert.equal(await page.locator('input[aria-label="zzqqxx 的释义"]').inputValue(), '自己补的释义')
   // 用它学新词
@@ -425,7 +425,7 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.locator('[data-review-deck="custom"]:checked').waitFor({ timeout: 30000 })
   // 用它练拼写
   await page.goto(`${BASE}#/study/lists`)
-  await page.locator('[data-list]').first().click()
+  await page.locator('[data-list]').filter({ hasText: '测试词表' }).click()
   await page.locator('[data-go-spell]').click()
   await page.locator('[data-source="custom"][aria-pressed="true"]').waitFor({ timeout: 30000 })
   assert.ok((await page.locator('[data-preview]').innerText()).includes('一共 4 个词'))
