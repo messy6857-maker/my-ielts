@@ -426,7 +426,20 @@ it('dictation: words written wrong that the vocabulary has can be added to 我�
   const P = (await import('../src/pages/listening/intensive.vue')).default
   const { lookupVocabularyWord } = await import('../src/pages/vocabulary/loadVocabulary')
   const { readLists, saveLists } = await import('../src/utils/wordLists')
-  saveLists([{ id: 'a', name: '剑 18 生词', updatedAt: 1, words: [] }, { id: 'b', name: '写作词', updatedAt: 1, words: [] }])
+  saveLists([
+    {
+      id: 'a',
+      name: '剑 18 生词',
+      updatedAt: 1,
+      words: [],
+    },
+    {
+      id: 'b',
+      name: '写作词',
+      updatedAt: 1,
+      words: [],
+    },
+  ])
   const { tokenizeDictation } = await import('../src/utils/dictationDiff')
   const { s, w } = await page(P)
   s.mode = 'dictation'
@@ -459,7 +472,16 @@ it('dictation: words written wrong that the vocabulary has can be added to 我�
   expect(button.text()).toContain('加入我的词表')
   await button.trigger('click')
   await flushPromises()
-  expect(readLists().map(l => [l.id, l.words.map(x => x.word)])).toEqual([['a', []], ['b', [s.dictationListWords[0].word]]])
+  expect(readLists().map(l => [
+    l.id,
+    l.words.map(x => x.word),
+  ])).toEqual([
+    ['a', []],
+    [
+      'b',
+      [s.dictationListWords[0].word],
+    ],
+  ])
   expect(w.find('[data-list-words] button').attributes('disabled')).toBeDefined()
   expect(w.find('[data-list-words] button').text()).toContain('已在词表里')
   // 换一句：上一句的词不再显示

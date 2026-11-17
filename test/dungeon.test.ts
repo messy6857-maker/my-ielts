@@ -6,7 +6,6 @@ import { useAuth } from '../src/composables/useAuth'
 import { useCheckin, useWordSchedule } from '../src/composables/useSpacedRepetition'
 import { nsKey, useMistakes } from '../src/composables/useStudyData'
 import GamePage from '../src/pages/game.vue'
-import { readLists, saveLists } from '../src/utils/wordLists'
 import {
   buildFloor,
   buildPool,
@@ -26,6 +25,7 @@ import {
   seededRng,
   sourceWords,
 } from '../src/utils/dungeon'
+import { readLists, saveLists } from '../src/utils/wordLists'
 
 const DAY = 86400000
 const NOW = new Date(2026, 10, 15, 15, 0, 0).getTime()
@@ -1034,8 +1034,44 @@ describe('the game page', () => {
 
   it('my word lists: pick one, its words become monsters, results go to that list’s own records', async () => {
     saveLists([
-      { id: 'a', name: '剑 18 生词', updatedAt: 1, words: [{ word: 'Serendipity', meaning: '意外发现', pos: 'n.', synonyms: [] }, { word: 'zzqqxx', meaning: '', pos: '', synonyms: [] }] },
-      { id: 'b', name: '写作词', updatedAt: 2, words: [{ word: 'nevertheless', meaning: '然而', pos: 'adv.', synonyms: [] }, { word: 'moreover', meaning: '此外', pos: 'adv.', synonyms: [] }] },
+      {
+        id: 'a',
+        name: '剑 18 生词',
+        updatedAt: 1,
+        words: [
+          {
+            word: 'Serendipity',
+            meaning: '意外发现',
+            pos: 'n.',
+            synonyms: [],
+          },
+          {
+            word: 'zzqqxx',
+            meaning: '',
+            pos: '',
+            synonyms: [],
+          },
+        ],
+      },
+      {
+        id: 'b',
+        name: '写作词',
+        updatedAt: 2,
+        words: [
+          {
+            word: 'nevertheless',
+            meaning: '然而',
+            pos: 'adv.',
+            synonyms: [],
+          },
+          {
+            word: 'moreover',
+            meaning: '此外',
+            pos: 'adv.',
+            synonyms: [],
+          },
+        ],
+      },
     ])
     const w = await open()
     const select = w.find('select[aria-label="哪个词表"]')
@@ -1062,7 +1098,17 @@ describe('the game page', () => {
     const select = w.find('select[aria-label="哪个词表"]')
     expect(select.findAll('option').map((o: any) => o.text())).toEqual(['我的词单'])
     expect(w.text()).toContain('我的词表（2）')
-    expect(readLists().map(l => [l.id, l.name, l.words.map(x => x.word)])).toEqual([['dungeon', '我的词单', ['reserve', 'in advance']]])
+    expect(readLists().map(l => [
+      l.id,
+      l.name,
+      l.words.map(x => x.word),
+    ])).toEqual([
+      [
+        'dungeon',
+        '我的词单',
+        ['reserve', 'in advance'],
+      ],
+    ])
     expect(JSON.parse(localStorage.getItem(nsKey('dungeon_wordlist_v1'))!)).toEqual(['listening179:1', 'listening179:2'])
     expect(w.find('[data-manage-lists]').exists()).toBe(true)
   })

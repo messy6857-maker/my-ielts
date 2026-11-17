@@ -252,7 +252,15 @@ export function migrateOldWordList(siteCards: StudyCard[]) {
   if (!lists.some(l => l.id === DUNGEON_LIST_ID)) {
     const words = dungeonListEntries(siteCards)
     if (words.length) {
-      saveLists([...lists, { id: DUNGEON_LIST_ID, name: DUNGEON_LIST_NAME, words, updatedAt: Date.now() }])
+      saveLists([
+        ...lists,
+        {
+          id: DUNGEON_LIST_ID,
+          name: DUNGEON_LIST_NAME,
+          words,
+          updatedAt: Date.now(),
+        },
+      ])
     }
   }
   saveValue(nsKey(MIGRATED_KEY), true)
@@ -275,7 +283,10 @@ export function addEntriesToList(listId: string, entries: ListEntry[]): { listId
   const lists = readLists()
   let list = lists.find(l => l.id === listId)
   if (!list) {
-    list = lists.find(l => l.id === DUNGEON_LIST_ID) ?? { ...newList(DUNGEON_LIST_NAME), id: DUNGEON_LIST_ID }
+    list = lists.find(l => l.id === DUNGEON_LIST_ID) ?? {
+      ...newList(DUNGEON_LIST_NAME),
+      id: DUNGEON_LIST_ID,
+    }
     if (!lists.includes(list))
       lists.push(list)
   }

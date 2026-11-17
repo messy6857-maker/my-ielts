@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DungeonDeck, DungeonMode, DungeonSelection, DungeonWord, Monster, QuestionKind, Relic, RelicId, Rng } from '../utils/dungeon'
+import type { WordList } from '../utils/wordLists'
 import { resolveAudioUrl } from '../composables/useAudio'
 import { useAudioGroup } from '../composables/useAudioGroup'
 import { useDeckStore } from '../composables/useDeckStore'
@@ -31,7 +32,6 @@ import {
   sourceWords,
   START_HEARTS,
 } from '../utils/dungeon'
-import type { WordList } from '../utils/wordLists'
 import { loadWordLists } from '../utils/loadStudyCards'
 import { readValue, saveValue } from '../utils/storage'
 import { getVocabularyChapterMeta, listVocabularyChapters, loadAllVocabulary } from './vocabulary/loadVocabulary'
@@ -48,7 +48,6 @@ const deckStores = {
 }
 const checkin = useCheckin()
 const { currentUser } = useAuth()
-
 
 // ---------- 进门前：选词源 ----------
 const SELECTION_KEY = 'dungeon_selection_v1'

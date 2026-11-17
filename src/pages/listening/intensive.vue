@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DiffToken } from '../../utils/dictationDiff'
+import type { WordList } from '../../utils/wordLists'
 import type { SentenceTiming } from './timings/loadTimings'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { resolveMediaUrl } from '../../composables/useAudio'
@@ -13,9 +14,8 @@ import {
   saveDictationPartProgress,
   summarizeDictationPart,
 } from '../../utils/dictationProgress'
-import { transcriptSentenceEntries } from '../../utils/text'
-import type { WordList } from '../../utils/wordLists'
 import { loadWordLists } from '../../utils/loadStudyCards'
+import { transcriptSentenceEntries } from '../../utils/text'
 import { addEntriesToList, entryId, setTargetList, targetListId } from '../../utils/wordLists'
 import { lookupVocabularyWord } from '../vocabulary/loadVocabulary'
 import { loadTestTimings, prefersOriginalAudio, shouldUseTtsFallback } from './timings/loadTimings'
@@ -478,8 +478,14 @@ async function findListWords(tokens: DiffToken[]) {
       if ((tok.mark !== 'wrong' && tok.mark !== 'missing') || !tok.expected || !/^[a-z][a-z'-]+$/.test(tok.expected))
         continue
       const hit = await lookupVocabularyWord(tok.expected)
-      if (hit && hit.word)
-        found.set(`vocab:${hit.id}`, { key: `vocab:${hit.id}`, word: hit.word, meaning: hit.meaning, pos: hit.pos ?? '' })
+      if (hit && hit.word) {
+        found.set(`vocab:${hit.id}`, {
+          key: `vocab:${hit.id}`,
+          word: hit.word,
+          meaning: hit.meaning,
+          pos: hit.pos ?? '',
+        })
+      }
     }
   }
   catch {
@@ -516,7 +522,14 @@ async function addListWord(word: ListWord) {
   const id = lists.some(l => l.id === targetList.value)
     ? targetList.value
     : ''
-  const { listId } = addEntriesToList(id, [{ word: word.word, meaning: word.meaning, pos: word.pos, synonyms: [] }])
+  const { listId } = addEntriesToList(id, [
+    {
+      word: word.word,
+      meaning: word.meaning,
+      pos: word.pos,
+      synonyms: [],
+    },
+  ])
   wordLists.value = await loadWordLists()
   targetList.value = listId
 }

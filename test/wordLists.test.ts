@@ -246,11 +246,18 @@ describe('我的词表', () => {
   it('the old 我的词单 is moved into a normal, editable list once; the old record is left alone', async () => {
     saveValue(nsKey('dungeon_wordlist_v1'), ['listening179:1', 'listening179:2'])
     const lists = await loadWordLists()
-    expect(lists.map(l => [l.id, l.name, l.words.length])).toEqual([['dungeon', '我的词单', 2]])
+    expect(lists.map(l => [l.id, l.name, l.words.length])).toEqual([
+      ['dungeon', '我的词单', 2],
+    ])
     expect(lists[0].words[0]).toMatchObject({ word: 'reserve', meaning: '预订' })
     expect(JSON.parse(localStorage.getItem(nsKey('dungeon_wordlist_v1'))!)).toEqual(['listening179:1', 'listening179:2'])
     // 在词表里删掉一个词后不会被搬回来
-    saveLists([{ ...lists[0], words: lists[0].words.slice(1) }])
+    saveLists([
+      {
+        ...lists[0],
+        words: lists[0].words.slice(1),
+      },
+    ])
     expect((await loadWordLists())[0].words.map(w => w.word)).toEqual(['in advance'])
     const w = await mountAt(ListsPage, '/study/lists')
     await until(() => w.find('[data-list="dungeon"]').exists())

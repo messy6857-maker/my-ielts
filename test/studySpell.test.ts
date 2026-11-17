@@ -469,10 +469,17 @@ describe('adding words to a list, and old addresses', () => {
     const hit = await loader.lookupVocabularyWord(`${word.word[0].toUpperCase()}s`)
     expect(hit).toMatchObject({ id: word.id, word: word.word[0] })
     expect(await loader.lookupVocabularyWord('zzzzqq')).toBeNull()
-    const entry = { word: word.word[0], meaning: '释义', pos: '', synonyms: [] }
+    const entry = {
+      word: word.word[0],
+      meaning: '释义',
+      pos: '',
+      synonyms: [],
+    }
     expect(addEntriesToList('', [entry, entry])).toEqual({ listId: 'dungeon', added: 1 })
     expect(addEntriesToList('dungeon', [entry])).toEqual({ listId: 'dungeon', added: 0 })
-    expect(readLists().map(l => [l.name, l.words.length])).toEqual([['我的词单', 1]])
+    expect(readLists().map(l => [l.name, l.words.length])).toEqual([
+      ['我的词单', 1],
+    ])
     expect(targetListId(readLists())).toBe('dungeon')
   })
   it('the old practice addresses redirect to 练拼写 with the list and mode chosen', () => {
