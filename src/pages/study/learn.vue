@@ -18,22 +18,25 @@ const router = useRouter()
 const { currentUser } = useAuth()
 const { setProgress, clearChapterProgress } = useProgress()
 
+// 地址里没指定词库时，回到上次学的那个词库
+const DECK_KEY = 'study_learn_deck'
 function parseDeck(value: unknown): DeckId {
   return DECK_IDS.includes(value as DeckId)
     ? value as DeckId
-    : 'vocabulary'
+    : readChapterPreference(DECK_KEY, [...DECK_IDS], currentUser.value, 'vocabulary') as DeckId
 }
 const deck = ref<DeckId>(parseDeck(route.query.deck))
 watch(() => route.query.deck, (value) => {
   deck.value = parseDeck(value)
 })
 watch(deck, (value) => {
+  writeChapterPreference(DECK_KEY, value, currentUser.value)
   if (route.query.deck !== value) {
     router.replace({
       query: { ...route.query, deck: value },
     })
   }
-})
+}, { immediate: true })
 const stores = Object.fromEntries(DECK_IDS.map(d => [
   d,
   useStudyDeck(d),
@@ -87,6 +90,7 @@ watch([deck, category], () => {
   load()
 }, { immediate: true })
 watch(currentUser, (user) => {
+  deck.value = readChapterPreference(DECK_KEY, [...DECK_IDS], user, deck.value) as DeckId
   const next = readChapterPreference(CHAPTER_KEY, chapters, user)
   if (category.value !== next)
     category.value = next

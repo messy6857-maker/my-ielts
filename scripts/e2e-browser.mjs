@@ -203,9 +203,14 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   assert.ok(icon && icon.width > 0, '导航图标没有显示')
   assert.equal(await page.locator('a[href="#/game"]').count(), 0)
   await nav.click()
-  await page.locator('[data-deck="reading538"]').waitFor()
-  for (const [deck, label, title] of [['vocabulary', '卡片自测', '学新词 · 词汇表'], ['reading538', '卡片自测', '学新词 · 阅读考点词'], ['listening179', '卡片自测', '学新词 · 听力 179'], ['corpus', '卡片自测', '学新词 · 听力语料库']]) {
-    await page.locator(`[data-deck="${deck}"] a`).filter({ hasText: label }).first().click()
+  // 背单词首页：一件事一个入口，没有按词库重复的卡片自测
+  await page.locator('[data-entry="learn"]').waitFor()
+  assert.equal(await page.locator('[data-entry]').count(), 4)
+  assert.equal(await page.getByText('卡片自测 →').count(), 0)
+  await page.locator('[data-entry="learn"]').click()
+  for (const [deck, title] of [['vocabulary', '学新词 · 词汇表'], ['reading538', '学新词 · 阅读考点词'], ['listening179', '学新词 · 听力 179'], ['corpus', '学新词 · 听力语料库']]) {
+    // 词库进来以后再选
+    await page.locator('select[aria-label="词库"]').selectOption(deck)
     await page.getByText(title).first().waitFor({ timeout: 20000 })
     // 统一卡片：自评后看词条，再到下一张
     await page.locator('[data-card] [data-word]').waitFor({ timeout: 20000 })
@@ -215,10 +220,13 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
     await page.locator('[data-card] [data-word]').waitFor()
     // 在自测页里导航仍高亮“背单词”
     assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).includes('text-primary-700'))
-    await page.getByRole('button', { name: /返回背单词/ }).first().click()
-    await page.getByRole('button', { name: '退出', exact: true }).click()
-    await page.locator('[data-deck="reading538"]').waitFor()
   }
+  await page.getByRole('button', { name: /返回背单词/ }).first().click()
+  await page.getByRole('button', { name: '退出', exact: true }).click()
+  await page.locator('[data-entry="learn"]').waitFor()
+  // 再进学新词：还是上次学的词库
+  await page.locator('[data-entry="learn"]').click()
+  await page.getByText('学新词 · 听力语料库').first().waitFor({ timeout: 20000 })
   // 旧的卡片自测地址跳到学新词，并选好对应词库
   await page.goto(`${BASE}#/reading/flashcard`)
   await page.getByText('学新词 · 阅读考点词').first().waitFor({ timeout: 20000 })
@@ -226,11 +234,11 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   // 新词计数写回原来的阅读考点词记录
   const readingDaily = await page.evaluate(() => Object.keys(localStorage).filter(k => k.includes('reading538')))
   assert.ok(readingDaily.length > 0, '阅读考点词没有写回原记录')
-  await page.getByRole('button', { name: /返回背单词/ }).first().click()
-  await page.getByRole('button', { name: '退出', exact: true }).click()
-  await page.locator('[data-deck="reading538"]').waitFor()
-  // 语料库拼写练习：拼错一个，看到标红的字母，返回
-  await page.locator('[data-deck="corpus"] a').filter({ hasText: '拼写练习' }).click()
+  // 练拼写：一个入口，进去再选练法。语料库拼写：拼错一个，看到答案，返回
+  await page.goto(`${BASE}#/study`)
+  await page.locator('[data-entry="spell"]').click()
+  assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).includes('text-primary-700'))
+  await page.locator('[data-spell="corpus"]').click()
   await page.getByRole('button', { name: '开始' }).click()
   await page.locator('input[aria-label="拼写"]').fill('zzzz')
   await page.locator('input[aria-label="拼写"]').press('Enter')
@@ -239,8 +247,7 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.locator('input[aria-label="拼写"]:enabled').waitFor()
   assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).includes('text-primary-700'))
   await page.getByRole('button', { name: '← 返回背单词' }).click()
-  await page.locator('[data-deck="reading538"]').waitFor()
-  await page.locator('[data-deck="vocabulary"] a').filter({ hasText: '拼写练习' }).click()
+  await page.locator('[data-spell="vocabulary"]').click()
   await page.locator('input[id="1"]').waitFor({ timeout: 20000 })
   assert.equal(await page.getByRole('link', { name: '自测卡片' }).count(), 0)
   assert.deepEqual(errors, [])
@@ -253,7 +260,7 @@ await step('单词地牢：从背单词进入，选章节开局，一路作答�
   const errors = []
   page.on('pageerror', e => errors.push(e.message))
   await page.goto(`${BASE}#/study`)
-  await page.locator('[data-game]').click()
+  await page.locator('[data-entry="game"]').click()
   await page.getByRole('button', { name: '进入地牢' }).waitFor({ timeout: 20000 })
   assert.ok(await page.getByRole('button', { name: '进入地牢' }).isDisabled())
   await page.locator('button[data-chapter]').first().click()

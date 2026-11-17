@@ -173,6 +173,16 @@ describe('学新词 writes back to each deck’s original records', () => {
     expect(w.find('[data-word]').exists()).toBe(true)
   })
 
+  it('no deck in the address: opens the list studied last time', async () => {
+    const first = await mountLearn('deck=listening179')
+    expect(first.w.text()).toContain('学新词 · 听力 179')
+    first.w.unmount()
+    wrappers.pop()
+    const { w, router } = await mountLearn('')
+    expect(w.text()).toContain('学新词 · 听力 179')
+    expect(router.currentRoute.value.query.deck).toBe('listening179')
+  })
+
   it('an unknown deck falls back to the vocabulary list', async () => {
     const { w } = await mountLearn('deck=nope')
     expect(w.text()).toContain('学新词 · 词汇表')
