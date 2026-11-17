@@ -20,7 +20,9 @@ const tab = computed<TabId>(() => TABS.some(t => t.id === route.query.part)
   ? route.query.part as TabId
   : 'listening')
 function choose(id: TabId) {
-  router.replace({ query: { ...route.query, part: id } })
+  router.replace({
+    query: { ...route.query, part: id },
+  })
 }
 </script>
 

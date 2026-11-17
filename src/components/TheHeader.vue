@@ -45,7 +45,16 @@ const route = useRoute()
 const SECTION_PREFIXES: Record<string, string[]> = {
   '/': ['/mistakes', '/stats'],
   '/study': ['/study', '/game', '/vocabulary'],
-  '/ielts': ['/ielts', '/listening', '/reading', '/writing', '/speaking', '/grammar', '/mock', '/grading'],
+  '/ielts': [
+    '/ielts',
+    '/listening',
+    '/reading',
+    '/writing',
+    '/speaking',
+    '/grammar',
+    '/mock',
+    '/grading',
+  ],
 }
 function isActive(link: string) {
   const path = route.path

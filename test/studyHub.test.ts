@@ -97,14 +97,21 @@ describe('背单词 hub', () => {
     expect(card).toBeTruthy()
     expect(w.findAll('a').some((a: any) => a.attributes('href') === '/vocabulary/typing')).toBe(false)
     // 首页四个入口：背单词、雅思考试、错词本、学习统计
-    expect(w.findAll('[data-home-entry]').map((a: any) => a.attributes('href'))).toEqual(['/study', '/ielts', '/mistakes', '/stats'])
+    expect(w.findAll('[data-home-entry]').map((a: any) => a.attributes('href'))).toEqual([
+      '/study',
+      '/ielts',
+      '/mistakes',
+      '/stats',
+    ])
   })
 
   it('the menu has three entries; each stays lit on every page under it', async () => {
     const lit = async (path: string) => {
       const w = await mountAt(TheHeader, path)
       const links = w.findAll('a').filter((a: any) => ['/', '/study', '/ielts'].includes(a.attributes('href')) && a.classes().includes('text-primary-700'))
-      const labels = [...new Set(links.map((a: any) => a.attributes('href')))]
+      const labels = [
+        ...new Set(links.map((a: any) => a.attributes('href'))),
+      ]
       w.unmount()
       return labels
     }
@@ -112,14 +119,44 @@ describe('背单词 hub', () => {
     const texts = w.findAll('a').map((a: any) => a.text().replace(/\d+$/, '').trim())
     for (const label of ['首页', '背单词', '雅思考试'])
       expect(texts).toContain(label)
-    for (const label of ['词汇', '语法', '听力', '口语', '阅读', '写作', '错词本', '学习统计'])
+    for (const label of [
+      '词汇',
+      '语法',
+      '听力',
+      '口语',
+      '阅读',
+      '写作',
+      '错词本',
+      '学习统计',
+    ])
       expect(texts).not.toContain(label)
     w.unmount()
     for (const path of ['/', '/mistakes', '/stats'])
       expect(await lit(path)).toEqual(['/'])
-    for (const path of ['/study', '/study/learn', '/study/spell', '/study/review', '/study/lists', '/game', '/vocabulary'])
+    for (const path of [
+      '/study',
+      '/study/learn',
+      '/study/spell',
+      '/study/review',
+      '/study/lists',
+      '/game',
+      '/vocabulary',
+    ])
       expect(await lit(path)).toEqual(['/study'])
-    for (const path of ['/ielts', '/ielts/guide', '/listening/keyword', '/listening/intensive', '/reading', '/reading/daily', '/writing', '/speaking', '/grammar', '/mock/listening-test', '/mock/history', '/grading/history'])
+    for (const path of [
+      '/ielts',
+      '/ielts/guide',
+      '/listening/keyword',
+      '/listening/intensive',
+      '/reading',
+      '/reading/daily',
+      '/writing',
+      '/speaking',
+      '/grammar',
+      '/mock/listening-test',
+      '/mock/history',
+      '/grading/history',
+    ])
       expect(await lit(path)).toEqual(['/ielts'])
     expect(await lit('/settings')).toEqual([])
   })
@@ -129,7 +166,10 @@ describe('雅思考试', () => {
   it('one entry for practice by skill, the methods page, mock tests and records', async () => {
     const Hub = (await import('../src/pages/ielts/index.vue')).default
     const w = await mountAt(Hub, '/ielts')
-    expect(w.findAll('[data-entry]').map((a: any) => [a.attributes('data-entry'), a.attributes('href')])).toEqual([
+    expect(w.findAll('[data-entry]').map((a: any) => [
+      a.attributes('data-entry'),
+      a.attributes('href'),
+    ])).toEqual([
       ['listening', '/listening/keyword'],
       ['reading', '/reading'],
       ['writing', '/writing'],
@@ -146,7 +186,12 @@ describe('雅思考试', () => {
     const w = await mountAt(Guide, '/ielts/guide')
     expect(w.find('[data-back]').attributes('href')).toBe('/ielts')
     expect(w.text()).toContain('Section 1')
-    for (const [part, text] of [['reading', '判断题'], ['writing', 'Task Response'], ['speaking', 'Part 2'], ['listening', 'Section 4']]) {
+    for (const [part, text] of [
+      ['reading', '判断题'],
+      ['writing', 'Task Response'],
+      ['speaking', 'Part 2'],
+      ['listening', 'Section 4'],
+    ]) {
       await w.find(`[data-part="${part}"]`).trigger('click')
       await flushPromises()
       expect(w.text()).toContain(text)
@@ -158,7 +203,15 @@ describe('雅思考试', () => {
     expect(source('src/components/ListeningTabs.vue')).not.toContain('/mock/listening-test')
     expect(source('src/components/ListeningTabs.vue')).not.toContain('基本概念')
     expect(source('src/components/ReadingTabs.vue')).not.toContain('/mock/reading-test')
-    for (const p of ['src/pages/listening.vue', 'src/components/ReadingTabs.vue', 'src/pages/writing/index.vue', 'src/pages/speaking/index.vue', 'src/pages/grammar/index.vue', 'src/components/ExamTabs.vue', 'src/pages/ielts/guide.vue'])
+    for (const p of [
+      'src/pages/listening.vue',
+      'src/components/ReadingTabs.vue',
+      'src/pages/writing/index.vue',
+      'src/pages/speaking/index.vue',
+      'src/pages/grammar/index.vue',
+      'src/components/ExamTabs.vue',
+      'src/pages/ielts/guide.vue',
+    ])
       expect(source(p)).toContain('<StudyBack to="/ielts" label="雅思考试" />')
     for (const p of ['src/pages/mistakes.vue', 'src/pages/stats.vue'])
       expect(source(p)).toContain('<StudyBack to="/" label="首页" />')

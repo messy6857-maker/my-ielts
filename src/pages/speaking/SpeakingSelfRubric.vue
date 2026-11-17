@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import type { CriterionKey } from '../../utils/speakingCriteria'
 import { computed, ref, watch } from 'vue'
 import { useAuth } from '../../composables/useAuth'
-import type { CriterionKey } from '../../utils/speakingCriteria'
 import { CRITERIA } from '../../utils/speakingCriteria'
 import { accountKey, readValue, saveValue } from '../../utils/storage'
 

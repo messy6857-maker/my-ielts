@@ -15,13 +15,13 @@ import {
   saveDraft,
 } from '../../../utils/drafts'
 import { accountPrefix, readRecords, saveRecord } from '../../../utils/storage'
+import { TASK2_GUIDE } from '../../../utils/writingGuide'
 import AIGradePanel from '../AIGradePanel.vue'
 import { CAMBRIDGE_WRITING } from '../cambridge'
-import { EXTRA_TASK2 } from '../cambridge-extra'
 
+import { EXTRA_TASK2 } from '../cambridge-extra'
 import ModelEssayView from '../ModelEssayView.vue'
 import { analyzeEssay } from '../task1/grader'
-import { TASK2_GUIDE } from '../../../utils/writingGuide'
 
 // 同页退出/换号时立即切到当前账号的历史与草稿，不再把旧账号内容带进游客写入
 const props = defineProps<{ resumeSelection?: { prompt: string, draft: string } }>()

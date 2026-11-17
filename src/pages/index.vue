@@ -94,7 +94,9 @@ const menus = computed(() => [
     desc: '听说读写和语法练习、做题方法、限时模考和记录',
   },
   {
-    label: mistakeCount.value > 0 ? `错词本（${mistakeCount.value}）` : '错词本',
+    label: mistakeCount.value > 0
+      ? `错词本（${mistakeCount.value}）`
+      : '错词本',
     icon: 'i-carbon-notebook',
     link: '/mistakes',
     desc: '自测、拼写、模考、听写里记错的词和题都在这里',
