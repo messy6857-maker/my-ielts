@@ -21,9 +21,12 @@ export interface WordList {
 }
 const LISTS_KEY = 'study_wordlists_v1'
 export const MAX_LIST_WORDS = 3000
-/** 单词地牢和听写里的“我的词单”，在这里作为一个固定的词表出现（在地牢选词页里编辑） */
+/** 以前单词地牢和听写用的“我的词单”，第一次打开时搬成一个普通词表（id 固定，名字叫“我的词单”） */
 export const DUNGEON_LIST_ID = 'dungeon'
-export const DUNGEON_LIST_NAME = '我的词单（单词地牢、听写加入的）'
+export const DUNGEON_LIST_NAME = '我的词单'
+const MIGRATED_KEY = 'study_wordlists_migrated_v1'
+/** 听写、单词地牢往哪个词表里加词（记住上次选的） */
+const TARGET_KEY = 'study_wordlist_target_v1'
 
 export function entryId(word: string): string {
   return word.toLowerCase().trim().replace(/\s+/g, ' ')
@@ -86,7 +89,7 @@ export function readLists(): WordList[] {
     return []
   const out: WordList[] = []
   for (const raw of saved) {
-    if (!raw || typeof raw.id !== 'string' || !raw.id || raw.id === DUNGEON_LIST_ID || out.some(l => l.id === raw.id))
+    if (!raw || typeof raw.id !== 'string' || !raw.id || out.some(l => l.id === raw.id))
       continue
     out.push({
       id: raw.id,
@@ -234,7 +237,57 @@ export function fillMeanings(entries: ListEntry[], siteCards: StudyCard[]): List
       : e
   })
 }
-/** “我的词单”里存的是网站词库的 key（vocab:<id> / reading538:<id> / listening179:<id>），换成词表的词 */
+/** 旧的“我的词单”还没搬过来（里面有词、这个账号还没搬过） */
+export function needsListMigration(): boolean {
+  return readWordList().length > 0 && !readValue<boolean>(nsKey(MIGRATED_KEY), false)
+}
+/**
+ * 把旧的“我的词单”搬成一个普通词表。旧记录不删、不改；搬过一次就不再搬
+ * （之后在词表里删掉的词不会被搬回来）。
+ */
+export function migrateOldWordList(siteCards: StudyCard[]) {
+  if (!needsListMigration())
+    return
+  const lists = readLists()
+  if (!lists.some(l => l.id === DUNGEON_LIST_ID)) {
+    const words = dungeonListEntries(siteCards)
+    if (words.length) {
+      saveLists([...lists, { id: DUNGEON_LIST_ID, name: DUNGEON_LIST_NAME, words, updatedAt: Date.now() }])
+    }
+  }
+  saveValue(nsKey(MIGRATED_KEY), true)
+}
+/** 听写、单词地牢加词时默认加到哪个词表：上次选的，没有就第一个 */
+export function targetListId(lists: WordList[]): string {
+  const saved = readValue<string>(nsKey(TARGET_KEY), '')
+  return lists.some(l => l.id === saved)
+    ? saved
+    : lists[0]?.id ?? ''
+}
+export function setTargetList(id: string) {
+  saveValue(nsKey(TARGET_KEY), id)
+}
+/**
+ * 往一个词表里加词（同一个词不重复加）。listId 为空或找不到时新建一个“我的词单”。
+ * 返回加到了哪个词表、新加了几个。
+ */
+export function addEntriesToList(listId: string, entries: ListEntry[]): { listId: string, added: number } {
+  const lists = readLists()
+  let list = lists.find(l => l.id === listId)
+  if (!list) {
+    list = lists.find(l => l.id === DUNGEON_LIST_ID) ?? { ...newList(DUNGEON_LIST_NAME), id: DUNGEON_LIST_ID }
+    if (!lists.includes(list))
+      lists.push(list)
+  }
+  const merged = mergeEntries(list.words, entries)
+  list.words = merged.words
+  list.updatedAt = Date.now()
+  saveLists(lists)
+  setTargetList(list.id)
+  return { listId: list.id, added: merged.added }
+}
+
+/** 旧“我的词单”里存的是网站词库的 key（vocab:<id> / reading538:<id> / listening179:<id>），换成词表的词 */
 export function dungeonListEntries(siteCards: StudyCard[]): ListEntry[] {
   const keys = new Set(readWordList())
   if (!keys.size)

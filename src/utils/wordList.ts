@@ -1,9 +1,8 @@
-import type { StudyCard } from './studyDeck'
 import { nsKey } from '../composables/useStudyData'
-import { readValue, saveValue } from './storage'
+import { readValue } from './storage'
 
-// “我的词单”：单词地牢里自己勾选保存的词，练拼写和听写结果页也读写同一份（按账号）。
-// 存的是词的 key：vocab:<id> / reading538:<id> / listening179:<id>。
+// 旧的“我的词单”：以前单词地牢和听写往这里存词（存的是网站词库的 key：vocab:<id> / reading538:<id> /
+// listening179:<id>）。现在只在搬成“我的词表”时读一次，不再写。
 const LIST_KEY = 'dungeon_wordlist_v1'
 
 export function readWordList(): string[] {
@@ -11,24 +10,4 @@ export function readWordList(): string[] {
   return Array.isArray(saved)
     ? saved.filter((k): k is string => typeof k === 'string')
     : []
-}
-/** 加进词单（已经在里面的不重复加），返回新加了几个 */
-export function addToWordList(keys: string[]): number {
-  const list = readWordList()
-  const fresh = [
-    ...new Set(keys),
-  ].filter(k => !list.includes(k))
-  if (fresh.length) {
-    saveValue(nsKey(LIST_KEY), [
-      ...list,
-      ...fresh,
-    ])
-  }
-  return fresh.length
-}
-/** 这张卡在词单里的 key（词汇表的 key 是 vocab:<id>） */
-export function wordListKey(card: StudyCard): string {
-  return card.deck === 'vocabulary'
-    ? `vocab:${card.id}`
-    : card.key
 }

@@ -6,6 +6,7 @@ import { useAuth } from '../src/composables/useAuth'
 import { useCheckin, useWordSchedule } from '../src/composables/useSpacedRepetition'
 import { nsKey, useMistakes } from '../src/composables/useStudyData'
 import GamePage from '../src/pages/game.vue'
+import { readLists, saveLists } from '../src/utils/wordLists'
 import {
   buildFloor,
   buildPool,
@@ -1031,25 +1032,38 @@ describe('the game page', () => {
     expect(w.find('[data-daily]').text()).toContain(`今日已通关 · ${score} 分`)
   })
 
-  it('my word list: search, add, remove; it is remembered and can be fought', async () => {
+  it('my word lists: pick one, its words become monsters, results go to that list’s own records', async () => {
+    saveLists([
+      { id: 'a', name: '剑 18 生词', updatedAt: 1, words: [{ word: 'Serendipity', meaning: '意外发现', pos: 'n.', synonyms: [] }, { word: 'zzqqxx', meaning: '', pos: '', synonyms: [] }] },
+      { id: 'b', name: '写作词', updatedAt: 2, words: [{ word: 'nevertheless', meaning: '然而', pos: 'adv.', synonyms: [] }, { word: 'moreover', meaning: '此外', pos: 'adv.', synonyms: [] }] },
+    ])
     const w = await open()
-    await w.findAll('button').find((b: any) => b.text() === '编辑词单')!.trigger('click')
-    await w.find('input[type="search"]').setValue('atmos')
-    const results = w.findAll('button[data-search-result]')
-    expect(results.length).toBeGreaterThan(0)
-    expect(results[0].text()).toContain('atmosphere')
-    await results[0].trigger('click')
-    expect(w.text()).toContain('我的词单（1）')
-    await w.find('input[type="search"]').setValue('预订')
-    await w.find('button[data-search-result]').trigger('click')
-    expect(w.text()).toContain('我的词单（2）')
-    expect(JSON.parse(localStorage.getItem(nsKey('dungeon_wordlist_v1'))!)).toHaveLength(2)
-    await w.find('button[data-list-word]').trigger('click')
-    expect(w.text()).toContain('我的词单（1）')
+    const select = w.find('select[aria-label="哪个词表"]')
+    expect(select.findAll('option').map((o: any) => o.text())).toEqual(['剑 18 生词', '写作词'])
+    // 没有释义的词出不了题，不算
+    expect(w.text()).toContain('我的词表（1）')
+    await select.setValue('b')
+    expect(w.text()).toContain('我的词表（2）')
+    await w.find('input[data-source="today"]').setValue(false)
     await w.find('input[data-source="custom"]').setValue(true)
-    expect(w.text()).toContain('选中 1 个词，每层 1 个房间')
+    expect(w.text()).toContain('选中 2 个词')
     await startButton(w).trigger('click')
-    expect(state(w).monsters).toHaveLength(1)
-    expect(JSON.parse(localStorage.getItem(nsKey('dungeon_selection_v1'))!).custom).toBe(true)
+    const s = state(w)
+    expect(s.monsters.map((m: any) => m.word.key).sort()).toEqual(['custom:moreover', 'custom:nevertheless'])
+    expect(JSON.parse(localStorage.getItem(nsKey('dungeon_selection_v1'))!)).toMatchObject({ custom: true, list: 'b' })
+    // 答错记进“我的词表”分组
+    s.recordWord(s.monsters[0], 'choice')
+    expect(useMistakes().mistakes.value.find((m: any) => m.key === s.monsters[0].word.key)?.module).toBe('wordlist')
+  })
+
+  it('the old 我的词单 becomes a normal list called 我的词单 the first time, without touching the old record', async () => {
+    localStorage.setItem(nsKey('dungeon_wordlist_v1'), JSON.stringify(['listening179:1', 'listening179:2']))
+    const w = await open()
+    const select = w.find('select[aria-label="哪个词表"]')
+    expect(select.findAll('option').map((o: any) => o.text())).toEqual(['我的词单'])
+    expect(w.text()).toContain('我的词表（2）')
+    expect(readLists().map(l => [l.id, l.name, l.words.map(x => x.word)])).toEqual([['dungeon', '我的词单', ['reserve', 'in advance']]])
+    expect(JSON.parse(localStorage.getItem(nsKey('dungeon_wordlist_v1'))!)).toEqual(['listening179:1', 'listening179:2'])
+    expect(w.find('[data-manage-lists]').exists()).toBe(true)
   })
 })

@@ -475,10 +475,8 @@ await step('单词地牢：从背单词进入，选章节开局，一路作答�
   await page.getByText('每日地牢 · 第 1 / 3 层').waitFor()
   await page.reload()
   await page.getByRole('button', { name: '进入地牢' }).waitFor({ timeout: 20000 })
-  await page.getByRole('button', { name: '编辑词单' }).click()
-  await page.locator('input[type="search"]').fill('atmos')
-  await page.locator('button[data-search-result]').first().click()
-  await page.getByText('我的词单（1）').waitFor()
+  // 我的词表在地牢里选；没有词表时链接到“我的词表”
+  await page.locator('[data-manage-lists]').waitFor()
   await page.locator('button[data-deck="reading538"]').click()
   await page.locator('button[data-mode="endless"]').click()
   await page.getByRole('button', { name: '进入地牢' }).click()

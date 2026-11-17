@@ -18,6 +18,7 @@ import {
   flattenListening,
   flattenReading,
   flattenVocabulary,
+  flattenWordLists,
   floorRules,
   isSynonym,
   MODES,
@@ -30,6 +31,8 @@ import {
   sourceWords,
   START_HEARTS,
 } from '../utils/dungeon'
+import type { WordList } from '../utils/wordLists'
+import { loadWordLists } from '../utils/loadStudyCards'
 import { readValue, saveValue } from '../utils/storage'
 import { getVocabularyChapterMeta, listVocabularyChapters, loadAllVocabulary } from './vocabulary/loadVocabulary'
 
@@ -41,41 +44,15 @@ const scheduleStore = useWordSchedule()
 const deckStores = {
   reading538: useDeckStore('reading538'),
   listening179: useDeckStore('listening179'),
+  custom: useDeckStore('custom'),
 }
 const checkin = useCheckin()
 const { currentUser } = useAuth()
 
-const allWords = shallowRef<DungeonWord[]>([])
-const loading = ref(true)
-const loadError = ref(false)
-async function loadWords() {
-  loading.value = true
-  loadError.value = false
-  try {
-    const [vocabulary, reading, listening] = await Promise.all([
-      loadAllVocabulary(),
-      import('./reading/reading538words'),
-      import('./listening/listening179.json'),
-    ])
-    allWords.value = [
-      ...flattenVocabulary(vocabulary),
-      ...flattenReading(reading.default as any),
-      ...flattenListening(listening.default as any),
-    ]
-  }
-  catch {
-    loadError.value = true
-  }
-  finally {
-    loading.value = false
-  }
-}
-loadWords()
 
 // ---------- 进门前：选词源 ----------
 const SELECTION_KEY = 'dungeon_selection_v1'
 const BEST_KEY = 'dungeon_best_v1'
-const LIST_KEY = 'dungeon_wordlist_v1'
 const DAILY_KEY = 'dungeon_daily_v1'
 const chapters = listVocabularyChapters()
 const extraDecks: DungeonDeck[] = ['reading538', 'listening179']
@@ -86,6 +63,9 @@ function readSelection(): DungeonSelection {
     mistakes: saved?.mistakes ?? false,
     due: saved?.due ?? false,
     custom: saved?.custom ?? false,
+    list: typeof saved?.list === 'string'
+      ? saved.list
+      : '',
     chapters: Array.isArray(saved?.chapters)
       ? saved.chapters.filter(c => chapters.includes(c))
       : [],
@@ -95,6 +75,43 @@ function readSelection(): DungeonSelection {
   }
 }
 const selection = ref<DungeonSelection>(readSelection())
+const allWords = shallowRef<DungeonWord[]>([])
+/** 我的词表（在“背单词 → 我的词表”里编辑） */
+const wordLists = shallowRef<WordList[]>([])
+const loading = ref(true)
+const loadError = ref(false)
+let loadSeq = 0
+async function loadWords() {
+  const seq = ++loadSeq
+  loading.value = true
+  loadError.value = false
+  try {
+    const [vocabulary, reading, listening, lists] = await Promise.all([
+      loadAllVocabulary(),
+      import('./reading/reading538words'),
+      import('./listening/listening179.json'),
+      loadWordLists(),
+    ])
+    if (seq !== loadSeq)
+      return
+    wordLists.value = lists
+    if (!lists.some(l => l.id === selection.value.list))
+      selection.value.list = lists[0]?.id ?? ''
+    allWords.value = [
+      ...flattenVocabulary(vocabulary),
+      ...flattenReading(reading.default as any),
+      ...flattenListening(listening.default as any),
+      ...flattenWordLists(lists.flatMap(l => l.words)),
+    ]
+  }
+  catch {
+    loadError.value = true
+  }
+  finally {
+    loading.value = false
+  }
+}
+loadWords()
 interface ModeBest { score: number, floor: number }
 interface Best { combo: number, modes: Partial<Record<DungeonMode, ModeBest>> }
 function readBest(): Best {
@@ -123,13 +140,9 @@ function readMode(): DungeonMode {
     : 'quick'
 }
 const mode = ref<DungeonMode>(readMode())
-function readCustomKeys(): string[] {
-  const saved = readValue<unknown>(nsKey(LIST_KEY), [])
-  return Array.isArray(saved)
-    ? saved.filter((k): k is string => typeof k === 'string')
-    : []
-}
-const customKeys = ref<string[]>(readCustomKeys())
+/** 选中的那个词表里的词 */
+const customKeys = computed(() => (wordLists.value.find(l => l.id === selection.value.list)?.words ?? [])
+  .map(w => `custom:${w.word.trim().replace(/\s+/g, ' ').toLowerCase()}`))
 interface DailyResult { date: string, score: number, won: boolean }
 function readDaily(): DailyResult | null {
   const saved = readValue<Partial<DailyResult> | null>(nsKey(DAILY_KEY), null)
@@ -180,41 +193,6 @@ function toggleDeck(deck: DungeonDeck) {
 }
 function chapterLabel(chapter: string) {
   return getVocabularyChapterMeta(chapter)?.label || chapter.replace(/^\d+_/, '')
-}
-
-// ---------- 我的词单 ----------
-const editorOpen = ref(false)
-const search = ref('')
-const SEARCH_LIMIT = 30
-const searchResults = computed(() => {
-  const q = search.value.trim().toLowerCase()
-  if (!q)
-    return []
-  const starts: DungeonWord[] = []
-  const contains: DungeonWord[] = []
-  for (const w of allWords.value) {
-    const text = w.word.toLowerCase()
-    if (text.startsWith(q))
-      starts.push(w)
-    else if (text.includes(q) || w.meaning.includes(q))
-      contains.push(w)
-  }
-  return [
-    ...starts,
-    ...contains,
-  ].slice(0, SEARCH_LIMIT)
-})
-function saveCustomKeys(keys: string[]) {
-  customKeys.value = keys
-  saveValue(nsKey(LIST_KEY), keys)
-}
-function toggleCustom(w: DungeonWord) {
-  saveCustomKeys(customKeys.value.includes(w.key)
-    ? customKeys.value.filter(k => k !== w.key)
-    : [...customKeys.value, w.key])
-}
-function clearCustom() {
-  saveCustomKeys([])
 }
 
 // ---------- 游戏中 ----------
@@ -364,7 +342,6 @@ function begin(words: DungeonWord[], rng: Rng, asDaily: boolean, floors: number)
   shieldReady.value = false
   newRecord.value = false
   monsterHinted = false
-  editorOpen.value = false
   stage.value = 'playing'
   enterQuestion()
 }
@@ -434,7 +411,9 @@ function recordWord(m: Monster, wrongKind: QuestionKind | null) {
   if (wrongKind) {
     const module = w.deck === 'reading538'
       ? 'reading'
-      : 'listening'
+      : w.deck === 'custom'
+        ? 'wordlist'
+        : 'listening'
     addMistake(module, {
       key: w.key,
       title: w.word,
@@ -614,8 +593,8 @@ watch(currentUser, () => {
   selection.value = readSelection()
   best.value = readBest()
   mode.value = readMode()
-  customKeys.value = readCustomKeys()
   dailyResult.value = readDaily()
+  loadWords()
   stage.value = 'setup'
 })
 
@@ -777,60 +756,23 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
           </label>
           <div class="flex flex-wrap items-center gap-2">
             <label class="flex items-center gap-2">
-              <input v-model="selection.custom" type="checkbox" data-source="custom">
-              我的词单（{{ sources.custom.length }}）
+              <input v-model="selection.custom" type="checkbox" data-source="custom" :disabled="!wordLists.length">
+              我的词表<template v-if="wordLists.length">（{{ sources.custom.length }}）</template>
             </label>
-            <button class="text-sm text-blue-600 underline dark:text-blue-400" @click="editorOpen = !editorOpen">
-              {{ editorOpen ? '收起' : '编辑词单' }}
-            </button>
-          </div>
-        </div>
-
-        <!-- 词单编辑 -->
-        <div v-if="editorOpen" class="mb-4 border border-gray-200 rounded-lg p-3 dark:border-gray-700" data-editor>
-          <input
-            v-model="search"
-            type="search"
-            aria-label="搜索单词或释义"
-            placeholder="搜索单词或中文释义，点一下加入词单"
-            class="mb-2 w-full border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          >
-          <ul v-if="searchResults.length" class="mb-2 max-h-60 overflow-auto text-sm">
-            <li v-for="w in searchResults" :key="w.key">
-              <button
-                data-search-result
-                class="w-full flex items-center gap-2 rounded px-2 py-1 text-left hover:bg-gray-50 dark:hover:bg-gray-700"
-                :aria-pressed="customKeys.includes(w.key)"
-                @click="toggleCustom(w)"
-              >
-                <span class="w-4">{{ customKeys.includes(w.key) ? '✓' : '+' }}</span>
-                <span class="font-medium">{{ w.word }}</span>
-                <span class="flex-1 truncate text-gray-500 dark:text-gray-400">{{ w.pos }} {{ w.meaning }}</span>
-                <span class="text-xs text-gray-400">{{ DECK_LABEL[w.deck] }}</span>
-              </button>
-            </li>
-          </ul>
-          <p v-else-if="search.trim()" class="mb-2 text-sm text-gray-500 dark:text-gray-400">
-            没有找到匹配的词
-          </p>
-          <div v-if="sources.custom.length" class="flex flex-wrap items-center gap-2 text-sm">
-            <button
-              v-for="w in sources.custom"
-              :key="w.key"
-              data-list-word
-              class="border border-gray-300 rounded-full px-2 py-0.5 dark:border-gray-600"
-              :title="`移出词单：${w.word}`"
-              @click="toggleCustom(w)"
+            <select
+              v-if="wordLists.length"
+              v-model="selection.list"
+              aria-label="哪个词表"
+              class="border border-gray-300 rounded-lg bg-white px-2 py-1 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             >
-              {{ w.word }} ×
-            </button>
-            <button class="text-red-600 underline dark:text-red-400" @click="clearCustom">
-              清空词单
-            </button>
+              <option v-for="l in wordLists" :key="l.id" :value="l.id">
+                {{ l.name }}
+              </option>
+            </select>
+            <RouterLink to="/study/lists" class="text-sm text-blue-600 underline dark:text-blue-400" data-manage-lists>
+              {{ wordLists.length ? '管理词表' : '还没有词表，去新建' }}
+            </RouterLink>
           </div>
-          <p v-else class="text-sm text-gray-500 dark:text-gray-400">
-            词单还是空的
-          </p>
         </div>
 
         <div class="mb-2 flex flex-wrap items-center gap-3">

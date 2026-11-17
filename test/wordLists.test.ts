@@ -243,19 +243,20 @@ describe('我的词表', () => {
     ])
   })
 
-  it('the dungeon’s 我的词单 shows up as a read-only list', async () => {
+  it('the old 我的词单 is moved into a normal, editable list once; the old record is left alone', async () => {
     saveValue(nsKey('dungeon_wordlist_v1'), ['listening179:1', 'listening179:2'])
     const lists = await loadWordLists()
-    expect(lists.map(l => [l.id, l.words.length])).toEqual([
-      ['dungeon', 2],
-    ])
+    expect(lists.map(l => [l.id, l.name, l.words.length])).toEqual([['dungeon', '我的词单', 2]])
     expect(lists[0].words[0]).toMatchObject({ word: 'reserve', meaning: '预订' })
+    expect(JSON.parse(localStorage.getItem(nsKey('dungeon_wordlist_v1'))!)).toEqual(['listening179:1', 'listening179:2'])
+    // 在词表里删掉一个词后不会被搬回来
+    saveLists([{ ...lists[0], words: lists[0].words.slice(1) }])
+    expect((await loadWordLists())[0].words.map(w => w.word)).toEqual(['in advance'])
     const w = await mountAt(ListsPage, '/study/lists')
     await until(() => w.find('[data-list="dungeon"]').exists())
     await w.find('[data-list="dungeon"]').trigger('click')
-    expect(w.find('[data-add]').exists()).toBe(false)
-    expect(w.find('[data-words] input').exists()).toBe(false)
-    expect(w.find('[data-count]').text()).toContain('在单词地牢的选词页里编辑')
+    expect(w.find('[data-add]').exists()).toBe(true)
+    expect(w.find('input[aria-label="in advance 的释义"]').exists()).toBe(true)
   })
 
   it('学新词 studies one chosen list; progress, new-word count and mistakes are kept apart from the site’s lists', async () => {

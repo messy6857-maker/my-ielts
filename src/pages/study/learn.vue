@@ -301,19 +301,6 @@ const SUBTITLE: Record<DeckId, string> = {
           </p>
         </div>
 
-        <div class="mb-4">
-          <label class="mb-2 block text-sm text-gray-700 font-bold dark:text-gray-200" for="learn-goal">这个词库每天学几个新词</label>
-          <input
-            id="learn-goal"
-            v-model.lazy="goal"
-            type="number"
-            min="1"
-            max="500"
-            aria-label="每日新词目标"
-            class="block w-24 border border-gray-300 rounded-lg bg-white p-2.5 text-center text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          >
-        </div>
-
         <p v-if="loadError" class="mb-3 text-sm text-amber-700" role="alert">
           词表加载失败。<button class="underline" @click="load">
             重试
@@ -328,23 +315,42 @@ const SUBTITLE: Record<DeckId, string> = {
           </template>
         </p>
 
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <button
-            data-start
-            class="rounded-lg bg-blue-600 px-8 py-2.5 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
-            :disabled="!ready || cards.length === 0"
-            @click="start"
-          >
-            开始
-          </button>
-          <button
-            title="重置记忆：这个词库全部单词回到新词，从 0 开始"
-            class="border border-red-300 rounded-lg bg-white px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:bg-gray-800 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-            @click="resetMemory"
-          >
-            🔄 重置这个词库的记忆
-          </button>
-        </div>
+        <button
+          data-start
+          class="rounded-lg bg-blue-600 px-8 py-2.5 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
+          :disabled="!ready || cards.length === 0"
+          @click="start"
+        >
+          开始
+        </button>
+
+        <!-- 不常改的放进“更多设置”：每天学几个新词、重置记忆 -->
+        <details class="mt-6 border-t border-gray-200 pt-4 dark:border-gray-700" data-more-settings>
+          <summary class="cursor-pointer text-sm text-gray-600 dark:text-gray-300">
+            更多设置：每天学几个新词（现在 {{ store.goal() }} 个）、重置记忆
+          </summary>
+          <div class="mt-3 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <label class="mb-2 block text-sm text-gray-700 font-bold dark:text-gray-200" for="learn-goal">这个词库每天学几个新词</label>
+              <input
+                id="learn-goal"
+                v-model.lazy="goal"
+                type="number"
+                min="1"
+                max="500"
+                aria-label="每日新词目标"
+                class="block w-24 border border-gray-300 rounded-lg bg-white p-2.5 text-center text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+              >
+            </div>
+            <button
+              title="重置记忆：这个词库全部单词回到新词，从 0 开始"
+              class="border border-red-300 rounded-lg bg-white px-3 py-2 text-sm text-red-600 dark:border-red-800 dark:bg-gray-800 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+              @click="resetMemory"
+            >
+              🔄 重置这个词库的记忆
+            </button>
+          </div>
+        </details>
       </div>
     </div>
   </div>

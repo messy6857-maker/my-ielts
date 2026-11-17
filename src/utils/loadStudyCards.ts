@@ -3,8 +3,7 @@ import type { WordList } from './wordLists'
 import { loadAllVocabulary, loadVocabularyChapter } from '../pages/vocabulary/loadVocabulary'
 import { WORD_CHAPTER_INDEX } from '../pages/vocabulary/vocabularyMeta'
 import { corpusCards, listeningCards, readingCards, vocabularyCards } from './studyDeck'
-import { readWordList } from './wordList'
-import { DUNGEON_LIST_ID, DUNGEON_LIST_NAME, dungeonListEntries, entryCard, readLists } from './wordLists'
+import { entryCard, migrateOldWordList, needsListMigration, readLists } from './wordLists'
 
 const chapterOf = (id: string | number) => (WORD_CHAPTER_INDEX as Record<string, string>)[String(id)]
 export type SiteDeckId = Exclude<DeckId, 'custom'>
@@ -19,21 +18,11 @@ export const SITE_DECK_IDS: SiteDeckId[] = [
 export async function loadSiteCards(): Promise<StudyCard[]> {
   return (await Promise.all(SITE_DECK_IDS.map(d => loadDeckCards(d)))).flat()
 }
-/** 全部“我的词表”（自己建的，加上单词地牢的“我的词单”——里面有词才出现） */
+/** 全部“我的词表”（旧的“我的词单”第一次用到时搬成一个普通词表） */
 export async function loadWordLists(): Promise<WordList[]> {
-  const lists = readLists()
-  if (readWordList().length) {
-    const words = dungeonListEntries(await loadSiteCards())
-    if (words.length) {
-      lists.push({
-        id: DUNGEON_LIST_ID,
-        name: DUNGEON_LIST_NAME,
-        words,
-        updatedAt: 0,
-      })
-    }
-  }
-  return lists
+  if (needsListMigration())
+    migrateOldWordList(await loadSiteCards())
+  return readLists()
 }
 /**
  * 取一个词库的全部卡片；词汇表给了章节就只取那一章，不给就取全部章节。

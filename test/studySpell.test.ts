@@ -21,8 +21,7 @@ import {
 } from '../src/utils/spellPractice'
 import { readRecords, saveValue } from '../src/utils/storage'
 import { corpusCards, listeningCards, vocabularyCards } from '../src/utils/studyDeck'
-import { addToWordList, readWordList } from '../src/utils/wordList'
-import { saveLists } from '../src/utils/wordLists'
+import { addEntriesToList, readLists, saveLists, targetListId } from '../src/utils/wordLists'
 
 const listening = listeningCards(listening179 as any)
 const corpus = corpusCards(corpusData as any)
@@ -437,7 +436,7 @@ describe('练拼写: choose first, one word at a time', () => {
     expect(w.find('[data-start]').attributes('disabled')).toBeDefined()
     await w.find('[data-source="custom"]').trigger('click')
     const select = w.find('select[aria-label="词表"]')
-    expect(select.findAll('option').map((o: any) => o.text())).toEqual(['我的生词（2）', '我的词单（单词地牢、听写加入的）（2）'])
+    expect(select.findAll('option').map((o: any) => o.text())).toEqual(['我的生词（2）', '我的词单（2）'])
     await choose(w, 'custom', 'meaning', 0)
     const s = state(w)
     expect(s.queue.map((c: any) => c.key).sort()).toEqual(['custom:serendipity', 'custom:take off'])
@@ -459,20 +458,22 @@ describe('练拼写: choose first, one word at a time', () => {
   })
 })
 
-describe('我的词单 from dictation, and old addresses', () => {
+describe('adding words to a list, and old addresses', () => {
   beforeEach(() => {
     localStorage.clear()
     useAuth().currentUser.value = null
   })
-  it('finds vocabulary entries by spelling, also for inflected forms; adding twice keeps one', async () => {
+  it('finds vocabulary entries by spelling, also for inflected forms; adding twice keeps one; no list yet makes 我的词单', async () => {
     const all = await loader.loadAllVocabulary()
     const word = (Object.values(all)[0] as any).words[0][0]
     const hit = await loader.lookupVocabularyWord(`${word.word[0].toUpperCase()}s`)
     expect(hit).toMatchObject({ id: word.id, word: word.word[0] })
     expect(await loader.lookupVocabularyWord('zzzzqq')).toBeNull()
-    expect(addToWordList([`vocab:${word.id}`, `vocab:${word.id}`])).toBe(1)
-    expect(addToWordList([`vocab:${word.id}`])).toBe(0)
-    expect(readWordList()).toEqual([`vocab:${word.id}`])
+    const entry = { word: word.word[0], meaning: '释义', pos: '', synonyms: [] }
+    expect(addEntriesToList('', [entry, entry])).toEqual({ listId: 'dungeon', added: 1 })
+    expect(addEntriesToList('dungeon', [entry])).toEqual({ listId: 'dungeon', added: 0 })
+    expect(readLists().map(l => [l.name, l.words.length])).toEqual([['我的词单', 1]])
+    expect(targetListId(readLists())).toBe('dungeon')
   })
   it('the old practice addresses redirect to 练拼写 with the list and mode chosen', () => {
     const main = readFileSync('src/main.ts', 'utf8')
