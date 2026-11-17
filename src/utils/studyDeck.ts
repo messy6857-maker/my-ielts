@@ -2,12 +2,14 @@
 import type { MistakeModule, ProgressModule } from '../composables/useStudyData'
 import { buildCorpusWords } from './corpusSpelling'
 
-export type DeckId = 'vocabulary' | 'reading538' | 'listening179' | 'corpus'
+// custom 是“我的词表”：自己导入或从网站词库里选的词，进度和网站词库分开记
+export type DeckId = 'vocabulary' | 'reading538' | 'listening179' | 'corpus' | 'custom'
 export const DECK_IDS: DeckId[] = [
   'vocabulary',
   'reading538',
   'listening179',
   'corpus',
+  'custom',
 ]
 
 export interface DeckMeta {
@@ -43,6 +45,12 @@ export const DECK_META: Record<DeckId, DeckMeta> = {
     mistakeModule: 'corpus',
     attemptNs: 'corpus',
     progressModule: 'corpus_flashcard',
+  },
+  custom: {
+    name: '我的词表',
+    mistakeModule: 'wordlist',
+    attemptNs: 'custom',
+    progressModule: 'custom_flashcard',
   },
 }
 
@@ -184,5 +192,7 @@ export function audioPath(c: StudyCard): { local: string } | { remote: string } 
     const clean = c.word.replace(/\*/g, '')
     return { remote: `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(clean)}&type=1` }
   }
+  if (c.deck === 'custom')
+    return { remote: `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(c.word)}&type=1` }
   return { local: `179_audios/${c.word}.mp3` }
 }

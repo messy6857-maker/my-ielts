@@ -8,7 +8,7 @@ defineOptions({ name: 'StudyPage' })
 
 const vocabularySchedules = useWordSchedule()
 const vocabularyDaily = useDailyGoal()
-const others = (['reading538', 'listening179', 'corpus'] as const).map(ns => useDeckStore(ns))
+const others = (['reading538', 'listening179', 'corpus', 'custom'] as const).map(ns => useDeckStore(ns))
 
 // 到期按“现在”算：停留在页面上时每分钟刷新一次
 const now = ref(Date.now())
@@ -55,6 +55,14 @@ const entries = computed(() => [
     desc: '听写、看释义拼写、跟打。练哪个词库、用哪种练法，进去再选。',
     badge: '',
     to: '/study/spell',
+  },
+  {
+    id: 'lists',
+    icon: '🗂️',
+    title: '我的词表',
+    desc: '自己建词表：粘贴或上传单词，也可以从网站词库里选。建好后在学新词、复习、练拼写里用。',
+    badge: '',
+    to: '/study/lists',
   },
   {
     id: 'game',

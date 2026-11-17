@@ -23,7 +23,7 @@ export const SPELL_SOURCES: Array<{ id: SpellSource, label: string }> = [
   { id: 'corpus', label: '听力语料库' },
   { id: 'mistakes', label: '拼错过的词' },
   { id: 'today', label: '今天学的词' },
-  { id: 'custom', label: '我的词单' },
+  { id: 'custom', label: '我的词表' },
 ]
 export type CorpusChapterId = 'ch2' | 'ch3' | 'ch4'
 export const CORPUS_CHAPTERS: Array<{ id: CorpusChapterId, label: string }> = [
@@ -72,7 +72,7 @@ export function typedWrong(input: string, card: StudyCard): boolean {
 }
 
 export interface SpellMistake {
-  module: 'vocabulary' | 'typing' | 'listening' | 'corpus'
+  module: 'vocabulary' | 'typing' | 'listening' | 'corpus' | 'wordlist'
   entry: { key: string, title: string, detail: string, hint?: string }
 }
 /** 拼错记到原来的错题分组：词汇表 → 词汇拼写（跟打 → 打字练习），听力 179 → 听力，语料库 → 语料库 */
@@ -116,6 +116,8 @@ export function spellMistake(card: StudyCard, mode: SpellMode): SpellMistake | n
       },
     }
   }
+  if (card.deck === 'custom')
+    return { module: 'wordlist', entry: { key: card.key, title: card.word, detail } }
   return null
 }
 

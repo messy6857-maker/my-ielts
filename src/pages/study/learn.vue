@@ -4,8 +4,10 @@ import type { DeckId, StudyCard } from '../../utils/studyDeck'
 import { planQueue } from '../../composables/useDeckStore'
 import { confirmDialog } from '../../composables/useDialog'
 import { useStudyDeck } from '../../composables/useStudyDeck'
+import { nsKey } from '../../composables/useStudyData'
 import { readChapterPreference, writeChapterPreference } from '../../utils/chapterPreference'
-import { loadDeckCards } from '../../utils/loadStudyCards'
+import type { WordList } from '../../utils/wordLists'
+import { loadDeckCards, loadWordLists } from '../../utils/loadStudyCards'
 import { DECK_IDS, DECK_META } from '../../utils/studyDeck'
 import { listVocabularyChapters } from '../vocabulary/loadVocabulary'
 
@@ -70,6 +72,15 @@ const CHAPTER_KEY = 'vocabulary_flashcard_chapter'
 const chapters = listVocabularyChapters()
 const category = ref(readChapterPreference(CHAPTER_KEY, chapters, currentUser.value))
 
+// 我的词表：选其中一个词表来学（记住上次选的；地址里可以带 list=<词表 id>）
+const LIST_KEY = 'study_learn_list'
+const wordLists = shallowRef<WordList[]>([])
+const listId = ref('')
+function pickList(lists: WordList[], user: string | null) {
+  const wanted = [route.query.list, localStorage.getItem(nsKey(LIST_KEY, user))].find(id => lists.some(l => l.id === id))
+  return (wanted as string | undefined) ?? lists[0]?.id ?? ''
+}
+
 const cards = shallowRef<StudyCard[]>([])
 const ready = ref(false)
 const loadError = ref(false)
@@ -81,9 +92,19 @@ async function load() {
   loadError.value = false
   const which = deck.value
   try {
+    if (which === 'custom') {
+      const lists = await loadWordLists()
+      if (seq !== loadSeq)
+        return
+      wordLists.value = lists
+      if (!lists.some(l => l.id === listId.value))
+        listId.value = pickList(lists, currentUser.value)
+    }
     const list = await loadDeckCards(which, which === 'vocabulary'
       ? category.value
-      : undefined)
+      : which === 'custom'
+        ? listId.value || 'none'
+        : undefined)
     if (seq !== loadSeq)
       return
     cards.value = list
@@ -95,15 +116,18 @@ async function load() {
       loadError.value = true
   }
 }
-watch([deck, category], () => {
+watch([deck, category, listId], () => {
   if (deck.value === 'vocabulary')
     writeChapterPreference(CHAPTER_KEY, category.value, currentUser.value)
+  if (deck.value === 'custom' && listId.value)
+    writeChapterPreference(LIST_KEY, listId.value, currentUser.value)
   load()
 }, { immediate: true })
 watch(currentUser, (user) => {
   started.value = false
   chosenPractice.value = readChapterPreference(PRACTICE_KEY, practiceIds, user, 'recognize') as Practice
   deck.value = readChapterPreference(DECK_KEY, [...DECK_IDS], user, deck.value) as DeckId
+  listId.value = ''
   const next = readChapterPreference(CHAPTER_KEY, chapters, user)
   if (category.value !== next)
     category.value = next
@@ -170,6 +194,7 @@ const SUBTITLE: Record<DeckId, string> = {
   reading538: '看到单词先凭感觉自评，重点记同义替换',
   listening179: '看到单词先凭感觉自评，重点记同义替换',
   corpus: '看到单词先凭感觉自评，再看拼写要点',
+  custom: '自己导入或从网站词库里选的词，进度单独记',
 }
 </script>
 
@@ -208,7 +233,7 @@ const SUBTITLE: Record<DeckId, string> = {
         <div class="mb-2 text-sm text-gray-700 font-bold dark:text-gray-200">
           词库
         </div>
-        <div class="grid grid-cols-2 mb-2 gap-2 sm:grid-cols-4">
+        <div class="grid grid-cols-2 mb-2 gap-2 sm:grid-cols-5">
           <button
             v-for="d in DECK_IDS"
             :key="d"
@@ -256,6 +281,23 @@ const SUBTITLE: Record<DeckId, string> = {
           </select>
         </div>
 
+        <div v-if="deck === 'custom'" class="mb-4">
+          <label class="mb-2 block text-sm text-gray-700 font-bold dark:text-gray-200" for="learn-list">词表</label>
+          <select v-if="wordLists.length" id="learn-list" v-model="listId" aria-label="词表" class="block w-full border border-gray-300 rounded-lg bg-white p-2.5 text-sm sm:w-72 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+            <option v-for="l in wordLists" :key="l.id" :value="l.id">
+              {{ l.name }}（{{ l.words.length }}）
+            </option>
+          </select>
+          <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+            <template v-if="ready && !wordLists.length">
+              还没有词表。
+            </template>
+            <RouterLink to="/study/lists" class="underline" data-manage-lists>
+              {{ wordLists.length ? '管理词表' : '去新建一个' }}
+            </RouterLink>
+          </p>
+        </div>
+
         <div class="mb-4">
           <label class="mb-2 block text-sm text-gray-700 font-bold dark:text-gray-200" for="learn-goal">这个词库每天学几个新词</label>
           <input
@@ -287,7 +329,7 @@ const SUBTITLE: Record<DeckId, string> = {
           <button
             data-start
             class="rounded-lg bg-blue-600 px-8 py-2.5 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
-            :disabled="!ready"
+            :disabled="!ready || cards.length === 0"
             @click="start"
           >
             开始
