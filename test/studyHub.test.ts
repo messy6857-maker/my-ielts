@@ -8,6 +8,7 @@ import { useDeckStore } from '../src/composables/useDeckStore'
 import { useDailyGoal, useWordSchedule } from '../src/composables/useSpacedRepetition'
 import IndexPage from '../src/pages/index.vue'
 import StudyPage from '../src/pages/study/index.vue'
+import SpellPage from '../src/pages/study/spell.vue'
 
 const DAY = 86400000
 const wrappers: any[] = []
@@ -61,30 +62,35 @@ function seed() {
 }
 
 describe('背单词 hub', () => {
-  it('shows every word list with its goal, due / new / learned counts and its own practice modes', async () => {
+  it('one entry per task: no per-list duplicates, choices are made inside', async () => {
     seed()
     const w = await mountAt(StudyPage, '/study')
     expect(w.find('[data-summary]').text()).toContain('一共有 3 个词到期')
-    const deck = (id: string) => w.find(`[data-deck="${id}"]`)
-    expect(deck('vocabulary').find('[data-stats]').text().replace(/\s+/g, '')).toBe('到期2今日新词1/30已学3')
-    expect(deck('reading538').find('[data-stats]').text().replace(/\s+/g, '')).toContain('到期1')
-    expect(deck('listening179').find('[data-stats]').text().replace(/\s+/g, '')).toContain('已学1')
-    expect(deck('corpus').find('[data-stats]').text().replace(/\s+/g, '')).toContain('到期0')
-    // 各词库目标不同：阅读考点词不要求拼写，也没有拼写练习
-    expect(deck('vocabulary').find('[data-goal]').text()).toContain('会拼写')
-    expect(deck('reading538').find('[data-goal]').text()).toContain('不要求拼写')
-    expect(deck('listening179').find('[data-goal]').text()).toContain('能拼对')
-    const links = (id: string) => deck(id).findAll('a').map((a: any) => a.attributes('href'))
-    expect(links('vocabulary')).toEqual([
-      '/study/learn?deck=vocabulary',
-      '/vocabulary/flashcard?review=due',
+    const entries = w.findAll('[data-entry]')
+    expect(entries.map((a: any) => [
+      a.attributes('data-entry'),
+      a.attributes('href'),
+    ])).toEqual([
+      ['learn', '/study/learn'],
+      ['review', '/vocabulary/flashcard?review=due'],
+      ['spell', '/study/spell'],
+      ['game', '/game'],
+    ])
+    expect(w.findAll('a')).toHaveLength(4)
+    expect(w.text()).not.toContain('卡片自测 →')
+    expect(w.find('[data-entry="learn"] [data-badge]').text()).toBe('今天已学 1 个新词')
+    expect(w.find('[data-entry="review"] [data-badge]').text()).toBe('2 个到期')
+  })
+
+  it('练拼写 lists the spelling modes; reading keywords are not among them', async () => {
+    const w = await mountAt(SpellPage, '/study/spell')
+    expect(w.findAll('[data-spell]').map((a: any) => a.attributes('href'))).toEqual([
       '/vocabulary?practice=1',
       '/vocabulary/typing',
+      '/listening/179practice',
+      '/listening/corpus-spelling',
     ])
-    expect(links('reading538')).toEqual(['/study/learn?deck=reading538'])
-    expect(links('listening179')).toEqual(['/study/learn?deck=listening179', '/listening/179practice'])
-    expect(links('corpus')).toEqual(['/study/learn?deck=corpus', '/listening/corpus-spelling'])
-    expect(w.find('[data-game]').attributes('href')).toBe('/game')
+    expect(w.findAll('a').some((a: any) => a.attributes('href') === '/study')).toBe(true)
   })
 
   it('nothing due: suggests learning new words', async () => {
@@ -107,6 +113,7 @@ describe('背单词 hub', () => {
     for (const [path, lit] of [
       ['/study', true],
       ['/study/learn', true],
+      ['/study/spell', true],
       ['/game', true],
       ['/listening/179practice', true],
       ['/reading', false],

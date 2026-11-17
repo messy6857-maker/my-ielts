@@ -79,6 +79,7 @@ const route = useRoute()
 const STUDY_PATHS = new Set([
   '/study',
   '/study/learn',
+  '/study/spell',
   '/game',
   '/vocabulary/flashcard',
   '/vocabulary/typing',

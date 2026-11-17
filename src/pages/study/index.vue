@@ -1,90 +1,14 @@
 <script setup lang="ts">
-import type { WordSchedule } from '../../composables/useSpacedRepetition'
 import { useDeckStore } from '../../composables/useDeckStore'
 import { useDailyGoal, useWordSchedule } from '../../composables/useSpacedRepetition'
 import { countDueSchedules } from '../../utils/todayTasks'
 
-// 背单词：各词库的自测卡片、拼写练习和单词地牢的统一入口。
-// 各词库的记录、每日新词目标仍各自独立，这里只汇总显示、跳到对应页面。
+// 背单词：一件事一个入口。词库、章节、每日目标这些都进去以后再选。
 defineOptions({ name: 'StudyPage' })
-
-interface Mode { label: string, desc: string, to: string }
-interface Deck {
-  id: string
-  name: string
-  desc: string
-  /** 这个词库要掌握到什么程度 */
-  aim: string
-  schedules: () => Record<string, WordSchedule | undefined>
-  dailyCount: () => number
-  goal: () => number
-  modes: Mode[]
-}
 
 const vocabularySchedules = useWordSchedule()
 const vocabularyDaily = useDailyGoal()
-const decks = ['reading538', 'listening179', 'corpus'] as const
-const stores = Object.fromEntries(decks.map(ns => [
-  ns,
-  useDeckStore(ns),
-])) as Record<(typeof decks)[number], ReturnType<typeof useDeckStore>>
-
-const CARD_DESC = '先凭感觉自评认识 / 模糊 / 不认识，按记忆曲线安排复习'
-const DECKS: Deck[] = [
-  {
-    id: 'vocabulary',
-    name: '词汇表',
-    desc: '按话题分章的雅思核心词汇',
-    aim: '会认、会读、会拼写，知道用法和同义词',
-    schedules: () => vocabularySchedules.schedules.value,
-    dailyCount: () => vocabularyDaily.dailyCount.value,
-    goal: () => vocabularyDaily.goal.value,
-    modes: [
-      { label: '卡片自测', desc: `按章节学新词。${CARD_DESC}`, to: '/study/learn?deck=vocabulary' },
-      { label: '到期复习', desc: '全部章节里已到期的词一起复习', to: '/vocabulary/flashcard?review=due' },
-      { label: '拼写练习', desc: '在词表里听发音逐个拼写', to: '/vocabulary?practice=1' },
-      { label: '跟打练习', desc: '看着单词和释义打一遍，熟悉拼写', to: '/vocabulary/typing' },
-    ],
-  },
-  {
-    id: 'reading538',
-    name: '阅读考点词',
-    desc: '376 个阅读考点词和同义替换',
-    aim: '看到能认出意思、想到同义替换，不要求拼写',
-    schedules: () => stores.reading538.schedules.value,
-    dailyCount: () => stores.reading538.dailyCount.value,
-    goal: () => stores.reading538.goal.value,
-    modes: [
-      { label: '卡片自测', desc: `${CARD_DESC}，重点记同义替换`, to: '/study/learn?deck=reading538' },
-    ],
-  },
-  {
-    id: 'listening179',
-    name: '听力 179 考点词',
-    desc: '听力高频考点词和同义替换',
-    aim: '听到能听懂、能拼对（听力要填空），知道同义替换',
-    schedules: () => stores.listening179.schedules.value,
-    dailyCount: () => stores.listening179.dailyCount.value,
-    goal: () => stores.listening179.goal.value,
-    modes: [
-      { label: '卡片自测', desc: `${CARD_DESC}，重点记同义替换`, to: '/study/learn?deck=listening179' },
-      { label: '拼写和同义替换练习', desc: '逐行写出单词和它的同义替换', to: '/listening/179practice' },
-    ],
-  },
-  {
-    id: 'corpus',
-    name: '听力语料库',
-    desc: '拼写规范、特别名词、形容词副词等',
-    aim: '记住拼写规范和特殊写法，能拼对',
-    schedules: () => stores.corpus.schedules.value,
-    dailyCount: () => stores.corpus.dailyCount.value,
-    goal: () => stores.corpus.goal.value,
-    modes: [
-      { label: '卡片自测', desc: CARD_DESC, to: '/study/learn?deck=corpus' },
-      { label: '拼写练习', desc: '听发音、看释义把词拼出来，英式美式都算对，拼错标出错的字母', to: '/listening/corpus-spelling' },
-    ],
-  },
-]
+const others = (['reading538', 'listening179', 'corpus'] as const).map(ns => useDeckStore(ns))
 
 // 到期按“现在”算：停留在页面上时每分钟刷新一次
 const now = ref(Date.now())
@@ -93,22 +17,59 @@ const ticker = setInterval(() => {
 }, 60000)
 onBeforeUnmount(() => clearInterval(ticker))
 
-const stats = computed(() => DECKS.map((deck) => {
-  const schedules = deck.schedules()
-  return {
-    deck,
-    due: countDueSchedules(schedules, now.value),
-    learned: Object.values(schedules).filter(Boolean).length,
-    dailyCount: deck.dailyCount(),
-    goal: deck.goal(),
-  }
-}))
-const totalDue = computed(() => stats.value.reduce((n, s) => n + s.due, 0))
+const vocabularyDue = computed(() => countDueSchedules(vocabularySchedules.schedules.value, now.value))
+const totalDue = computed(() => others.reduce(
+  (n, store) => n + countDueSchedules(store.schedules.value, now.value),
+  vocabularyDue.value,
+))
+const newToday = computed(() => others.reduce(
+  (n, store) => n + store.dailyCount.value,
+  vocabularyDaily.dailyCount.value,
+))
+
+const entries = computed(() => [
+  {
+    id: 'learn',
+    icon: '📖',
+    title: '学新词',
+    desc: '卡片自测：先凭感觉自评，再看词条。词库、章节、每天学几个，进去再选。',
+    badge: newToday.value > 0
+      ? `今天已学 ${newToday.value} 个新词`
+      : '',
+    to: '/study/learn',
+  },
+  {
+    id: 'review',
+    icon: '🔁',
+    title: '复习到期的词',
+    desc: '复习词汇表里已经到期的词。其他词库到期的词，在学新词里选那个词库时会先出现。',
+    badge: vocabularyDue.value > 0
+      ? `${vocabularyDue.value} 个到期`
+      : '',
+    to: '/vocabulary/flashcard?review=due',
+  },
+  {
+    id: 'spell',
+    icon: '✏️',
+    title: '练拼写',
+    desc: '听写、看释义拼写、跟打。练哪个词库、用哪种练法，进去再选。',
+    badge: '',
+    to: '/study/spell',
+  },
+  {
+    id: 'game',
+    icon: '🐉',
+    title: '单词地牢',
+    desc: '把单词变成怪物一层层打下去，答对算复习，答错进错词本。',
+    badge: '',
+    to: '/game',
+  },
+])
 </script>
 
 <template>
   <div class="px-4 pt-6 2xl:px-0">
-    <div class="mx-auto max-w-4xl">
+    <div class="mx-auto max-w-2xl">
       <div class="mb-4">
         <h3 class="text-xl text-gray-900 font-bold dark:text-white">
           背单词
@@ -120,61 +81,26 @@ const totalDue = computed(() => stats.value.reduce((n, s) => n + s.due, 0))
           <template v-else>
             今天没有到期要复习的词，可以学点新词。
           </template>
-          每个词库要掌握的程度不同，练法也不同；进度和每日目标分开记录。
         </p>
       </div>
 
-      <div class="grid gap-4 md:grid-cols-2">
-        <section
-          v-for="s in stats"
-          :key="s.deck.id"
-          :data-deck="s.deck.id"
-          class="border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800"
+      <div class="flex flex-col gap-3">
+        <RouterLink
+          v-for="entry in entries"
+          :key="entry.id"
+          :to="entry.to"
+          :data-entry="entry.id"
+          class="block border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
-          <h4 class="text-lg text-gray-900 font-bold dark:text-white">
-            {{ s.deck.name }}
-          </h4>
-          <p class="text-sm text-gray-500 dark:text-gray-400">
-            {{ s.deck.desc }}
-          </p>
-          <p class="mt-1 text-sm text-blue-700 dark:text-blue-300" data-goal>
-            目标：{{ s.deck.aim }}
-          </p>
-          <div class="my-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-700 dark:text-gray-200" data-stats>
-            <span>到期 <b :class="s.due > 0 ? 'text-orange-600 dark:text-orange-400' : ''">{{ s.due }}</b></span>
-            <span>今日新词 <b>{{ s.dailyCount }}</b> / {{ s.goal }}</span>
-            <span>已学 <b>{{ s.learned }}</b></span>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="text-lg text-gray-900 font-bold dark:text-white">{{ entry.icon }} {{ entry.title }} →</span>
+            <span v-if="entry.badge" class="rounded-full bg-orange-100 px-2 py-0.5 text-xs text-orange-700 font-bold dark:bg-orange-900/40 dark:text-orange-300" data-badge>{{ entry.badge }}</span>
           </div>
-          <div class="flex flex-col gap-2">
-            <RouterLink
-              v-for="mode in s.deck.modes"
-              :key="mode.to"
-              :to="mode.to"
-              class="block border border-gray-200 rounded-lg px-3 py-2 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              <div class="text-gray-900 font-medium dark:text-white">
-                {{ mode.label }} →
-              </div>
-              <div class="text-xs text-gray-500 dark:text-gray-400">
-                {{ mode.desc }}
-              </div>
-            </RouterLink>
+          <div class="mt-1 text-sm text-gray-600 dark:text-gray-300">
+            {{ entry.desc }}
           </div>
-        </section>
+        </RouterLink>
       </div>
-
-      <RouterLink
-        to="/game"
-        data-game
-        class="mt-4 block border border-orange-300 rounded-lg bg-orange-50 p-4 dark:border-orange-700 dark:bg-gray-700 hover:bg-orange-100 dark:hover:bg-gray-600"
-      >
-        <div class="text-lg text-gray-900 font-bold dark:text-white">
-          🐉 单词地牢 →
-        </div>
-        <div class="text-sm text-gray-600 dark:text-gray-300">
-          把今天学的词、错词、到期的词或任意词库变成怪物一层层打下去，有每日关卡。出题按各词库的目标来：阅读考点词不考拼写。答对算复习，答错进错词本。
-        </div>
-      </RouterLink>
     </div>
   </div>
 </template>
