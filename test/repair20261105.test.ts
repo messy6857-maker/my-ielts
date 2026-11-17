@@ -794,7 +794,10 @@ it('daily reading: note words and looked-up words go into 我的词表 (base for
   auth.currentUser.value = null
   const { readLists, saveLists } = await import('../src/utils/wordLists')
   const loader = await import('../src/pages/vocabulary/loadVocabulary')
-  vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, json: async () => ({}) })))
+  vi.stubGlobal('fetch', vi.fn(async () => ({
+    ok: false,
+    json: async () => ({}),
+  })))
   const P = (await import('../src/pages/reading/daily.vue')).default
   const { s, w } = await page(P)
   await until(() => !!s.daily && !s.dailyLoading)
@@ -804,10 +807,26 @@ it('daily reading: note words and looked-up words go into 我的词表 (base for
   expect(add.text()).toBe('＋ 词表')
   await add.trigger('click')
   await until(() => readLists().length === 1)
-  expect(readLists()[0]).toMatchObject({ name: '我的词单', words: [{ word: note.word.trim(), meaning: note.meaning }] })
+  expect(readLists()[0]).toMatchObject({
+    name: '我的词单',
+    words: [
+      {
+        word: note.word.trim(),
+        meaning: note.meaning,
+      },
+    ],
+  })
   await until(() => w.find('[data-add-note]').text() === '✓ 已在词表')
   // 两个词表时可以选加到哪个；查词卡片里的词库词用原形
-  saveLists([...readLists(), { id: 'b', name: '写作词', updatedAt: 1, words: [] }])
+  saveLists([
+    ...readLists(),
+    {
+      id: 'b',
+      name: '写作词',
+      updatedAt: 1,
+      words: [],
+    },
+  ])
   const all = await loader.loadAllVocabulary()
   const base = (Object.values(all)[0] as any).words[0][0].word[0] as string
   s.wordList.choose('b')

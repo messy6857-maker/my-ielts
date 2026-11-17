@@ -1,5 +1,5 @@
 import type { ListEntry, WordList } from '../utils/wordLists'
-import { shallowRef, ref, watch } from 'vue'
+import { ref, shallowRef, watch } from 'vue'
 import { loadWordLists } from '../utils/loadStudyCards'
 import { addEntriesToList, entryId, readLists, setTargetList, targetListId } from '../utils/wordLists'
 import { useAuth } from './useAuth'

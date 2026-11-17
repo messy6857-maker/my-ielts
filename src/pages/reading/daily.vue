@@ -3,6 +3,7 @@ import PageBookmark from '../../components/PageBookmark.vue'
 
 import TextHighlights from '../../components/TextHighlights.vue'
 import { getToken } from '../../composables/syncClient'
+import { useAddToList } from '../../composables/useAddToList'
 import { translateWithAI } from '../../composables/useAISettings'
 import { speechLanguage } from '../../composables/useAudioGroup'
 import { useAuth } from '../../composables/useAuth'
@@ -10,7 +11,6 @@ import { adoptLegacyGuestPageBookmarks, migrateGuestPageBookmarks } from '../../
 import { stopAllAudio } from '../../composables/useSingleAudio'
 import { getDeviceId } from '../../composables/useStudyTimer'
 import { SYNC_API_BASE } from '../../sync-config'
-import { useAddToList } from '../../composables/useAddToList'
 import { lookupVocabularyMeaning, lookupVocabularyWord } from '../vocabulary/loadVocabulary'
 import { wordPhonetics } from '../vocabulary/wordPhonetics'
 import indexData from './daily/index.json'
@@ -200,7 +200,12 @@ const textColors = [
 // 生词送进“我的词表”，之后在背单词里练（阅读页本身不做练习）
 const wordList = useAddToList()
 function addNote(n: WordNote) {
-  wordList.add({ word: n.word.trim(), meaning: n.meaning, pos: n.pos, synonyms: [] })
+  wordList.add({
+    word: n.word.trim(),
+    meaning: n.meaning,
+    pos: n.pos,
+    synonyms: [],
+  })
 }
 /** 查词卡片里的词：词库里有就用词库的原形（travelled → travel），没有就用点的这个词 */
 async function addPopupWord() {
@@ -784,7 +789,9 @@ function paragraphs(passage: string): string[] {
                   class="ml-2 border border-gray-300 rounded bg-white px-1 py-0.5 text-xs font-normal dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   @change="wordList.choose(($event.target as HTMLSelectElement).value)"
                 >
-                  <option v-for="l in wordList.lists.value" :key="l.id" :value="l.id">加到：{{ l.name }}</option>
+                  <option v-for="l in wordList.lists.value" :key="l.id" :value="l.id">
+                    加到：{{ l.name }}
+                  </option>
                 </select>
               </p>
               <ul class="space-y-1.5">
@@ -819,7 +826,7 @@ function paragraphs(passage: string): string[] {
                   <button
                     type="button"
                     data-add-note
-                    class="ml-1.5 text-xs text-blue-600 disabled:text-gray-400 dark:text-blue-400"
+                    class="ml-1.5 text-xs text-blue-600 dark:text-blue-400 disabled:text-gray-400"
                     :title="wordList.has(n.word) ? '已在词表里' : `把 ${n.word} 加入我的词表`"
                     :disabled="wordList.has(n.word)"
                     @click="addNote(n)"
@@ -985,7 +992,9 @@ function paragraphs(passage: string): string[] {
                   class="ml-2 border border-gray-300 rounded bg-white px-1 py-0.5 text-xs font-normal dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   @change="wordList.choose(($event.target as HTMLSelectElement).value)"
                 >
-                  <option v-for="l in wordList.lists.value" :key="l.id" :value="l.id">加到：{{ l.name }}</option>
+                  <option v-for="l in wordList.lists.value" :key="l.id" :value="l.id">
+                    加到：{{ l.name }}
+                  </option>
                 </select>
               </p>
               <ul class="space-y-1.5">
@@ -1004,7 +1013,7 @@ function paragraphs(passage: string): string[] {
                   <button
                     type="button"
                     data-add-note
-                    class="ml-1.5 text-xs text-blue-600 disabled:text-gray-400 dark:text-blue-400"
+                    class="ml-1.5 text-xs text-blue-600 dark:text-blue-400 disabled:text-gray-400"
                     :title="wordList.has(n.word) ? '已在词表里' : `把 ${n.word} 加入我的词表`"
                     :disabled="wordList.has(n.word)"
                     @click="addNote(n)"
@@ -1163,7 +1172,7 @@ function paragraphs(passage: string): string[] {
           v-if="translatePopup.kind === 'word'"
           type="button"
           data-add-word
-          class="border border-blue-300 rounded-lg px-3 py-1.5 text-sm text-blue-700 font-medium disabled:border-gray-200 dark:border-blue-800 dark:text-blue-300 disabled:text-gray-400"
+          class="border border-blue-300 rounded-lg px-3 py-1.5 text-sm text-blue-700 font-medium dark:border-blue-800 disabled:border-gray-200 dark:text-blue-300 disabled:text-gray-400"
           :disabled="translatePopup.loading || !!translatePopup.addedAs || wordList.has(translatePopup.source)"
           @click="addPopupWord"
         >
