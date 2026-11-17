@@ -144,7 +144,7 @@ it('successful pulls reset failure notification suppression', async () => {
 it('failed synonym imports can be retried', async () => {
   // Run the source function verbatim, substituting only its import dependency.
   // Vue/Vite module mocks do not reliably intercept this SFC dynamic import.
-  const source = readFileSync('src/pages/vocabulary/flashcard.vue', 'utf8')
+  const source = readFileSync('src/pages/vocabulary/vocabExtras.ts', 'utf8')
   const body = source
     .match(/function ensureSynonymPos\(\) \{([\s\S]*?)\n\}/)![1]
     .replace('import(\'./synonymPos\')', 'loader()')

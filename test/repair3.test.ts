@@ -16,14 +16,11 @@ import {
   useAuth,
 } from '../src/composables/useAuth'
 import { useDailyStore } from '../src/composables/useDailyStore'
-import { useWordSchedule } from '../src/composables/useSpacedRepetition'
 import {
   studyDay,
   useMistakes,
   useProgress,
 } from '../src/composables/useStudyData'
-import * as details from '../src/composables/useVocabularyDetails'
-import * as wordInfo from '../src/composables/useWordInfo'
 import vocabulary from '../src/pages/vocabulary/vocabulary'
 import { analyzeEssay } from '../src/pages/writing/task1/grader'
 import { previewStudyBackup, restoreStudyBackup } from '../src/utils/backup'
@@ -495,22 +492,6 @@ it('an active sibling attempt requires explicit selection and a fresh start does
   expect(s.answers.Q1).toBeUndefined()
   expect(localStorage.getItem(key)).toBe(JSON.stringify(draft))
 })
-it('chapter detail failures offer a visible retry without blocking a valid card', async () => {
-  vi.spyOn(details, 'loadVocabularyDetails')
-    .mockRejectedValueOnce(new Error('offline'))
-    .mockResolvedValue({
-      1: { example: 'Recovered example.', extra: 'note' },
-    })
-  vi.spyOn(wordInfo, 'loadWordInfoWithFallback').mockResolvedValue(null)
-  const Page = (await import('../src/pages/vocabulary/flashcard.vue')).default
-  const { s, w } = await page(Page)
-  expect(s.cardDetailsError).toBe(true)
-  expect(w.text()).toContain('重试加载')
-  await s.retryWordInfo()
-  await flushPromises()
-  expect(s.cardDetailsError).toBe(false)
-  expect(s.current.example).toBe('Recovered example.')
-})
 it('typing defaults to case-insensitive and stores explicit preference under the account', async () => {
   const Page = (await import('../src/pages/vocabulary/typing.vue')).default
   const { s } = await page(Page)
@@ -545,54 +526,6 @@ it('daily word totals already aggregate other devices; local undo leaves another
   expect(daily.dailyCount.value).toBe(1)
   daily.decrementNewWord('same', date)
   expect(daily.dailyCount.value).toBe(1)
-})
-it('all-chapter grading moves every duplicate word schedule and undo restores the aliases', async () => {
-  const byWord = new Map<string, any[]>()
-  for (const c of Object.values(vocabulary) as any[]) {
-    for (const w of c.words.flat()) {
-      const key = w.word[0].toLowerCase().trim()
-      byWord.set(key, [
-        ...(byWord.get(key) || []),
-        w,
-      ])
-    }
-  }
-  const duplicate = [
-    ...byWord.values(),
-  ].find(words => words.length > 1)!
-  const schedule = useWordSchedule()
-  const due = {
-    ease: 2.5,
-    interval: 1,
-    dueAt: 1,
-    reps: 1,
-    lapses: 0,
-  }
-  for (const word of duplicate) schedule.set(word.id, due)
-  vi.spyOn(details, 'loadVocabularyDetails').mockResolvedValue({})
-  vi.spyOn(wordInfo, 'loadWordInfoWithFallback').mockResolvedValue(null)
-  const Page = (await import('../src/pages/vocabulary/flashcard.vue')).default
-  const { s } = await page(Page)
-  s.crossChapter = true
-  await flushPromises()
-  for (let i = 0; i < 80 && !s.vocabReady; i++) {
-    await new Promise(resolve => setTimeout(resolve, 5))
-    await flushPromises()
-  }
-  expect(s.current.word.toLowerCase()).toBe(duplicate[0].word[0].toLowerCase())
-  s.grade(5)
-  for (const word of duplicate)
-    expect(schedule.get(word.id)?.dueAt).toBeGreaterThan(Date.now())
-  s.goBackOne()
-  for (const word of duplicate) expect(schedule.get(word.id)?.dueAt).toBe(1)
-  s.grade(5)
-  s.restart()
-  expect(
-    s.queue.some(
-      (card: any) =>
-        card.word.toLowerCase() === duplicate[0].word[0].toLowerCase(),
-    ),
-  ).toBe(false)
 })
 
 it('compacted cloud deletions still block guest migration and backup resurrection', async () => {

@@ -5,7 +5,7 @@
 import { chromium } from 'playwright'
 
 const BASE = process.argv[2] ?? 'http://localhost:4175/'
-const ROUTES = ['/', '/vocabulary', '/vocabulary/flashcard', '/vocabulary/typing', '/grammar', '/reading', '/reading/daily', '/reading/flashcard', '/listening', '/listening/179practice', '/listening/flashcard', '/listening/corpus', '/listening/intensive', '/speaking', '/writing', '/mistakes', '/stats', '/settings', '/ielts', '/grading/history', '/mock/history']
+const ROUTES = ['/', '/vocabulary', '/study/learn', '/study/review', '/vocabulary/typing', '/grammar', '/reading', '/reading/daily', '/reading/flashcard', '/listening', '/listening/179practice', '/listening/flashcard', '/listening/corpus', '/listening/intensive', '/speaking', '/writing', '/mistakes', '/stats', '/settings', '/ielts', '/grading/history', '/mock/history']
 const UNSAFE = /删除|清空|退出|重置|注销|登录|注册|导出|导入|恢复|认领|丢弃|上传|下载|录音|开始考试|交卷/
 const CLICKS_PER_ROUTE = 10
 

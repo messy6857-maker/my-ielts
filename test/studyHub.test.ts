@@ -72,14 +72,14 @@ describe('背单词 hub', () => {
       a.attributes('href'),
     ])).toEqual([
       ['learn', '/study/learn'],
-      ['review', '/vocabulary/flashcard?review=due'],
+      ['review', '/study/review'],
       ['spell', '/study/spell'],
       ['game', '/game'],
     ])
     expect(w.findAll('a')).toHaveLength(4)
     expect(w.text()).not.toContain('卡片自测 →')
     expect(w.find('[data-entry="learn"] [data-badge]').text()).toBe('今天已学 1 个新词')
-    expect(w.find('[data-entry="review"] [data-badge]').text()).toBe('2 个到期')
+    expect(w.find('[data-entry="review"] [data-badge]').text()).toBe('3 个到期')
   })
 
   it('练拼写 lists the spelling modes; reading keywords are not among them', async () => {
@@ -114,6 +114,7 @@ describe('背单词 hub', () => {
       ['/study', true],
       ['/study/learn', true],
       ['/study/spell', true],
+      ['/study/review', true],
       ['/game', true],
       ['/listening/179practice', true],
       ['/reading', false],
@@ -137,7 +138,6 @@ describe('old entry buttons are gone; self-tests return to the hub', () => {
     expect(source('src/pages/listening/keyword.vue')).not.toContain('179practice')
     expect(source('src/pages/listening/corpus.vue')).not.toContain('corpus-flashcard')
     expect(source('src/components/StudyCardSession.vue')).toContain('useGoBack(\'/study\')')
-    expect(source('src/pages/vocabulary/flashcard.vue')).toContain('router.push(\'/study\')')
   })
 
   it('the vocabulary list opens in practice mode when coming from 拼写练习', async () => {

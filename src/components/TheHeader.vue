@@ -81,7 +81,7 @@ const STUDY_PATHS = new Set([
   '/study/learn',
   '/study/spell',
   '/game',
-  '/vocabulary/flashcard',
+  '/study/review',
   '/vocabulary/typing',
   '/listening/corpus-spelling',
   '/listening/179practice',

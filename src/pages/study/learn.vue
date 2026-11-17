@@ -5,9 +5,9 @@ import { planQueue } from '../../composables/useDeckStore'
 import { confirmDialog } from '../../composables/useDialog'
 import { useStudyDeck } from '../../composables/useStudyDeck'
 import { readChapterPreference, writeChapterPreference } from '../../utils/chapterPreference'
-import { corpusCards, DECK_IDS, DECK_META, listeningCards, readingCards, vocabularyCards } from '../../utils/studyDeck'
-import { listVocabularyChapters, loadVocabularyChapter } from '../vocabulary/loadVocabulary'
-import { WORD_CHAPTER_INDEX } from '../vocabulary/vocabularyMeta'
+import { loadDeckCards } from '../../utils/loadStudyCards'
+import { DECK_IDS, DECK_META } from '../../utils/studyDeck'
+import { listVocabularyChapters } from '../vocabulary/loadVocabulary'
 
 // 学新词：选词库（词汇表再选章节），用统一的卡片自测学今天的新词，顺带复习这个词库里少量到期的词。
 // 每个词库的每日新词目标、复习进度各自独立，沿用原来的记录。
@@ -61,20 +61,9 @@ async function load() {
   loadError.value = false
   const which = deck.value
   try {
-    let list: StudyCard[]
-    if (which === 'vocabulary') {
-      const chapter = category.value
-      list = vocabularyCards({ [chapter]: await loadVocabularyChapter(chapter) }, id => (WORD_CHAPTER_INDEX as Record<string, string>)[String(id)])
-    }
-    else if (which === 'reading538') {
-      list = readingCards((await import('../reading/reading538words')).default as any)
-    }
-    else if (which === 'listening179') {
-      list = listeningCards((await import('../listening/listening179.json')).default as any)
-    }
-    else {
-      list = corpusCards((await import('../listening/spelling_convention')).default as any)
-    }
+    const list = await loadDeckCards(which, which === 'vocabulary'
+      ? category.value
+      : undefined)
     if (seq !== loadSeq)
       return
     cards.value = list

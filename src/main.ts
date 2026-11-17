@@ -14,6 +14,16 @@ const router = createRouter({
   routes: [
     ...routes,
     // 各词库的卡片自测已合并到“学新词”，旧地址跳过去
+    // 词汇表的单词自测：到期复习去“复习到期的词”，其余去“学新词”
+    {
+      path: '/vocabulary/flashcard',
+      redirect: to => to.query.review === 'due'
+        ? { path: '/study/review', query: {} }
+        : {
+            path: '/study/learn',
+            query: { deck: 'vocabulary' },
+          },
+    },
     { path: '/reading/flashcard', redirect: '/study/learn?deck=reading538' },
     { path: '/listening/flashcard', redirect: '/study/learn?deck=listening179' },
     { path: '/listening/corpus-flashcard', redirect: '/study/learn?deck=corpus' },

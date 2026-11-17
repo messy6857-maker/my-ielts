@@ -11,7 +11,6 @@ import {
 } from '../src/composables/useAuth'
 import { studyDay, useMistakes } from '../src/composables/useStudyData'
 import { getDeviceId, useStudyTimer } from '../src/composables/useStudyTimer'
-import * as vocabularyDetails from '../src/composables/useVocabularyDetails'
 import { previewStudyBackup, restoreStudyBackup } from '../src/utils/backup'
 import {
   emergencyWritingDrafts,
@@ -312,30 +311,6 @@ it('d08 valid capitalized spelling survives reload with immediately saved progre
     target: { id: 'word-1', value: item.spellValue },
   }, item)
   expect(item.spellError).toBe(false)
-})
-it('d09 quick self-grading preserves the pending notes for the card still being studied', async () => {
-  let finish!: (data: any) => void
-  vi.spyOn(vocabularyDetails, 'loadVocabularyDetails').mockImplementation(
-    () =>
-      new Promise<any>((resolve) => {
-        finish = resolve
-      }),
-  )
-  const Page = (await import('../src/pages/vocabulary/flashcard.vue')).default
-  const { s } = await page(Page)
-  const id = s.current.id
-  s.grade(5)
-  await nextTick()
-  finish({
-    [String(id)]: {
-      example: 'This verified example should be visible.',
-      extra: 'useful notes',
-    },
-  })
-  await flushPromises()
-  expect(s.studying.id).toBe(id)
-  expect(s.studying.example).toBe('This verified example should be visible.')
-  expect(s.studying.extra).toBe('useful notes')
 })
 it('d10 legacy table import reports failed writes accurately', () => {
   const key = accountKey('progress_v1', 'alice')

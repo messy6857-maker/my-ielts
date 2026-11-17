@@ -42,11 +42,11 @@ const entries = computed(() => [
     id: 'review',
     icon: '🔁',
     title: '复习到期的词',
-    desc: '复习词汇表里已经到期的词。其他词库到期的词，在学新词里选那个词库时会先出现。',
-    badge: vocabularyDue.value > 0
-      ? `${vocabularyDue.value} 个到期`
+    desc: '所有词库到期的词放在一起复习。复习哪些词库、一轮多少个，进去再选。',
+    badge: totalDue.value > 0
+      ? `${totalDue.value} 个到期`
       : '',
-    to: '/vocabulary/flashcard?review=due',
+    to: '/study/review',
   },
   {
     id: 'spell',
