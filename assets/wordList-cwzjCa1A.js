@@ -1,0 +1,1 @@
+import{r as e}from"./useStudyData-2WdenQJv.js";import{Q as t,Y as n}from"./useAuth-TJo-xCBj.js";var r=`dungeon_wordlist_v1`;function i(){let t=n(e(r),[]);return Array.isArray(t)?t.filter(e=>typeof e==`string`):[]}function a(n){let a=i(),o=[...new Set(n)].filter(e=>!a.includes(e));return o.length&&t(e(r),[...a,...o]),o.length}export{i as n,a as t};
