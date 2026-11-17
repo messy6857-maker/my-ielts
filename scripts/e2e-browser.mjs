@@ -349,10 +349,16 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   // 顶部导航只有三项；雅思考试：分项练习、做题方法、模考、记录，每一级都能返回
   await page.goto(`${BASE}#/`)
   const navTexts = await page.locator('header a').evaluateAll(as => as.map(a => a.textContent.replace(/\d+/g, '').trim()))
-  for (const label of ['首页', '背单词', '雅思考试'])
+  for (const label of ['首页', '背单词', '每日阅读', '雅思考试'])
     assert.ok(navTexts.includes(label), label)
   for (const label of ['词汇', '语法', '听力', '口语', '阅读', '写作', '错词本', '学习统计'])
     assert.ok(!navTexts.includes(label), label)
+  // 每日阅读：导航一步进去，导航里亮的是每日阅读
+  await page.locator('header a[href="#/reading/daily"]').first().click()
+  await page.getByText('📅 每日阅读').waitFor({ timeout: 20000 })
+  assert.ok((await page.locator('a[href="#/reading/daily"]').first().getAttribute('class')).includes('text-primary-700'))
+  assert.ok(!(await page.locator('a[href="#/ielts"]').first().getAttribute('class')).includes('text-primary-700'))
+  await page.goto(`${BASE}#/`)
   await page.locator('[data-home-entry="/ielts"]').click()
   await page.locator('[data-entry="guide"]').click()
   await page.getByText('Section 1').first().waitFor()

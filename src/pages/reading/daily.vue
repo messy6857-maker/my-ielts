@@ -647,7 +647,6 @@ function paragraphs(passage: string): string[] {
     正在加载文章…
   </p>
   <div class="mx-auto max-w-3xl px-4 pt-6 2xl:px-0">
-    <ReadingTabs />
     <div class="mb-6 flex items-center justify-between">
       <h2 class="text-2xl text-gray-900 font-bold dark:text-white">
         📅 每日阅读

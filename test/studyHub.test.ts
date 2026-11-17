@@ -105,10 +105,10 @@ describe('背单词 hub', () => {
     ])
   })
 
-  it('the menu has three entries; each stays lit on every page under it', async () => {
+  it('the menu has four entries; each stays lit on every page under it', async () => {
     const lit = async (path: string) => {
       const w = await mountAt(TheHeader, path)
-      const links = w.findAll('a').filter((a: any) => ['/', '/study', '/ielts'].includes(a.attributes('href')) && a.classes().includes('text-primary-700'))
+      const links = w.findAll('a').filter((a: any) => ['/', '/study', '/reading/daily', '/ielts'].includes(a.attributes('href')) && a.classes().includes('text-primary-700'))
       const labels = [
         ...new Set(links.map((a: any) => a.attributes('href'))),
       ]
@@ -117,7 +117,7 @@ describe('背单词 hub', () => {
     }
     const w = await mountAt(TheHeader, '/')
     const texts = w.findAll('a').map((a: any) => a.text().replace(/\d+$/, '').trim())
-    for (const label of ['首页', '背单词', '雅思考试'])
+    for (const label of ['首页', '背单词', '每日阅读', '雅思考试'])
       expect(texts).toContain(label)
     for (const label of [
       '词汇',
@@ -149,7 +149,6 @@ describe('背单词 hub', () => {
       '/listening/keyword',
       '/listening/intensive',
       '/reading',
-      '/reading/daily',
       '/writing',
       '/speaking',
       '/grammar',
@@ -158,6 +157,8 @@ describe('背单词 hub', () => {
       '/grading/history',
     ])
       expect(await lit(path)).toEqual(['/ielts'])
+    // 每日阅读单独一个入口，不算雅思考试
+    expect(await lit('/reading/daily')).toEqual(['/reading/daily'])
     expect(await lit('/settings')).toEqual([])
   })
 })
@@ -202,10 +203,10 @@ describe('雅思考试', () => {
     const source = (p: string) => readFileSync(p, 'utf8')
     expect(source('src/components/ListeningTabs.vue')).not.toContain('/mock/listening-test')
     expect(source('src/components/ListeningTabs.vue')).not.toContain('IELTS 听力基本概念')
-    expect(source('src/components/ReadingTabs.vue')).not.toContain('/mock/reading-test')
+    expect(source('src/pages/reading/index.vue')).not.toContain('/mock/reading-test')
     for (const p of [
       'src/pages/listening.vue',
-      'src/components/ReadingTabs.vue',
+      'src/pages/reading/index.vue',
       'src/pages/writing/index.vue',
       'src/pages/speaking/index.vue',
       'src/pages/grammar/index.vue',
@@ -227,7 +228,7 @@ describe('old entry buttons are gone; self-tests return to the hub', () => {
   it('no self-test or practice buttons are left on the vocabulary, reading and listening pages', () => {
     const source = (p: string) => readFileSync(p, 'utf8')
     expect(source('src/pages/vocabulary/index.vue')).not.toContain('to="/vocabulary/flashcard"')
-    expect(source('src/components/ReadingTabs.vue')).not.toContain('/reading/flashcard')
+    expect(source('src/pages/reading/index.vue')).not.toContain('/reading/flashcard')
     expect(source('src/pages/listening/keyword.vue')).not.toContain('/listening/flashcard')
     expect(source('src/pages/listening/keyword.vue')).not.toContain('179practice')
     expect(source('src/pages/listening/corpus.vue')).not.toContain('corpus-flashcard')

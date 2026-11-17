@@ -79,13 +79,19 @@ function percent(done: number, total: number) {
     : 0
 }
 
-// 首页四个入口：背单词、雅思考试，以及错词本、学习统计
+// 首页入口：背单词、每日阅读、雅思考试，以及错词本、学习统计
 const menus = computed(() => [
   {
     label: '背单词',
     icon: 'i-carbon-book',
     link: '/study',
     desc: '学新词、复习到期的词、练拼写、单词地牢，词汇表也在这里',
+  },
+  {
+    label: '每日阅读',
+    icon: 'i-carbon-calendar',
+    link: '/reading/daily',
+    desc: '每天更新：用你昨天学过的单词写的文章，加上热点新闻阅读',
   },
   {
     label: '雅思考试',
