@@ -355,7 +355,7 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
     assert.ok(!navTexts.includes(label), label)
   await page.locator('[data-home-entry="/ielts"]').click()
   await page.locator('[data-entry="guide"]').click()
-  await page.getByText('Section 1').waitFor()
+  await page.getByText('Section 1').first().waitFor()
   await page.locator('[data-part="reading"]').click()
   await page.getByText('常见题型怎么做').waitFor()
   await page.locator('a[data-back][href="#/ielts"]').click()

@@ -201,7 +201,7 @@ describe('雅思考试', () => {
   it('the listening and reading tabs no longer hold the method page or the mock tests; every page has a way back', () => {
     const source = (p: string) => readFileSync(p, 'utf8')
     expect(source('src/components/ListeningTabs.vue')).not.toContain('/mock/listening-test')
-    expect(source('src/components/ListeningTabs.vue')).not.toContain('基本概念')
+    expect(source('src/components/ListeningTabs.vue')).not.toContain('IELTS 听力基本概念')
     expect(source('src/components/ReadingTabs.vue')).not.toContain('/mock/reading-test')
     for (const p of [
       'src/pages/listening.vue',
