@@ -26,6 +26,8 @@ function parseDeck(value: unknown): DeckId {
     : readChapterPreference(DECK_KEY, [...DECK_IDS], currentUser.value, 'vocabulary') as DeckId
 }
 const deck = ref<DeckId>(parseDeck(route.query.deck))
+// 进来先选，点“开始”才出卡片；卡片页的返回键回到这个选择页
+const started = ref(false)
 watch(() => route.query.deck, (value) => {
   deck.value = parseDeck(value)
 })
@@ -122,8 +124,6 @@ const goal = computed({
   get: () => store.value.goal(),
   set: (v: string | number) => store.value.setGoal(Number(v)),
 })
-// 进来先选，点“开始”才出卡片；卡片页的返回键回到这个选择页
-const started = ref(false)
 const preview = computed(() => {
   void version.value
   return ready.value
