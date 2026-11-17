@@ -138,7 +138,7 @@ describe('复习到期的词: choose first, all word lists together', () => {
       useWordSchedule().set(id, due(id))
     useDeckStore('reading538').setSchedule(readingId, due(9))
     const w = await mountReview()
-    expect(w.findAll('[data-count]').map((b: any) => b.text())).toEqual(['20 个', '50 个', '全部', '自定义数量'])
+    expect(w.findAll('[data-count]').map((b: any) => b.text())).toEqual(['20 个', '50 个', '自定义数量', '全部'])
     expect(w.find('[data-preview]').text()).toContain('这一轮复习 4 个')
     await w.find('[data-count="custom"]').trigger('click')
     const input = w.find('input[aria-label="自定义数量"]')

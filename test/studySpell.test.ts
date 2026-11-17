@@ -278,6 +278,28 @@ describe('练拼写: choose first, one word at a time', () => {
     expect(w.find('[data-setup]').exists()).toBe(true)
   })
 
+  it('round size: 10 / 20 / 50 / a custom number / all, with custom before all, remembered next time', async () => {
+    const w = await open()
+    expect(w.findAll('[data-size]').map((b: any) => b.text())).toEqual(['10 个', '20 个', '50 个', '自定义数量', '全部'])
+    await w.find('[data-source="listening179"]').trigger('click')
+    expect(w.find('input[aria-label="自定义数量"]').exists()).toBe(false)
+    await w.find('[data-size="custom"]').trigger('click')
+    const input = w.find('input[aria-label="自定义数量"]')
+    await input.setValue('7')
+    await input.trigger('change')
+    expect(w.find('[data-preview]').text()).toContain('这一轮练 7 个')
+    await w.find('[data-start]').trigger('click')
+    await flushPromises()
+    expect(state(w).queue).toHaveLength(7)
+    w.unmount()
+    wrappers.pop()
+    const again = await open()
+    expect(again.find('[data-size="custom"]').attributes('aria-pressed')).toBe('true')
+    expect((again.find('input[aria-label="自定义数量"]').element as HTMLInputElement).value).toBe('7')
+    await again.find('[data-size="0"]').trigger('click')
+    expect(again.find('[data-preview]').text()).toContain('这一轮练 179 个')
+  })
+
   it('dictation hides the meaning until the word is checked', async () => {
     const w = await open()
     await choose(w, 'vocabulary', 'dictation')
