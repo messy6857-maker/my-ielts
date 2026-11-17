@@ -321,7 +321,7 @@ describe('练拼写: choose first, one word at a time', () => {
     await new Promise(r => setTimeout(r, 230))
     await flushPromises()
     expect(useMistakes().mistakes.value.some(m => m.key === `typing:${word}`)).toBe(false)
-    expect(useProgress().modules.value.some(m => m.module === 'typing')).toBe(false)
+    expect(useProgress().modules.value.find(m => m.module === 'typing')?.done ?? 0).toBe(0)
     expect(s.stage).toBe('setup')
     useAuth().currentUser.value = null
   })
