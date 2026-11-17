@@ -468,33 +468,6 @@ it('legacy counts can be assigned to self-test without merging current spelling 
     mistakes.mistakes.value.some(m => m.key === 'legacy-vocabulary:1'),
   ).toBe(false)
 })
-it('late detail loading replaces a pending failure hint once without increasing its count', async () => {
-  let finish!: (value: any) => void
-  vi.spyOn(details, 'loadVocabularyDetails').mockImplementation(
-    () =>
-      new Promise<any>((resolve) => {
-        finish = resolve
-      }),
-  )
-  vi.spyOn(dictionary, 'loadWordInfoWithFallback').mockResolvedValue(null)
-  const Page = (await import('../src/pages/vocabulary/flashcard.vue')).default
-  const { s } = await page(Page)
-  const id = s.current.id
-  s.grade(0)
-  const before = useMistakes().mistakes.value.find(
-    m => m.key === `flashcard:${id}`,
-  )!
-  expect(before.hint).toBeTruthy()
-  finish({
-    [id]: { example: 'Independent late example.', extra: '' },
-  })
-  await flushPromises()
-  const after = useMistakes().mistakes.value.find(
-    m => m.key === `flashcard:${id}`,
-  )!
-  expect(after.count).toBe(before.count)
-  expect(after.hint).toBe('Independent late example.')
-})
 it('a fresh capability probe blocks an old backend before any new-format PUT', async () => {
   vi.stubGlobal(
     'fetch',

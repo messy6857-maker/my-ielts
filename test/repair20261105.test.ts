@@ -507,24 +507,6 @@ it('the writing grader stops a role phrase at the next independent clause', asyn
   expect(analyzeEssay('He worked as a teacher and students improved.').complexRatio).toBe(0)
 })
 
-it('vocabulary grades are disabled while the selected chapter loads', async () => {
-  const loader = await import('../src/pages/vocabulary/loadVocabulary')
-  const P = (await import('../src/pages/vocabulary/flashcard.vue')).default
-  const { s } = await page(P)
-  await until(() => s.vocabReady && !!s.current)
-  const card = s.current
-  const next = loader.listVocabularyChapters().find(c => c !== s.category)!
-  const selected = defer<any>()
-  vi.spyOn(loader, 'loadVocabularyChapter').mockReturnValueOnce(selected.promise)
-  s.category = next
-  await nextTick()
-  expect(s.vocabReady).toBe(false)
-  expect(s.current.id).toBe(card.id)
-  s.grade(0)
-  expect(useMistakes().mistakes.value.some(x => x.key === `flashcard:${card.id}`)).toBe(false)
-  selected.resolve(await loader.loadVocabularyChapter(next))
-  await flushPromises()
-})
 
 it('opening one legacy writing result keeps unrelated scores in the sync payload', async () => {
   const props = { task: 'task1', question: 'Legacy to v2 migration', essay: 'Open this prior result' }

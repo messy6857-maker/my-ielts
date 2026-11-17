@@ -239,6 +239,40 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   // 新词计数写回原来的阅读考点词记录
   const readingDaily = await page.evaluate(() => Object.keys(localStorage).filter(k => k.includes('reading538')))
   assert.ok(readingDaily.length > 0, '阅读考点词没有写回原记录')
+  // 复习到期的词：刚才四个词库各有一个“不认识”的词已经到期。进来先选，默认勾上有到期词的词库
+  await page.goto(`${BASE}#/study`)
+  await page.locator('[data-entry="review"] [data-badge]').waitFor()
+  await page.locator('[data-entry="review"]').click()
+  await page.locator('[data-start]:enabled').waitFor({ timeout: 30000 })
+  assert.equal(await page.locator('[data-card]').count(), 0)
+  assert.equal(await page.locator('[data-review-deck]:checked').count(), 4)
+  assert.ok((await page.locator('[data-preview]').innerText()).includes('这一轮复习 4 个'))
+  // 自定义数量：只复习 2 个
+  await page.locator('[data-count="custom"]').click()
+  await page.locator('input[aria-label="自定义数量"]').fill('2')
+  await page.locator('input[aria-label="自定义数量"]').press('Tab')
+  await page.getByText('这一轮复习 2 个').waitFor()
+  await page.locator('[data-start]').click()
+  // 每个词注明来自哪个词库
+  await page.locator('[data-card] [data-deck-label]').waitFor()
+  assert.ok((await page.locator('[data-deck-label]').innerText()).startsWith('来自 '))
+  assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).includes('text-primary-700'))
+  await page.getByRole('button', { name: '认识', exact: true }).click()
+  await page.locator('[data-study]').waitFor()
+  await page.getByRole('button', { name: '下一个', exact: true }).click()
+  await page.locator('[data-card] [data-word]').waitFor()
+  // 返回选择页：少了一个到期的词；再返回背单词
+  await page.getByRole('button', { name: /返回选择/ }).first().click()
+  await page.getByRole('button', { name: '退出', exact: true }).click()
+  await page.locator('[data-setup]').waitFor()
+  await page.getByText('选中的词库一共 3 个到期').waitFor()
+  await page.locator('a[data-back][href="#/study"]').click()
+  await page.locator('[data-entry="review"]').waitFor()
+  // 旧的词汇表单词自测地址：到期复习跳到复习页，其余跳到学新词
+  await page.goto(`${BASE}#/vocabulary/flashcard?review=due`)
+  await page.getByRole('heading', { name: '复习到期的词' }).waitFor({ timeout: 20000 })
+  await page.goto(`${BASE}#/vocabulary/flashcard`)
+  await page.locator('[data-deck-choice="vocabulary"][aria-pressed="true"]').waitFor({ timeout: 20000 })
   // 练拼写：一个入口，进去再选练法。语料库拼写：拼错一个，看到答案，返回
   await page.goto(`${BASE}#/study`)
   await page.locator('[data-entry="spell"]').click()
