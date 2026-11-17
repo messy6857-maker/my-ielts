@@ -132,10 +132,6 @@ it('b3: 仅空格输入不计正确、不持久化空格串', async () => {
   expect(map[`${CHAPTER}|1`]).toBeUndefined()
 })
 
-
-
-
-
 it('o1: 完成练习后错词旁直接显示正确答案', async () => {
   const w = mountSpelling()
   await flushPromises()
@@ -164,4 +160,3 @@ it('o2: 四个开关持久化，重新挂载后保持上次选择', async () => 
   expect(label).toBeTruthy()
   expect((label.find('input[type="checkbox"]').element as HTMLInputElement).checked).toBe(true)
 })
-

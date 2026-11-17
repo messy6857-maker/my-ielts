@@ -186,7 +186,12 @@ export async function lookupVocabularyWord(word: string): Promise<VocabularyWord
         const map = new Map<string, VocabularyWordHit>()
         for (const chapter of Object.values(all)) {
           for (const w of chapter.words.flat()) {
-            const hit = { id: w.id, word: String(w.word?.[0] ?? ''), meaning: w.meaning, pos: w.pos }
+            const hit = {
+              id: w.id,
+              word: String(w.word?.[0] ?? ''),
+              meaning: w.meaning,
+              pos: w.pos,
+            }
             for (const form of w.word ?? []) {
               const k = String(form).toLowerCase().trim()
               if (k && !map.has(k))

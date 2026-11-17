@@ -33,7 +33,7 @@ export const CORPUS_CHAPTERS: Array<{ id: CorpusChapterId, label: string }> = [
 ]
 
 export function normalizeSpelling(text: string): string {
-  return text.toLowerCase().trim().replace(/[  -​  　]/g, ' ').replace(/\s+/g, ' ')
+  return text.toLowerCase().trim().replace(/[\xA0\u2000-\u200B\u202F\u205F\u3000]/g, ' ').replace(/\s+/g, ' ')
 }
 /** 拼对了返回匹配上的那个写法，否则返回 null */
 export function matchSpelling(input: string, card: StudyCard): string | null {
@@ -80,13 +80,42 @@ export function spellMistake(card: StudyCard, mode: SpellMode): SpellMistake | n
   const detail = `${card.pos} ${card.meaning}`.trim()
   if (card.deck === 'vocabulary') {
     return mode === 'typing'
-      ? { module: 'typing', entry: { key: `typing:${card.word}`, title: card.word, detail, hint: card.example } }
-      : { module: 'vocabulary', entry: { key: `spelling:${card.id}`, title: card.spellings.join(' / '), detail, hint: card.example } }
+      ? {
+          module: 'typing',
+          entry: {
+            key: `typing:${card.word}`,
+            title: card.word,
+            detail,
+            hint: card.example,
+          },
+        }
+      : {
+          module: 'vocabulary',
+          entry: {
+            key: `spelling:${card.id}`,
+            title: card.spellings.join(' / '),
+            detail,
+            hint: card.example,
+          },
+        }
   }
-  if (card.deck === 'listening179')
-    return { module: 'listening', entry: { key: `listening179:${card.id}`, title: card.word, detail: `${detail}；同义替换：${card.synonyms.join(' / ')}` } }
-  if (card.deck === 'corpus')
-    return { module: 'corpus', entry: { key: `corpus:${card.id}`, title: card.word, detail, hint: card.note || card.spellings.join(' / ') } }
+  if (card.deck === 'listening179') {
+    return {
+      module: 'listening',
+      entry: { key: `listening179:${card.id}`, title: card.word, detail: `${detail}；同义替换：${card.synonyms.join(' / ')}` },
+    }
+  }
+  if (card.deck === 'corpus') {
+    return {
+      module: 'corpus',
+      entry: {
+        key: `corpus:${card.id}`,
+        title: card.word,
+        detail,
+        hint: card.note || card.spellings.join(' / '),
+      },
+    }
+  }
   return null
 }
 
@@ -134,7 +163,10 @@ export function pickSpellRound(cards: StudyCard[], size: number, options: { answ
   let out = [...cards]
   if (options.answered) {
     const answered = options.answered
-    out = [...out.filter(c => !answered(c)), ...out.filter(c => answered(c))]
+    out = [
+      ...out.filter(c => !answered(c)),
+      ...out.filter(c => answered(c)),
+    ]
   }
   else {
     const rng = options.rng ?? Math.random

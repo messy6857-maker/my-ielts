@@ -87,8 +87,6 @@ it('l4: the marker filter does not eat real sentences mentioning Q or Part', () 
   ])
 })
 
-
-
 it('l7: no 179 word lists itself as its own synonym', () => {
   for (const w of words179 as unknown as Array<{ word: string, replace: string[] }>) {
     expect(w.replace).not.toContain(w.word)

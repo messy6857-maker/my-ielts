@@ -433,7 +433,9 @@ it('dictation: words written wrong that the vocabulary has can be added to 我�
   const hits = async () => {
     const keys = new Set<string>()
     for (const token of tokenizeDictation(s.currentDictationEntry.text)) {
-      const hit = /^[a-z][a-z'-]+$/.test(token) ? await lookupVocabularyWord(token) : null
+      const hit = /^[a-z][a-z'-]+$/.test(token)
+        ? await lookupVocabularyWord(token)
+        : null
       if (hit)
         keys.add(`vocab:${hit.id}`)
     }
@@ -701,7 +703,6 @@ it('restoring a different account’s backup does not import its global AI delet
   expect(collectSyncData('bob')[target]).toBeDefined()
   expect(localStorage.getItem(accountKey('archive_retention_writing_v3', 'bob'))).toBeNull()
 })
-
 
 it('a failed mock mistake save survives a new save instance and retries', async () => {
   const { useMockMistakeSave } = await import('../src/composables/useMockMistakeSave')

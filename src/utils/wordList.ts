@@ -15,9 +15,15 @@ export function readWordList(): string[] {
 /** 加进词单（已经在里面的不重复加），返回新加了几个 */
 export function addToWordList(keys: string[]): number {
   const list = readWordList()
-  const fresh = [...new Set(keys)].filter(k => !list.includes(k))
-  if (fresh.length)
-    saveValue(nsKey(LIST_KEY), [...list, ...fresh])
+  const fresh = [
+    ...new Set(keys),
+  ].filter(k => !list.includes(k))
+  if (fresh.length) {
+    saveValue(nsKey(LIST_KEY), [
+      ...list,
+      ...fresh,
+    ])
+  }
   return fresh.length
 }
 /** 这张卡在词单里的 key（词汇表的 key 是 vocab:<id>） */

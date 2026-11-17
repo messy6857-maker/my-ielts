@@ -2,10 +2,10 @@
 import type { DiffChar } from '../../utils/corpusSpelling'
 import type { CorpusChapterId, SpellMode, SpellSource } from '../../utils/spellPractice'
 import type { DeckId, StudyCard } from '../../utils/studyDeck'
-import { useAudioGroup } from '../../composables/useAudioGroup'
 import { resolveAudioUrl } from '../../composables/useAudio'
-import { useStudyDeck } from '../../composables/useStudyDeck'
+import { useAudioGroup } from '../../composables/useAudioGroup'
 import { nsKey, useMistakes } from '../../composables/useStudyData'
+import { useStudyDeck } from '../../composables/useStudyDeck'
 import { loadDeckCards } from '../../utils/loadStudyCards'
 import {
   CORPUS_CHAPTERS,
@@ -37,7 +37,10 @@ const { currentUser } = useAuth()
 const { addMistake, mistakes } = useMistakes()
 const { setProgress, markListening179RowStudied } = useProgress()
 const SPELL_DECKS: DeckId[] = ['vocabulary', 'listening179', 'corpus']
-const stores = Object.fromEntries(SPELL_DECKS.map(d => [d, useStudyDeck(d)])) as Record<DeckId, ReturnType<typeof useStudyDeck>>
+const stores = Object.fromEntries(SPELL_DECKS.map(d => [
+  d,
+  useStudyDeck(d),
+])) as Record<DeckId, ReturnType<typeof useStudyDeck>>
 
 // —— 选择 ——
 const chapters = listVocabularyChapters()
@@ -108,8 +111,16 @@ const allCards = computed(() => cards.value
   : [])
 const pools = computed<Record<SpellSource, StudyCard[]>>(() => {
   const all = cards.value
-  if (!all)
-    return { vocabulary: [], listening179: [], corpus: [], mistakes: [], today: [], custom: [] }
+  if (!all) {
+    return {
+      vocabulary: [],
+      listening179: [],
+      corpus: [],
+      mistakes: [],
+      today: [],
+      custom: [],
+    }
+  }
   const custom = new Set(customKeys.value)
   return {
     vocabulary: all.vocabulary.filter(c => c.chapter === settings.value.chapter),
@@ -184,7 +195,9 @@ function play() {
   if (!c)
     return
   const path = audioPath(c)
-  managedAudio.play('local' in path ? resolveAudioUrl(path.local) : path.remote, c.word)
+  managedAudio.play('local' in path
+    ? resolveAudioUrl(path.local)
+    : path.remote, c.word)
 }
 function clearAdvance() {
   if (advanceTimer) {
@@ -229,7 +242,9 @@ function startRound() {
     ? spelledAnswers()
     : {}
   begin(pickSpellRound(pool.value, settings.value.size, byChapter
-    ? { answered: c => !!answers[`${c.chapter}|${c.id}`] }
+    ? {
+        answered: c => !!answers[`${c.chapter}|${c.id}`],
+      }
     : {}))
 }
 function retryMissed() {
@@ -478,7 +493,7 @@ const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.lab
             </p>
             <button
               data-start
-              class="rounded-lg bg-blue-600 px-8 py-2.5 text-white font-bold disabled:opacity-50 hover:bg-blue-700"
+              class="rounded-lg bg-blue-600 px-8 py-2.5 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
               :disabled="!pool.length"
               @click="startRound"
             >

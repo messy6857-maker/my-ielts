@@ -25,7 +25,23 @@ import { addToWordList, readWordList } from '../src/utils/wordList'
 
 const listening = listeningCards(listening179 as any)
 const corpus = corpusCards(corpusData as any)
-const vocab = (word: string[], id = 1, chapter = '01_x') => vocabularyCards({ [chapter]: { words: [[{ id, word, pos: 'n.', meaning: '释义', example: 'An example.' }]] } }, () => chapter)[0]
+function vocab(word: string[], id = 1, chapter = '01_x') {
+  return vocabularyCards({
+    [chapter]: {
+      words: [
+        [
+          {
+            id,
+            word,
+            pos: 'n.',
+            meaning: '释义',
+            example: 'An example.',
+          },
+        ],
+      ],
+    },
+  }, () => chapter)[0]
+}
 
 describe('one set of checking rules for every way of practising', () => {
   it('case and extra spaces are ignored; every accepted spelling counts', () => {
@@ -65,12 +81,24 @@ describe('one set of checking rules for every way of practising', () => {
 
   it('mistakes go to the group each practice used before', () => {
     const v = vocab(['colour', 'color'], 7)
-    expect(spellMistake(v, 'dictation')).toMatchObject({ module: 'vocabulary', entry: { key: 'spelling:7', title: 'colour / color', hint: 'An example.' } })
+    expect(spellMistake(v, 'dictation')).toMatchObject({
+      module: 'vocabulary',
+      entry: { key: 'spelling:7', title: 'colour / color', hint: 'An example.' },
+    })
     expect(spellMistake(v, 'meaning')!.entry.key).toBe('spelling:7')
-    expect(spellMistake(v, 'typing')).toMatchObject({ module: 'typing', entry: { key: 'typing:colour', title: 'colour' } })
-    expect(spellMistake(listening[0], 'synonym')).toMatchObject({ module: 'listening', entry: { key: 'listening179:1' } })
+    expect(spellMistake(v, 'typing')).toMatchObject({
+      module: 'typing',
+      entry: { key: 'typing:colour', title: 'colour' },
+    })
+    expect(spellMistake(listening[0], 'synonym')).toMatchObject({
+      module: 'listening',
+      entry: { key: 'listening179:1' },
+    })
     expect(spellMistake(listening[0], 'synonym')!.entry.detail).toContain('同义替换：book')
-    expect(spellMistake(corpus[0], 'meaning')).toMatchObject({ module: 'corpus', entry: { key: `corpus:${corpus[0].id}` } })
+    expect(spellMistake(corpus[0], 'meaning')).toMatchObject({
+      module: 'corpus',
+      entry: { key: `corpus:${corpus[0].id}` },
+    })
   })
 
   it('word sources: misspelt words, words studied today, round order', () => {
@@ -79,13 +107,32 @@ describe('one set of checking rules for every way of practising', () => {
     const copy = vocab(['alpha'], 3, '02_y')
     const all = [a, b, copy, listening[0], corpus[0]]
     const m = (key: string) => ({ key } as any)
-    expect(mistakenCards(all, [m('typing:alpha'), m('spelling:2'), m('listening179:1'), m('flashcard:1')])).toEqual([a, b, listening[0]])
+    expect(mistakenCards(all, [
+      m('typing:alpha'),
+      m('spelling:2'),
+      m('listening179:1'),
+      m('flashcard:1'),
+    ])).toEqual([a, b, listening[0]])
     const now = Date.now()
-    const today = { ease: 2.5, interval: 1, dueAt: now + 86400000 - 1000, reps: 1, lapses: 0 }
+    const today = {
+      ease: 2.5,
+      interval: 1,
+      dueAt: now + 86400000 - 1000,
+      reps: 1,
+      lapses: 0,
+    }
     const old = { ...today, dueAt: now - 5 * 86400000 }
-    expect(todayCards(all, c => c === b ? today : c === a ? old : undefined, now)).toEqual([b])
-    expect(pickSpellRound([a, b, copy], 2, { answered: c => c === a })).toEqual([b, copy])
-    expect(pickSpellRound([a, b, copy], 0, { answered: c => c === a })).toEqual([b, copy, a])
+    expect(todayCards(all, c => c === b
+      ? today
+      : c === a
+        ? old
+        : undefined, now)).toEqual([b])
+    expect(pickSpellRound([a, b, copy], 2, {
+      answered: c => c === a,
+    })).toEqual([b, copy])
+    expect(pickSpellRound([a, b, copy], 0, {
+      answered: c => c === a,
+    })).toEqual([b, copy, a])
     expect(pickSpellRound(all, 3)).toHaveLength(3)
     expect(new Set(pickSpellRound(all, 0))).toEqual(new Set(all))
   })
@@ -97,7 +144,11 @@ describe('练拼写: choose first, one word at a time', () => {
     localStorage.clear()
     window.dispatchEvent(new StorageEvent('storage', { key: null }))
     useAuth().currentUser.value = null
-    vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn(), getVoices: () => [] })
+    vi.stubGlobal('speechSynthesis', {
+      cancel: vi.fn(),
+      speak: vi.fn(),
+      getVoices: () => [],
+    })
     vi.stubGlobal('SpeechSynthesisUtterance', class {
       constructor(public text: string) {}
     })
@@ -118,9 +169,22 @@ describe('练拼写: choose first, one word at a time', () => {
     expect(check()).toBe(true)
   }
   async function open(query = '') {
-    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { template: '<p />' } }] })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/:p(.*)*',
+          component: { template: '<p />' },
+        },
+      ],
+    })
     await router.push(`/study/spell${query}`)
-    const w = mount(SpellPage, { attachTo: document.body, global: { plugins: [router] } })
+    const w = mount(SpellPage, {
+      attachTo: document.body,
+      global: {
+        plugins: [router],
+      },
+    })
     wrappers.push(w)
     await until(() => w.find('[data-start]').exists())
     return w
@@ -149,10 +213,22 @@ describe('练拼写: choose first, one word at a time', () => {
     const w = await open()
     expect(w.find('[data-question]').exists()).toBe(false)
     expect(w.find('[data-back]').attributes('href')).toBe('/study')
-    expect(w.findAll('[data-source]').map((b: any) => b.attributes('data-source'))).toEqual(['vocabulary', 'listening179', 'corpus', 'mistakes', 'today', 'custom'])
+    expect(w.findAll('[data-source]').map((b: any) => b.attributes('data-source'))).toEqual([
+      'vocabulary',
+      'listening179',
+      'corpus',
+      'mistakes',
+      'today',
+      'custom',
+    ])
     expect(w.findAll('[data-mode]').map((b: any) => b.attributes('data-mode'))).toEqual(['dictation', 'meaning', 'typing'])
     await w.find('[data-source="listening179"]').trigger('click')
-    expect(w.findAll('[data-mode]').map((b: any) => b.attributes('data-mode'))).toEqual(['dictation', 'meaning', 'typing', 'synonym'])
+    expect(w.findAll('[data-mode]').map((b: any) => b.attributes('data-mode'))).toEqual([
+      'dictation',
+      'meaning',
+      'typing',
+      'synonym',
+    ])
     expect(w.find('[data-preview]').text()).toContain('一共 179 个词')
     await w.find('[data-mode="synonym"]').trigger('click')
     await w.find('[data-source="corpus"]').trigger('click')
@@ -261,7 +337,9 @@ describe('练拼写: choose first, one word at a time', () => {
     const first = s.current
     await answer(w, first.word, first.synonyms.join('，').toLowerCase())
     expect(w.find('[data-answer]').text()).toContain('拼对了')
-    expect(Object.keys(readRecords('listening179_done_v1', null))).toEqual([String(first.id)])
+    expect(Object.keys(readRecords('listening179_done_v1', null))).toEqual([
+      String(first.id),
+    ])
     await next(w)
     const second = s.current
     await answer(w, second.word, '')

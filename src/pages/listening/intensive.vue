@@ -485,7 +485,9 @@ async function findListWords(tokens: DiffToken[]) {
   if (seq !== listWordSeq || owner !== currentUser.value)
     return
   wordListKeys.value = readWordList()
-  dictationListWords.value = [...found.values()]
+  dictationListWords.value = [
+    ...found.values(),
+  ]
 }
 function addListWord(word: ListWord) {
   addToWordList([word.key])
@@ -1004,7 +1006,7 @@ const testLabel = computed(
               <button
                 v-for="w in dictationListWords"
                 :key="w.key"
-                class="border border-blue-300 rounded-lg px-2 py-1 text-blue-700 dark:border-blue-800 dark:text-blue-300 disabled:border-gray-200 disabled:text-gray-400 dark:disabled:border-gray-700"
+                class="border border-blue-300 rounded-lg px-2 py-1 text-blue-700 dark:border-blue-800 disabled:border-gray-200 dark:text-blue-300 disabled:text-gray-400 dark:disabled:border-gray-700"
                 :disabled="wordListKeys.includes(w.key)"
                 :title="w.meaning"
                 @click="addListWord(w)"

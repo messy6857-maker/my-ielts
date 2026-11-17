@@ -1,9 +1,4 @@
-import { flushPromises, mount } from '@vue/test-utils'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick } from 'vue'
-import { createMemoryHistory, createRouter } from 'vue-router'
-import { useAuth } from '../src/composables/useAuth'
-import { nsKey, useMistakes } from '../src/composables/useStudyData'
+import { describe, expect, it } from 'vitest'
 import corpusData from '../src/pages/listening/spelling_convention'
 import { buildCorpusWords, closestSpelling, markMissed, matchSpelling, pickRound } from '../src/utils/corpusSpelling'
 
