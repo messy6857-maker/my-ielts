@@ -33,7 +33,9 @@ const entries = computed(() => [
     icon: '📖',
     title: '学新词',
     desc: '卡片自测：先凭感觉自评，再看词条。词库、章节、每天学几个，进去再选。',
-    badge: newToday.value > 0 ? `今天已学 ${newToday.value} 个新词` : '',
+    badge: newToday.value > 0
+      ? `今天已学 ${newToday.value} 个新词`
+      : '',
     to: '/study/learn',
   },
   {
@@ -41,7 +43,9 @@ const entries = computed(() => [
     icon: '🔁',
     title: '复习到期的词',
     desc: '复习词汇表里已经到期的词。其他词库到期的词，在学新词里选那个词库时会先出现。',
-    badge: vocabularyDue.value > 0 ? `${vocabularyDue.value} 个到期` : '',
+    badge: vocabularyDue.value > 0
+      ? `${vocabularyDue.value} 个到期`
+      : '',
     to: '/vocabulary/flashcard?review=due',
   },
   {

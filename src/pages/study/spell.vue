@@ -3,10 +3,34 @@
 defineOptions({ name: 'StudySpellPage' })
 
 const MODES = [
-  { id: 'vocabulary', deck: '词汇表', label: '听发音拼写', desc: '在词表里听发音，逐个把词拼出来', to: '/vocabulary?practice=1' },
-  { id: 'typing', deck: '词汇表', label: '跟打', desc: '看着单词和释义打一遍，熟悉拼写', to: '/vocabulary/typing' },
-  { id: 'listening179', deck: '听力 179 考点词', label: '拼写和同义替换', desc: '逐行写出单词和它的同义替换', to: '/listening/179practice' },
-  { id: 'corpus', deck: '听力语料库', label: '听发音、看释义拼写', desc: '英式美式都算对，拼错会标出错的字母', to: '/listening/corpus-spelling' },
+  {
+    id: 'vocabulary',
+    deck: '词汇表',
+    label: '听发音拼写',
+    desc: '在词表里听发音，逐个把词拼出来',
+    to: '/vocabulary?practice=1',
+  },
+  {
+    id: 'typing',
+    deck: '词汇表',
+    label: '跟打',
+    desc: '看着单词和释义打一遍，熟悉拼写',
+    to: '/vocabulary/typing',
+  },
+  {
+    id: 'listening179',
+    deck: '听力 179 考点词',
+    label: '拼写和同义替换',
+    desc: '逐行写出单词和它的同义替换',
+    to: '/listening/179practice',
+  },
+  {
+    id: 'corpus',
+    deck: '听力语料库',
+    label: '听发音、看释义拼写',
+    desc: '英式美式都算对，拼错会标出错的字母',
+    to: '/listening/corpus-spelling',
+  },
 ]
 </script>
 

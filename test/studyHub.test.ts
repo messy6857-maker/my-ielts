@@ -67,7 +67,10 @@ describe('背单词 hub', () => {
     const w = await mountAt(StudyPage, '/study')
     expect(w.find('[data-summary]').text()).toContain('一共有 3 个词到期')
     const entries = w.findAll('[data-entry]')
-    expect(entries.map((a: any) => [a.attributes('data-entry'), a.attributes('href')])).toEqual([
+    expect(entries.map((a: any) => [
+      a.attributes('data-entry'),
+      a.attributes('href'),
+    ])).toEqual([
       ['learn', '/study/learn'],
       ['review', '/vocabulary/flashcard?review=due'],
       ['spell', '/study/spell'],
