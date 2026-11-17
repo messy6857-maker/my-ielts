@@ -46,9 +46,13 @@ const props = defineProps<{
   aliasIds?: (card: StudyCard) => Array<string | number>
   /** 一轮里一个词都没有时显示的话 */
   emptyText?: string
+  /** 返回键上写的上一级名字，比如“选择”；不传就是返回背单词 */
+  backLabel?: string
 }>()
 const emit = defineEmits<{
   finished: [{ known: number, total: number }]
+  /** 传了 backLabel 时，确认退出后交给上一级处理 */
+  exit: []
 }>()
 
 interface SessionCard extends StudyCard {
@@ -354,7 +358,9 @@ function cancelExit() {
 }
 function confirmExit() {
   showExitModal.value = false
-  goBack()
+  if (props.backLabel)
+    emit('exit')
+  else goBack()
 }
 
 const { currentUser } = useAuth()
@@ -404,7 +410,7 @@ defineExpose({ restart })
             class="shrink-0 border border-gray-300 rounded-lg bg-white px-3 py-2 text-sm text-gray-600 dark:border-gray-600 dark:bg-gray-800 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
             @click="handleBack"
           >
-            ← 返回背单词
+            ← 返回{{ backLabel || '背单词' }}
           </button>
           <div>
             <h1 class="text-2xl text-gray-900 font-extrabold dark:text-white">
@@ -499,7 +505,7 @@ defineExpose({ restart })
             再来一轮
           </button>
           <button class="rounded-lg bg-gray-200 px-6 py-2.5 text-sm text-gray-700 font-medium dark:bg-gray-700 hover:bg-gray-300 dark:text-gray-200" @click="handleBack">
-            返回背单词
+            返回{{ backLabel || '背单词' }}
           </button>
         </div>
       </div>

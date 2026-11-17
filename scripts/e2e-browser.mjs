@@ -208,9 +208,12 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   assert.equal(await page.locator('[data-entry]').count(), 4)
   assert.equal(await page.getByText('卡片自测 →').count(), 0)
   await page.locator('[data-entry="learn"]').click()
+  // 学新词：进来先选，不直接开始
+  await page.locator('[data-setup]').waitFor({ timeout: 20000 })
+  assert.equal(await page.locator('[data-card]').count(), 0)
   for (const [deck, title] of [['vocabulary', '学新词 · 词汇表'], ['reading538', '学新词 · 阅读考点词'], ['listening179', '学新词 · 听力 179'], ['corpus', '学新词 · 听力语料库']]) {
-    // 词库进来以后再选
-    await page.locator('select[aria-label="词库"]').selectOption(deck)
+    await page.locator(`[data-deck-choice="${deck}"]`).click()
+    await page.locator('[data-start]:enabled').click()
     await page.getByText(title).first().waitFor({ timeout: 20000 })
     // 统一卡片：自评后看词条，再到下一张
     await page.locator('[data-card] [data-word]').waitFor({ timeout: 20000 })
@@ -220,16 +223,18 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
     await page.locator('[data-card] [data-word]').waitFor()
     // 在自测页里导航仍高亮“背单词”
     assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).includes('text-primary-700'))
+    // 返回键回到上一级：选择页
+    await page.getByRole('button', { name: /返回选择/ }).first().click()
+    await page.getByRole('button', { name: '退出', exact: true }).click()
+    await page.locator('[data-setup]').waitFor()
   }
-  await page.getByRole('button', { name: /返回背单词/ }).first().click()
-  await page.getByRole('button', { name: '退出', exact: true }).click()
-  await page.locator('[data-entry="learn"]').waitFor()
-  // 再进学新词：还是上次学的词库
+  // 选择页的返回键回到背单词；再进学新词，默认还是上次的词库
+  await page.locator('a[data-back][href="#/study"]').click()
   await page.locator('[data-entry="learn"]').click()
-  await page.getByText('学新词 · 听力语料库').first().waitFor({ timeout: 20000 })
+  await page.locator('[data-deck-choice="corpus"][aria-pressed="true"]').waitFor({ timeout: 20000 })
   // 旧的卡片自测地址跳到学新词，并选好对应词库
   await page.goto(`${BASE}#/reading/flashcard`)
-  await page.getByText('学新词 · 阅读考点词').first().waitFor({ timeout: 20000 })
+  await page.locator('[data-deck-choice="reading538"][aria-pressed="true"]').waitFor({ timeout: 20000 })
   assert.ok(page.url().includes('deck=reading538'))
   // 新词计数写回原来的阅读考点词记录
   const readingDaily = await page.evaluate(() => Object.keys(localStorage).filter(k => k.includes('reading538')))
@@ -246,7 +251,19 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.keyboard.press('Enter')
   await page.locator('input[aria-label="拼写"]:enabled').waitFor()
   assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).includes('text-primary-700'))
-  await page.getByRole('button', { name: '← 返回背单词' }).click()
+  // 每一级都有返回键：拼写页 → 练拼写 → 背单词
+  await page.locator('a[data-back][href="#/study/spell"]').click()
+  await page.locator('[data-spell="typing"]').click()
+  await page.locator('a[data-back][href="#/study/spell"]').click()
+  await page.locator('[data-spell="listening179"]').click()
+  await page.locator('a[data-back][href="#/study/spell"]').click()
+  await page.locator('[data-spell="vocabulary"]').click()
+  await page.locator('input[id="1"]').waitFor({ timeout: 20000 })
+  await page.locator('a[data-back][href="#/study/spell"]').click()
+  await page.locator('[data-spell="vocabulary"]').waitFor()
+  await page.locator('a[data-back][href="#/study"]').click()
+  await page.locator('[data-entry="spell"]').waitFor()
+  await page.locator('[data-entry="spell"]').click()
   await page.locator('[data-spell="vocabulary"]').click()
   await page.locator('input[id="1"]').waitFor({ timeout: 20000 })
   assert.equal(await page.getByRole('link', { name: '自测卡片' }).count(), 0)
@@ -260,6 +277,9 @@ await step('单词地牢：从背单词进入，选章节开局，一路作答�
   const errors = []
   page.on('pageerror', e => errors.push(e.message))
   await page.goto(`${BASE}#/study`)
+  await page.locator('[data-entry="game"]').click()
+  // 地牢选词页能返回背单词
+  await page.locator('a[data-back][href="#/study"]').click()
   await page.locator('[data-entry="game"]').click()
   await page.getByRole('button', { name: '进入地牢' }).waitFor({ timeout: 20000 })
   assert.ok(await page.getByRole('button', { name: '进入地牢' }).isDisabled())

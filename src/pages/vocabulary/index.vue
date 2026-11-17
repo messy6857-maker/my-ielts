@@ -45,6 +45,7 @@ const storedSwitches = (() => {
   }
 })()
 // 从“背单词”的拼写练习进来（?practice=1）直接打开练习模式
+const fromSpell = useRoute()?.query?.practice === '1'
 const isTrainingModel = ref(useRoute()?.query?.practice === '1' || (storedSwitches?.training ?? false))
 const isShowMeaning = ref(storedSwitches?.meaning ?? true)
 const isAutoPlayWordAudio = ref(storedSwitches?.autoplay ?? true)
@@ -478,6 +479,10 @@ function copyAllError() {
     </button>
   </p>
   <div ref="mediaRoot" class="px-4 pt-6 2xl:px-0">
+    <!-- 从“练拼写”进来的，可以原路返回 -->
+    <div v-if="fromSpell" class="mb-3">
+      <StudyBack to="/study/spell" label="练拼写" />
+    </div>
     <p
       v-if="mediaError"
       role="alert"

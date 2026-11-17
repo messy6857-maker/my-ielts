@@ -105,7 +105,10 @@ function next(index) {
 
 <template>
   <div>
-    <div class="mt-6 items-center justify-between lg:flex">
+    <div class="mt-4">
+      <StudyBack to="/study/spell" label="练拼写" />
+    </div>
+    <div class="mt-4 items-center justify-between lg:flex">
       <div class="mb-4 lg:mb-0">
         <h3 class="mb-2 text-xl text-gray-900 font-bold dark:text-white">
           听力 179 考点词练习

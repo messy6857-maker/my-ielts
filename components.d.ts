@@ -18,6 +18,7 @@ declare module 'vue' {
     ReadingTabs: typeof import('./src/components/ReadingTabs.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    StudyBack: typeof import('./src/components/StudyBack.vue')['default']
     StudyCardSession: typeof import('./src/components/StudyCardSession.vue')['default']
     TextHighlights: typeof import('./src/components/TextHighlights.vue')['default']
     TheFooter: typeof import('./src/components/TheFooter.vue')['default']
