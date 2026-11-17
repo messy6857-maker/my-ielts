@@ -359,6 +359,10 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   assert.ok((await page.locator('a[href="#/reading/daily"]').first().getAttribute('class')).split(/\s+/).includes('text-primary-700'))
   // 没亮的入口是灰字（hover 时才变色）
   assert.ok((await page.locator('a[href="#/ielts"]').first().getAttribute('class')).split(/\s+/).includes('text-gray-700'))
+  // 每日阅读里的生词一键加进我的词表
+  await page.locator('[data-add-note]').first().click()
+  await page.locator('[data-add-note]').first().filter({ hasText: '✓ 已在词表' }).waitFor()
+  assert.ok(await page.evaluate(() => Object.keys(localStorage).some(k => k.includes('study_wordlists_v1'))))
   await page.goto(`${BASE}#/`)
   await page.locator('[data-home-entry="/ielts"]').click()
   await page.locator('[data-entry="guide"]').click()
@@ -403,7 +407,7 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.getByText('4 个词。').waitFor()
   // 刷新后还在
   await page.reload()
-  await page.locator('[data-list]').first().click()
+  await page.locator('[data-list]').filter({ hasText: '测试词表' }).click()
   await page.getByText('4 个词。').waitFor()
   assert.equal(await page.locator('input[aria-label="zzqqxx 的释义"]').inputValue(), '自己补的释义')
   // 用它学新词
@@ -421,7 +425,7 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.locator('[data-review-deck="custom"]:checked').waitFor({ timeout: 30000 })
   // 用它练拼写
   await page.goto(`${BASE}#/study/lists`)
-  await page.locator('[data-list]').first().click()
+  await page.locator('[data-list]').filter({ hasText: '测试词表' }).click()
   await page.locator('[data-go-spell]').click()
   await page.locator('[data-source="custom"][aria-pressed="true"]').waitFor({ timeout: 30000 })
   assert.ok((await page.locator('[data-preview]').innerText()).includes('一共 4 个词'))

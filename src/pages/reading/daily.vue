@@ -3,6 +3,7 @@ import PageBookmark from '../../components/PageBookmark.vue'
 
 import TextHighlights from '../../components/TextHighlights.vue'
 import { getToken } from '../../composables/syncClient'
+import { useAddToList } from '../../composables/useAddToList'
 import { translateWithAI } from '../../composables/useAISettings'
 import { speechLanguage } from '../../composables/useAudioGroup'
 import { useAuth } from '../../composables/useAuth'
@@ -10,7 +11,7 @@ import { adoptLegacyGuestPageBookmarks, migrateGuestPageBookmarks } from '../../
 import { stopAllAudio } from '../../composables/useSingleAudio'
 import { getDeviceId } from '../../composables/useStudyTimer'
 import { SYNC_API_BASE } from '../../sync-config'
-import { lookupVocabularyMeaning } from '../vocabulary/loadVocabulary'
+import { lookupVocabularyMeaning, lookupVocabularyWord } from '../vocabulary/loadVocabulary'
 import { wordPhonetics } from '../vocabulary/wordPhonetics'
 import indexData from './daily/index.json'
 
@@ -196,6 +197,16 @@ const textColors = [
   'text-teal-600 dark:text-teal-400',
   'text-indigo-600 dark:text-indigo-400',
 ]
+// 生词送进“我的词表”，之后在背单词里练（阅读页本身不做练习）
+const wordList = useAddToList()
+function addNote(n: WordNote) {
+  wordList.add({
+    word: n.word.trim(),
+    meaning: n.meaning,
+    pos: n.pos,
+    synonyms: [],
+  })
+}
 const expandedNotes = ref(new Set<string>())
 function toggleNote(key: string) {
   if (expandedNotes.value.has(key))
@@ -305,10 +316,41 @@ interface TranslatePopupState {
   loading: boolean
   error: string
   showTranslateButton: boolean
+  /** 这个词是文章生词注释里的（用注释里的写法加进词表） */
+  fromNote?: boolean
+  /** 已经加进词表时，加进去的写法 */
+  addedAs?: string
   /** 锚点（单词/选区的视口包围盒），卡片贴着它显示 */
   anchor: { left: number, top: number, bottom: number, right: number }
 }
 const translatePopup = ref<TranslatePopupState | null>(null)
+/** 查词卡片里的词：词库里有就用词库的原形（travelled → travel），没有就用点的这个词 */
+async function addPopupWord() {
+  const popup = translatePopup.value
+  if (!popup || popup.kind !== 'word')
+    return
+  let word = popup.source.trim()
+  let meaning = popup.meaning
+  let pos = popup.pos
+  if (!popup.fromNote) {
+    try {
+      const hit = await lookupVocabularyWord(word)
+      if (hit?.word) {
+        word = hit.word
+        meaning = meaning || hit.meaning
+        pos = pos || hit.pos
+      }
+    }
+    catch {
+      // 词库没加载出来：照样加，用点的这个词
+    }
+  }
+  // 句首大写的普通词存成小写（全大写的缩写保持原样）
+  if (/^[A-Z][a-z'-]+$/.test(word) && !popup.fromNote)
+    word = word.toLowerCase()
+  await wordList.add({ word, meaning, pos, synonyms: [] })
+  popup.addedAs = word
+}
 const translatePopupEl = ref<HTMLElement | null>(null)
 const popupStyle = ref({ left: '0px', top: '0px' })
 let translateSeq = 0
@@ -420,6 +462,8 @@ async function openWordPopup(word: string, notes: WordNote[], rect: DOMRect) {
   if (note) {
     if (seq !== translateSeq)
       return
+    popup.source = note.word
+    popup.fromNote = true
     popup.pos = note.pos
     popup.meaning = note.meaning
     popup.loading = false
@@ -737,6 +781,18 @@ function paragraphs(passage: string): string[] {
               >
                 生词注释
                 <span class="text-gray-400 font-normal">（点击单词查看中文）</span>
+                <select
+                  v-if="wordList.lists.value.length > 1"
+                  :value="wordList.target.value"
+                  aria-label="加到哪个词表"
+                  title="点“＋ 词表”时加到这个词表"
+                  class="ml-2 border border-gray-300 rounded bg-white px-1 py-0.5 text-xs font-normal dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  @change="wordList.choose(($event.target as HTMLSelectElement).value)"
+                >
+                  <option v-for="l in wordList.lists.value" :key="l.id" :value="l.id">
+                    加到：{{ l.name }}
+                  </option>
+                </select>
               </p>
               <ul class="space-y-1.5">
                 <li
@@ -766,6 +822,16 @@ function paragraphs(passage: string): string[] {
                     @click="speak(n.word)"
                   >
                     🔊
+                  </button>
+                  <button
+                    type="button"
+                    data-add-note
+                    class="ml-1.5 text-xs text-blue-600 dark:text-blue-400 disabled:text-gray-400"
+                    :title="wordList.has(n.word) ? '已在词表里' : `把 ${n.word} 加入我的词表`"
+                    :disabled="wordList.has(n.word)"
+                    @click="addNote(n)"
+                  >
+                    {{ wordList.has(n.word) ? '✓ 已在词表' : '＋ 词表' }}
                   </button>
                   <span
                     v-if="n.pos"
@@ -918,6 +984,18 @@ function paragraphs(passage: string): string[] {
               >
                 生词注释
                 <span class="text-gray-400 font-normal">（点击单词查看中文）</span>
+                <select
+                  v-if="wordList.lists.value.length > 1"
+                  :value="wordList.target.value"
+                  aria-label="加到哪个词表"
+                  title="点“＋ 词表”时加到这个词表"
+                  class="ml-2 border border-gray-300 rounded bg-white px-1 py-0.5 text-xs font-normal dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                  @change="wordList.choose(($event.target as HTMLSelectElement).value)"
+                >
+                  <option v-for="l in wordList.lists.value" :key="l.id" :value="l.id">
+                    加到：{{ l.name }}
+                  </option>
+                </select>
               </p>
               <ul class="space-y-1.5">
                 <li v-for="(n, i) in art.notes" :key="i" class="text-sm">
@@ -931,6 +1009,16 @@ function paragraphs(passage: string): string[] {
                     @click="toggleNote(`${selectedDate}-news${ai}-${i}`)"
                   >
                     {{ n.word }}
+                  </button>
+                  <button
+                    type="button"
+                    data-add-note
+                    class="ml-1.5 text-xs text-blue-600 dark:text-blue-400 disabled:text-gray-400"
+                    :title="wordList.has(n.word) ? '已在词表里' : `把 ${n.word} 加入我的词表`"
+                    :disabled="wordList.has(n.word)"
+                    @click="addNote(n)"
+                  >
+                    {{ wordList.has(n.word) ? '✓ 已在词表' : '＋ 词表' }}
                   </button>
                   <span
                     v-if="n.pos"
@@ -993,6 +1081,13 @@ function paragraphs(passage: string): string[] {
             </div>
           </article>
         </section>
+        <!-- 这里只读文章；想练雅思真题的题型去限时模考 -->
+        <p class="mb-8 text-center text-sm text-gray-500 dark:text-gray-400" data-exam-hint>
+          生词点“＋ 词表”加进我的词表，在背单词里练。想练雅思真题的题型？
+          <RouterLink to="/mock/reading-test" class="text-blue-700 underline dark:text-blue-300">
+            去限时模考 →
+          </RouterLink>
+        </p>
       </template>
     </template>
 
@@ -1072,6 +1167,16 @@ function paragraphs(passage: string): string[] {
           @click="speak(translatePopup.source)"
         >
           🔊 朗读
+        </button>
+        <button
+          v-if="translatePopup.kind === 'word'"
+          type="button"
+          data-add-word
+          class="border border-blue-300 rounded-lg px-3 py-1.5 text-sm text-blue-700 font-medium dark:border-blue-800 disabled:border-gray-200 dark:text-blue-300 disabled:text-gray-400"
+          :disabled="translatePopup.loading || !!translatePopup.addedAs || wordList.has(translatePopup.source)"
+          @click="addPopupWord"
+        >
+          {{ translatePopup.addedAs || wordList.has(translatePopup.source) ? '已在词表里' : '＋ 加入我的词表' }}
         </button>
         <button
           v-if="translatePopup.showTranslateButton"
