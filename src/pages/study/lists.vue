@@ -82,6 +82,11 @@ async function loadDungeonList() {
   }
 }
 
+// 打开一个词表时要清空的输入：粘贴框、提示、搜索词、显示多少个词
+const pasteText = ref('')
+const notice = ref('')
+const query = ref('')
+const shown = ref(100)
 // —— 词表列表 ——
 const newName = ref('')
 function createList() {
@@ -119,8 +124,6 @@ async function removeList() {
 // —— 往词表里加词 ——
 type AddMode = 'paste' | 'file' | 'site'
 const addMode = ref<AddMode>('paste')
-const pasteText = ref('')
-const notice = ref('')
 const importing = ref(false)
 async function importText(text: string) {
   const list = lists.value.find(l => l.id === selectedId.value)
@@ -183,7 +186,6 @@ async function importFile(event: Event) {
   }
 }
 // 从网站词库里选
-const query = ref('')
 const inList = computed(() => new Set(selected.value?.words.map(w => entryId(w.word)) ?? []))
 const results = computed(() => {
   const q = query.value.trim().toLowerCase()
@@ -219,7 +221,6 @@ watch(addMode, (mode) => {
 })
 
 // —— 词表里的词 ——
-const shown = ref(100)
 function setMeaning(index: number, value: string) {
   const list = selected.value
   if (!list || readOnly.value)

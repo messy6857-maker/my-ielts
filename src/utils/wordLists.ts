@@ -113,7 +113,7 @@ export function newList(name: string): WordList {
   }
 }
 
-const POS_RE = /^((?:(?:n|v|vt|vi|adj|adv|prep|conj|pron|num|int|art|aux|phr|abbr)\.\s*(?:[/&,]\s*)?)+)\s*(.*)$/i
+const POS_RE = /^((?:(?:n|v|vt|vi|adj|adv|prep|conj|pron|num|int|art|aux|phr|abbr)\.\s*(?:[/&,]\s*)?)+)(.*)$/i
 /**
  * 解析导入的文本：一行一个词，后面可以带释义。
  * 认得的写法：“abandon 放弃”“abandon,放弃”“abandon\t放弃”“abandon v. 放弃”“take off - 起飞”，也可以只有单词。

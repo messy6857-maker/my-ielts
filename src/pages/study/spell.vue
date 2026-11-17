@@ -107,6 +107,7 @@ function toggleCorpus(id: CorpusChapterId) {
 }
 
 const cards = shallowRef<Record<DeckId, StudyCard[]> | null>(null)
+const wordLists = shallowRef<WordList[]>([])
 const loadError = ref(false)
 let loadSeq = 0
 async function load() {
@@ -130,7 +131,6 @@ async function load() {
   }
 }
 const now = ref(Date.now())
-const wordLists = shallowRef<WordList[]>([])
 const allCards = computed(() => cards.value
   ? SPELL_DECKS.flatMap(d => cards.value![d])
   : [])

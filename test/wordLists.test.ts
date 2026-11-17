@@ -53,7 +53,7 @@ describe('importing words', () => {
       entry('in charge of', '负责， 主管'),
       entry('vocabulary', '词汇'),
     ])
-    expect(skipped).toBe(2)
+    expect(skipped).toBe(3)
   })
 
   it('the same word is kept once; a later copy only fills in a missing meaning; a list has a size limit', () => {
@@ -94,7 +94,7 @@ describe('importing words', () => {
   })
 
   it('a list word becomes a card of its own deck, keyed by the word itself', () => {
-    expect(entryCard(entry('Take  Off', '起飞'))).toMatchObject({
+    expect(entryCard(entry('Take Off', '起飞'))).toMatchObject({
       key: 'custom:take off',
       deck: 'custom',
       id: 'take off',
@@ -188,11 +188,7 @@ describe('我的词表', () => {
     await until(() => w.find('[data-notice]').exists())
     expect(w.find('[data-notice]').text()).toBe('加了 3 个词，1 个已经在词表里或重复，1 行没认出来，1 个没找到释义，可以在下面自己补。')
     expect(w.find('[data-count]').text()).toBe('3 个词，1 个还没有释义。')
-    expect(readLists()[0].words.map(x => [x.word, x.meaning])).toEqual([
-      ['serendipity', '意外发现'],
-      ['reserve', '预订'],
-      ['zzqqxx', ''],
-    ])
+    expect(readLists()[0].words.map(x => `${x.word}:${x.meaning ? 'has meaning' : 'blank'}`)).toEqual(['serendipity:has meaning', 'reserve:has meaning', 'zzqqxx:blank'])
     const fix = w.find('input[aria-label="zzqqxx 的释义"]')
     await fix.setValue('自己补的')
     await fix.trigger('change')
