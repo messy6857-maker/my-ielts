@@ -1,0 +1,1 @@
+import{O as e,d as t,j as n,o as r,p as i,w as a}from"./runtime-core.esm-bundler-BaT_QEjx.js";import{s as o}from"./vue-router-nfpj53qs.js";var s=i({__name:`index`,setup(i){return o().replace(`/listening/keyword`),(i,o)=>{let s=e(`RouterLink`);return a(),r(s,{to:`/listening/keyword`},{default:n(()=>[...o[0]||=[t(` 打开听力 179 考点词 `,-1)]]),_:1})}}});export{s as default};
