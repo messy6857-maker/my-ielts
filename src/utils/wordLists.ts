@@ -50,7 +50,10 @@ function cleanEntry(raw: any): ListEntry | null {
 /** 去掉重复的词（不分大小写），后面的同一个词补上前面缺的释义 */
 export function mergeEntries(existing: ListEntry[], incoming: ListEntry[]): { words: ListEntry[], added: number, filled: number } {
   const words = existing.map(e => ({ ...e }))
-  const index = new Map(words.map((e, i) => [entryId(e.word), i]))
+  const index = new Map(words.map((e, i) => [
+    entryId(e.word),
+    i,
+  ]))
   let added = 0
   let filled = 0
   for (const raw of incoming) {
@@ -66,7 +69,12 @@ export function mergeEntries(existing: ListEntry[], incoming: ListEntry[]): { wo
       added++
     }
     else if (!words[at].meaning && e.meaning) {
-      words[at] = { ...words[at], meaning: e.meaning, pos: words[at].pos || e.pos, synonyms: words[at].synonyms.length ? words[at].synonyms : e.synonyms }
+      words[at] = {
+        ...words[at],
+        meaning: e.meaning,
+        pos: words[at].pos || e.pos,
+        synonyms: words[at].synonyms.length ? words[at].synonyms : e.synonyms,
+      }
       filled++
     }
   }
@@ -85,7 +93,9 @@ export function readLists(): WordList[] {
       name: typeof raw.name === 'string' && raw.name.trim()
         ? raw.name.trim().slice(0, 40)
         : '未命名词表',
-      words: mergeEntries([], Array.isArray(raw.words) ? raw.words : []).words,
+      words: mergeEntries([], Array.isArray(raw.words)
+        ? raw.words
+        : []).words,
       updatedAt: Number(raw.updatedAt) || 0,
     })
   }
@@ -112,7 +122,7 @@ const POS_RE = /^((?:(?:n|v|vt|vi|adj|adv|prep|conj|pron|num|int|art|aux|phr|abb
 export function parseImport(text: string): { entries: ListEntry[], skipped: number } {
   const entries: ListEntry[] = []
   let skipped = 0
-  for (const rawLine of text.replace(/^﻿/, '').split(/\r?\n/)) {
+  for (const rawLine of text.replace(/^\uFEFF/, '').split(/\r?\n/)) {
     let line = rawLine.trim().replace(/^\d+[.、)）]\s*/, '')
     if (!line)
       continue
@@ -138,7 +148,7 @@ export function parseImport(text: string): { entries: ListEntry[], skipped: numb
     word = word.trim()
     // “abandon v.” 这种把词性写在单词后面的
     let pos = ''
-    const tail = /^(.*?[a-z])\s+((?:(?:n|v|vt|vi|adj|adv|prep|conj|pron|num|int|art|aux|phr|abbr)\.\s*[/&]?\s*)+)$/i.exec(word)
+    const tail = /^(.*?[a-z])\s+((?:(?:n|v|vt|vi|adj|adv|prep|conj|pron|num|int|art|aux|phr|abbr)\.\s*(?:[/&]\s*)?)+)$/i.exec(word)
     if (tail) {
       word = tail[1]
       pos = tail[2].trim()
@@ -150,7 +160,12 @@ export function parseImport(text: string): { entries: ListEntry[], skipped: numb
       pos = pos || lead[1].trim()
       rest = lead[2].trim()
     }
-    const entry = cleanEntry({ word, meaning: rest, pos, synonyms: [] })
+    const entry = cleanEntry({
+      word,
+      meaning: rest,
+      pos,
+      synonyms: [],
+    })
     // 表头行（word, meaning / 单词, 释义）不算
     const header = !!entry && /^(?:words?|english)$/i.test(entry.word) && /^(?:meanings?|chinese|translation|释义|中文|意思)/i.test(entry.meaning)
     if (entry && /^[a-z]/i.test(entry.word) && !header)
@@ -206,7 +221,16 @@ export function fillMeanings(entries: ListEntry[], siteCards: StudyCard[]): List
       return e
     const hit = index.get(entryId(e.word))
     return hit
-      ? { ...e, meaning: hit.meaning, pos: e.pos || (hit.pos === '短语' ? '' : hit.pos), synonyms: e.synonyms.length ? e.synonyms : hit.synonyms.slice(0, 12) }
+      ? {
+          ...e,
+          meaning: hit.meaning,
+          pos: e.pos || (hit.pos === '短语'
+            ? ''
+            : hit.pos),
+          synonyms: e.synonyms.length
+            ? e.synonyms
+            : hit.synonyms.slice(0, 12),
+        }
       : e
   })
 }
@@ -215,6 +239,8 @@ export function dungeonListEntries(siteCards: StudyCard[]): ListEntry[] {
   const keys = new Set(readWordList())
   if (!keys.size)
     return []
-  const picked = siteCards.filter(c => keys.has(c.deck === 'vocabulary' ? `vocab:${c.id}` : c.key))
+  const picked = siteCards.filter(c => keys.has(c.deck === 'vocabulary'
+    ? `vocab:${c.id}`
+    : c.key))
   return mergeEntries([], picked.map(entryFromCard)).words
 }

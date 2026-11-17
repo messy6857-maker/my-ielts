@@ -34,7 +34,9 @@ const missing = computed(() => selected.value?.words.filter(w => !w.meaning).len
 
 const countText = computed(() => [
   `${selected.value?.words.length ?? 0} 个词`,
-  missing.value ? `，${missing.value} 个还没有释义` : '',
+  missing.value
+    ? `，${missing.value} 个还没有释义`
+    : '',
   '。',
   readOnly.value ? '这个词表在单词地牢的选词页里编辑；听写核对后也可以往里加词。' : '',
 ].join(''))
@@ -148,10 +150,18 @@ async function importText(text: string) {
   const noMeaning = merged.words.slice(before).filter(w => !w.meaning).length
   notice.value = [
     `加了 ${merged.added} 个词`,
-    entries.length - merged.added > 0 && !full ? `${entries.length - merged.added} 个已经在词表里或重复` : '',
-    skipped ? `${skipped} 行没认出来` : '',
-    noMeaning ? `${noMeaning} 个没找到释义，可以在下面自己补` : '',
-    full ? `一个词表最多 ${MAX_LIST_WORDS} 个词，多出来的没有加` : '',
+    entries.length - merged.added > 0 && !full
+      ? `${entries.length - merged.added} 个已经在词表里或重复`
+      : '',
+    skipped
+      ? `${skipped} 行没认出来`
+      : '',
+    noMeaning
+      ? `${noMeaning} 个没找到释义，可以在下面自己补`
+      : '',
+    full
+      ? `一个词表最多 ${MAX_LIST_WORDS} 个词，多出来的没有加`
+      : '',
   ].filter(Boolean).join('，').concat('。')
   pasteText.value = ''
 }
@@ -199,7 +209,9 @@ function addCard(card: StudyCard) {
   const list = selected.value
   if (!list || readOnly.value)
     return
-  update(mergeEntries(list.words, [entryFromCard(card)]).words)
+  update(mergeEntries(list.words, [
+    entryFromCard(card),
+  ]).words)
 }
 watch(addMode, (mode) => {
   if (mode === 'site')
@@ -213,7 +225,10 @@ function setMeaning(index: number, value: string) {
   if (!list || readOnly.value)
     return
   update(list.words.map((w, i) => i === index
-    ? { ...w, meaning: value.trim().slice(0, 200) }
+    ? {
+        ...w,
+        meaning: value.trim().slice(0, 200),
+      }
     : w))
 }
 function removeWord(index: number) {

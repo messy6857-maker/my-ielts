@@ -116,8 +116,12 @@ export function spellMistake(card: StudyCard, mode: SpellMode): SpellMistake | n
       },
     }
   }
-  if (card.deck === 'custom')
-    return { module: 'wordlist', entry: { key: card.key, title: card.word, detail } }
+  if (card.deck === 'custom') {
+    return {
+      module: 'wordlist',
+      entry: { key: card.key, title: card.word, detail },
+    }
+  }
   return null
 }
 

@@ -409,7 +409,27 @@ describe('练拼写: choose first, one word at a time', () => {
     useMistakes().addMistake('flashcard', { key: 'flashcard:99', title: 'x', detail: '' })
     // 我的词表：自己建的词表，加上单词地牢的“我的词单”（存的是网站词库的词）
     saveValue(nsKey('dungeon_wordlist_v1'), [`vocab:${word.id}`, 'listening179:2'])
-    saveLists([{ id: 'mine', name: '我的生词', updatedAt: 1, words: [{ word: 'Serendipity', meaning: '意外发现', pos: 'n.', synonyms: [] }, { word: 'take off', meaning: '起飞', pos: '', synonyms: [] }] }])
+    saveLists([
+      {
+        id: 'mine',
+        name: '我的生词',
+        updatedAt: 1,
+        words: [
+          {
+            word: 'Serendipity',
+            meaning: '意外发现',
+            pos: 'n.',
+            synonyms: [],
+          },
+          {
+            word: 'take off',
+            meaning: '起飞',
+            pos: '',
+            synonyms: [],
+          },
+        ],
+      },
+    ])
     const w = await open()
     expect(w.find('[data-source="mistakes"]').text()).toContain('（2）')
     expect(w.find('[data-source="today"]').text()).toContain('（0）')

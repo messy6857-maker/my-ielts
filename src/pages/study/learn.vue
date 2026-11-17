@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { StudyPlan } from '../../components/StudyCardSession.vue'
 import type { DeckId, StudyCard } from '../../utils/studyDeck'
+import type { WordList } from '../../utils/wordLists'
 import { planQueue } from '../../composables/useDeckStore'
 import { confirmDialog } from '../../composables/useDialog'
-import { useStudyDeck } from '../../composables/useStudyDeck'
 import { nsKey } from '../../composables/useStudyData'
+import { useStudyDeck } from '../../composables/useStudyDeck'
 import { readChapterPreference, writeChapterPreference } from '../../utils/chapterPreference'
-import type { WordList } from '../../utils/wordLists'
 import { loadDeckCards, loadWordLists } from '../../utils/loadStudyCards'
 import { DECK_IDS, DECK_META } from '../../utils/studyDeck'
 import { listVocabularyChapters } from '../vocabulary/loadVocabulary'
@@ -77,7 +77,10 @@ const LIST_KEY = 'study_learn_list'
 const wordLists = shallowRef<WordList[]>([])
 const listId = ref('')
 function pickList(lists: WordList[], user: string | null) {
-  const wanted = [route.query.list, localStorage.getItem(nsKey(LIST_KEY, user))].find(id => lists.some(l => l.id === id))
+  const wanted = [
+    route.query.list,
+    localStorage.getItem(nsKey(LIST_KEY, user)),
+  ].find(id => lists.some(l => l.id === id))
   return (wanted as string | undefined) ?? lists[0]?.id ?? ''
 }
 

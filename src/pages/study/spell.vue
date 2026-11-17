@@ -2,11 +2,11 @@
 import type { DiffChar } from '../../utils/corpusSpelling'
 import type { CorpusChapterId, SpellMode, SpellSource } from '../../utils/spellPractice'
 import type { DeckId, StudyCard } from '../../utils/studyDeck'
+import type { WordList } from '../../utils/wordLists'
 import { resolveAudioUrl } from '../../composables/useAudio'
 import { useAudioGroup } from '../../composables/useAudioGroup'
 import { nsKey, useMistakes } from '../../composables/useStudyData'
 import { useStudyDeck } from '../../composables/useStudyDeck'
-import type { WordList } from '../../utils/wordLists'
 import { loadDeckCards, loadWordLists } from '../../utils/loadStudyCards'
 import {
   CORPUS_CHAPTERS,
@@ -36,7 +36,12 @@ const managedAudio = useAudioGroup()
 const { currentUser } = useAuth()
 const { addMistake, mistakes } = useMistakes()
 const { setProgress, markListening179RowStudied } = useProgress()
-const SPELL_DECKS: DeckId[] = ['vocabulary', 'listening179', 'corpus', 'custom']
+const SPELL_DECKS: DeckId[] = [
+  'vocabulary',
+  'listening179',
+  'corpus',
+  'custom',
+]
 const stores = Object.fromEntries(SPELL_DECKS.map(d => [
   d,
   useStudyDeck(d),
@@ -108,7 +113,10 @@ async function load() {
   const seq = ++loadSeq
   loadError.value = false
   try {
-    const [lists, own] = await Promise.all([Promise.all(SPELL_DECKS.map(d => loadDeckCards(d))), loadWordLists()])
+    const [lists, own] = await Promise.all([
+      Promise.all(SPELL_DECKS.map(d => loadDeckCards(d))),
+      loadWordLists(),
+    ])
     if (seq !== loadSeq)
       return
     wordLists.value = own

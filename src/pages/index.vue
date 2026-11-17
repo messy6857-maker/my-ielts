@@ -25,7 +25,12 @@ const { mistakes, totalCount: mistakeCount } = useMistakes()
 const { currentUser } = useAuth()
 const { schedules } = useWordSchedule()
 // 到期复习按全部词库算（词汇表、阅读考点词、听力 179、语料库，各自的键互不重叠）
-const deckSchedules = ['reading538', 'listening179', 'corpus', 'custom'].map(ns => useDeckStore(ns).schedules)
+const deckSchedules = [
+  'reading538',
+  'listening179',
+  'corpus',
+  'custom',
+].map(ns => useDeckStore(ns).schedules)
 const allSchedules = computed(() => Object.assign({}, schedules.value, ...deckSchedules.map(d => d.value)))
 const timer = useStudyTimer()
 

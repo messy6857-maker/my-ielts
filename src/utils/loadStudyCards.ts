@@ -8,7 +8,12 @@ import { DUNGEON_LIST_ID, DUNGEON_LIST_NAME, dungeonListEntries, entryCard, read
 
 const chapterOf = (id: string | number) => (WORD_CHAPTER_INDEX as Record<string, string>)[String(id)]
 export type SiteDeckId = Exclude<DeckId, 'custom'>
-export const SITE_DECK_IDS: SiteDeckId[] = ['vocabulary', 'reading538', 'listening179', 'corpus']
+export const SITE_DECK_IDS: SiteDeckId[] = [
+  'vocabulary',
+  'reading538',
+  'listening179',
+  'corpus',
+]
 
 /** 网站词库的全部卡片（四个词库） */
 export async function loadSiteCards(): Promise<StudyCard[]> {
@@ -19,8 +24,14 @@ export async function loadWordLists(): Promise<WordList[]> {
   const lists = readLists()
   if (readWordList().length) {
     const words = dungeonListEntries(await loadSiteCards())
-    if (words.length)
-      lists.push({ id: DUNGEON_LIST_ID, name: DUNGEON_LIST_NAME, words, updatedAt: 0 })
+    if (words.length) {
+      lists.push({
+        id: DUNGEON_LIST_ID,
+        name: DUNGEON_LIST_NAME,
+        words,
+        updatedAt: 0,
+      })
+    }
   }
   return lists
 }

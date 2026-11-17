@@ -14,7 +14,14 @@ import { saveValue } from '../src/utils/storage'
 import { listeningCards } from '../src/utils/studyDeck'
 import { entryCard, fillMeanings, MAX_LIST_WORDS, mergeEntries, parseImport, readLists, saveLists } from '../src/utils/wordLists'
 
-const entry = (word: string, meaning = '', pos = '') => ({ word, meaning, pos, synonyms: [] as string[] })
+function entry(word: string, meaning = '', pos = '') {
+  return {
+    word,
+    meaning,
+    pos,
+    synonyms: [] as string[],
+  }
+}
 
 describe('importing words', () => {
   it('reads one word per line in the usual ways people write them', () => {
@@ -50,8 +57,20 @@ describe('importing words', () => {
   })
 
   it('the same word is kept once; a later copy only fills in a missing meaning; a list has a size limit', () => {
-    const merged = mergeEntries([entry('Apple'), entry('pear', '梨')], [entry('apple', '苹果'), entry('PEAR', '别的'), entry('plum'), entry('plum')])
-    expect(merged.words).toEqual([entry('Apple', '苹果'), entry('pear', '梨'), entry('plum')])
+    const merged = mergeEntries([
+      entry('Apple'),
+      entry('pear', '梨'),
+    ], [
+      entry('apple', '苹果'),
+      entry('PEAR', '别的'),
+      entry('plum'),
+      entry('plum'),
+    ])
+    expect(merged.words).toEqual([
+      entry('Apple', '苹果'),
+      entry('pear', '梨'),
+      entry('plum'),
+    ])
     expect(merged).toMatchObject({ added: 1, filled: 1 })
     const many = Array.from({ length: MAX_LIST_WORDS + 5 }, (_, i) => entry(`w${'a'.repeat(1)}${String.fromCharCode(97 + (i % 26))}${Math.floor(i / 26).toString(36).replace(/\d/g, d => 'ghijklmnop'[Number(d)])}`))
     expect(mergeEntries([], many).words.length).toBeLessThanOrEqual(MAX_LIST_WORDS)
@@ -59,14 +78,30 @@ describe('importing words', () => {
 
   it('missing meanings come from the site’s word lists; unknown words stay blank', () => {
     const site = listeningCards(listening179 as any)
-    const [known, unknown, own] = fillMeanings([entry('RESERVE'), entry('zzqqxx'), entry('reserve', '我自己写的')], site)
-    expect(known).toMatchObject({ word: 'RESERVE', meaning: '预订', pos: 'v.', synonyms: ['book'] })
+    const [known, unknown, own] = fillMeanings([
+      entry('RESERVE'),
+      entry('zzqqxx'),
+      entry('reserve', '我自己写的'),
+    ], site)
+    expect(known).toMatchObject({
+      word: 'RESERVE',
+      meaning: '预订',
+      pos: 'v.',
+      synonyms: ['book'],
+    })
     expect(unknown.meaning).toBe('')
     expect(own.meaning).toBe('我自己写的')
   })
 
   it('a list word becomes a card of its own deck, keyed by the word itself', () => {
-    expect(entryCard(entry('Take  Off', '起飞'))).toMatchObject({ key: 'custom:take off', deck: 'custom', id: 'take off', word: 'Take Off', spellings: ['Take Off'], meaning: '起飞' })
+    expect(entryCard(entry('Take  Off', '起飞'))).toMatchObject({
+      key: 'custom:take off',
+      deck: 'custom',
+      id: 'take off',
+      word: 'Take Off',
+      spellings: ['Take Off'],
+      meaning: '起飞',
+    })
   })
 })
 
@@ -76,7 +111,11 @@ describe('我的词表', () => {
     localStorage.clear()
     window.dispatchEvent(new StorageEvent('storage', { key: null }))
     useAuth().currentUser.value = null
-    vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn(), getVoices: () => [] })
+    vi.stubGlobal('speechSynthesis', {
+      cancel: vi.fn(),
+      speak: vi.fn(),
+      getVoices: () => [],
+    })
     vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
     vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
   })
@@ -94,16 +133,45 @@ describe('我的词表', () => {
     expect(check()).toBe(true)
   }
   async function mountAt(Page: any, path: string) {
-    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { template: '<p />' } }] })
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: '/:p(.*)*',
+          component: { template: '<p />' },
+        },
+      ],
+    })
     await router.push(path)
-    const w = mount(Page, { attachTo: document.body, global: { plugins: [router] } })
+    const w = mount(Page, {
+      attachTo: document.body,
+      global: {
+        plugins: [router],
+      },
+    })
     wrappers.push(w)
     await flushPromises()
     return w
   }
   const mine = () => saveLists([
-    { id: 'a', name: '剑 18 生词', updatedAt: 1, words: [entry('serendipity', '意外发现', 'n.'), entry('zzqqxx')] },
-    { id: 'b', name: '写作词', updatedAt: 2, words: [entry('Serendipity', '机缘'), entry('nevertheless', '然而', 'adv.')] },
+    {
+      id: 'a',
+      name: '剑 18 生词',
+      updatedAt: 1,
+      words: [
+        entry('serendipity', '意外发现', 'n.'),
+        entry('zzqqxx'),
+      ],
+    },
+    {
+      id: 'b',
+      name: '写作词',
+      updatedAt: 2,
+      words: [
+        entry('Serendipity', '机缘'),
+        entry('nevertheless', '然而', 'adv.'),
+      ],
+    },
   ])
 
   it('create a list, paste words, fix a meaning, pick from the site, remove a word, delete the list', async () => {
@@ -120,7 +188,11 @@ describe('我的词表', () => {
     await until(() => w.find('[data-notice]').exists())
     expect(w.find('[data-notice]').text()).toBe('加了 3 个词，1 个已经在词表里或重复，1 行没认出来，1 个没找到释义，可以在下面自己补。')
     expect(w.find('[data-count]').text()).toBe('3 个词，1 个还没有释义。')
-    expect(readLists()[0].words.map(x => [x.word, x.meaning])).toEqual([['serendipity', '意外发现'], ['reserve', '预订'], ['zzqqxx', '']])
+    expect(readLists()[0].words.map(x => [x.word, x.meaning])).toEqual([
+      ['serendipity', '意外发现'],
+      ['reserve', '预订'],
+      ['zzqqxx', ''],
+    ])
     const fix = w.find('input[aria-label="zzqqxx 的释义"]')
     await fix.setValue('自己补的')
     await fix.trigger('change')
@@ -148,7 +220,14 @@ describe('我的词表', () => {
   })
 
   it('a file is imported like pasted text', async () => {
-    saveLists([{ id: 'a', name: 'x', updatedAt: 1, words: [] }])
+    saveLists([
+      {
+        id: 'a',
+        name: 'x',
+        updatedAt: 1,
+        words: [],
+      },
+    ])
     const w = await mountAt(ListsPage, '/study/lists')
     await w.find('[data-list="a"]').trigger('click')
     await w.find('[data-add="file"]').trigger('click')
@@ -156,16 +235,24 @@ describe('我的词表', () => {
     const file = new File(['word,meaning\nabandon,放弃\nbenefit,好处'], 'words.csv', { type: 'text/csv' })
     if (typeof file.text !== 'function')
       (file as any).text = async () => 'word,meaning\nabandon,放弃\nbenefit,好处'
-    Object.defineProperty(input.element, 'files', { value: [file], configurable: true })
+    Object.defineProperty(input.element, 'files', {
+      value: [file],
+      configurable: true,
+    })
     await input.trigger('change')
     await until(() => w.find('[data-notice]').exists())
-    expect(readLists()[0].words.map(x => [x.word, x.meaning])).toEqual([['abandon', '放弃'], ['benefit', '好处']])
+    expect(readLists()[0].words.map(x => [x.word, x.meaning])).toEqual([
+      ['abandon', '放弃'],
+      ['benefit', '好处'],
+    ])
   })
 
   it('the dungeon’s 我的词单 shows up as a read-only list', async () => {
     saveValue(nsKey('dungeon_wordlist_v1'), ['listening179:1', 'listening179:2'])
     const lists = await loadWordLists()
-    expect(lists.map(l => [l.id, l.words.length])).toEqual([['dungeon', 2]])
+    expect(lists.map(l => [l.id, l.words.length])).toEqual([
+      ['dungeon', 2],
+    ])
     expect(lists[0].words[0]).toMatchObject({ word: 'reserve', meaning: '预订' })
     const w = await mountAt(ListsPage, '/study/lists')
     await until(() => w.find('[data-list="dungeon"]').exists())
@@ -213,7 +300,16 @@ describe('我的词表', () => {
     expect(w.find('[data-start]').attributes('disabled')).toBeDefined()
     w.unmount()
     wrappers.pop()
-    saveLists([{ id: 'a', name: 'x', updatedAt: 1, words: [entry('zzqqxx')] }])
+    saveLists([
+      {
+        id: 'a',
+        name: 'x',
+        updatedAt: 1,
+        words: [
+          entry('zzqqxx'),
+        ],
+      },
+    ])
     const again = await mountAt(LearnPage, '/study/learn?deck=custom')
     await until(() => again.find('[data-start]').attributes('disabled') === undefined)
     await again.find('[data-start]').trigger('click')

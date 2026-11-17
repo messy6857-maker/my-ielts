@@ -8,7 +8,12 @@ defineOptions({ name: 'StudyPage' })
 
 const vocabularySchedules = useWordSchedule()
 const vocabularyDaily = useDailyGoal()
-const others = (['reading538', 'listening179', 'corpus', 'custom'] as const).map(ns => useDeckStore(ns))
+const others = ([
+  'reading538',
+  'listening179',
+  'corpus',
+  'custom',
+] as const).map(ns => useDeckStore(ns))
 
 // 到期按“现在”算：停留在页面上时每分钟刷新一次
 const now = ref(Date.now())
