@@ -17,7 +17,7 @@ const GROUPS = [
         id: 'reading',
         icon: '📖',
         title: '阅读',
-        desc: '阅读考点词同义替换、每日阅读',
+        desc: '阅读考点词同义替换',
         to: '/reading',
       },
       {

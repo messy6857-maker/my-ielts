@@ -222,7 +222,7 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
     await page.getByRole('button', { name: '下一个', exact: true }).click()
     await page.locator('[data-card] [data-word]').waitFor()
     // 在自测页里导航仍高亮“背单词”
-    assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).includes('text-primary-700'))
+    assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).split(/\s+/).includes('text-primary-700'))
     // 返回键回到上一级：选择页
     await page.getByRole('button', { name: /返回选择/ }).first().click()
     await page.getByRole('button', { name: '退出', exact: true }).click()
@@ -273,7 +273,7 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   // 每个词注明来自哪个词库
   await page.locator('[data-card] [data-deck-label]').waitFor()
   assert.ok((await page.locator('[data-deck-label]').innerText()).startsWith('来自 '))
-  assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).includes('text-primary-700'))
+  assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).split(/\s+/).includes('text-primary-700'))
   await page.getByRole('button', { name: '认识', exact: true }).click()
   await page.locator('[data-study]').waitFor()
   await page.getByRole('button', { name: '下一个', exact: true }).click()
@@ -295,7 +295,7 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.locator('[data-entry="spell"]').click()
   await page.locator('[data-start]').waitFor({ timeout: 30000 })
   assert.equal(await page.locator('[data-question]').count(), 0)
-  assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).includes('text-primary-700'))
+  assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).split(/\s+/).includes('text-primary-700'))
   // 语料库、看义拼写：拼错一个，看到标出的字母；返回选择
   await page.locator('[data-source="corpus"]').click()
   await page.locator('[data-mode="meaning"]').click()
@@ -349,10 +349,17 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   // 顶部导航只有三项；雅思考试：分项练习、做题方法、模考、记录，每一级都能返回
   await page.goto(`${BASE}#/`)
   const navTexts = await page.locator('header a').evaluateAll(as => as.map(a => a.textContent.replace(/\d+/g, '').trim()))
-  for (const label of ['首页', '背单词', '雅思考试'])
+  for (const label of ['首页', '背单词', '每日阅读', '雅思考试'])
     assert.ok(navTexts.includes(label), label)
   for (const label of ['词汇', '语法', '听力', '口语', '阅读', '写作', '错词本', '学习统计'])
     assert.ok(!navTexts.includes(label), label)
+  // 每日阅读：导航一步进去，导航里亮的是每日阅读
+  await page.locator('header a[href="#/reading/daily"]').first().click()
+  await page.getByText('📅 每日阅读').waitFor({ timeout: 20000 })
+  assert.ok((await page.locator('a[href="#/reading/daily"]').first().getAttribute('class')).split(/\s+/).includes('text-primary-700'))
+  // 没亮的入口是灰字（hover 时才变色）
+  assert.ok((await page.locator('a[href="#/ielts"]').first().getAttribute('class')).split(/\s+/).includes('text-gray-700'))
+  await page.goto(`${BASE}#/`)
   await page.locator('[data-home-entry="/ielts"]').click()
   await page.locator('[data-entry="guide"]').click()
   await page.getByText('Section 1').first().waitFor()
@@ -368,7 +375,7 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.locator('a[data-back][href="#/ielts"]').click()
   await page.locator('[data-entry="listening"]').click()
   await page.getByText('听力 179 考点词').first().waitFor()
-  assert.ok((await page.locator('a[href="#/ielts"]').first().getAttribute('class')).includes('text-primary-700'))
+  assert.ok((await page.locator('a[href="#/ielts"]').first().getAttribute('class')).split(/\s+/).includes('text-primary-700'))
   await page.locator('a[data-back][href="#/ielts"]').click()
   await page.locator('[data-entry="records"]').click()
   await page.getByRole('link', { name: '批改记录' }).click()

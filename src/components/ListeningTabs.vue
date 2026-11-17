@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router'
 
-// 听力页签栏，从 listening.vue 抽出（与 ReadingTabs.vue 同结构）：
+// 听力页签栏，从 listening.vue 抽出：
 // 样式与写作/阅读页签一致，只有当前页高亮，其余为白底。
 // 判定逻辑与 listening.vue 原有逻辑完全一致。
 // 听力的基本概念和做题技巧在“雅思考试 → 做题方法”，限时模考在“雅思考试 → 限时模考”

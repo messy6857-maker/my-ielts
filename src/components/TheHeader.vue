@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { accountNotice } from '../composables/useAuth'
 
-// 顶部只留三个入口：首页（含错词本、学习统计）、背单词（含词汇表）、雅思考试（听说读写、语法、做题方法、模考、记录）
+// 顶部四个入口：首页（含错词本、学习统计）、背单词（含词汇表）、每日阅读、雅思考试（听说读写、语法、做题方法、模考、记录）
 const menus = reactive([
   {
     label: '首页',
@@ -12,6 +12,11 @@ const menus = reactive([
     label: '背单词',
     icon: 'i-carbon-book',
     link: '/study',
+  },
+  {
+    label: '每日阅读',
+    icon: 'i-carbon-calendar',
+    link: '/reading/daily',
   },
   {
     label: '雅思考试',
@@ -58,6 +63,12 @@ const SECTION_PREFIXES: Record<string, string[]> = {
 }
 function isActive(link: string) {
   const path = route.path
+  // 每日阅读的地址在 /reading 下面，但它是单独的入口，不算雅思考试
+  const daily = path === '/reading/daily'
+  if (link === '/reading/daily')
+    return daily
+  if (daily)
+    return false
   if (link === '/' && path === '/')
     return true
   return (SECTION_PREFIXES[link] ?? []).some(prefix => path === prefix || path.startsWith(`${prefix}/`))
