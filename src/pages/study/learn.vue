@@ -126,7 +126,9 @@ const goal = computed({
 const started = ref(false)
 const preview = computed(() => {
   void version.value
-  return ready.value ? build() : null
+  return ready.value
+    ? build()
+    : null
 })
 function start() {
   if (ready.value)
@@ -251,7 +253,7 @@ const SUBTITLE: Record<DeckId, string> = {
         <div class="flex flex-wrap items-center justify-between gap-3">
           <button
             data-start
-            class="rounded-lg bg-blue-600 px-8 py-2.5 text-white font-bold disabled:opacity-50 hover:bg-blue-700"
+            class="rounded-lg bg-blue-600 px-8 py-2.5 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
             :disabled="!ready"
             @click="start"
           >

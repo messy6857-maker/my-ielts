@@ -38,9 +38,22 @@ async function settle() {
 }
 // 学新词进来先是选择页；start 为 true 时顺手点“开始”进到卡片
 async function mountLearn(query: string, start = true) {
-  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { template: '<p />' } }] })
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      {
+        path: '/:p(.*)*',
+        component: { template: '<p />' },
+      },
+    ],
+  })
   await router.push(`/study/learn?${query}`)
-  const w = mount(LearnPage, { attachTo: document.body, global: { plugins: [router] } })
+  const w = mount(LearnPage, {
+    attachTo: document.body,
+    global: {
+      plugins: [router],
+    },
+  })
   wrappers.push(w)
   await settle()
   if (start) {
@@ -216,7 +229,12 @@ describe('学新词 starts only after you choose, and every screen can go back',
 
   it('every practice page under 练拼写 and the dungeon has a way back', () => {
     const source = (p: string) => readFileSync(p, 'utf8')
-    for (const p of ['src/pages/vocabulary/typing.vue', 'src/pages/listening/179practice.vue', 'src/pages/listening/corpus-spelling.vue', 'src/pages/vocabulary/index.vue'])
+    for (const p of [
+      'src/pages/vocabulary/typing.vue',
+      'src/pages/listening/179practice.vue',
+      'src/pages/listening/corpus-spelling.vue',
+      'src/pages/vocabulary/index.vue',
+    ])
       expect(source(p)).toContain('<StudyBack to="/study/spell" label="练拼写" />')
     expect(source('src/pages/study/spell.vue')).toContain('<StudyBack to="/study" label="背单词" />')
     expect(source('src/pages/game.vue')).toContain('<StudyBack v-if="stage === \'setup\'" to="/study" label="背单词" />')

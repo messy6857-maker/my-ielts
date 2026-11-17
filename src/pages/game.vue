@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { DungeonDeck, DungeonMode, DungeonSelection, DungeonWord, Monster, QuestionKind, Relic, RelicId, Rng } from '../utils/dungeon'
-import { confirmDialog } from '../composables/useDialog'
 import { resolveAudioUrl } from '../composables/useAudio'
 import { useAudioGroup } from '../composables/useAudioGroup'
 import { useDeckStore } from '../composables/useDeckStore'
+import { confirmDialog } from '../composables/useDialog'
 import { gradeSchedule, useCheckin, useWordSchedule } from '../composables/useSpacedRepetition'
 import { recordAttempt } from '../composables/useStats'
 import { nsKey, studyDay, useMistakes } from '../composables/useStudyData'
