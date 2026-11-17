@@ -20,6 +20,7 @@ import {
   phonetic,
   synonymPosError,
 } from '../pages/vocabulary/vocabExtras'
+import { diffSpelling, matchSpelling, spellMistake } from '../utils/spellPractice'
 import { audioPath, DECK_IDS, DECK_META, mistakeHint, mistakeKey } from '../utils/studyDeck'
 
 // 统一的卡片自测：先凭感觉自评认识 / 模糊 / 不认识，再看词条。所有词库共用这一套流程，
@@ -48,6 +49,11 @@ const props = defineProps<{
   emptyText?: string
   /** 返回键上写的上一级名字，比如“选择”；不传就是返回背单词 */
   backLabel?: string
+  /**
+   * 这一轮学到什么程度：recognize 认得意思就行（默认）；spell 看完词条再把词拼一遍；
+   * related 词条里重点看同义词、拓展词。自评和记忆曲线三种都一样。
+   */
+  practice?: 'recognize' | 'spell' | 'related'
 }>()
 const emit = defineEmits<{
   finished: [{ known: number, total: number }]
@@ -102,6 +108,45 @@ const current = computed(() => studying.value
   ? null
   : (queue.value[0] ?? null))
 const remaining = computed(() => queue.value.length)
+
+// 会拼写：看完词条，把词遮住拼一遍。拼错只记进拼写错题，不改刚才的自评。阅读考点词不要求拼写。
+type SpellStep = 'read' | 'typing' | 'wrong' | 'done'
+const spellStep = ref<SpellStep>('read')
+const spellInput = ref('')
+const spellDiff = ref<Array<{ char: string, ok: boolean }>>([])
+const spellInputEl = ref<HTMLInputElement | null>(null)
+const spellMissed = new Set<string>()
+const needsSpell = computed(() => props.practice === 'spell' && !!studying.value && studying.value.deck !== 'reading538')
+const wordHidden = computed(() => needsSpell.value && spellStep.value === 'typing')
+function resetSpell() {
+  spellStep.value = 'read'
+  spellInput.value = ''
+  spellDiff.value = []
+}
+async function startSpell() {
+  spellInput.value = ''
+  spellDiff.value = []
+  spellStep.value = 'typing'
+  await nextTick()
+  spellInputEl.value?.focus()
+}
+function checkSpell() {
+  const card = studying.value
+  if (!card || spellStep.value !== 'typing' || !spellInput.value.trim())
+    return
+  if (matchSpelling(spellInput.value, card)) {
+    spellStep.value = 'done'
+    return
+  }
+  spellDiff.value = diffSpelling(spellInput.value, card)
+  spellStep.value = 'wrong'
+  if (!spellMissed.has(card.key)) {
+    spellMissed.add(card.key)
+    const m = spellMistake(card, 'meaning')
+    if (m)
+      addMistake(m.module, m.entry)
+  }
+}
 
 function playAudio(card?: StudyCard | null) {
   const c = card ?? current.value ?? studying.value
@@ -199,6 +244,7 @@ function grade(g: 0 | 3 | 5) {
     }
   }
   lastGrade.value = g
+  resetSpell()
   studying.value = card
   playAudio(card)
 }
@@ -256,6 +302,7 @@ const finishStats = computed(() => {
   }
 })
 function next() {
+  resetSpell()
   studying.value = null
   lastGrade.value = null
   wordInfoSeq++
@@ -565,7 +612,7 @@ defineExpose({ restart })
             >{{ lastGrade === 5 ? '认识 · 确认一下' : lastGrade === 0 ? '不认识 · 记一下' : '模糊 · 再看看' }}</span>
           </div>
           <div class="mb-4 flex items-center justify-center gap-3">
-            <span class="text-3xl text-gray-900 font-black dark:text-white">{{ studying.word }}</span>
+            <span class="text-3xl text-gray-900 font-black dark:text-white" data-study-word>{{ wordHidden ? '？？？' : studying.word }}</span>
             <button class="p-2 text-gray-400 hover:text-blue-500" title="播放发音" @click="playAudio()">
               <i class="i-ph-speaker-high-bold block text-xl" />
             </button>
@@ -581,18 +628,43 @@ defineExpose({ restart })
             <span class="text-xl text-gray-800 font-medium dark:text-gray-200">{{ studying.meaning }}</span>
           </div>
 
+          <!-- 会拼写：遮住单词拼一遍 -->
+          <form v-if="wordHidden" class="mb-6" data-spell @submit.prevent="checkSpell">
+            <p class="mb-2 text-center text-sm text-gray-500 dark:text-gray-400">
+              把这个词拼出来
+            </p>
+            <input
+              ref="spellInputEl"
+              v-model="spellInput"
+              aria-label="拼写"
+              autocomplete="off"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+              class="block w-full border border-gray-300 rounded-lg bg-white p-3 text-center text-xl dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+            >
+            <div class="mt-3 flex gap-3">
+              <button type="button" class="flex-1 border border-gray-300 rounded-xl py-3 text-sm text-gray-600 font-bold dark:border-gray-600 dark:text-gray-300" @click="next">
+                跳过
+              </button>
+              <button type="submit" class="flex-1 rounded-xl bg-blue-600 py-3 text-sm text-white font-bold disabled:opacity-50" :disabled="!spellInput.trim()">
+                核对
+              </button>
+            </div>
+          </form>
           <VocabCardHints
-            v-if="studying.deck === 'vocabulary'"
+            v-else-if="studying.deck === 'vocabulary'"
             :key="`post-${studying.key}`"
             :card="studying"
             phase="post"
             :word-info="wordInfo"
             :lapses="studyLapses"
+            :related="practice === 'related'"
           />
           <template v-else>
             <div v-if="studying.synonyms.length > 0" class="mb-6 border border-teal-200 rounded-xl bg-teal-50 p-4 dark:border-teal-800 dark:bg-teal-900/20" data-synonyms>
               <div class="mb-2 text-sm text-teal-700 font-bold dark:text-teal-300">
-                🔗 同义替换
+                🔗 同义替换<span v-if="practice === 'related'" class="ml-1 font-normal">（这一轮重点记）</span>
               </div>
               <p class="text-sm text-gray-700 leading-relaxed dark:text-gray-300">
                 {{ studying.synonyms.join(' · ') }}
@@ -616,17 +688,36 @@ defineExpose({ restart })
             </div>
           </template>
 
-          <div class="flex gap-3">
+          <p v-if="needsSpell && spellStep === 'done'" class="mb-4 text-center text-green-600 font-bold" data-spell-result>
+            拼对了 ✓
+          </p>
+          <div v-if="needsSpell && spellStep === 'wrong'" class="mb-4 text-center" data-spell-result>
+            <p class="text-red-600 font-bold">
+              没拼对，红色是漏写或写错的字母
+            </p>
+            <p class="text-2xl font-black">
+              <span v-for="(c, i) in spellDiff" :key="i" :class="c.ok ? 'text-gray-900 dark:text-white' : 'text-red-600 underline'">{{ c.char }}</span>
+            </p>
+          </div>
+          <div v-if="!wordHidden" class="flex gap-3">
             <button
-              v-if="gradeHistory.length > 0"
+              v-if="gradeHistory.length > 0 && (!needsSpell || spellStep === 'read')"
               class="flex-1 border border-gray-300 rounded-xl py-3 text-sm text-gray-600 font-bold dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               @click="goBackOne"
             >
               ↩ 返回上一个，重新测试
             </button>
-            <button class="flex-1 rounded-xl bg-blue-600 py-3 text-sm text-white font-bold hover:bg-blue-700" @click="next">
-              下一个
+            <button v-if="needsSpell && spellStep === 'read'" class="flex-1 rounded-xl bg-blue-600 py-3 text-sm text-white font-bold hover:bg-blue-700" @click="startSpell">
+              拼一遍
             </button>
+            <template v-else>
+              <button v-if="needsSpell && spellStep === 'wrong'" class="flex-1 border border-gray-300 rounded-xl py-3 text-sm text-gray-600 font-bold dark:border-gray-600 dark:text-gray-300" @click="startSpell">
+                再拼一次
+              </button>
+              <button class="flex-1 rounded-xl bg-blue-600 py-3 text-sm text-white font-bold hover:bg-blue-700" @click="next">
+                下一个
+              </button>
+            </template>
           </div>
         </div>
       </div>

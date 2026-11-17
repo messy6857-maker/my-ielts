@@ -18,6 +18,8 @@ const props = defineProps<{
   wordInfo: WordInfo | null
   /** 这个词累计答错次数（巧记标题旁提示） */
   lapses?: number
+  /** 这一轮重点记关联词：同义词、拓展词排在最前面，意思直接显示 */
+  related?: boolean
 }>()
 
 ensureMnemonic()
@@ -134,11 +136,46 @@ function toggleExtra(i: number) {
 
   <!-- 自评后：例句、例句扩展、拓展词、巧记 -->
   <template v-else-if="phase === 'post'">
+    <div
+      v-if="related && ((wordInfo && wordInfo.synonyms.length > 0) || extras.length > 0)"
+      class="mb-6 border border-teal-200 rounded-xl bg-teal-50 p-4 text-left dark:border-teal-800 dark:bg-teal-900/20"
+      data-related
+    >
+      <div class="mb-2 text-sm text-teal-700 font-bold dark:text-teal-300">
+        🔗 关联词<span class="ml-1 font-normal">（这一轮重点记）</span>
+      </div>
+      <template v-if="wordInfo && wordInfo.synonyms.length > 0">
+        <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">
+          同义词
+        </p>
+        <ul class="mb-3 space-y-1.5">
+          <li v-for="(syn, i) in wordInfo.synonyms.slice(0, 8)" :key="i" class="text-sm">
+            <span class="mr-1.5 inline-block h-2 w-2 rounded-full" :class="dots[i % dots.length]" />
+            <span class="font-bold" :class="colors[i % colors.length]">{{ syn }}</span>
+            <span v-if="synonymPos(syn)" class="ml-1 text-gray-500 italic dark:text-gray-400" style="font-family: times">{{ synonymPos(syn) }}</span>
+            <span v-if="synonymMeaning(syn)" class="ml-2 text-gray-600 dark:text-gray-400">{{ synonymMeaning(syn) }}</span>
+          </li>
+        </ul>
+      </template>
+      <template v-if="extras.length > 0">
+        <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">
+          拓展词
+        </p>
+        <ul class="space-y-1.5">
+          <li v-for="(ex, i) in extras" :key="i" class="text-sm leading-relaxed">
+            <span class="mr-1.5 inline-block h-2 w-2 rounded-full" :class="dots[i % dots.length]" />
+            <span class="font-bold" :class="colors[i % colors.length]">{{ ex.word }}</span>
+            <span v-if="ex.pos" class="ml-1 text-gray-500 italic dark:text-gray-400" style="font-family: times">{{ ex.pos }}</span>
+            <span class="ml-2 text-gray-600 dark:text-gray-400">{{ ex.meaning }}</span>
+          </li>
+        </ul>
+      </template>
+    </div>
     <p v-if="card.example" class="mb-6 text-center text-sm text-gray-500 italic dark:text-gray-400">
       {{ card.example }}
     </p>
     <div
-      v-if="wordInfo && (wordInfo.examples.length > 0 || wordInfo.synonyms.length > 0)"
+      v-if="wordInfo && (wordInfo.examples.length > 0 || (wordInfo.synonyms.length > 0 && !related))"
       class="mb-6 border border-sky-200 rounded-xl bg-sky-50 p-4 text-left dark:border-sky-800 dark:bg-sky-900/20"
     >
       <div class="mb-2 text-sm text-sky-700 font-bold dark:text-sky-300">
@@ -152,7 +189,7 @@ function toggleExtra(i: number) {
         “{{ ex }}”
         <span v-if="wordInfo.word !== card.word.toLowerCase()" class="text-xs text-gray-400 not-italic">（{{ wordInfo.word }} 的例句）</span>
       </p>
-      <div v-if="wordInfo.synonyms.length > 0" class="mt-2">
+      <div v-if="wordInfo.synonyms.length > 0 && !related" class="mt-2">
         <p class="mb-1 text-xs text-gray-500 dark:text-gray-400">
           同义词：
         </p>
@@ -170,7 +207,7 @@ function toggleExtra(i: number) {
     </div>
 
     <div
-      v-if="extras.length > 0"
+      v-if="extras.length > 0 && !related"
       class="mb-6 border border-teal-200 rounded-xl bg-teal-50 p-4 dark:border-teal-800 dark:bg-teal-900/20"
     >
       <div class="mb-2 text-sm text-teal-700 font-bold dark:text-teal-300">

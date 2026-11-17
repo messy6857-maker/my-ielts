@@ -36,6 +36,14 @@ async function settle() {
     await new Promise(r => setTimeout(r, 0))
   }
 }
+// 等词表加载完（“开始”可点）再点
+async function clickStart(w: any) {
+  for (let i = 0; i < 200 && w.find('[data-start]').attributes('disabled') !== undefined; i++) {
+    await new Promise(r => setTimeout(r, 5))
+    await flushPromises()
+  }
+  await w.find('[data-start]').trigger('click')
+}
 // 学新词进来先是选择页；start 为 true 时顺手点“开始”进到卡片
 async function mountLearn(query: string, start = true) {
   const router = createRouter({
@@ -57,7 +65,7 @@ async function mountLearn(query: string, start = true) {
   wrappers.push(w)
   await settle()
   if (start) {
-    await w.find('[data-start]').trigger('click')
+    await clickStart(w)
     await settle()
   }
   return { w, router }
@@ -145,7 +153,7 @@ describe('学新词 writes back to each deck’s original records', () => {
   it('vocabulary deck uses sr_vocabulary_v1 and the vocabulary daily goal', async () => {
     const { w } = await mountLearn('deck=vocabulary', false)
     expect(w.find('select[aria-label="章节"]').exists()).toBe(true)
-    await w.find('[data-start]').trigger('click')
+    await clickStart(w)
     await settle()
     expect(w.text()).toContain('学新词 · 词汇表')
     await button(w, '认识').trigger('click')
@@ -177,7 +185,7 @@ describe('学新词 writes back to each deck’s original records', () => {
     await w.find('[data-deck-choice="corpus"]').trigger('click')
     await settle()
     expect(router.currentRoute.value.query.deck).toBe('corpus')
-    await w.find('[data-start]').trigger('click')
+    await clickStart(w)
     await settle()
     expect(w.text()).toContain('学新词 · 听力语料库')
     expect(w.find('[data-word]').exists()).toBe(true)
@@ -208,7 +216,7 @@ describe('学新词 starts only after you choose, and every screen can go back',
     expect(w.find('[data-deck-choice="reading538"]').attributes('aria-pressed')).toBe('true')
     expect(w.find('[data-preview]').text()).toMatch(/新词 [1-9]\d* 个/)
     expect(Object.keys(useDeckStore('reading538').schedules.value)).toHaveLength(0)
-    await w.find('[data-start]').trigger('click')
+    await clickStart(w)
     await settle()
     expect(w.find('[data-setup]').exists()).toBe(false)
     expect(w.find('[data-card]').exists()).toBe(true)
@@ -222,7 +230,7 @@ describe('学新词 starts only after you choose, and every screen can go back',
     expect(w.find('[data-setup]').exists()).toBe(true)
     await w.find('[data-deck-choice="listening179"]').trigger('click')
     await settle()
-    await w.find('[data-start]').trigger('click')
+    await clickStart(w)
     await settle()
     expect(w.text()).toContain('学新词 · 听力 179')
   })
@@ -232,6 +240,124 @@ describe('学新词 starts only after you choose, and every screen can go back',
     expect(source('src/pages/vocabulary/index.vue')).toContain('<StudyBack to="/study/spell" label="练拼写" />')
     expect(source('src/pages/study/spell.vue')).toContain('<StudyBack to="/study" label="背单词" />')
     expect(source('src/pages/game.vue')).toContain('← 返回选词')
+  })
+})
+
+describe('学新词: how far to learn each word', () => {
+  it('three levels; reading keywords have no spelling, the corpus has no related words; the choice is remembered', async () => {
+    const levels = (w: any) => w.findAll('[data-practice]').map((b: any) => b.attributes('data-practice'))
+    const { w } = await mountLearn('deck=vocabulary', false)
+    expect(levels(w)).toEqual(['recognize', 'spell', 'related'])
+    expect(w.find('[data-practice="recognize"]').attributes('aria-pressed')).toBe('true')
+    await w.find('[data-practice="spell"]').trigger('click')
+    await w.find('[data-deck-choice="reading538"]').trigger('click')
+    await settle()
+    expect(levels(w)).toEqual(['recognize', 'related'])
+    expect(w.find('[data-practice="recognize"]').attributes('aria-pressed')).toBe('true')
+    await w.find('[data-deck-choice="corpus"]').trigger('click')
+    await settle()
+    expect(levels(w)).toEqual(['recognize', 'spell'])
+    expect(w.find('[data-practice="spell"]').attributes('aria-pressed')).toBe('true')
+    w.unmount()
+    wrappers.pop()
+    const again = await mountLearn('deck=listening179', false)
+    expect(again.w.find('[data-practice="spell"]').attributes('aria-pressed')).toBe('true')
+  })
+
+  it('会拼写: after the entry the word is hidden and typed once; a miss goes to the spelling mistakes, the self-rating stays', async () => {
+    const { w } = await mountLearn('deck=listening179', false)
+    await w.find('[data-practice="spell"]').trigger('click')
+    await clickStart(w)
+    await settle()
+    const word = w.find('[data-word]').text()
+    await button(w, '认识').trigger('click')
+    await flushPromises()
+    expect(button(w, '下一个')).toBeUndefined()
+    expect(w.find('[data-study-word]').text()).toBe(word)
+    const store = useDeckStore('listening179')
+    const key = Object.keys(store.schedules.value)[0]
+    const rated = JSON.stringify(store.schedules.value[key])
+    await button(w, '拼一遍').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-study-word]').text()).toBe('？？？')
+    expect(w.find('[data-synonyms]').exists()).toBe(false)
+    await w.find('input[aria-label="拼写"]').setValue('zzzz')
+    await w.find('form[data-spell]').trigger('submit')
+    expect(w.find('[data-spell-result]').text()).toContain('没拼对')
+    expect(w.find('[data-study-word]').text()).toBe(word)
+    expect(useMistakes().mistakes.value.find(m => m.key === key)?.module).toBe('listening')
+    expect(JSON.stringify(store.schedules.value[key])).toBe(rated)
+    await button(w, '再拼一次').trigger('click')
+    await flushPromises()
+    await w.find('input[aria-label="拼写"]').setValue(word.toUpperCase())
+    await w.find('form[data-spell]').trigger('submit')
+    expect(w.find('[data-spell-result]').text()).toContain('拼对了')
+    expect(useMistakes().mistakes.value.find(m => m.key === key)?.count).toBe(1)
+    await button(w, '下一个').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-card]').exists()).toBe(true)
+  })
+
+  it('认意思 keeps the plain flow; 关联词 marks the synonyms as this round’s focus', async () => {
+    const plain = await mountLearn('deck=reading538')
+    await button(plain.w, '认识').trigger('click')
+    await flushPromises()
+    expect(button(plain.w, '拼一遍')).toBeUndefined()
+    expect(button(plain.w, '下一个')).toBeTruthy()
+    plain.w.unmount()
+    wrappers.pop()
+    const { w } = await mountLearn('deck=listening179', false)
+    await w.find('[data-practice="related"]').trigger('click')
+    await clickStart(w)
+    await settle()
+    await button(w, '认识').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-synonyms]').text()).toContain('这一轮重点记')
+    expect(button(w, '下一个')).toBeTruthy()
+  })
+
+  it('关联词 on a vocabulary card lists synonyms and extension words with their meanings up front', async () => {
+    const Hints = (await import('../src/components/VocabCardHints.vue')).default
+    const card = {
+      key: 'vocabulary:1',
+      deck: 'vocabulary',
+      id: 1,
+      word: 'big',
+      spellings: ['big'],
+      pos: 'adj.',
+      meaning: '大的',
+      chapter: 'c',
+      synonyms: [],
+      remark: '',
+      note: '',
+      example: 'A big house.',
+      extra: 'huge adj. 巨大的',
+      hintWords: [],
+    }
+    const info = {
+      word: 'big',
+      examples: [],
+      synonyms: ['large'],
+    }
+    const focus = mount(Hints, {
+      props: {
+        card,
+        phase: 'post',
+        wordInfo: info,
+        related: true,
+      } as any,
+    })
+    wrappers.push(focus)
+    expect(focus.find('[data-related]').text()).toContain('large')
+    expect(focus.find('[data-related]').text()).toContain('huge')
+    expect(focus.find('[data-related]').text()).toContain('巨大的')
+    expect(focus.text().match(/huge/g)).toHaveLength(1)
+    const plain = mount(Hints, {
+      props: { card, phase: 'post', wordInfo: info } as any,
+    })
+    wrappers.push(plain)
+    expect(plain.find('[data-related]').exists()).toBe(false)
+    expect(plain.text()).toContain('拓展词汇')
   })
 })
 
