@@ -79,60 +79,25 @@ function percent(done: number, total: number) {
     : 0
 }
 
-const menus = reactive([
-  {
-    label: '词汇',
-    icon: 'i-carbon-chart-histogram',
-    link: '/vocabulary',
-    desc: '包含雅思词汇真经内容，按场景分组',
-  },
-  {
-    label: '语法',
-    icon: 'i-carbon-load-balancer-vpc',
-    link: '/grammar',
-    desc: '新东方雅思语法课程，针对雅思考试设计，思维导图',
-  },
-  {
-    label: '听力',
-    icon: 'i-carbon-headphones',
-    link: '/listening',
-    desc: '听力基本概念，179 考点词同义替换和雅思王语料库',
-  },
-  {
-    label: '口语',
-    icon: 'i-carbon-microphone',
-    link: '/speaking',
-    desc: 'Part 1/2/3 真题题库，计时 + 录音自测',
-  },
-  {
-    label: '阅读',
-    icon: 'i-carbon-white-paper',
-    link: '/reading',
-    desc: '376 考点词同义替换',
-  },
-  {
-    label: '写作',
-    icon: 'i-carbon-edit',
-    link: '/writing',
-    desc: '100 句翻译练习、大小作文',
-  },
-  {
-    label: '听力模考',
-    icon: 'i-carbon-headset',
-    link: '/mock/listening-test',
-    desc: '剑桥 18–21 听力真题模考，限时作答与交卷评分',
-  },
-  {
-    label: '阅读模考',
-    icon: 'i-carbon-document',
-    link: '/mock/reading-test',
-    desc: '剑桥 18–21 阅读真题模考，限时作答与交卷评分',
-  },
+// 首页四个入口：背单词、雅思考试，以及错词本、学习统计
+const menus = computed(() => [
   {
     label: '背单词',
     icon: 'i-carbon-book',
     link: '/study',
-    desc: '词汇表、阅读和听力考点词的自测卡片、拼写练习和单词地牢',
+    desc: '学新词、复习到期的词、练拼写、单词地牢，词汇表也在这里',
+  },
+  {
+    label: '雅思考试',
+    icon: 'i-carbon-education',
+    link: '/ielts',
+    desc: '听说读写和语法练习、做题方法、限时模考和记录',
+  },
+  {
+    label: mistakeCount.value > 0 ? `错词本（${mistakeCount.value}）` : '错词本',
+    icon: 'i-carbon-notebook',
+    link: '/mistakes',
+    desc: '自测、拼写、模考、听写里记错的词和题都在这里',
   },
   {
     label: '学习统计',
@@ -340,11 +305,12 @@ const menus = reactive([
           </div>
         </div>
         <div
-          class="md:grid lg:grid-cols-3 md:grid-cols-2 md:gap-12 space-y-8 md:space-y-0"
+          class="md:grid md:grid-cols-2 md:gap-12 space-y-8 md:space-y-0"
         >
           <RouterLink
             v-for="m in menus"
-            :key="m.label"
+            :key="m.link"
+            :data-home-entry="m.link"
             :to="m.link"
             class="block"
           >

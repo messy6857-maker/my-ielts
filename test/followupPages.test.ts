@@ -227,7 +227,7 @@ it('keeps U.S.A. and Ph.D. in their containing sentence', () =>
     'Another sentence.',
   ]))
 it('listening display table and scoring function agree for every raw score', async () => {
-  const Page = (await import('../src/pages/listening/index.vue')).default
+  const Page = (await import('../src/components/guide/ListeningGuide.vue')).default
   const { state } = await show(Page)
   for (let score = 0; score <= 40; score++) {
     const row = state.scoreTable.find(([range]: string[]) => {

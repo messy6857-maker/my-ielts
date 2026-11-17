@@ -3,10 +3,8 @@ import type { MockTestPair } from './registry'
 import type { MockQuestion } from './types'
 import { useRoute, useRouter } from 'vue-router'
 
-import ListeningTabs from '~/components/ListeningTabs.vue'
 import { resolveMediaUrl } from '~/composables/useAudio'
 import { alertDialog, chooseDialog, confirmDialog } from '~/composables/useDialog'
-import { useGoBack } from '~/composables/useGoBack'
 import { useMockMistakeSave } from '~/composables/useMockMistakeSave'
 import { useStudyTimer } from '~/composables/useStudyTimer'
 import { collectMockMistakeEntries } from '~/utils/mockMistakes'
@@ -33,7 +31,6 @@ import {
 
 const partImageFailed = ref<Record<number, boolean>>({})
 
-const { goBack } = useGoBack('/listening')
 const studyTimer = useStudyTimer()
 
 const router = useRouter()
@@ -712,15 +709,8 @@ async function submit() {
     <template v-else-if="test">
       <!-- 开始屏：点开始才计时 -->
       <div v-if="!started" class="mx-auto max-w-2xl py-16 text-center">
-        <ListeningTabs />
-        <div class="mb-6 text-left">
-          <button
-            type="button"
-            class="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-            @click="goBack"
-          >
-            ← 返回
-          </button>
+        <div class="text-left">
+          <ExamTabs group="mock" />
         </div>
         <p class="mb-4 text-5xl">
           🎧
@@ -1175,9 +1165,9 @@ async function submit() {
           <button
             type="button"
             class="border border-gray-300 rounded-lg px-6 py-2 text-sm text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-            @click="router.push('/listening')"
+            @click="router.push('/ielts')"
           >
-            ← 返回听力
+            ← 返回雅思考试
           </button>
           <button
             type="button"

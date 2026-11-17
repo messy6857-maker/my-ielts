@@ -99,6 +99,9 @@ function tabBtn(t: Tab) {
 
 <template>
   <div class="mx-auto max-w-3xl px-4 pt-6 2xl:px-0">
+    <div class="mb-4">
+      <StudyBack to="/ielts" label="雅思考试" />
+    </div>
     <h2 class="mb-1 text-xl font-bold dark:text-white">
       🎙 口语
     </h2>

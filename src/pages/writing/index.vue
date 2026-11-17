@@ -277,7 +277,8 @@ function nextPractice() {
       class="mb-4 border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
     >
       <!-- 页签 -->
-      <div class="mb-3 flex justify-end">
+      <div class="mb-3 flex items-center justify-between gap-3">
+        <StudyBack to="/ielts" label="雅思考试" />
         <router-link
           to="/grading/history"
           class="text-xs text-purple-700 dark:text-purple-300 hover:underline"

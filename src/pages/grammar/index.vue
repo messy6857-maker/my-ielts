@@ -26,6 +26,9 @@ async function onHandoutClick(event: MouseEvent) {
     <div
       class="mb-4 border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
     >
+      <div class="mb-4">
+        <StudyBack to="/ielts" label="雅思考试" />
+      </div>
       <h3 class="mb-4 text-xl font-semibold dark:text-white">
         概述
       </h3>

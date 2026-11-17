@@ -31,7 +31,7 @@ import {
 
 const router = useRouter()
 const route = useRoute()
-const { goBack } = useGoBack('/reading')
+const { goBack } = useGoBack('/ielts')
 const studyTimer = useStudyTimer()
 // 考试中点返回先确认未交卷；开始屏/已交卷直接返回
 
@@ -612,17 +612,8 @@ function switchPassage(index: number) {
     <template v-else-if="test">
       <!-- 开始屏：点开始才计时 -->
       <div v-if="!started" class="mx-auto max-w-2xl py-16 text-center">
-        <div class="mb-6 text-left">
-          <button
-            type="button"
-            class="border border-gray-300 rounded-lg px-4 py-2 text-sm text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-            @click="handleBack"
-          >
-            ← 返回
-          </button>
-        </div>
-        <div class="mb-6 text-left">
-          <ReadingTabs />
+        <div class="text-left">
+          <ExamTabs group="mock" />
         </div>
         <p class="mb-4 text-5xl">
           📖
@@ -1078,9 +1069,9 @@ function switchPassage(index: number) {
           <button
             type="button"
             class="border border-gray-300 rounded-lg px-6 py-2 text-sm text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-            @click="handleBack"
+            @click="router.push('/ielts')"
           >
-            ← 返回阅读
+            ← 返回雅思考试
           </button>
           <button
             type="button"
