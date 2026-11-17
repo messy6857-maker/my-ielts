@@ -41,6 +41,15 @@ jobs:
           for i in $(seq 1 30); do curl -sf http://localhost:4173/ > /dev/null && break; sleep 1; done
           node e2e-browser.mjs http://localhost:4173/ 2>&1 | tee $RUNNER_TEMP/e2e.log
         continue-on-error: true
+      - name: screenshots
+        run: |
+          cp scripts/shots.mjs $RUNNER_TEMP/e2e/ && cd $RUNNER_TEMP/e2e && mkdir -p shots && node shots.mjs http://localhost:4173/
+        continue-on-error: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shots
+          path: ${{ runner.temp }}/e2e/shots
+        continue-on-error: true
       - name: Commit regenerated lockfile and type declarations
         run: |
           git config user.name "deps-lab"
