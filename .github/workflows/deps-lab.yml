@@ -43,7 +43,7 @@ jobs:
         continue-on-error: true
       - name: screenshots
         run: |
-          cp scripts/shots.mjs $RUNNER_TEMP/e2e/ && cd $RUNNER_TEMP/e2e && mkdir -p shots && node shots.mjs http://localhost:4173/
+          cp scripts/shots.mjs $RUNNER_TEMP/e2e/ && cd $RUNNER_TEMP/e2e && mkdir -p shots && node shots.mjs http://localhost:4173/ && mkdir -p $GITHUB_WORKSPACE/shots && cp shots/*.png $GITHUB_WORKSPACE/shots/
         continue-on-error: true
       - uses: actions/upload-artifact@v4
         with:
