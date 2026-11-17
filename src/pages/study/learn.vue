@@ -28,6 +28,26 @@ function parseDeck(value: unknown): DeckId {
 const deck = ref<DeckId>(parseDeck(route.query.deck))
 // 进来先选，点“开始”才出卡片；卡片页的返回键回到这个选择页
 const started = ref(false)
+// 学到什么程度：认意思 / 会拼写 / 关联词。阅读考点词不要求拼写，语料库没有关联词。
+type Practice = 'recognize' | 'spell' | 'related'
+const PRACTICES: Array<{ id: Practice, label: string, desc: string }> = [
+  { id: 'recognize', label: '认意思', desc: '看到词能想起意思就行' },
+  { id: 'spell', label: '会拼写', desc: '看完词条，再把词遮住拼一遍' },
+  { id: 'related', label: '关联词', desc: '词条里重点看同义词、拓展词' },
+]
+const PRACTICE_KEY = 'study_learn_practice'
+const practiceIds = PRACTICES.map(p => p.id)
+const practices = computed(() => PRACTICES.filter(p =>
+  !(p.id === 'spell' && deck.value === 'reading538') && !(p.id === 'related' && deck.value === 'corpus')))
+const chosenPractice = ref(readChapterPreference(PRACTICE_KEY, practiceIds, currentUser.value, 'recognize') as Practice)
+// 这个词库没有的练法，按“认意思”来（不改记住的选择）
+const practice = computed<Practice>(() => practices.value.some(p => p.id === chosenPractice.value)
+  ? chosenPractice.value
+  : 'recognize')
+function choosePractice(id: Practice) {
+  chosenPractice.value = id
+  writeChapterPreference(PRACTICE_KEY, id, currentUser.value)
+}
 watch(() => route.query.deck, (value) => {
   deck.value = parseDeck(value)
 })
@@ -82,6 +102,7 @@ watch([deck, category], () => {
 }, { immediate: true })
 watch(currentUser, (user) => {
   started.value = false
+  chosenPractice.value = readChapterPreference(PRACTICE_KEY, practiceIds, user, 'recognize') as Practice
   deck.value = readChapterPreference(DECK_KEY, [...DECK_IDS], user, deck.value) as DeckId
   const next = readChapterPreference(CHAPTER_KEY, chapters, user)
   if (category.value !== next)
@@ -161,6 +182,7 @@ const SUBTITLE: Record<DeckId, string> = {
     :version="version"
     :build="build"
     back-label="选择"
+    :practice="practice"
     @finished="onFinished"
     @exit="started = false"
   >
@@ -202,6 +224,28 @@ const SUBTITLE: Record<DeckId, string> = {
         <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
           {{ SUBTITLE[deck] }}
         </p>
+
+        <div class="mb-2 text-sm text-gray-700 font-bold dark:text-gray-200">
+          学到什么程度
+        </div>
+        <div class="grid mb-4 gap-2 sm:grid-cols-3">
+          <button
+            v-for="p in practices"
+            :key="p.id"
+            :data-practice="p.id"
+            :aria-pressed="practice === p.id"
+            class="border rounded-lg px-3 py-2 text-left"
+            :class="practice === p.id ? 'border-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'border-gray-300 bg-white hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700'"
+            @click="choosePractice(p.id)"
+          >
+            <div class="text-sm font-bold" :class="practice === p.id ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'">
+              {{ p.label }}
+            </div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+              {{ p.desc }}
+            </div>
+          </button>
+        </div>
 
         <div v-if="deck === 'vocabulary'" class="mb-4">
           <label class="mb-2 block text-sm text-gray-700 font-bold dark:text-gray-200" for="learn-chapter">章节</label>

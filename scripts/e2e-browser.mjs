@@ -228,6 +228,23 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
     await page.getByRole('button', { name: '退出', exact: true }).click()
     await page.locator('[data-setup]').waitFor()
   }
+  // 学到什么程度：选“会拼写”，看完词条把词遮住拼一遍
+  await page.locator('[data-deck-choice="listening179"]').click()
+  await page.locator('[data-practice="spell"]').click()
+  await page.locator('[data-start]:enabled').click()
+  const spellWord = await page.locator('[data-card] [data-word]').innerText()
+  await page.getByRole('button', { name: '不认识', exact: true }).click()
+  await page.getByRole('button', { name: '拼一遍', exact: true }).click()
+  assert.equal(await page.locator('[data-study-word]').innerText(), '？？？')
+  await page.locator('form[data-spell] input').fill(spellWord)
+  await page.locator('form[data-spell] input').press('Enter')
+  await page.getByText('拼对了 ✓').waitFor()
+  await page.getByRole('button', { name: '下一个', exact: true }).click()
+  await page.locator('[data-card] [data-word]').waitFor()
+  await page.getByRole('button', { name: /返回选择/ }).first().click()
+  await page.getByRole('button', { name: '退出', exact: true }).click()
+  await page.locator('[data-practice="recognize"]').click()
+  await page.locator('[data-deck-choice="corpus"]').click()
   // 选择页的返回键回到背单词；再进学新词，默认还是上次的词库
   await page.locator('a[data-back][href="#/study"]').click()
   await page.locator('[data-entry="learn"]').click()
