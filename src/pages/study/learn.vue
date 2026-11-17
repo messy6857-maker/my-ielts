@@ -61,7 +61,9 @@ async function load() {
   loadError.value = false
   const which = deck.value
   try {
-    const list = await loadDeckCards(which, which === 'vocabulary' ? category.value : undefined)
+    const list = await loadDeckCards(which, which === 'vocabulary'
+      ? category.value
+      : undefined)
     if (seq !== loadSeq)
       return
     cards.value = list

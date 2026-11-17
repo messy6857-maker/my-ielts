@@ -12,7 +12,10 @@ import { DECK_IDS, DECK_META } from '../../utils/studyDeck'
 defineOptions({ name: 'StudyReviewPage' })
 
 const { currentUser } = useAuth()
-const stores = Object.fromEntries(DECK_IDS.map(d => [d, useStudyDeck(d)])) as Record<DeckId, ReturnType<typeof useStudyDeck>>
+const stores = Object.fromEntries(DECK_IDS.map(d => [
+  d,
+  useStudyDeck(d),
+])) as Record<DeckId, ReturnType<typeof useStudyDeck>>
 
 const cards = shallowRef<Record<DeckId, StudyCard[]> | null>(null)
 const loadError = ref(false)
@@ -38,7 +41,10 @@ const vocabularyAliases = computed(() => {
   const map = new Map<string, Array<string | number>>()
   for (const c of cards.value?.vocabulary ?? []) {
     const key = normalize(c.word)
-    map.set(key, [...(map.get(key) ?? []), c.id])
+    map.set(key, [
+      ...(map.get(key) ?? []),
+      c.id,
+    ])
   }
   return map
 })
@@ -67,7 +73,9 @@ const dueByDeck = computed(() => {
         if (!prev || d.dueAt < prev.dueAt)
           byWord.set(key, d)
       }
-      due = [...byWord.values()]
+      due = [
+        ...byWord.values(),
+      ]
     }
     out[deck] = due
   }
@@ -97,14 +105,18 @@ const CUSTOM_KEY = 'study_review_custom'
 const modeIds = COUNT_MODES.map(m => m.id)
 function readCustom(user: string | null) {
   const n = Number(localStorage.getItem(accountKey(CUSTOM_KEY, user)) ?? '30')
-  return Number.isFinite(n) && n >= 1 ? Math.min(500, Math.round(n)) : 30
+  return Number.isFinite(n) && n >= 1
+    ? Math.min(500, Math.round(n))
+    : 30
 }
 const countMode = ref(readChapterPreference(MODE_KEY, modeIds, currentUser.value, '20') as CountMode)
 const customCount = ref(readCustom(currentUser.value))
 watch(countMode, value => writeChapterPreference(MODE_KEY, value, currentUser.value))
 function setCustom(value: string | number) {
   const n = Math.round(Number(value))
-  customCount.value = Number.isFinite(n) && n >= 1 ? Math.min(500, n) : 30
+  customCount.value = Number.isFinite(n) && n >= 1
+    ? Math.min(500, n)
+    : 30
   writeChapterPreference(CUSTOM_KEY, String(customCount.value), currentUser.value)
 }
 const limit = computed(() => countMode.value === 'all'
@@ -122,7 +134,12 @@ const totalDue = computed(() => DECK_IDS.reduce((n, d) => n + dueByDeck.value[d]
 function build(): StudyPlan {
   now.value = Date.now()
   const items = selectedDue.value.slice(0, limit.value).map(d => ({ card: d.card, isNew: false }))
-  return { items, reviewCount: items.length, dueCount: items.length, newCount: 0 }
+  return {
+    items,
+    reviewCount: items.length,
+    dueCount: items.length,
+    newCount: 0,
+  }
 }
 
 const started = ref(false)
@@ -238,13 +255,15 @@ onMounted(load)
               先勾上要复习的词库。
             </template>
             <template v-else>
-              这一轮复习 {{ roundSize }} 个<template v-if="selectedDue.length > roundSize">，选中的词库一共 {{ selectedDue.length }} 个到期，剩下的可以再来一轮</template>。
+              这一轮复习 {{ roundSize }} 个<template v-if="selectedDue.length > roundSize">
+                ，选中的词库一共 {{ selectedDue.length }} 个到期，剩下的可以再来一轮
+              </template>。
             </template>
           </p>
 
           <button
             data-start
-            class="rounded-lg bg-blue-600 px-8 py-2.5 text-white font-bold disabled:opacity-50 hover:bg-blue-700"
+            class="rounded-lg bg-blue-600 px-8 py-2.5 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
             :disabled="roundSize === 0"
             @click="start"
           >

@@ -19,8 +19,6 @@ import {
   useMistakes,
   useProgress,
 } from '../src/composables/useStudyData'
-import * as details from '../src/composables/useVocabularyDetails'
-import * as dictionary from '../src/composables/useWordInfo'
 import { cam20Test3ListeningTranscript } from '../src/pages/mock/cam20-test3-listening-transcript'
 import { cam21Test3ListeningTranscript } from '../src/pages/mock/cam21-test3-listening-transcript'
 import { analyzeEssay } from '../src/pages/writing/task1/grader'

@@ -11,7 +11,6 @@ import {
 } from '../src/composables/useAuth'
 import { studyDay, useMistakes } from '../src/composables/useStudyData'
 import { getDeviceId, useStudyTimer } from '../src/composables/useStudyTimer'
-import * as vocabularyDetails from '../src/composables/useVocabularyDetails'
 import { previewStudyBackup, restoreStudyBackup } from '../src/utils/backup'
 import {
   emergencyWritingDrafts,

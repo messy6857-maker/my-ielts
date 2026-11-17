@@ -19,7 +19,11 @@ beforeEach(() => {
   localStorage.clear()
   window.dispatchEvent(new StorageEvent('storage', { key: null }))
   useAuth().currentUser.value = null
-  vi.stubGlobal('speechSynthesis', { cancel: vi.fn(), speak: vi.fn(), getVoices: () => [] })
+  vi.stubGlobal('speechSynthesis', {
+    cancel: vi.fn(),
+    speak: vi.fn(),
+    getVoices: () => [],
+  })
   vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
   vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {})
   vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 404 })))
@@ -45,9 +49,22 @@ async function until(check: () => boolean) {
   expect(check()).toBe(true)
 }
 async function mountPage(Page: any, path: string) {
-  const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: { template: '<p />' } }] })
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      {
+        path: '/:p(.*)*',
+        component: { template: '<p />' },
+      },
+    ],
+  })
   await router.push(path)
-  const w = mount(Page, { attachTo: document.body, global: { plugins: [router] } })
+  const w = mount(Page, {
+    attachTo: document.body,
+    global: {
+      plugins: [router],
+    },
+  })
   wrappers.push(w)
   await settle()
   return w
@@ -64,7 +81,15 @@ async function start(w: any) {
   return w.findComponent(StudyCardSession).vm.$.setupState as any
 }
 const button = (w: any, text: string) => w.findAll('button').find((b: any) => b.text().trim() === text)
-const due = (dueAt: number) => ({ ease: 2.5, interval: 1, dueAt, reps: 1, lapses: 0 })
+function due(dueAt: number) {
+  return {
+    ease: 2.5,
+    interval: 1,
+    dueAt,
+    reps: 1,
+    lapses: 0,
+  }
+}
 const readingCat = (reading538 as any)[0]
 const readingId = `${readingCat.title}-${readingCat.words[0][0]}`
 const readingWord = readingCat.words[0][1]
@@ -79,7 +104,12 @@ describe('复习到期的词: choose first, all word lists together', () => {
     expect(w.find('[data-card]').exists()).toBe(false)
     expect(w.find('[data-back]').attributes('href')).toBe('/study')
     const box = (d: string) => w.find(`[data-review-deck="${d}"]`).element as HTMLInputElement
-    expect([box('vocabulary').checked, box('reading538').checked, box('listening179').checked, box('corpus').checked]).toEqual([true, true, false, false])
+    expect([
+      box('vocabulary').checked,
+      box('reading538').checked,
+      box('listening179').checked,
+      box('corpus').checked,
+    ]).toEqual([true, true, false, false])
     expect(box('listening179').disabled).toBe(true)
     expect(w.find('[data-preview]').text()).toContain('这一轮复习 3 个')
   })
@@ -152,10 +182,15 @@ describe('复习到期的词: choose first, all word lists together', () => {
     for (const c of Object.values(all) as any[]) {
       for (const word of c.words.flat()) {
         const key = word.word[0].toLowerCase().trim()
-        byWord.set(key, [...(byWord.get(key) || []), word])
+        byWord.set(key, [
+          ...(byWord.get(key) || []),
+          word,
+        ])
       }
     }
-    const duplicate = [...byWord.values()].find(words => words.length > 1)!
+    const duplicate = [
+      ...byWord.values(),
+    ].find(words => words.length > 1)!
     const schedule = useWordSchedule()
     for (const word of duplicate)
       schedule.set(word.id, due(1))
@@ -206,7 +241,9 @@ describe('vocabulary cards in 学新词 keep the old page’s detail handling', 
     const id = s.current.id
     s.grade(5)
     await flushPromises()
-    finish({ [String(id)]: { example: 'This verified example should be visible.', extra: 'useful notes' } })
+    finish({
+      [String(id)]: { example: 'This verified example should be visible.', extra: 'useful notes' },
+    })
     await flushPromises()
     expect(s.studying.id).toBe(id)
     expect(s.studying.example).toBe('This verified example should be visible.')
@@ -224,7 +261,9 @@ describe('vocabulary cards in 学新词 keep the old page’s detail handling', 
     s.grade(0)
     const before = useMistakes().mistakes.value.find(m => m.key === `flashcard:${id}`)!
     expect(before.hint).toBeTruthy()
-    finish({ [id]: { example: 'Independent late example.', extra: '' } })
+    finish({
+      [id]: { example: 'Independent late example.', extra: '' },
+    })
     await flushPromises()
     const after = useMistakes().mistakes.value.find(m => m.key === `flashcard:${id}`)!
     expect(after.count).toBe(before.count)
@@ -237,7 +276,9 @@ describe('vocabulary cards in 学新词 keep the old page’s detail handling', 
     const { s, w } = await learn()
     expect(s.cardDetailsError).toBe(true)
     expect(w.text()).toContain('重试加载')
-    load.mockResolvedValue({ [String(s.current.id)]: { example: 'Recovered example.', extra: 'note' } })
+    load.mockResolvedValue({
+      [String(s.current.id)]: { example: 'Recovered example.', extra: 'note' },
+    })
     await s.retryWordInfo()
     await flushPromises()
     expect(s.cardDetailsError).toBe(false)

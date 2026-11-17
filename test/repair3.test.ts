@@ -16,14 +16,11 @@ import {
   useAuth,
 } from '../src/composables/useAuth'
 import { useDailyStore } from '../src/composables/useDailyStore'
-import { useWordSchedule } from '../src/composables/useSpacedRepetition'
 import {
   studyDay,
   useMistakes,
   useProgress,
 } from '../src/composables/useStudyData'
-import * as details from '../src/composables/useVocabularyDetails'
-import * as wordInfo from '../src/composables/useWordInfo'
 import vocabulary from '../src/pages/vocabulary/vocabulary'
 import { analyzeEssay } from '../src/pages/writing/task1/grader'
 import { previewStudyBackup, restoreStudyBackup } from '../src/utils/backup'
