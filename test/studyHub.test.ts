@@ -73,9 +73,10 @@ describe('背单词 hub', () => {
       ['learn', '/study/learn'],
       ['review', '/study/review'],
       ['spell', '/study/spell'],
+      ['lists', '/study/lists'],
       ['game', '/game'],
     ])
-    expect(w.findAll('a')).toHaveLength(4)
+    expect(w.findAll('a')).toHaveLength(5)
     expect(w.text()).not.toContain('卡片自测 →')
     expect(w.find('[data-entry="learn"] [data-badge]').text()).toBe('今天已学 1 个新词')
     expect(w.find('[data-entry="review"] [data-badge]').text()).toBe('3 个到期')
@@ -103,6 +104,7 @@ describe('背单词 hub', () => {
       ['/study/learn', true],
       ['/study/spell', true],
       ['/study/review', true],
+      ['/study/lists', true],
       ['/game', true],
       ['/reading', false],
     ] as const) {

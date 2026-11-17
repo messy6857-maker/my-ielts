@@ -22,6 +22,7 @@ import {
 import { readRecords, saveValue } from '../src/utils/storage'
 import { corpusCards, listeningCards, vocabularyCards } from '../src/utils/studyDeck'
 import { addToWordList, readWordList } from '../src/utils/wordList'
+import { saveLists } from '../src/utils/wordLists'
 
 const listening = listeningCards(listening179 as any)
 const corpus = corpusCards(corpusData as any)
@@ -406,15 +407,47 @@ describe('练拼写: choose first, one word at a time', () => {
     useMistakes().addMistake('typing', { key: `typing:${word.word[0]}`, title: word.word[0], detail: '' })
     useMistakes().addMistake('corpus', { key: `corpus:${corpus[0].id}`, title: corpus[0].word, detail: '' })
     useMistakes().addMistake('flashcard', { key: 'flashcard:99', title: 'x', detail: '' })
-    saveValue(nsKey('dungeon_wordlist_v1'), [`vocab:${word.id}`, 'listening179:2', 'reading538:anything'])
+    // 我的词表：自己建的词表，加上单词地牢的“我的词单”（存的是网站词库的词）
+    saveValue(nsKey('dungeon_wordlist_v1'), [`vocab:${word.id}`, 'listening179:2'])
+    saveLists([
+      {
+        id: 'mine',
+        name: '我的生词',
+        updatedAt: 1,
+        words: [
+          {
+            word: 'Serendipity',
+            meaning: '意外发现',
+            pos: 'n.',
+            synonyms: [],
+          },
+          {
+            word: 'take off',
+            meaning: '起飞',
+            pos: '',
+            synonyms: [],
+          },
+        ],
+      },
+    ])
     const w = await open()
     expect(w.find('[data-source="mistakes"]').text()).toContain('（2）')
-    expect(w.find('[data-source="custom"]').text()).toContain('（2）')
     expect(w.find('[data-source="today"]').text()).toContain('（0）')
     await w.find('[data-source="today"]').trigger('click')
     expect(w.find('[data-start]').attributes('disabled')).toBeDefined()
+    await w.find('[data-source="custom"]').trigger('click')
+    const select = w.find('select[aria-label="词表"]')
+    expect(select.findAll('option').map((o: any) => o.text())).toEqual(['我的生词（2）', '我的词单（单词地牢、听写加入的）（2）'])
     await choose(w, 'custom', 'meaning', 0)
-    expect(state(w).queue.map((c: any) => c.key).sort()).toEqual(['listening179:2', `vocabulary:${word.id}`])
+    const s = state(w)
+    expect(s.queue.map((c: any) => c.key).sort()).toEqual(['custom:serendipity', 'custom:take off'])
+    const first = s.current
+    await answer(w, 'zzzz')
+    expect(useMistakes().mistakes.value.find(m => m.key === first.key)?.module).toBe('wordlist')
+    await w.find('button[data-back]').trigger('click')
+    expect(w.find('[data-source="mistakes"]').text()).toContain('（3）')
+    await select.setValue('dungeon')
+    expect(w.find('[data-preview]').text()).toContain('一共 2 个词')
   })
 
   it('a failed recording falls back to reading the word aloud', async () => {

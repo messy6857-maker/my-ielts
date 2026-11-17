@@ -80,6 +80,7 @@ const STUDY_PATHS = new Set([
   '/study',
   '/study/learn',
   '/study/spell',
+  '/study/lists',
   '/game',
   '/study/review',
 ])

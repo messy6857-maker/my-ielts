@@ -625,7 +625,7 @@ defineExpose({ restart })
           </p>
           <div class="mb-4 text-center">
             <span v-if="studying.pos" class="mr-2 text-sm text-gray-400 italic" style="font-family: times">{{ studying.pos }}</span>
-            <span class="text-xl text-gray-800 font-medium dark:text-gray-200">{{ studying.meaning }}</span>
+            <span class="text-xl text-gray-800 font-medium dark:text-gray-200">{{ studying.meaning || '（还没有释义，可以在“我的词表”里补上）' }}</span>
           </div>
 
           <!-- 会拼写：遮住单词拼一遍 -->

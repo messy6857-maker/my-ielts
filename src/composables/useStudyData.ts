@@ -28,6 +28,7 @@ export type MistakeModule
     | 'mock_listening'
     | 'mock_reading'
     | 'dictation'
+    | 'wordlist'
 export type ProgressModule
   = | `spelling:${string}`
     | 'vocabulary'
@@ -39,6 +40,7 @@ export type ProgressModule
     | 'listening_flashcard'
     | 'reading_flashcard'
     | 'corpus_flashcard'
+    | 'custom_flashcard'
 export interface MistakeItem {
   key: string
   module: MistakeModule
@@ -69,6 +71,7 @@ export const MISTAKE_MODULE_LABEL: Record<MistakeModule, string> = {
   mock_listening: '听力模考',
   mock_reading: '阅读模考',
   dictation: '精听听写',
+  wordlist: '我的词表',
 }
 export const PROGRESS_MODULE_LABEL: Record<
   Exclude<ProgressModule, `spelling:${string}`>,
@@ -83,6 +86,7 @@ export const PROGRESS_MODULE_LABEL: Record<
   listening_flashcard: '听力自测',
   reading_flashcard: '阅读自测',
   corpus_flashcard: '语料库自测',
+  custom_flashcard: '我的词表自测',
 }
 export function nsKey(base: string, user?: string | null) {
   return accountKey(

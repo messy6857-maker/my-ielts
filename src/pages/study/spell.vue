@@ -2,11 +2,12 @@
 import type { DiffChar } from '../../utils/corpusSpelling'
 import type { CorpusChapterId, SpellMode, SpellSource } from '../../utils/spellPractice'
 import type { DeckId, StudyCard } from '../../utils/studyDeck'
+import type { WordList } from '../../utils/wordLists'
 import { resolveAudioUrl } from '../../composables/useAudio'
 import { useAudioGroup } from '../../composables/useAudioGroup'
 import { nsKey, useMistakes } from '../../composables/useStudyData'
 import { useStudyDeck } from '../../composables/useStudyDeck'
-import { loadDeckCards } from '../../utils/loadStudyCards'
+import { loadDeckCards, loadWordLists } from '../../utils/loadStudyCards'
 import {
   CORPUS_CHAPTERS,
   diffSpelling,
@@ -19,11 +20,10 @@ import {
   spellMistake,
   todayCards,
   typedWrong,
-  uniqueByWord,
 } from '../../utils/spellPractice'
 import { readRecords, readValue, saveRecord, saveValue } from '../../utils/storage'
 import { audioPath } from '../../utils/studyDeck'
-import { readWordList, wordListKey } from '../../utils/wordList'
+import { entryCard } from '../../utils/wordLists'
 import { listVocabularyChapters } from '../vocabulary/loadVocabulary'
 
 // 练拼写：进来先选词从哪里来、用哪种练法、一轮多少个，点“开始”才出题。
@@ -36,7 +36,12 @@ const managedAudio = useAudioGroup()
 const { currentUser } = useAuth()
 const { addMistake, mistakes } = useMistakes()
 const { setProgress, markListening179RowStudied } = useProgress()
-const SPELL_DECKS: DeckId[] = ['vocabulary', 'listening179', 'corpus']
+const SPELL_DECKS: DeckId[] = [
+  'vocabulary',
+  'listening179',
+  'corpus',
+  'custom',
+]
 const stores = Object.fromEntries(SPELL_DECKS.map(d => [
   d,
   useStudyDeck(d),
@@ -62,6 +67,8 @@ interface Settings {
   size: Size
   /** 自定义数量 */
   custom: number
+  /** 选了“我的词表”时练哪个词表 */
+  list: string
 }
 const sourceIds = SPELL_SOURCES.map(s => s.id)
 const modeIds = SPELL_MODES.map(m => m.id)
@@ -88,6 +95,7 @@ function readSettings(): Settings {
       ? saved!.size!
       : 20,
     custom: clampCount(saved?.custom),
+    list: [query.list, saved?.list].find(v => typeof v === 'string' && v) as string | undefined ?? '',
   }
 }
 const settings = ref<Settings>(readSettings())
@@ -99,15 +107,22 @@ function toggleCorpus(id: CorpusChapterId) {
 }
 
 const cards = shallowRef<Record<DeckId, StudyCard[]> | null>(null)
+const wordLists = shallowRef<WordList[]>([])
 const loadError = ref(false)
 let loadSeq = 0
 async function load() {
   const seq = ++loadSeq
   loadError.value = false
   try {
-    const lists = await Promise.all(SPELL_DECKS.map(d => loadDeckCards(d)))
+    const [lists, own] = await Promise.all([
+      Promise.all(SPELL_DECKS.map(d => loadDeckCards(d))),
+      loadWordLists(),
+    ])
     if (seq !== loadSeq)
       return
+    wordLists.value = own
+    if (!own.some(l => l.id === settings.value.list))
+      settings.value.list = own[0]?.id ?? ''
     cards.value = Object.fromEntries(SPELL_DECKS.map((d, i) => [d, lists[i]])) as Record<DeckId, StudyCard[]>
   }
   catch {
@@ -116,7 +131,6 @@ async function load() {
   }
 }
 const now = ref(Date.now())
-const customKeys = ref(readWordList())
 const allCards = computed(() => cards.value
   ? SPELL_DECKS.flatMap(d => cards.value![d])
   : [])
@@ -132,14 +146,13 @@ const pools = computed<Record<SpellSource, StudyCard[]>>(() => {
       custom: [],
     }
   }
-  const custom = new Set(customKeys.value)
   return {
     vocabulary: all.vocabulary.filter(c => c.chapter === settings.value.chapter),
     listening179: all.listening179,
     corpus: all.corpus.filter(c => settings.value.corpus.some(ch => String(c.id).startsWith(`${ch}-`))),
     mistakes: mistakenCards(allCards.value, mistakes.value),
     today: todayCards(allCards.value, c => stores[c.deck].getSchedule(c.id), now.value),
-    custom: uniqueByWord(allCards.value.filter(c => custom.has(wordListKey(c)))),
+    custom: (wordLists.value.find(l => l.id === settings.value.list)?.words ?? []).map(entryCard),
   }
 })
 const pool = computed(() => pools.value[settings.value.source])
@@ -367,7 +380,6 @@ function backToSetup() {
   clearAdvance()
   managedAudio.dispose()
   now.value = Date.now()
-  customKeys.value = readWordList()
   stage.value = 'setup'
 }
 function onKeydown(event: KeyboardEvent) {
@@ -388,9 +400,9 @@ watch(currentUser, () => {
   clearAdvance()
   managedAudio.dispose()
   settings.value = readSettings()
-  customKeys.value = readWordList()
   now.value = Date.now()
   stage.value = 'setup'
+  load()
 })
 const sourceLabel = computed(() => SPELL_SOURCES.find(s => s.id === settings.value.source)!.label)
 const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.label)
@@ -435,7 +447,7 @@ const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.lab
                 :class="settings.source === s.id ? 'border-blue-600 bg-blue-600 text-white' : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200'"
                 @click="settings.source = s.id"
               >
-                {{ s.label }}<template v-if="s.id === 'mistakes' || s.id === 'today' || s.id === 'custom'">
+                {{ s.label }}<template v-if="s.id === 'mistakes' || s.id === 'today'">
                   （{{ pools[s.id].length }}）
                 </template>
               </button>
@@ -458,9 +470,21 @@ const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.lab
                 {{ c.label }}
               </label>
             </div>
-            <p v-else-if="settings.source === 'custom'" class="mb-4 text-xs text-gray-500 dark:text-gray-400">
-              词单在单词地牢的选词页里编辑；听写核对后拼错的词也可以加进来。
-            </p>
+            <div v-else-if="settings.source === 'custom'" class="mb-4">
+              <select v-if="wordLists.length" v-model="settings.list" aria-label="词表" class="block w-full border border-gray-300 rounded-lg bg-white p-2.5 text-sm sm:w-72 dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+                <option v-for="l in wordLists" :key="l.id" :value="l.id">
+                  {{ l.name }}（{{ l.words.length }}）
+                </option>
+              </select>
+              <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                <template v-if="!wordLists.length">
+                  还没有词表。
+                </template>
+                <RouterLink to="/study/lists" class="underline">
+                  {{ wordLists.length ? '管理词表' : '去新建一个' }}
+                </RouterLink>
+              </p>
+            </div>
             <div v-else class="mb-4" />
 
             <div class="mb-2 text-sm text-gray-700 font-bold dark:text-gray-200">

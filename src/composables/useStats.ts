@@ -32,6 +32,7 @@ export const ATTEMPT_MODULE_LABEL: Record<string, string> = {
   listening179: '听力自测',
   reading538: '阅读自测',
   corpus: '语料库自测',
+  custom: '我的词表自测',
 }
 export function attemptModuleLabel(ns: string): string {
   return ATTEMPT_MODULE_LABEL[ns] || ns
