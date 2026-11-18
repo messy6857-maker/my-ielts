@@ -48,11 +48,38 @@ const router = useRouter()
 const route = useRoute()
 // 每个入口下面的页面里也高亮这个入口（按顺序匹配，先匹配到的算）
 const SECTIONS: Array<[string, string[]]> = [
-  ['/reading/daily', ['/reading/daily']],
-  ['/', ['/mistakes', '/stats']],
+  [
+    '/reading/daily',
+    ['/reading/daily'],
+  ],
+  [
+    '/',
+    ['/mistakes', '/stats'],
+  ],
   // 单词表虽然地址在 /reading、/listening 下，属于背单词
-  ['/study', ['/study', '/game', '/vocabulary', '/reading', '/listening/keyword', '/listening/corpus']],
-  ['/ielts', ['/ielts', '/listening', '/writing', '/speaking', '/grammar', '/mock', '/grading']],
+  [
+    '/study',
+    [
+      '/study',
+      '/game',
+      '/vocabulary',
+      '/reading',
+      '/listening/keyword',
+      '/listening/corpus',
+    ],
+  ],
+  [
+    '/ielts',
+    [
+      '/ielts',
+      '/listening',
+      '/writing',
+      '/speaking',
+      '/grammar',
+      '/mock',
+      '/grading',
+    ],
+  ],
 ]
 function sectionOf(path: string) {
   if (path === '/')

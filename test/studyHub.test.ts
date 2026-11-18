@@ -234,10 +234,18 @@ describe('雅思考试', () => {
 describe('背单词 → 查单词表', () => {
   it('every word table is switched in one place, which goes back to 背单词', async () => {
     const Tabs = (await import('../src/components/WordTableTabs.vue')).default
-    for (const path of ['/vocabulary', '/reading', '/listening/keyword', '/listening/corpus']) {
+    for (const path of [
+      '/vocabulary',
+      '/reading',
+      '/listening/keyword',
+      '/listening/corpus',
+    ]) {
       const w = await mountAt(Tabs, path)
       expect(w.find('[data-back]').attributes('href')).toBe('/study')
-      expect(w.findAll('[data-word-tables] a:not([data-back])').map((a: any) => [a.text(), a.classes().includes('bg-blue-600')])).toEqual([
+      expect(w.findAll('[data-word-tables] a:not([data-back])').map((a: any) => [
+        a.text(),
+        a.classes().includes('bg-blue-600'),
+      ])).toEqual([
         ['词汇表', path === '/vocabulary'],
         ['阅读考点词', path === '/reading'],
         ['听力 179 考点词', path === '/listening/keyword'],
