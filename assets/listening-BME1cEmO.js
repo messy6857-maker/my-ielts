@@ -1,0 +1,1 @@
+import{O as e,d as t,j as n,o as r,p as i,w as a}from"./runtime-core.esm-bundler-BaT_QEjx.js";import{s as o}from"./vue-router-nfpj53qs.js";var s=i({__name:`index`,setup(i){return o().replace(`/ielts/guide?part=listening`),(i,o)=>{let s=e(`RouterLink`);return a(),r(s,{to:`/ielts/guide?part=listening`},{default:n(()=>[...o[0]||=[t(` 打开听力做题方法 `,-1)]]),_:1})}}});export{s as default};
