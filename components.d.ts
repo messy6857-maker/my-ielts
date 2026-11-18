@@ -15,7 +15,6 @@ declare module 'vue' {
     ExamTabs: typeof import('./src/components/ExamTabs.vue')['default']
     ImageViewer: typeof import('./src/components/ImageViewer.vue')['default']
     ListeningGuide: typeof import('./src/components/guide/ListeningGuide.vue')['default']
-    ListeningTabs: typeof import('./src/components/ListeningTabs.vue')['default']
     PageBookmark: typeof import('./src/components/PageBookmark.vue')['default']
     ReadingGuide: typeof import('./src/components/guide/ReadingGuide.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
@@ -27,6 +26,7 @@ declare module 'vue' {
     TheFooter: typeof import('./src/components/TheFooter.vue')['default']
     TheHeader: typeof import('./src/components/TheHeader.vue')['default']
     VocabCardHints: typeof import('./src/components/VocabCardHints.vue')['default']
+    WordTableTabs: typeof import('./src/components/WordTableTabs.vue')['default']
     WritingGuide: typeof import('./src/components/guide/WritingGuide.vue')['default']
   }
 }

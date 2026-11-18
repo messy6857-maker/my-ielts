@@ -237,7 +237,7 @@ describe('学新词 starts only after you choose, and every screen can go back',
 
   it('the vocabulary table (opened from 练拼写) and the dungeon have a way back', () => {
     const source = (p: string) => readFileSync(p, 'utf8')
-    expect(source('src/pages/vocabulary/index.vue')).toContain('<StudyBack v-if="fromSpell" to="/study/spell" label="练拼写" />')
+    expect(source('src/pages/vocabulary/index.vue')).toContain('<StudyBack to="/study/spell" label="练拼写" />')
     expect(source('src/pages/study/spell.vue')).toContain('<StudyBack to="/study" label="背单词" />')
     expect(source('src/pages/game.vue')).toContain('← 返回选词')
   })

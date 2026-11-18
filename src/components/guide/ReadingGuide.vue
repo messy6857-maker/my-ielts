@@ -42,7 +42,12 @@ const TYPES = [
     <ol class="ml-6 list-decimal space-y-1">
       <li>先读题、划关键词，再回原文定位，不要从头精读全文</li>
       <li>略读（skimming）抓段落大意，扫读（scanning）找数字、人名、专有名词</li>
-      <li>重点认同义替换：题目和原文很少用同一个词，“阅读考点词”就是练这个的</li>
+      <li>
+        重点认同义替换：题目和原文很少用同一个词。阅读考点词在
+        <RouterLink to="/reading" class="text-blue-700 underline dark:text-blue-300">
+          背单词 → 查单词表
+        </RouterLink>，背和练在背单词的学新词、复习里
+      </li>
       <li>一题卡住先跳过，最后回来猜，不要空着</li>
     </ol>
   </div>

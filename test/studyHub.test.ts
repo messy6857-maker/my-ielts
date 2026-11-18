@@ -96,14 +96,18 @@ describe('背单词 hub', () => {
     const card = w.findAll('a').find((a: any) => a.attributes('href') === '/study' && a.text().includes('背单词'))
     expect(card).toBeTruthy()
     expect(w.findAll('a').some((a: any) => a.attributes('href') === '/vocabulary/typing')).toBe(false)
-    // 首页入口：背单词、每日阅读、雅思考试、错词本、学习统计
+    // 首页入口：背单词、每日阅读、雅思考试、学习统计
     expect(w.findAll('[data-home-entry]').map((a: any) => a.attributes('href'))).toEqual([
       '/study',
       '/reading/daily',
       '/ielts',
-      '/mistakes',
       '/stats',
     ])
+    // 错词本只在今日任务里出现一次；首页不再有学习进度（在学习统计里）
+    expect(w.findAll('a').filter((a: any) => a.attributes('href') === '/mistakes')).toHaveLength(1)
+    expect(w.find('[data-today-mistakes]').exists()).toBe(true)
+    expect(w.text()).not.toContain('学习进度')
+    expect(w.text()).not.toContain('我的 IELTS 备考中心')
   })
 
   it('the menu has four entries; each stays lit on every page under it', async () => {
@@ -147,14 +151,16 @@ describe('背单词 hub', () => {
       '/study/lists',
       '/game',
       '/vocabulary',
+      // 单词表在“背单词 → 查单词表”里
+      '/reading',
+      '/listening/keyword',
+      '/listening/corpus',
     ])
       expect(await lit(path)).toEqual(['/study'])
     for (const path of [
       '/ielts',
       '/ielts/guide',
-      '/listening/keyword',
       '/listening/intensive',
-      '/reading',
       '/writing',
       '/speaking',
       '/grammar',
@@ -177,8 +183,7 @@ describe('雅思考试', () => {
       a.attributes('data-entry'),
       a.attributes('href'),
     ])).toEqual([
-      ['listening', '/listening/keyword'],
-      ['reading', '/reading'],
+      ['listening', '/listening/intensive'],
       ['writing', '/writing'],
       ['speaking', '/speaking'],
       ['grammar', '/grammar'],
@@ -207,12 +212,9 @@ describe('雅思考试', () => {
 
   it('the listening and reading tabs no longer hold the method page or the mock tests; every page has a way back', () => {
     const source = (p: string) => readFileSync(p, 'utf8')
-    expect(source('src/components/ListeningTabs.vue')).not.toContain('/mock/listening-test')
-    expect(source('src/components/ListeningTabs.vue')).not.toContain('IELTS 听力基本概念')
     expect(source('src/pages/reading/index.vue')).not.toContain('/mock/reading-test')
     for (const p of [
       'src/pages/listening.vue',
-      'src/pages/reading/index.vue',
       'src/pages/writing/index.vue',
       'src/pages/speaking/index.vue',
       'src/pages/grammar/index.vue',
@@ -226,7 +228,36 @@ describe('雅思考试', () => {
       expect(source(p)).toContain('<ExamTabs group="mock" />')
     for (const p of ['src/pages/mock/history.vue', 'src/pages/grading/history.vue'])
       expect(source(p)).toContain('<ExamTabs group="records" />')
-    expect(source('src/pages/vocabulary/index.vue')).toContain('<StudyBack v-else to="/study" label="背单词" />')
+  })
+})
+
+describe('背单词 → 查单词表', () => {
+  it('every word table is switched in one place, which goes back to 背单词', async () => {
+    const Tabs = (await import('../src/components/WordTableTabs.vue')).default
+    for (const path of [
+      '/vocabulary',
+      '/reading',
+      '/listening/keyword',
+      '/listening/corpus',
+    ]) {
+      const w = await mountAt(Tabs, path)
+      expect(w.find('[data-back]').attributes('href')).toBe('/study')
+      expect(w.findAll('[data-word-tables] a:not([data-back])').map((a: any) => [
+        a.text(),
+        a.classes().includes('bg-blue-600'),
+      ])).toEqual([
+        ['词汇表', path === '/vocabulary'],
+        ['阅读考点词', path === '/reading'],
+        ['听力 179 考点词', path === '/listening/keyword'],
+        ['听力语料库', path === '/listening/corpus'],
+      ])
+      w.unmount()
+    }
+    const source = (p: string) => readFileSync(p, 'utf8')
+    expect(source('src/pages/reading/index.vue')).toContain('<WordTableTabs />')
+    expect(source('src/pages/vocabulary/index.vue')).toContain('<WordTableTabs v-else />')
+    expect(source('src/pages/listening.vue')).toContain('<WordTableTabs v-if="isWordTable" />')
+    expect(source('src/pages/listening/index.vue')).toContain('/ielts/guide?part=listening')
   })
 })
 

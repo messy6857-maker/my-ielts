@@ -10,15 +10,8 @@ const GROUPS = [
         id: 'listening',
         icon: '🎧',
         title: '听力',
-        desc: '179 考点词、语料库、精听练习',
-        to: '/listening/keyword',
-      },
-      {
-        id: 'reading',
-        icon: '📖',
-        title: '阅读',
-        desc: '阅读考点词同义替换',
-        to: '/reading',
+        desc: '精听练习：逐句精听、听写',
+        to: '/listening/intensive',
       },
       {
         id: 'writing',

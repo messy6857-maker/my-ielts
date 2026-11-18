@@ -46,32 +46,48 @@ watch(currentUser, (u, prev) => {
 })
 const router = useRouter()
 const route = useRoute()
-// 每个入口下面的页面里也高亮这个入口
-const SECTION_PREFIXES: Record<string, string[]> = {
-  '/': ['/mistakes', '/stats'],
-  '/study': ['/study', '/game', '/vocabulary'],
-  '/ielts': [
-    '/ielts',
-    '/listening',
-    '/reading',
-    '/writing',
-    '/speaking',
-    '/grammar',
-    '/mock',
-    '/grading',
+// 每个入口下面的页面里也高亮这个入口（按顺序匹配，先匹配到的算）
+const SECTIONS: Array<[string, string[]]> = [
+  [
+    '/reading/daily',
+    ['/reading/daily'],
   ],
+  [
+    '/',
+    ['/mistakes', '/stats'],
+  ],
+  // 单词表虽然地址在 /reading、/listening 下，属于背单词
+  [
+    '/study',
+    [
+      '/study',
+      '/game',
+      '/vocabulary',
+      '/reading',
+      '/listening/keyword',
+      '/listening/corpus',
+    ],
+  ],
+  [
+    '/ielts',
+    [
+      '/ielts',
+      '/listening',
+      '/writing',
+      '/speaking',
+      '/grammar',
+      '/mock',
+      '/grading',
+    ],
+  ],
+]
+function sectionOf(path: string) {
+  if (path === '/')
+    return '/'
+  return SECTIONS.find(([, prefixes]) => prefixes.some(prefix => path === prefix || path.startsWith(`${prefix}/`)))?.[0] ?? ''
 }
 function isActive(link: string) {
-  const path = route.path
-  // 每日阅读的地址在 /reading 下面，但它是单独的入口，不算雅思考试
-  const daily = path === '/reading/daily'
-  if (link === '/reading/daily')
-    return daily
-  if (daily)
-    return false
-  if (link === '/' && path === '/')
-    return true
-  return (SECTION_PREFIXES[link] ?? []).some(prefix => path === prefix || path.startsWith(`${prefix}/`))
+  return sectionOf(route.path) === link
 }
 
 const syncDotClass = computed(() => {
