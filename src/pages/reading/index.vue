@@ -50,10 +50,8 @@ function play(word) {
     <div
       class="border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
     >
-      <!-- 每日阅读是单独的入口，限时模考在“雅思考试 → 限时模考” -->
-      <div class="mb-4">
-        <StudyBack to="/ielts" label="雅思考试" />
-      </div>
+      <!-- 阅读考点词是一张单词表，在“背单词 → 查单词表”里 -->
+      <WordTableTabs />
       <div class="mb-4 lg:mb-0">
         <h3 class="mb-2 text-xl text-gray-900 font-bold dark:text-white">
           阅读考点词

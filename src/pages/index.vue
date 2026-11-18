@@ -8,7 +8,6 @@ import {
   formatDate,
   MISTAKE_MODULE_LABEL,
   useMistakes,
-  useProgress,
 } from '../composables/useStudyData'
 import {
   formatDuration,
@@ -20,7 +19,6 @@ defineOptions({
   name: 'IndexPage',
 })
 
-const { modules, hasAnyProgress } = useProgress()
 const { mistakes, totalCount: mistakeCount } = useMistakes()
 const { currentUser } = useAuth()
 const { schedules } = useWordSchedule()
@@ -73,19 +71,13 @@ onUnmounted(() => {
     clearInterval(midnightTimer)
 })
 
-function percent(done: number, total: number) {
-  return total > 0
-    ? Math.round((done / total) * 100)
-    : 0
-}
-
-// 首页入口：背单词、每日阅读、雅思考试，以及错词本、学习统计
-const menus = computed(() => [
+// 首页入口：背单词、每日阅读、雅思考试、学习统计（错词本在今日任务里）
+const menus = [
   {
     label: '背单词',
     icon: 'i-carbon-book',
     link: '/study',
-    desc: '学新词、复习到期的词、练拼写、单词地牢，词汇表也在这里',
+    desc: '学新词、复习到期的词、练拼写、单词地牢，单词表也在这里',
   },
   {
     label: '每日阅读',
@@ -100,243 +92,169 @@ const menus = computed(() => [
     desc: '听说读写和语法练习、做题方法、限时模考和记录',
   },
   {
-    label: mistakeCount.value > 0
-      ? `错词本（${mistakeCount.value}）`
-      : '错词本',
-    icon: 'i-carbon-notebook',
-    link: '/mistakes',
-    desc: '自测、拼写、模考、听写里记错的词和题都在这里',
-  },
-  {
     label: '学习统计',
     icon: 'i-carbon-dashboard',
     link: '/stats',
     desc: '各模块进度、自测正确率、词汇掌握、模考成绩与打卡',
   },
-])
+]
 </script>
 
 <template>
   <div class="px-4 pt-6 2xl:px-0">
-    <section
-      class="mb-4 border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
-    >
-      <div class="mx-auto max-w-screen-xl px-4 py-8 lg:px-6 sm:py-16">
-        <h1
-          class="mb-16 text-center text-4xl text-gray-900 sm:text-6xl dark:text-white"
+    <section class="mx-auto max-w-screen-xl">
+      <!-- 入口：和顶部导航一样的三件事，加上学习统计。错词本在下面的今日任务里 -->
+      <div class="grid mb-6 gap-3 lg:grid-cols-4 sm:grid-cols-2">
+        <RouterLink
+          v-for="m in menus"
+          :key="m.link"
+          :data-home-entry="m.link"
+          :to="m.link"
+          class="block border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700"
         >
-          坚持练习，稳步提升 <span class="text-#f00 font-bold">IELTS</span>
-        </h1>
-        <div class="mb-8 max-w-screen-md lg:mb-16">
-          <h2
-            class="mb-4 text-4xl text-gray-900 font-extrabold tracking-tight dark:text-white"
-          >
-            我的 IELTS 备考中心
-          </h2>
-          <p class="text-gray-500 sm:text-xl dark:text-gray-400">
-            这里包含备考需要的一切，从词汇、语法开始...
+          <div class="flex items-center gap-2 text-lg text-gray-900 font-bold dark:text-white">
+            <i class="block h-5 w-5 text-primary-600 dark:text-primary-300" :class="m.icon" />
+            {{ m.label }} →
+          </div>
+          <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {{ m.desc }}
           </p>
-        </div>
+        </RouterLink>
+      </div>
 
-        <!-- 今日任务 -->
-        <div
-          class="mb-12 border border-blue-200 rounded-xl bg-blue-50/60 p-5 dark:border-blue-900/40 dark:bg-blue-950/20 sm:p-6"
-        >
-          <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <h3 class="text-xl text-gray-900 font-bold dark:text-white">
-              今日任务
-              <span class="ml-2 align-middle text-sm text-gray-400 font-normal">
-                {{ currentUser ? `账号：${currentUser}` : '游客模式' }}
-              </span>
-            </h3>
-            <button
-              class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-              @click="refreshTasks"
-            >
-              刷新
-            </button>
-          </div>
-
-          <div
-            class="grid mb-4 gap-3 lg:grid-cols-4 sm:grid-cols-2"
+      <!-- 今日任务 -->
+      <div
+        class="border border-blue-200 rounded-xl bg-blue-50/60 p-5 dark:border-blue-900/40 dark:bg-blue-950/20 sm:p-6"
+      >
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h3 class="text-xl text-gray-900 font-bold dark:text-white">
+            今日任务
+            <span class="ml-2 align-middle text-sm text-gray-400 font-normal">
+              {{ currentUser ? `账号：${currentUser}` : '游客模式' }}
+            </span>
+          </h3>
+          <button
+            class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            @click="refreshTasks"
           >
-            <RouterLink
-              to="/study"
-              class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40"
-            >
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                今日到期复习
-              </p>
-              <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
-                {{ today.dueWordCount }}
-              </p>
-              <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                去复习 →
-              </p>
-            </RouterLink>
-            <div class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40">
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                今日学习时长
-              </p>
-              <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
-                {{ formatDuration(today.studySeconds) }}
-              </p>
-              <p class="mt-1 text-xs text-gray-500">
-                含自测 / 精听 / 听写 / 模考
-              </p>
-            </div>
-            <RouterLink
-              to="/mistakes"
-              class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40"
-            >
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                错题本
-              </p>
-              <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
-                {{ mistakeCount }}
-              </p>
-              <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
-                去复习 →
-              </p>
-            </RouterLink>
-            <div class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40">
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                待继续
-              </p>
-              <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
-                {{ today.unfinishedMocks.length + today.writingDrafts.length }}
-              </p>
-              <p class="mt-1 text-xs text-gray-500">
-                模考草稿 + 写作草稿
-              </p>
-            </div>
-          </div>
-
-          <div
-            v-if="today.isEmpty"
-            class="border border-gray-300 rounded-lg border-dashed bg-white/50 p-4 text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-900/30 dark:text-gray-400"
-          >
-            今天还没有复习任务或进行中的练习。可以从下方入口开始：词汇自测、听力/阅读模考，或精听听写。
-          </div>
-          <div v-else class="text-sm space-y-3">
-            <div v-if="today.recentMistakes.length">
-              <p class="mb-1 text-gray-800 font-medium dark:text-gray-200">
-                最近错题
-              </p>
-              <ul class="space-y-1">
-                <li
-                  v-for="m in today.recentMistakes"
-                  :key="m.key"
-                  class="flex flex-wrap items-baseline gap-2 text-gray-600 dark:text-gray-300"
-                >
-                  <span class="rounded bg-gray-100 px-1.5 text-xs dark:bg-gray-700">{{
-                    MISTAKE_MODULE_LABEL[m.module] || m.module
-                  }}</span>
-                  <span class="truncate">{{ m.title }}</span>
-                </li>
-              </ul>
-            </div>
-            <div v-if="today.unfinishedMocks.length">
-              <p class="mb-1 text-gray-800 font-medium dark:text-gray-200">
-                未完成模考
-              </p>
-              <div class="flex flex-wrap gap-2">
-                <RouterLink
-                  v-for="m in today.unfinishedMocks"
-                  :key="`${m.kind}:${m.testId}`"
-                  :to="m.path"
-                  class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white font-medium hover:bg-blue-700"
-                >
-                  继续 {{ m.label }}（{{ m.kind === 'listening' ? '听力' : '阅读' }}）
-                  <span v-if="m.updatedAt"> · {{ formatDate(m.updatedAt) }}</span>
-                </RouterLink>
-              </div>
-            </div>
-            <div v-if="today.writingDrafts.length">
-              <p class="mb-1 text-gray-800 font-medium dark:text-gray-200">
-                写作草稿
-              </p>
-              <div class="flex flex-wrap gap-2">
-                <RouterLink
-                  v-for="d in today.writingDrafts"
-                  :key="`${d.task}:${d.promptId}:${d.versionId || ''}`"
-                  :to="d.path"
-                  class="border border-gray-300 rounded-lg bg-white px-3 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-800"
-                >
-                  继续 {{ d.task === 'task1' ? '小作文' : '大作文' }} · {{ d.promptId }}
-                  <span v-if="d.editedAt ?? d.updatedAt ?? d.stateAt">
-                    · {{ formatDate(d.editedAt ?? d.updatedAt ?? d.stateAt ?? 0) }}
-                  </span>
-                </RouterLink>
-              </div>
-            </div>
-          </div>
+            刷新
+          </button>
         </div>
 
-        <!-- 学习进度 -->
         <div
-          v-if="hasAnyProgress || mistakeCount > 0"
-          class="mb-12 border border-gray-200 rounded-xl bg-gray-50 p-6 dark:border-gray-700 dark:bg-gray-900"
-        >
-          <div class="mb-4 flex items-center justify-between">
-            <h3 class="text-xl text-gray-900 font-bold dark:text-white">
-              学习进度
-              <span class="ml-2 align-middle text-sm text-gray-400 font-normal">
-                {{ currentUser ? `当前账号：${currentUser}` : "游客模式" }}
-              </span>
-            </h3>
-            <RouterLink
-              v-if="mistakeCount > 0"
-              to="/mistakes"
-              class="rounded-lg bg-red-600 px-4 py-2 text-sm text-white font-medium hover:bg-red-700"
-            >
-              错词本（{{ mistakeCount }}）→
-            </RouterLink>
-          </div>
-          <div class="grid gap-4 lg:grid-cols-3 md:grid-cols-2">
-            <div v-for="m in modules" :key="m.module">
-              <div class="mb-1 flex items-center justify-between text-sm">
-                <span class="text-gray-700 font-medium dark:text-gray-300">{{
-                  m.label
-                }}</span>
-                <span class="text-gray-500 dark:text-gray-400">{{ m.done }} / {{ m.total }}</span>
-              </div>
-              <div
-                class="h-2.5 w-full rounded-full bg-gray-200 dark:bg-gray-700"
-              >
-                <div
-                  class="h-2.5 rounded-full bg-blue-600 transition-all"
-                  :style="{ width: `${percent(m.done, m.total)}%` }"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div
-          class="md:grid md:grid-cols-2 md:gap-12 space-y-8 md:space-y-0"
+          class="grid mb-4 gap-3 lg:grid-cols-4 sm:grid-cols-2"
         >
           <RouterLink
-            v-for="m in menus"
-            :key="m.link"
-            :data-home-entry="m.link"
-            :to="m.link"
-            class="block"
+            to="/study"
+            class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40"
           >
-            <div
-              class="mb-4 h-10 w-10 flex items-center justify-center rounded-full bg-primary-100 lg:h-12 lg:w-12 dark:bg-primary-900"
-            >
-              <i
-                class="block h-5 w-5 text-primary-600 lg:h-6 lg:w-6 dark:text-primary-300"
-                :class="m.icon"
-              />
-            </div>
-            <h3 class="mb-2 text-xl font-bold dark:text-white">
-              {{ m.label }}
-            </h3>
-            <p class="text-gray-500 dark:text-gray-400">
-              {{ m.desc }}
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              今日到期复习
+            </p>
+            <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
+              {{ today.dueWordCount }}
+            </p>
+            <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
+              去复习 →
             </p>
           </RouterLink>
+          <div class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              今日学习时长
+            </p>
+            <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
+              {{ formatDuration(today.studySeconds) }}
+            </p>
+            <p class="mt-1 text-xs text-gray-500">
+              含自测 / 精听 / 听写 / 模考
+            </p>
+          </div>
+          <RouterLink
+            to="/mistakes"
+            data-today-mistakes
+            class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40"
+          >
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              错词本
+            </p>
+            <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
+              {{ mistakeCount }}
+            </p>
+            <p class="mt-1 text-xs text-blue-600 dark:text-blue-400">
+              去复习 →
+            </p>
+          </RouterLink>
+          <div class="rounded-lg bg-white/80 p-3 dark:bg-gray-900/40">
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              待继续
+            </p>
+            <p class="mt-1 text-2xl text-gray-900 font-bold dark:text-white">
+              {{ today.unfinishedMocks.length + today.writingDrafts.length }}
+            </p>
+            <p class="mt-1 text-xs text-gray-500">
+              模考草稿 + 写作草稿
+            </p>
+          </div>
+        </div>
+
+        <div
+          v-if="today.isEmpty"
+          class="border border-gray-300 rounded-lg border-dashed bg-white/50 p-4 text-sm text-gray-500 dark:border-gray-600 dark:bg-gray-900/30 dark:text-gray-400"
+        >
+          今天还没有复习任务或进行中的练习。可以从上面的入口开始。
+        </div>
+        <div v-else class="text-sm space-y-3">
+          <div v-if="today.recentMistakes.length">
+            <p class="mb-1 text-gray-800 font-medium dark:text-gray-200">
+              最近错题
+            </p>
+            <ul class="space-y-1">
+              <li
+                v-for="m in today.recentMistakes"
+                :key="m.key"
+                class="flex flex-wrap items-baseline gap-2 text-gray-600 dark:text-gray-300"
+              >
+                <span class="rounded bg-gray-100 px-1.5 text-xs dark:bg-gray-700">{{
+                  MISTAKE_MODULE_LABEL[m.module] || m.module
+                }}</span>
+                <span class="truncate">{{ m.title }}</span>
+              </li>
+            </ul>
+          </div>
+          <div v-if="today.unfinishedMocks.length">
+            <p class="mb-1 text-gray-800 font-medium dark:text-gray-200">
+              未完成模考
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <RouterLink
+                v-for="m in today.unfinishedMocks"
+                :key="`${m.kind}:${m.testId}`"
+                :to="m.path"
+                class="rounded-lg bg-blue-600 px-3 py-1.5 text-xs text-white font-medium hover:bg-blue-700"
+              >
+                继续 {{ m.label }}（{{ m.kind === 'listening' ? '听力' : '阅读' }}）
+                <span v-if="m.updatedAt"> · {{ formatDate(m.updatedAt) }}</span>
+              </RouterLink>
+            </div>
+          </div>
+          <div v-if="today.writingDrafts.length">
+            <p class="mb-1 text-gray-800 font-medium dark:text-gray-200">
+              写作草稿
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <RouterLink
+                v-for="d in today.writingDrafts"
+                :key="`${d.task}:${d.promptId}:${d.versionId || ''}`"
+                :to="d.path"
+                class="border border-gray-300 rounded-lg bg-white px-3 py-1.5 text-xs dark:border-gray-600 dark:bg-gray-800"
+              >
+                继续 {{ d.task === 'task1' ? '小作文' : '大作文' }} · {{ d.promptId }}
+                <span v-if="d.editedAt ?? d.updatedAt ?? d.stateAt">
+                  · {{ formatDate(d.editedAt ?? d.updatedAt ?? d.stateAt ?? 0) }}
+                </span>
+              </RouterLink>
+            </div>
+          </div>
         </div>
       </div>
     </section>

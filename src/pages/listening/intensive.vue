@@ -1072,7 +1072,7 @@ const testLabel = computed(
             :disabled="dictationAddedMistake"
             @click="addDictationMistake"
           >
-            {{ dictationAddedMistake ? '已加入错题本' : '加入错题本' }}
+            {{ dictationAddedMistake ? '已加入错词本' : '加入错词本' }}
           </button>
           <p v-if="dictationMistakeError" role="alert" class="text-xs text-red-600">
             错题保存失败，请释放空间后重试

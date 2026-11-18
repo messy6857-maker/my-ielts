@@ -107,10 +107,10 @@ const entries = computed(() => [
         </RouterLink>
       </div>
 
-      <!-- 不是一件要做的事、但会用到的：查词汇表、管理自己的词表 -->
+      <!-- 不是一件要做的事、但会用到的：查单词表（词汇表、考点词、语料库）、管理自己的词表 -->
       <div class="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm" data-more>
         <RouterLink to="/vocabulary" class="text-blue-700 underline dark:text-blue-300">
-          📚 查词汇表
+          📚 查单词表
         </RouterLink>
         <RouterLink to="/study/lists" class="text-blue-700 underline dark:text-blue-300">
           🗂️ 我的词表

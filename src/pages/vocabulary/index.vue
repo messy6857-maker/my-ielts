@@ -479,11 +479,11 @@ function copyAllError() {
     </button>
   </p>
   <div ref="mediaRoot" class="px-4 pt-6 2xl:px-0">
-    <!-- 词汇表在“背单词”里；从“练拼写”进来的原路返回练拼写 -->
-    <div class="mb-3">
-      <StudyBack v-if="fromSpell" to="/study/spell" label="练拼写" />
-      <StudyBack v-else to="/study" label="背单词" />
+    <!-- 词汇表在“背单词 → 查单词表”里；从“练拼写”进来的原路返回练拼写 -->
+    <div v-if="fromSpell" class="mb-3">
+      <StudyBack to="/study/spell" label="练拼写" />
     </div>
+    <WordTableTabs v-else />
     <p
       v-if="mediaError"
       role="alert"
