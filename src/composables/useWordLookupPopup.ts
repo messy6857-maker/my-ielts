@@ -29,6 +29,7 @@ export interface TranslatePopupState {
   addedAs?: string
   /** 锚点（单词/选区的视口包围盒），卡片贴着它显示 */
   anchor: { left: number, top: number, bottom: number, right: number }
+}
 
 export function useWordLookupPopup(options: {
   /** 音标（卡片里显示） */
@@ -40,7 +41,6 @@ export function useWordLookupPopup(options: {
   /** 这些值一变（换日期、换账号）就关掉卡片 */
   resetOn: WatchSource[]
 }) {
-  }
   const translatePopup = ref<TranslatePopupState | null>(null)
   /** 查词卡片里的词：词库里有就用词库的原形（travelled → travel），没有就用点的这个词 */
   async function addPopupWord() {
