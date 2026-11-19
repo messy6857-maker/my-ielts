@@ -530,9 +530,17 @@ for (const kind of ['reading', 'listening']) {
     await page.getByRole('button', { name: '▶ 开始测试' }).click({ timeout: 30000 })
     const submitButton = page.getByRole('button', { name: '交卷', exact: true })
     await submitButton.waitFor()
+    const tabs = page.locator('button').filter({ hasText: /^\s*(Passage|Part) \d/ })
+    // 选择题：点一个选项，选中后变蓝（在任一部分找到第一道选择题）
+    const option = page.locator('button.block.w-full:visible').first()
+    for (let i = 0; i < await tabs.count() && !(await option.count()); i++)
+      await tabs.nth(i).click()
+    if (await option.count()) {
+      await option.click()
+      assert.match(await option.getAttribute('class'), /border-blue-500/)
+    }
     // 答一题：找到第一道填空题（不在第一部分就切到后面的部分）
     const blank = page.locator('input[placeholder="输入答案"]:visible').first()
-    const tabs = page.locator('button').filter({ hasText: /^\s*(Passage|Part) \d/ })
     for (let i = 0; i < await tabs.count() && !(await blank.count()); i++)
       await tabs.nth(i).click()
     const filled = 'hello'
@@ -564,6 +572,8 @@ for (const kind of ['reading', 'listening']) {
     await submitButton.click()
     await page.getByText(/答对 \d+ \/ \d+ 分/).waitFor()
     await page.getByText('预估 Band').waitFor()
+    // 答错的题显示正确答案
+    await page.getByText(/正确答案：/).first().waitFor()
     assert.equal(await submitButton.count(), 0)
     // 交卷后成绩进了记录
     assert.ok(await page.evaluate(() => Object.keys(localStorage).some(k => k.includes('mock'))))
