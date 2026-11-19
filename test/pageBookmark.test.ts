@@ -195,10 +195,24 @@ describe('「＋ 书签」按钮（文章未加载时禁用，L1）', () => {
   }
 
   it('入口页、选择页不显示书签按钮（那里已经加过书签的照常显示）', async () => {
-    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: PageBookmark }] })
-    for (const path of ['/', '/study', '/study/learn', '/ielts']) {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/:p(.*)*', component: PageBookmark },
+      ],
+    })
+    for (const path of [
+      '/',
+      '/study',
+      '/study/learn',
+      '/ielts',
+    ]) {
       await router.push(path)
-      const w = mount(PageBookmark, { global: { plugins: [router] } })
+      const w = mount(PageBookmark, {
+        global: {
+          plugins: [router],
+        },
+      })
       expect(w.find('[aria-label="增加书签"]').exists()).toBe(false)
       w.unmount()
     }
