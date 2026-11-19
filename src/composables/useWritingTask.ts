@@ -196,7 +196,9 @@ export function useWritingTask<P extends { id: string }, R, X>(options: WritingT
     draftOwner = currentUser.value
     try {
       drafts.value = listDrafts(task, draftOwner)
-      const requested = useRequested ? options.resumeSelection() : undefined
+      const requested = useRequested
+        ? options.resumeSelection()
+        : undefined
       const version = requested && accountPrefix(draftOwner) + requested.draft
       const stored = readDraft(task, draftOwner, requested?.prompt, version)
       resumeError.value = !!requested && !stored
