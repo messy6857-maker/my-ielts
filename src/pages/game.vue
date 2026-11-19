@@ -1,25 +1,19 @@
 <script setup lang="ts">
-import type { DungeonDeck, DungeonMode, DungeonSelection, DungeonWord, Monster, QuestionKind, Relic, RelicId, Rng } from '../utils/dungeon'
-import type { WordList } from '../utils/wordLists'
+import type { DungeonWord, Monster, QuestionKind, Relic, RelicId, Rng } from '../utils/dungeon'
 import { resolveAudioUrl } from '../composables/useAudio'
 import { useAudioGroup } from '../composables/useAudioGroup'
 import { useDeckStore } from '../composables/useDeckStore'
 import { confirmDialog } from '../composables/useDialog'
+import { useDungeonSetup } from '../composables/useDungeonSetup'
 import { gradeSchedule, useCheckin, useWordSchedule } from '../composables/useSpacedRepetition'
 import { recordAttempt } from '../composables/useStats'
-import { nsKey, studyDay, useMistakes } from '../composables/useStudyData'
+import { studyDay, useMistakes } from '../composables/useStudyData'
 import {
   buildFloor,
-  buildPool,
   checkSpelling,
   DAILY_FLOORS,
   DAILY_SOURCE_LABEL,
-  dailyPool,
   DECK_LABEL,
-  flattenListening,
-  flattenReading,
-  flattenVocabulary,
-  flattenWordLists,
   floorRules,
   isSynonym,
   MODES,
@@ -29,12 +23,8 @@ import {
   phaseScore,
   ROOMS_PER_FLOOR,
   seededRng,
-  sourceWords,
   START_HEARTS,
 } from '../utils/dungeon'
-import { loadWordLists } from '../utils/loadStudyCards'
-import { readValue, saveValue } from '../utils/storage'
-import { getVocabularyChapterMeta, listVocabularyChapters, loadAllVocabulary } from './vocabulary/loadVocabulary'
 
 // 单词地牢：把选中的词变成怪物，一层 5 个房间，一层层往下打（快速 3 层 / 标准 10 层 / 无尽）。
 // 答对算一次复习（只更新已经学过的词的复习进度，没学过的词仍算新词），答错记进错词本。
@@ -49,150 +39,34 @@ const deckStores = {
 const checkin = useCheckin()
 const { currentUser } = useAuth()
 
-// ---------- 进门前：选词源 ----------
-const SELECTION_KEY = 'dungeon_selection_v1'
-const BEST_KEY = 'dungeon_best_v1'
-const DAILY_KEY = 'dungeon_daily_v1'
-const chapters = listVocabularyChapters()
-const extraDecks: DungeonDeck[] = ['reading538', 'listening179']
-function readSelection(): DungeonSelection {
-  const saved = readValue<Partial<DungeonSelection> | null>(nsKey(SELECTION_KEY), null)
-  return {
-    today: saved?.today ?? true,
-    mistakes: saved?.mistakes ?? false,
-    due: saved?.due ?? false,
-    custom: saved?.custom ?? false,
-    list: typeof saved?.list === 'string'
-      ? saved.list
-      : '',
-    chapters: Array.isArray(saved?.chapters)
-      ? saved.chapters.filter(c => chapters.includes(c))
-      : [],
-    decks: Array.isArray(saved?.decks)
-      ? saved.decks.filter(d => extraDecks.includes(d))
-      : [],
-  }
-}
-const selection = ref<DungeonSelection>(readSelection())
-const allWords = shallowRef<DungeonWord[]>([])
-/** 我的词表（在“背单词 → 我的词表”里编辑） */
-const wordLists = shallowRef<WordList[]>([])
-const loading = ref(true)
-const loadError = ref(false)
-let loadSeq = 0
-async function loadWords() {
-  const seq = ++loadSeq
-  loading.value = true
-  loadError.value = false
-  try {
-    const [vocabulary, reading, listening, lists] = await Promise.all([
-      loadAllVocabulary(),
-      import('./reading/reading538words'),
-      import('./listening/listening179.json'),
-      loadWordLists(),
-    ])
-    if (seq !== loadSeq)
-      return
-    wordLists.value = lists
-    if (!lists.some(l => l.id === selection.value.list))
-      selection.value.list = lists[0]?.id ?? ''
-    allWords.value = [
-      ...flattenVocabulary(vocabulary),
-      ...flattenReading(reading.default as any),
-      ...flattenListening(listening.default as any),
-      ...flattenWordLists(lists.flatMap(l => l.words)),
-    ]
-  }
-  catch {
-    loadError.value = true
-  }
-  finally {
-    loading.value = false
-  }
-}
-loadWords()
-interface ModeBest { score: number, floor: number }
-interface Best { combo: number, modes: Partial<Record<DungeonMode, ModeBest>> }
-function readBest(): Best {
-  const saved = readValue<any>(nsKey(BEST_KEY), null)
-  const modes: Best['modes'] = {}
-  for (const m of MODES) {
-    const b = saved?.modes?.[m.id]
-    if (b)
-      modes[m.id] = { score: Number(b.score) || 0, floor: Number(b.floor) || 0 }
-  }
-  // 第一版只有一种玩法，记录是 { score, combo }：分数算到快速模式头上
-  if (!saved?.modes && Number(saved?.score) > 0) {
-    modes.quick = {
-      score: Number(saved.score),
-      floor: 0,
-    }
-  }
-  return { combo: Number(saved?.combo) || 0, modes }
-}
-const best = ref<Best>(readBest())
-const MODE_KEY = 'dungeon_mode_v1'
-function readMode(): DungeonMode {
-  const saved = readValue<unknown>(nsKey(MODE_KEY), 'quick')
-  return MODES.some(m => m.id === saved)
-    ? saved as DungeonMode
-    : 'quick'
-}
-const mode = ref<DungeonMode>(readMode())
-/** 选中的那个词表里的词 */
-const customKeys = computed(() => (wordLists.value.find(l => l.id === selection.value.list)?.words ?? [])
-  .map(w => `custom:${w.word.trim().replace(/\s+/g, ' ').toLowerCase()}`))
-interface DailyResult { date: string, score: number, won: boolean }
-function readDaily(): DailyResult | null {
-  const saved = readValue<Partial<DailyResult> | null>(nsKey(DAILY_KEY), null)
-  return saved && saved.date === studyDay()
-    ? { date: saved.date, score: Number(saved.score) || 0, won: !!saved.won }
-    : null
-}
-const dailyResult = ref<DailyResult | null>(readDaily())
-
-/** 进入页面（或回到选词页）时的时间：到期、今天学的都按它算 */
-const now = ref(Date.now())
-const context = computed(() => {
-  const schedules = { ...scheduleStore.schedules.value }
-  for (const w of allWords.value) {
-    if (w.deck === 'vocabulary')
-      continue
-    const schedule = deckStores[w.deck].getSchedule(w.id)
-    if (schedule)
-      schedules[w.key] = schedule
-  }
-  return {
-    schedules,
-    mistakes: mistakes.value,
-    customKeys: customKeys.value,
-    now: now.value,
-  }
-})
-const sources = computed(() => sourceWords(allWords.value, context.value))
-const pool = computed(() => buildPool(allWords.value, selection.value, context.value))
-const daily = computed(() => dailyPool(allWords.value, context.value))
-const deckCounts = computed(() => {
-  const counts: Record<string, number> = {}
-  for (const w of allWords.value)
-    counts[w.deck] = (counts[w.deck] ?? 0) + 1
-  return counts
-})
-function toggleChapter(chapter: string) {
-  const list = selection.value.chapters
-  selection.value.chapters = list.includes(chapter)
-    ? list.filter(c => c !== chapter)
-    : [...list, chapter]
-}
-function toggleDeck(deck: DungeonDeck) {
-  const list = selection.value.decks
-  selection.value.decks = list.includes(deck)
-    ? list.filter(d => d !== deck)
-    : [...list, deck]
-}
-function chapterLabel(chapter: string) {
-  return getVocabularyChapterMeta(chapter)?.label || chapter.replace(/^\d+_/, '')
-}
+// ---------- 进门前：选词源（选择、纪录、词池在 useDungeonSetup 里） ----------
+const {
+  chapters,
+  extraDecks,
+  selection,
+  allWords,
+  wordLists,
+  loading,
+  loadError,
+  loadWords,
+  best,
+  mode,
+  dailyResult,
+  readDaily,
+  now,
+  context,
+  sources,
+  pool,
+  daily,
+  deckCounts,
+  toggleChapter,
+  toggleDeck,
+  chapterLabel,
+  saveChoice,
+  saveBest,
+  saveDaily,
+  reloadForAccount,
+} = useDungeonSetup({ scheduleStore, deckStores, mistakes })
 
 // ---------- 游戏中 ----------
 type Stage = 'setup' | 'playing' | 'relic' | 'won' | 'left' | 'lost'
@@ -346,8 +220,7 @@ function begin(words: DungeonWord[], rng: Rng, asDaily: boolean, floors: number)
 }
 function start() {
   now.value = Date.now()
-  saveValue(nsKey(SELECTION_KEY), selection.value)
-  saveValue(nsKey(MODE_KEY), mode.value)
+  saveChoice()
   begin(pool.value, Math.random, false, MODES.find(m => m.id === mode.value)!.floors)
 }
 /** 每日地牢：用日期当随机种子，同一天、同一批词每次都是同一局 */
@@ -437,16 +310,14 @@ function finish(next: 'won' | 'left' | 'lost') {
       floor: Math.max(previous?.floor ?? 0, floor.value),
     }
   }
-  best.value = updated
-  saveValue(nsKey(BEST_KEY), updated)
+  saveBest(updated)
   if (isDaily.value) {
     const previous = readDaily()
-    dailyResult.value = {
+    saveDaily({
       date: studyDay(),
       score: Math.max(previous?.score ?? 0, score.value),
       won: next === 'won' || !!previous?.won,
-    }
-    saveValue(nsKey(DAILY_KEY), dailyResult.value)
+    })
     // 通关每日地牢算今天打卡
     if (next === 'won')
       checkin.checkin()
@@ -589,11 +460,7 @@ function backToSetup() {
 // 换账号：回到选词页，用新账号的选择、词单和记录
 watch(currentUser, () => {
   stopTimer()
-  selection.value = readSelection()
-  best.value = readBest()
-  mode.value = readMode()
-  dailyResult.value = readDaily()
-  loadWords()
+  reloadForAccount()
   stage.value = 'setup'
 })
 

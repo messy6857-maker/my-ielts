@@ -517,6 +517,96 @@ await step('单词地牢：从背单词进入，选章节开局，一路作答�
   await ctx.close()
 })
 
+for (const kind of ['reading', 'listening']) {
+  await step(`${kind === 'reading' ? '阅读' : '听力'}模考：开始、作答、刷新后接着做、离开时确认、交卷看成绩`, async () => {
+    const ctx = await launched.newContext({ viewport: { width: 1280, height: 900 } })
+    const page = await ctx.newPage()
+    const errors = []
+    page.on('pageerror', e => errors.push(e.message))
+    await page.goto(`${BASE}#/mock/${kind}-test?test=cam21-test1`)
+    await page.getByRole('button', { name: '▶ 开始测试' }).click({ timeout: 30000 })
+    const submitButton = page.getByRole('button', { name: '交卷', exact: true })
+    await submitButton.waitFor()
+    // 答一题：有填空就填，没有就选第一个选项
+    const blank = page.locator('input[type="text"]:visible:not([maxlength])').first()
+    let filled = ''
+    if (await blank.count()) {
+      filled = 'hello'
+      await blank.fill(filled)
+    }
+    else {
+      await page.locator('input[type="radio"]:visible, input[type="checkbox"]:visible').first().check()
+    }
+    // 刷新：草稿还在，接着做，答案还在
+    await sleep(1500)
+    await page.reload()
+    const resume = page.getByRole('button', { name: /继续所选作答/ })
+    await resume.waitFor({ timeout: 30000 })
+    await resume.click()
+    await submitButton.waitFor()
+    if (filled)
+      assert.equal(await page.locator('input[type="text"]:visible:not([maxlength])').first().inputValue(), filled)
+    else
+      assert.equal(await page.locator('input[type="radio"]:checked, input[type="checkbox"]:checked').count() > 0, true)
+    // 没交卷就点导航离开：先问；选继续作答就留在本页
+    await page.locator('header a[href="#/"]').first().click()
+    await page.getByRole('button', { name: '继续作答' }).click()
+    assert.ok(page.url().includes(`/mock/${kind}-test`))
+    await submitButton.click()
+    await page.getByText(/答对 \d+ \/ \d+ 分/).waitFor()
+    await page.getByText('预估 Band').waitFor()
+    assert.equal(await submitButton.count(), 0)
+    // 交卷后成绩进了记录
+    assert.ok(await page.evaluate(() => Object.keys(localStorage).some(k => k.includes('mock'))))
+    assert.deepEqual(errors, [])
+    await ctx.close()
+  })
+}
+
+await step('每日阅读点词出释义卡片；精听点一句能播放，切换不报错', async () => {
+  const ctx = await launched.newContext({ viewport: { width: 1280, height: 900 } })
+  const page = await ctx.newPage()
+  const errors = []
+  page.on('pageerror', e => errors.push(e.message))
+  await page.goto(`${BASE}#/reading/daily`)
+  const passage = page.locator('.passage-text').first()
+  await passage.waitFor({ timeout: 30000 })
+  await passage.scrollIntoViewIfNeeded()
+  // 找到正文里第一个单词的位置点下去
+  const point = await passage.evaluate((el) => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    let node = walker.nextNode()
+    while (node) {
+      const m = /[A-Z]{3,}/i.exec(node.textContent ?? '')
+      if (m) {
+        const r = document.createRange()
+        r.setStart(node, m.index + 1)
+        r.setEnd(node, m.index + 2)
+        const b = r.getBoundingClientRect()
+        return { x: b.left + b.width / 2, y: b.top + b.height / 2 }
+      }
+      node = walker.nextNode()
+    }
+    return null
+  })
+  assert.ok(point)
+  await page.mouse.click(point.x, point.y)
+  const card = page.locator('[role="dialog"][aria-label="翻译"]')
+  await card.waitFor({ timeout: 10000 })
+  // 点卡片外面关掉
+  await page.mouse.click(5, 300)
+  await card.waitFor({ state: 'detached', timeout: 5000 })
+  // 精听：点一句播放，再换一个 Part
+  await page.goto(`${BASE}#/listening/intensive`)
+  await page.getByRole('button', { name: /查看原文对照/ }).click({ timeout: 30000 })
+  const play = page.locator('button[title="播放原音"], button[title="系统朗读（暂无原音时间）"]').first()
+  await play.waitFor({ timeout: 30000 })
+  await play.click()
+  await page.waitForTimeout(800)
+  assert.deepEqual(errors, [])
+  await ctx.close()
+})
+
 await browser.close()
 console.log(results.join('\n'))
 if (results.some(r => !r.startsWith('PASS')))
