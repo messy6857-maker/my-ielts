@@ -13,6 +13,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms))
 const results = []
 
 async function step(name, fn) {
+  // ONLY=正则：只跑名字匹配的步骤（对照旧版本时用）
+  if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name))
+    return
   const started = Date.now()
   try {
     await fn()
@@ -538,7 +541,15 @@ for (const kind of ['reading', 'listening']) {
     await sleep(1500)
     await page.reload()
     const resume = page.getByRole('button', { name: /继续所选作答/ })
-    await resume.waitFor({ timeout: 30000 })
+    try {
+      await resume.waitFor({ timeout: 30000 })
+    }
+    catch (e) {
+      await page.screenshot({ path: `shots/e2e-${kind}-resume.png`, fullPage: true }).catch(() => {})
+      const buttons = await page.locator('button:visible').allInnerTexts()
+      const keys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.includes('mock')).concat(Object.keys(sessionStorage)))
+      throw new Error(`刷新后没有“继续所选作答”。按钮：${JSON.stringify(buttons.slice(0, 12))} 存储：${JSON.stringify(keys)} ${e.message}`)
+    }
     await resume.click()
     await submitButton.waitFor()
     // 刷新后回到上次停留的那一部分，填的答案还在
@@ -566,8 +577,7 @@ await step('每日阅读点词出释义卡片；精听点一句能播放，切�
   await page.goto(`${BASE}#/reading/daily`)
   const passage = page.locator('.passage-text').first()
   await passage.waitFor({ timeout: 30000 })
-  await passage.scrollIntoViewIfNeeded()
-  // 找到正文里第一个单词的位置点下去
+  // 找到正文里第一个单词，滚到屏幕中间（顶部有固定导航栏），点下去
   const point = await passage.evaluate((el) => {
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
     let node = walker.nextNode()
@@ -577,6 +587,7 @@ await step('每日阅读点词出释义卡片；精听点一句能播放，切�
         const r = document.createRange()
         r.setStart(node, m.index + 1)
         r.setEnd(node, m.index + 2)
+        node.parentElement.scrollIntoView({ block: 'center' })
         const b = r.getBoundingClientRect()
         return { x: b.left + b.width / 2, y: b.top + b.height / 2 }
       }

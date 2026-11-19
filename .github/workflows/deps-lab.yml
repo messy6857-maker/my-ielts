@@ -42,6 +42,15 @@ jobs:
           mkdir -p shots
           node e2e-browser.mjs http://localhost:4173/ 2>&1 | tee $RUNNER_TEMP/e2e.log
         continue-on-error: true
+      - name: same mock checks against master (baseline)
+        run: |
+          git worktree add $RUNNER_TEMP/base origin/master
+          cd $RUNNER_TEMP/base && pnpm install --frozen-lockfile > /dev/null 2>&1 && pnpm build > /dev/null 2>&1
+          (pnpm preview --port 4174 --strictPort > $RUNNER_TEMP/preview-base.log 2>&1 &)
+          for i in $(seq 1 30); do curl -sf http://localhost:4174/ > /dev/null && break; sleep 1; done
+          cp $GITHUB_WORKSPACE/scripts/e2e-browser.mjs $RUNNER_TEMP/e2e/e2e-base.mjs
+          cd $RUNNER_TEMP/e2e && mkdir -p shots-base && ONLY='模考|每日阅读点词' node e2e-base.mjs http://localhost:4174/ 2>&1 | sed 's/^/BASE /'
+        continue-on-error: true
       - name: audit
         run: |
           cp scripts/audit.mjs $RUNNER_TEMP/e2e/ && cd $RUNNER_TEMP/e2e && mkdir -p shots && node audit.mjs http://localhost:4173/ ; mkdir -p $GITHUB_WORKSPACE/shots && cp shots/* $GITHUB_WORKSPACE/shots/
