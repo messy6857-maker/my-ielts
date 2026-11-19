@@ -55,9 +55,6 @@ jobs:
         run: |
           cp scripts/audit.mjs $RUNNER_TEMP/e2e/ && cd $RUNNER_TEMP/e2e && mkdir -p shots && node audit.mjs http://localhost:4173/ ; mkdir -p $GITHUB_WORKSPACE/shots && cp shots/* $GITHUB_WORKSPACE/shots/
         continue-on-error: true
-      - name: keep the build for local debugging
-        run: rm -rf _dist && cp -r dist _dist
-        continue-on-error: true
       - name: Commit regenerated lockfile and type declarations
         run: |
           git config user.name "deps-lab"

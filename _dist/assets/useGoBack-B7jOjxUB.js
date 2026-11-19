@@ -1,1 +1,0 @@
-import{s as e}from"./vue-router-nfpj53qs.js";function t(t=`/`){let n=e();function r(){let e=n.options.history.state.back;typeof e==`string`&&e.startsWith(`/`)&&!e.startsWith(`//`)?n.back():n.push(t)}return{goBack:r}}export{t};

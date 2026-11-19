@@ -599,6 +599,8 @@ await step('每日阅读点词出释义卡片；精听点一句能播放，切�
     return null
   })
   assert.ok(point)
+  // 等滚动事件过去（滚动会关掉卡片），再点
+  await page.waitForTimeout(600)
   await page.mouse.click(point.x, point.y)
   const card = page.locator('[role="dialog"][aria-label="翻译"]')
   try {
