@@ -709,7 +709,7 @@ async function submit() {
     <template v-else-if="test">
       <!-- 开始屏：点开始才计时 -->
       <div v-if="!started" class="mx-auto max-w-2xl py-16 text-center">
-        <div class="text-left">
+        <div class="mb-6 text-left">
           <SectionTabs group="mock" />
         </div>
         <p class="mb-4 text-5xl">
