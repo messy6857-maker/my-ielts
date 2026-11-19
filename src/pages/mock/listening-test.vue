@@ -1,13 +1,10 @@
 <script setup lang="ts">
 import { resolveMediaUrl } from '~/composables/useAudio'
 import { useMockExam } from '~/composables/useMockExam'
-import { loadMockTranscript, mockTestList, withTranscripts } from './registry'
+import { loadMockTranscript, withTranscripts } from './registry'
 import {
-  formatCountdown,
   listeningBandScore,
   mapLabelPlaceholder,
-  multiSelectScore,
-  showOptionsBox,
 } from './types'
 
 // 听力限时模考：考试流程（选题、草稿、计时、作答、交卷、保存）在 useMockExam 里和阅读共用；
@@ -379,194 +376,41 @@ async function fetchTranscript() {
     </div>
     <template v-else-if="test">
       <!-- 开始屏：点开始才计时 -->
-      <div v-if="!started" class="mx-auto max-w-2xl py-16 text-center">
-        <div class="mb-6 text-left">
-          <SectionTabs group="mock" />
-        </div>
-        <p class="mb-4 text-5xl">
-          🎧
-        </p>
-        <h2 class="mb-2 text-2xl text-gray-900 font-bold dark:text-white">
-          {{ test.title }}
-        </h2>
-        <p class="mb-2 text-gray-500 dark:text-gray-400">
+      <MockStartScreen
+        v-if="!started"
+        :recovery="recovery"
+        :test-id="testId"
+        icon="🎧"
+        :title="test.title"
+        @change-test="onTestChange"
+        @start="startTest"
+        @discard="discardDraftAndStart"
+      >
+        <template #summary>
           共 {{ test.parts.length }} 个 Part · {{ allQuestions.length }} 道题 ·
           满分 {{ scoredTotal }} 分 · 限时
           {{ Math.round(test.timeLimit / 60) }} 分钟
-        </p>
-        <p class="mb-8 text-sm text-gray-400 dark:text-gray-500">
-          点击开始后计时启动，时间到自动交卷
-        </p>
-        <div class="mb-6 flex items-center justify-center gap-3">
-          <span class="text-sm text-gray-500 dark:text-gray-400">选择套题：</span>
-          <select
-            :value="testId"
-            class="border border-gray-300 rounded-lg px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            @change="onTestChange"
-          >
-            <option v-for="t in mockTestList" :key="t.id" :value="t.id">
-              {{ t.label }}
-            </option>
-          </select>
-        </div>
-        <button
-          class="rounded-xl bg-blue-600 px-10 py-3 text-lg text-white font-bold hover:bg-blue-700"
-          @click="startTest"
-        >
-          {{
-            recovery.draft.value && !recovery.draft.value.submitted
-              ? "继续所选作答（从剩余时间计时）"
-              : recovery.availableDrafts.value.length && !recovery.draft.value
-                ? "▶ 全新开始（已有草稿未选）"
-                : "▶ 开始测试"
-          }}
-        </button>
-        <button
-          v-if="recovery.draft.value && !recovery.draft.value.submitted"
-          type="button"
-          class="ml-3 border border-gray-300 rounded-xl px-6 py-3 text-lg text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-          @click="discardDraftAndStart"
-        >
-          放弃草稿，重新开始
-        </button>
-        <p
-          v-if="recovery.retainedNotice.value"
-          role="status"
-          class="mt-4 text-sm text-amber-700 dark:text-amber-300"
-        >
-          {{ recovery.retainedNotice.value }}
-          <button
-            type="button"
-            class="ml-2 underline"
-            @click="recovery.dismissRetainedNotice()"
-          >
-            知道了
-          </button>
-        </p>
-        <p
-          v-if="recovery.submittedDrafts.value.length"
-          class="mt-4 text-sm text-gray-500 dark:text-gray-400"
-        >
-          该套题已有交卷记录，重新开始将是一次新的测试
-        </p>
-        <div
-          v-if="
-            recovery.availableDrafts.value.length > 1
-              || (recovery.availableDrafts.value.length && !recovery.draft.value)
-          "
-          class="my-3 text-sm"
-        >
-          <p>
-            不同页签是独立作答。请选择要恢复的草稿，提交或放弃仅影响所选的同次作答。
-          </p>
-          <select
-            aria-label="选择独立作答草稿"
-            :value="recovery.draft.value?.versionId || ''"
-            @change="
-              recovery.selectDraft(($event.target as HTMLSelectElement).value)
-            "
-          >
-            <option value="" disabled>
-              选择要恢复的作答
-            </option>
-            <option
-              v-for="snapshot in recovery.availableDrafts.value"
-              :key="snapshot.versionId"
-              :value="snapshot.versionId"
-            >
-              {{
-                snapshot.editedAt || snapshot.updatedAt
-                  ? new Date(
-                    snapshot.editedAt || snapshot.updatedAt,
-                  ).toLocaleString()
-                  : "时间未知"
-              }}
-              · {{ Object.values(snapshot.answers).filter(Boolean).length }} 题
-              {{
-                snapshot.timeLeft == null
-                  ? ""
-                  : `· 剩余 ${formatCountdown(snapshot.timeLeft)}`
-              }}
-              {{ snapshot.timeLeft === 0 ? "（剩余 0 秒）" : "" }}
-              {{
-                snapshot.activeElsewhere
-                  ? "（另一页签可能在使用）"
-                  : "（本机保留）"
-              }}
-            </option>
-          </select>
-        </div>
-        <p
-          v-if="recovery.draft.value && !recovery.draft.value.submitted"
-          class="mt-4 text-sm text-gray-500 dark:text-gray-400"
-        >
-          草稿最后保存：{{
-            recovery.draft.value.updatedAt
-              ? new Date(recovery.draft.value.updatedAt).toLocaleString()
-              : "时间未知（答案已保留）"
-          }}
-        </p>
-      </div>
+        </template>
+      </MockStartScreen>
       <div v-else :inert="recovery.blocked.value ? true : undefined">
-        <div class="mb-6 flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <h2 class="text-2xl text-gray-900 font-bold dark:text-white">
-              🎧 {{ test.title }}
-            </h2>
-            <select
-              :value="testId"
-              :disabled="recovery.blocked.value"
-              class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm dark:border-gray-600 dark:bg-gray-700"
-              @change="onTestChange"
-            >
-              <option v-for="t in mockTestList" :key="t.id" :value="t.id">
-                {{ t.label }}
-              </option>
-            </select>
-          </div>
-          <div class="flex items-center gap-4">
-            <span
-              class="rounded-lg px-4 py-2 text-xl font-bold font-mono"
-              :class="
-                timeLeft < 300
-                  ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                  : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
-              "
-            >
-              ⏱ {{ formatCountdown(timeLeft) }}
-            </span>
-            <button
-              v-if="!submitted"
-              :disabled="recovery.retired.value"
-              :title="recovery.retired.value ? '退役态下交卷不可用，请用上方横幅按钮处理' : undefined"
-              class="rounded-lg bg-blue-600 px-6 py-2 text-white font-bold disabled:cursor-not-allowed hover:bg-blue-700 disabled:opacity-50"
-              @click="submit"
-            >
-              交卷
-            </button>
-          </div>
-        </div>
+        <MockTopBar
+          :recovery="recovery"
+          :test-id="testId"
+          icon="🎧"
+          :title="test.title"
+          :time-left="timeLeft"
+          :submitted="submitted"
+          @change-test="onTestChange"
+          @submit="submit"
+        />
 
-        <div
+        <MockScoreCard
           v-if="submitted"
-          class="mb-8 border border-gray-200 rounded-2xl bg-white p-8 text-center shadow-sm dark:border-gray-700 dark:bg-gray-800"
+          :answered-count="answeredCount"
+          :band="band"
+          :correct-count="correctCount"
+          :scored-total="scoredTotal"
         >
-          <template v-if="answeredCount === 0">
-            <p class="mb-2 text-4xl text-gray-500 font-black dark:text-gray-400">
-              未作答
-            </p>
-          </template>
-          <template v-else>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              预估 Band（按公开换算表估算，仅供参考）
-            </p>
-            <p class="mb-2 text-5xl text-blue-600 font-black dark:text-blue-400">
-              {{ band.toFixed(1) }}
-            </p>
-          </template>
-          <p class="text-gray-600 dark:text-gray-400">
-            答对 {{ correctCount }} / {{ scoredTotal }} 分
-          </p>
           <button
             type="button"
             class="mt-4 border border-gray-300 rounded-lg px-6 py-2 text-sm text-gray-600 dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
@@ -574,7 +418,7 @@ async function fetchTranscript() {
           >
             🎧 去精听对照原文（精听页需再选本套题）
           </button>
-        </div>
+        </MockScoreCard>
 
         <div v-if="!submitted" class="mb-6 flex gap-2">
           <button
@@ -662,171 +506,41 @@ async function fetchTranscript() {
             </div>
             <div>
               <div class="space-y-4">
-                <div
+                <MockQuestionCard
                   v-for="(q, qi) in p.questions"
                   :key="q.id"
-                  class="border rounded-xl p-4 dark:border-gray-700"
-                  :class="
-                    questionStatus(q) === 'correct'
-                      ? 'border-green-300 bg-green-50 dark:bg-green-900/20'
-                      : questionStatus(q) === 'wrong'
-                        ? 'border-red-300 bg-red-50 dark:bg-red-900/20'
-                        : questionStatus(q) === 'partial'
-                          ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20'
-                          : 'border-gray-200 bg-white dark:bg-gray-800'
-                  "
+                  :q="q"
+                  :questions="p.questions"
+                  :index="qi"
+                  :answer="answers[q.id]"
+                  :status="questionStatus(q)"
+                  :submitted="submitted"
+                  @answer="setAnswer(q.id, $event)"
+                  @toggle="toggleMultiSelect(q.id, $event)"
                 >
-                  <p
-                    class="mb-3 text-sm text-gray-800 font-medium dark:text-gray-200"
-                  >
-                    <span
-                      class="mr-2 rounded bg-gray-100 px-2 py-0.5 text-xs font-bold dark:bg-gray-700"
-                    >{{ q.id }}</span>
-                    {{ q.question }}
-                  </p>
-
-                  <div
-                    v-if="q.type === 'multiple-choice' || q.type === 'tfng'"
-                    class="space-y-2"
-                  >
-                    <button
-                      v-for="(opt, oi) in q.options"
-                      :key="oi"
+                  <template #map-label>
+                    <input
+                      v-if="q.type === 'map-label'"
                       :disabled="submitted"
-                      class="block w-full border rounded-lg px-4 py-2 text-left text-sm"
-                      :class="
-                        submitted
-                          ? oi === q.answer
-                            ? 'border-green-500 bg-green-100 font-bold dark:bg-green-900/40'
-                            : answers[q.id] === String(oi)
-                              ? 'border-red-500 bg-red-100 dark:bg-red-900/40'
-                              : 'border-gray-200 opacity-60 dark:border-gray-700'
-                          : answers[q.id] === String(oi)
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                            : 'border-gray-200 hover:border-blue-400 dark:border-gray-700'
+                      :value="answers[q.id] ?? ''"
+                      :placeholder="mapLabelPlaceholder(q)"
+                      maxlength="1"
+                      class="w-24 border border-gray-300 rounded-lg px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      @input="
+                        setMapLabelAnswer(
+                          q.id,
+                          ($event.target as HTMLInputElement).value,
+                        )
                       "
-                      @click="setAnswer(q.id, String(oi))"
                     >
-                      {{ opt }}
-                    </button>
-                  </div>
-
-                  <!-- 多选题（Choose TWO） -->
-                  <div v-if="q.type === 'multi-select'" class="space-y-2">
-                    <button
-                      v-for="(opt, oi) in q.options"
-                      :key="oi"
-                      :disabled="submitted"
-                      class="block w-full border rounded-lg px-4 py-2 text-left text-sm"
-                      :class="
-                        submitted
-                          ? (q.answer as number[]).includes(oi)
-                            ? 'border-green-500 bg-green-100 font-bold dark:bg-green-900/40'
-                            : (answers[q.id] ?? '')
-                              .split(',')
-                              .includes(String(oi))
-                              ? 'border-red-500 bg-red-100 dark:bg-red-900/40'
-                              : 'border-gray-200 opacity-60 dark:border-gray-700'
-                          : (answers[q.id] ?? '')
-                            .split(',')
-                            .includes(String(oi))
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                            : 'border-gray-200 hover:border-blue-400 dark:border-gray-700'
-                      "
-                      @click="toggleMultiSelect(q.id, oi)"
+                    <p
+                      v-if="mapLabelHints[q.id]"
+                      class="mt-1 text-xs text-amber-600 dark:text-amber-400"
                     >
-                      <span
-                        class="mr-2 inline-block h-4 w-4 border rounded text-center text-xs leading-3"
-                        :class="
-                          (answers[q.id] ?? '').split(',').includes(String(oi))
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'border-gray-400'
-                        "
-                      >
-                        {{
-                          (answers[q.id] ?? "").split(",").includes(String(oi))
-                            ? "✓"
-                            : ""
-                        }}
-                      </span>
-                      {{ opt }}
-                    </button>
-                  </div>
-
-                  <input
-                    v-if="q.type === 'fill-blank'"
-                    :disabled="submitted"
-                    :value="answers[q.id] ?? ''"
-                    placeholder="输入答案"
-                    class="w-full border border-gray-300 rounded-lg px-4 py-2 text-sm dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    @input="
-                      setAnswer(q.id, ($event.target as HTMLInputElement).value)
-                    "
-                  >
-
-                  <!-- 配对/标注题的选项框（如 Q21-25 的 A-G，印在卷面上，作答时可见）；
-                       同一 Part 内连续且选项内容相同的题组只在首题出框（showOptionsBox） -->
-                  <div
-                    v-if="showOptionsBox(p.questions, qi)"
-                    class="mb-2 border border-gray-200 rounded-lg bg-gray-50 p-3 text-sm dark:border-gray-700 dark:bg-gray-800"
-                  >
-                    <p class="mb-1 font-bold">
-                      选项
+                      {{ mapLabelHints[q.id] }}
                     </p>
-                    <ul class="space-y-0.5">
-                      <li v-for="(opt, oi) in q.options" :key="oi">
-                        {{ String.fromCharCode(65 + oi) }}. {{ opt }}
-                      </li>
-                    </ul>
-                  </div>
-
-                  <input
-                    v-if="q.type === 'map-label'"
-                    :disabled="submitted"
-                    :value="answers[q.id] ?? ''"
-                    :placeholder="mapLabelPlaceholder(q)"
-                    maxlength="1"
-                    class="w-24 border border-gray-300 rounded-lg px-4 py-2 text-center text-sm uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                    @input="
-                      setMapLabelAnswer(
-                        q.id,
-                        ($event.target as HTMLInputElement).value,
-                      )
-                    "
-                  >
-                  <p
-                    v-if="mapLabelHints[q.id]"
-                    class="mt-1 text-xs text-amber-600 dark:text-amber-400"
-                  >
-                    {{ mapLabelHints[q.id] }}
-                  </p>
-
-                  <p
-                    v-if="submitted && questionStatus(q) !== 'correct'"
-                    class="mt-2 text-sm text-gray-500 dark:text-gray-400"
-                  >
-                    <span
-                      v-if="questionStatus(q) === 'partial'"
-                      class="text-amber-700 font-bold"
-                    >部分正确（{{
-                      multiSelectScore(q, answers[q.id] ?? "")
-                    }}
-                      / {{ Array.isArray(q.answer) ? q.answer.length : 1 }} 分）
-                      · </span>正确答案：{{
-                      q.type === "multi-select"
-                        ? (q.answer as number[])
-                          .map((i) => q.options?.[i])
-                          .join(" / ")
-                        : q.type === "fill-blank"
-                          ? Array.isArray(q.answer)
-                            ? q.answer.join(" / ")
-                            : q.answer
-                          : q.type === "map-label"
-                            ? q.answer
-                            : q.options?.[q.answer as number]
-                    }}
-                  </p>
-                </div>
+                  </template>
+                </MockQuestionCard>
               </div>
             </div>
           </div>

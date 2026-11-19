@@ -224,8 +224,10 @@ describe('雅思考试', () => {
       expect(source(p)).toContain('<StudyBack to="/ielts" label="雅思考试" />')
     for (const p of ['src/pages/mistakes.vue', 'src/pages/stats.vue'])
       expect(source(p)).toContain('<StudyBack to="/" label="首页" />')
+    // 模考两页的开始屏是共用的 MockStartScreen，返回 / 切换的标签在它里面
+    expect(source('src/components/MockStartScreen.vue')).toContain('<SectionTabs group="mock" />')
     for (const p of ['src/pages/mock/listening-test.vue', 'src/pages/mock/reading-test.vue'])
-      expect(source(p)).toContain('<SectionTabs group="mock" />')
+      expect(source(p)).toContain('<MockStartScreen')
     for (const p of ['src/pages/mock/history.vue', 'src/pages/grading/history.vue'])
       expect(source(p)).toContain('<SectionTabs group="records" />')
   })
