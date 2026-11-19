@@ -12,13 +12,13 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AppDialog: typeof import('./src/components/AppDialog.vue')['default']
-    ExamTabs: typeof import('./src/components/ExamTabs.vue')['default']
     ImageViewer: typeof import('./src/components/ImageViewer.vue')['default']
     ListeningGuide: typeof import('./src/components/guide/ListeningGuide.vue')['default']
     PageBookmark: typeof import('./src/components/PageBookmark.vue')['default']
     ReadingGuide: typeof import('./src/components/guide/ReadingGuide.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    SectionTabs: typeof import('./src/components/SectionTabs.vue')['default']
     SpeakingGuide: typeof import('./src/components/guide/SpeakingGuide.vue')['default']
     StudyBack: typeof import('./src/components/StudyBack.vue')['default']
     StudyCardSession: typeof import('./src/components/StudyCardSession.vue')['default']
@@ -26,7 +26,6 @@ declare module 'vue' {
     TheFooter: typeof import('./src/components/TheFooter.vue')['default']
     TheHeader: typeof import('./src/components/TheHeader.vue')['default']
     VocabCardHints: typeof import('./src/components/VocabCardHints.vue')['default']
-    WordTableTabs: typeof import('./src/components/WordTableTabs.vue')['default']
     WritingGuide: typeof import('./src/components/guide/WritingGuide.vue')['default']
   }
 }

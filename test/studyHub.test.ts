@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { flushPromises, mount } from '@vue/test-utils'
-import { defineComponent, h } from 'vue'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import TheHeader from '../src/components/TheHeader.vue'
 import { useAuth } from '../src/composables/useAuth'
@@ -234,11 +234,30 @@ describe('雅思考试', () => {
 describe('section tabs', () => {
   it('mock tests and records go back to 雅思考试 with their own tabs', async () => {
     const Section = (await import('../src/components/SectionTabs.vue')).default
-    for (const [group, path, labels] of [['mock', '/mock/reading-test', ['听力模考', '阅读模考']], ['records', '/grading/history', ['模考记录', '批改记录']]] as const) {
-      const w = await mountAt(defineComponent({ render: () => h(Section, { group }) }), path)
+    for (const [group, path, labels] of [
+      [
+        'mock',
+        '/mock/reading-test',
+        ['听力模考', '阅读模考'],
+      ],
+      [
+        'records',
+        '/grading/history',
+        ['模考记录', '批改记录'],
+      ],
+    ] as const) {
+      const w = await mountAt(defineComponent({
+        render: () => h(Section, { group }),
+      }), path)
       expect(w.find('[data-back]').attributes('href')).toBe('/ielts')
       expect(w.find('[data-exam-tabs]').exists()).toBe(true)
-      expect(w.findAll('[data-exam-tabs] a:not([data-back])').map((a: any) => [a.text(), a.classes().includes('bg-blue-600')])).toEqual([[labels[0], false], [labels[1], true]])
+      expect(w.findAll('[data-exam-tabs] a:not([data-back])').map((a: any) => [
+        a.text(),
+        a.classes().includes('bg-blue-600'),
+      ])).toEqual([
+        [labels[0], false],
+        [labels[1], true],
+      ])
       w.unmount()
     }
   })
@@ -247,7 +266,9 @@ describe('section tabs', () => {
 describe('背单词 → 查单词表', () => {
   it('every word table is switched in one place, which goes back to 背单词', async () => {
     const Section = (await import('../src/components/SectionTabs.vue')).default
-    const Tabs = defineComponent({ render: () => h(Section, { group: 'words' }) })
+    const Tabs = defineComponent({
+      render: () => h(Section, { group: 'words' }),
+    })
     for (const path of [
       '/vocabulary',
       '/reading',
@@ -271,8 +292,8 @@ describe('背单词 → 查单词表', () => {
     expect(source('src/pages/reading/index.vue')).toContain('<SectionTabs group="words" />')
     expect(source('src/pages/vocabulary/index.vue')).toContain('<SectionTabs v-else group="words" />')
     expect(source('src/pages/listening.vue')).toContain('<SectionTabs v-if="isWordTable" group="words" />')
-    expect(source('src/main.ts')).toContain("redirect: '/ielts/guide?part=listening'")
-    expect(source('src/main.ts')).toContain("{ path: '/ielts/practice', redirect: '/study/spell?source=listening179&mode=synonym' }")
+    expect(source('src/main.ts')).toContain('redirect: \'/ielts/guide?part=listening\'')
+    expect(source('src/main.ts')).toContain('{ path: \'/ielts/practice\', redirect: \'/study/spell?source=listening179&mode=synonym\' }')
   })
 })
 

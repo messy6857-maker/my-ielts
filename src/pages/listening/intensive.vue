@@ -494,7 +494,12 @@ async function findListWords(tokens: DiffToken[]) {
   ]
 }
 function addListWord(word: ListWord) {
-  return wordList.add({ word: word.word, meaning: word.meaning, pos: word.pos, synonyms: [] })
+  return wordList.add({
+    word: word.word,
+    meaning: word.meaning,
+    pos: word.pos,
+    synonyms: [],
+  })
 }
 
 function resetDictationUi() {

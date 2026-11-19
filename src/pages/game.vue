@@ -788,19 +788,19 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
             </button>
           </div>
           <div class="flex flex-wrap gap-2">
-          <button
-            v-for="chapter in chapters"
-            :key="chapter"
-            data-chapter
-            :aria-pressed="selection.chapters.includes(chapter)"
-            class="border rounded-full px-3 py-1 text-sm"
-            :class="selection.chapters.includes(chapter)
-              ? 'border-blue-600 bg-blue-600 text-white'
-              : 'border-gray-300 dark:border-gray-600'"
-            @click="toggleChapter(chapter)"
-          >
-            {{ chapterLabel(chapter) }}
-          </button>
+            <button
+              v-for="chapter in chapters"
+              :key="chapter"
+              data-chapter
+              :aria-pressed="selection.chapters.includes(chapter)"
+              class="border rounded-full px-3 py-1 text-sm"
+              :class="selection.chapters.includes(chapter)
+                ? 'border-blue-600 bg-blue-600 text-white'
+                : 'border-gray-300 dark:border-gray-600'"
+              @click="toggleChapter(chapter)"
+            >
+              {{ chapterLabel(chapter) }}
+            </button>
           </div>
         </details>
         <h4 class="mb-2 font-bold">

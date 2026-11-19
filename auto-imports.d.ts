@@ -743,7 +743,6 @@ declare module 'vue' {
     readonly rejectedReasonsOf: UnwrapRef<typeof import('./src/composables/syncClient')['rejectedReasonsOf']>
     readonly reloadApp: UnwrapRef<typeof import('./src/composables/useAppUpdate')['reloadApp']>
     readonly reloadPageBookmarks: UnwrapRef<typeof import('./src/composables/usePageBookmark')['reloadPageBookmarks']>
-    readonly removeJson: UnwrapRef<typeof import('./src/composables/useAuth')['removeJson']>
     readonly removePageBookmark: UnwrapRef<typeof import('./src/composables/usePageBookmark')['removePageBookmark']>
     readonly repairSavedGrade: UnwrapRef<typeof import('./src/composables/useAISettings')['repairSavedGrade']>
     readonly resolveAudioUrl: UnwrapRef<typeof import('./src/composables/useAudio')['resolveAudioUrl']>

@@ -19,7 +19,18 @@ const path = computed(() => route.path)
 // 模考页不显示：考试页右下角已有“原文”按钮，且考试时不需要书签
 const hidden = computed(() => path.value.startsWith('/mock'))
 // 入口页、选择页很短，用不上书签：不显示（这些页已经加过书签的照常显示，方便删掉）
-const SHORT_PAGES = new Set(['/', '/study', '/study/learn', '/study/review', '/study/spell', '/study/lists', '/game', '/ielts', '/mistakes', '/settings'])
+const SHORT_PAGES = new Set([
+  '/',
+  '/study',
+  '/study/learn',
+  '/study/review',
+  '/study/spell',
+  '/study/lists',
+  '/game',
+  '/ielts',
+  '/mistakes',
+  '/settings',
+])
 // 固定版在每日阅读页不显示（那页由 daily.vue 内嵌一份，免得出现两个）
 const visible = computed(() => {
   if (hidden.value)
@@ -175,7 +186,7 @@ function onRemove(id: string) {
     </div>
     <button
       type="button"
-      class="flex items-center gap-1 rounded-full bg-blue-600 px-3 py-2 text-sm text-white font-medium shadow-lg transition-colors disabled:cursor-not-allowed sm:px-4 sm:py-2.5 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600"
+      class="flex items-center gap-1 rounded-full bg-blue-600 px-3 py-2 text-sm text-white font-medium shadow-lg transition-colors disabled:cursor-not-allowed hover:bg-blue-700 sm:px-4 sm:py-2.5 disabled:opacity-50 disabled:hover:bg-blue-600"
       :title="props.addDisabled ? '文章加载中，加载完成后再加书签' : '在当前位置增加一个书签'"
       aria-label="增加书签"
       :disabled="props.addDisabled"

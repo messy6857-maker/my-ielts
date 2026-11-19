@@ -710,7 +710,6 @@ defineExpose({ restart })
           </div>
         </div>
       </div>
-
     </div>
   </div>
 </template>
