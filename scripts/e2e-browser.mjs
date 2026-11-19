@@ -537,12 +537,9 @@ for (const kind of ['reading', 'listening']) {
       await tabs.nth(i).click()
     const filled = 'hello'
     await blank.fill(filled)
-    // 刷新：草稿还在（刷新后要先选一份草稿，这是原有的设计），接着做，答案还在
+    // 刷新：只有这一份草稿，已经自动选上，直接点继续，答案还在
     await sleep(1500)
     await page.reload()
-    const drafts = page.locator('select[aria-label="选择独立作答草稿"]')
-    await drafts.waitFor({ timeout: 30000 })
-    await drafts.selectOption({ index: 1 })
     const resume = page.getByRole('button', { name: /继续所选作答/ })
     try {
       await resume.waitFor({ timeout: 30000 })
@@ -567,6 +564,36 @@ for (const kind of ['reading', 'listening']) {
     assert.equal(await submitButton.count(), 0)
     // 交卷后成绩进了记录
     assert.ok(await page.evaluate(() => Object.keys(localStorage).some(k => k.includes('mock'))))
+    assert.deepEqual(errors, [])
+    await ctx.close()
+  })
+}
+
+for (const [tab, name] of [['essay-small', '小作文'], ['essay-big', '大作文']]) {
+  await step(`${name}：开始写、刷新后草稿还在、提交看结果、进历史`, async () => {
+    const ctx = await launched.newContext({ viewport: { width: 1280, height: 900 } })
+    const page = await ctx.newPage()
+    const errors = []
+    page.on('pageerror', e => errors.push(e.message))
+    await page.goto(`${BASE}#/writing?tab=${tab}`)
+    await page.getByRole('button', { name: '开始写作' }).first().click({ timeout: 30000 })
+    const essay = 'Some people believe that technology makes life easier, while others think it creates new problems. '.repeat(6).trim()
+    const box = page.locator('textarea').first()
+    await box.fill(essay)
+    // 草稿 2 秒后自动保存；刷新后回到写作页，原文还在
+    await sleep(2600)
+    await page.reload()
+    await box.waitFor({ timeout: 30000 })
+    assert.equal(await box.inputValue(), essay)
+    // 不到最低词数：先问，确认后提交
+    await page.locator('button').filter({ hasText: /^\s*提交/ }).first().click()
+    await page.getByRole('alertdialog').getByRole('button', { name: '提交' }).click()
+    await page.getByText(/\d+ 词 · 用时/).first().waitFor()
+    // 提交后草稿清掉，刷新回到选题页，历史里有这一篇
+    await page.reload()
+    await page.getByRole('button', { name: '开始写作' }).first().waitFor({ timeout: 30000 })
+    assert.equal(await page.locator('textarea').count(), 0)
+    assert.ok(await page.getByRole('button', { name: /^查看/ }).count() > 0)
     assert.deepEqual(errors, [])
     await ctx.close()
   })

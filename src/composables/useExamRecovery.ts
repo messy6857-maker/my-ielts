@@ -188,6 +188,17 @@ export function useExamRecovery(options: {
           ? d.attemptId === selectedAttempt
           : d.versionId === key(),
       ) ?? null
+    // 例外：还没手动选过、只有一份草稿、也没有别的页签正在做它（多半是本页刷新前留下的），
+    // 直接选上，刷新后点“继续”即可；有好几份或别的页签正在用时，仍须手动选。
+    const only = availableDrafts.value[0]
+    if (
+      !draft.value
+      && selectedVersion === null
+      && availableDrafts.value.length === 1
+      && !only.activeElsewhere
+    ) {
+      draft.value = only
+    }
   }
   function writeDraft() {
     const completedKey = `${baseKey(activeTestId)}__completed_${encodeURIComponent(attemptId)}`
