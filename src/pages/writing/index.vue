@@ -151,6 +151,35 @@ const TABS = [
 ]
 
 // ---------- 100句翻译练习 · 练习模式 ----------
+// 100 句按章节折叠：默认只看章节标题和掌握数，点开再看句子和答案
+const openSections = ref(new Set())
+function toggleSection(title) {
+  const next = new Set(openSections.value)
+  if (next.has(title))
+    next.delete(title)
+  else next.add(title)
+  openSections.value = next
+}
+/** 每句属于哪一章，每章有几句、掌握了几句 */
+const sectionInfo = computed(() => {
+  const of = {}
+  const counts = {}
+  let current = ''
+  for (const item of sentences) {
+    if (item.no == null) {
+      current = item.title
+      counts[current] = { total: 0, mastered: 0 }
+      continue
+    }
+    of[item.no] = current
+    if (counts[current]) {
+      counts[current].total++
+      if (isMastered(item.no))
+        counts[current].mastered++
+    }
+  }
+  return { of, counts }
+})
 const practicing = ref(false)
 const practiceScope = ref('all') // all | unmastered | mistakes
 const practiceOrder = ref('seq') // seq | random
@@ -565,12 +594,23 @@ function nextPractice() {
                       <template v-for="item of sentences" :key="item.no ?? `sec-${item.title}`">
                         <template v-if="item.no == null">
                           <tr class="border-x-1 border-t-1">
-                            <td colspan="5" class="p-4 text-xl font-bold">
-                              {{ item.title }}
+                            <td colspan="5" class="p-0">
+                              <button
+                                type="button"
+                                class="w-full flex items-center justify-between gap-3 p-4 text-left text-xl font-bold hover:bg-gray-50 dark:hover:bg-gray-700"
+                                :aria-expanded="openSections.has(item.title)"
+                                data-writing-section
+                                @click="toggleSection(item.title)"
+                              >
+                                <span>{{ openSections.has(item.title) ? '▾' : '▸' }} {{ item.title }}</span>
+                                <span class="text-sm text-gray-500 font-normal dark:text-gray-400">
+                                  {{ sectionInfo.counts[item.title]?.total ?? 0 }} 句 · 已掌握 {{ sectionInfo.counts[item.title]?.mastered ?? 0 }}
+                                </span>
+                              </button>
                             </td>
                           </tr>
                         </template>
-                        <template v-else>
+                        <template v-else-if="openSections.has(sectionInfo.of[item.no])">
                           <tr class="border-t-1">
                             <td class="border-x-1 p-4" rowspan="2">
                               {{ item.no }}

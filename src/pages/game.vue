@@ -774,18 +774,20 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
           </div>
         </div>
 
-        <div class="mb-2 flex flex-wrap items-center gap-3">
-          <h4 class="font-bold">
-            按章节选
-          </h4>
-          <button class="text-sm text-blue-600 underline dark:text-blue-400" @click="selection.chapters = [...chapters]">
-            全选
-          </button>
-          <button class="text-sm text-blue-600 underline dark:text-blue-400" @click="selection.chapters = []">
-            清空
-          </button>
-        </div>
-        <div class="mb-4 flex flex-wrap gap-2">
+        <!-- 22 个章节默认收起，选过的章节会显示在标题里 -->
+        <details class="mb-4" :open="selection.chapters.length > 0" data-chapters>
+          <summary class="mb-2 cursor-pointer font-bold">
+            词汇表按章节选<span class="ml-1 text-sm text-gray-500 font-normal dark:text-gray-400">（{{ selection.chapters.length ? `已选 ${selection.chapters.length} 章` : '没选' }}）</span>
+          </summary>
+          <div class="mb-2 flex flex-wrap items-center gap-3">
+            <button class="text-sm text-blue-600 underline dark:text-blue-400" @click="selection.chapters = [...chapters]">
+              全选
+            </button>
+            <button class="text-sm text-blue-600 underline dark:text-blue-400" @click="selection.chapters = []">
+              清空
+            </button>
+          </div>
+          <div class="flex flex-wrap gap-2">
           <button
             v-for="chapter in chapters"
             :key="chapter"
@@ -799,7 +801,8 @@ function optionClass(isAnswer: boolean, isPicked: boolean) {
           >
             {{ chapterLabel(chapter) }}
           </button>
-        </div>
+          </div>
+        </details>
         <h4 class="mb-2 font-bold">
           考点词（带同义替换题；阅读考点词只考认词和同义替换，不考拼写）
         </h4>

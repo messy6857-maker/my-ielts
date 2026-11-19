@@ -1,11 +1,6 @@
-// 听力语料库拼写练习：取词、判分、标出拼错的字母（不碰存储和界面，便于测试）
+// 听力语料库的词（卡片和练拼写共用），以及拼错时标出错字母（所有拼写练法共用）
 
 export type CorpusChapter = 'ch2' | 'ch3' | 'ch4'
-export const CORPUS_CHAPTER_LABEL: Record<CorpusChapter, string> = {
-  ch2: '拼写规范',
-  ch3: '特别名词',
-  ch4: '形容词副词',
-}
 export interface CorpusWord {
   /** 和语料库自测卡片的 id 一致（错题记录共用 corpus:<id>） */
   id: string
@@ -103,17 +98,6 @@ export function buildCorpusWords(data: RawCorpus): CorpusWord[] {
   return out
 }
 
-function norm(text: string): string {
-  return text.toLowerCase().trim().replace(/\s+/g, ' ')
-}
-/** 拼对了返回匹配上的那个写法，否则返回 null。不分大小写，忽略首尾和多余空格 */
-export function matchSpelling(input: string, word: CorpusWord): string | null {
-  const answer = norm(input)
-  if (!answer)
-    return null
-  return word.accepted.find(s => norm(s) === answer) ?? null
-}
-
 export interface DiffChar { char: string, ok: boolean }
 /**
  * 标出正确拼写里哪些字母没写对：和输入做最长公共子序列（不分大小写），
@@ -147,29 +131,4 @@ export function markMissed(input: string, answer: string): DiffChar[] {
     }
   }
   return [...answer].map((char, k) => ({ char, ok: ok[k] }))
-}
-/** 输入最接近的那个正确写法（标错字母时用它对照） */
-export function closestSpelling(input: string, word: CorpusWord): string {
-  let best = word.word
-  let bestScore = Number.NEGATIVE_INFINITY
-  for (const s of word.accepted) {
-    const score = markMissed(input, s).filter(c => c.ok).length - s.length
-    if (score > bestScore) {
-      best = s
-      bestScore = score
-    }
-  }
-  return best
-}
-
-/** 打乱后取前 size 个（size 不给就是全部） */
-export function pickRound(words: CorpusWord[], size?: number, rng: () => number = Math.random): CorpusWord[] {
-  const out = [...words]
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(rng() * (i + 1))
-    ;[out[i], out[j]] = [out[j], out[i]]
-  }
-  return size
-    ? out.slice(0, size)
-    : out
 }

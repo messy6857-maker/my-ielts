@@ -18,12 +18,16 @@ const route = useRoute()
 const path = computed(() => route.path)
 // 模考页不显示：考试页右下角已有“原文”按钮，且考试时不需要书签
 const hidden = computed(() => path.value.startsWith('/mock'))
+// 入口页、选择页很短，用不上书签：不显示（这些页已经加过书签的照常显示，方便删掉）
+const SHORT_PAGES = new Set(['/', '/study', '/study/learn', '/study/review', '/study/spell', '/study/lists', '/game', '/ielts', '/mistakes', '/settings'])
 // 固定版在每日阅读页不显示（那页由 daily.vue 内嵌一份，免得出现两个）
 const visible = computed(() => {
   if (hidden.value)
     return false
   if (props.inline)
     return true
+  if (SHORT_PAGES.has(path.value) && getPageBookmarks(path.value).length === 0)
+    return false
   return path.value !== '/reading/daily'
 })
 // 按位置从上到下排，书签 1 在最上面
@@ -128,7 +132,7 @@ function onRemove(id: string) {
     v-if="visible"
     :class="props.inline
       ? 'flex flex-col items-end gap-2'
-      : 'fixed bottom-6 right-6 z-40 flex flex-col items-end gap-2'"
+      : 'fixed bottom-4 right-3 z-40 flex flex-col items-end gap-2 sm:bottom-6 sm:right-6'"
   >
     <p v-if="jumpFailed" role="status" class="rounded bg-white px-2 py-1 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300">
       当前文章未加载或原段落已变更
@@ -157,7 +161,7 @@ function onRemove(id: string) {
         :aria-label="`回到书签 ${i + 1}`"
         @click="onJump(bm.id)"
       >
-        🔖 书签 {{ i + 1 }} · {{ bookmarkPercent(bm) }}%
+        🔖<span class="hidden sm:inline"> 书签</span> {{ i + 1 }}<span class="hidden sm:inline"> · {{ bookmarkPercent(bm) }}%</span>
       </button>
       <button
         type="button"
@@ -171,13 +175,13 @@ function onRemove(id: string) {
     </div>
     <button
       type="button"
-      class="flex items-center gap-1 rounded-full bg-blue-600 px-4 py-2.5 text-sm text-white font-medium shadow-lg transition-colors disabled:cursor-not-allowed hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600"
+      class="flex items-center gap-1 rounded-full bg-blue-600 px-3 py-2 text-sm text-white font-medium shadow-lg transition-colors disabled:cursor-not-allowed sm:px-4 sm:py-2.5 hover:bg-blue-700 disabled:opacity-50 disabled:hover:bg-blue-600"
       :title="props.addDisabled ? '文章加载中，加载完成后再加书签' : '在当前位置增加一个书签'"
       aria-label="增加书签"
       :disabled="props.addDisabled"
       @click="onAdd"
     >
-      ＋ 书签
+      ＋<span class="hidden sm:inline"> 书签</span><span class="sm:hidden">🔖</span>
     </button>
     <button
       v-if="showBackToTop"
@@ -187,7 +191,7 @@ function onRemove(id: string) {
       aria-label="回到顶部"
       @click="backToTop"
     >
-      ↑ 顶部
+      ↑<span class="hidden sm:inline"> 顶部</span>
     </button>
   </div>
 </template>

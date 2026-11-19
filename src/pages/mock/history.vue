@@ -42,10 +42,10 @@ async function handleClear() {
 
 <template>
   <div class="mx-auto max-w-4xl px-4 py-8">
-    <ExamTabs group="records" />
+    <SectionTabs group="records" />
     <div class="mb-6 flex items-center justify-between">
       <h2 class="text-2xl text-gray-900 font-bold dark:text-white">
-        📊 模考记录
+        模考记录
       </h2>
       <button
         v-if="records.length"

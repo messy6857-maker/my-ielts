@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import corpusData from '../src/pages/listening/spelling_convention'
-import { buildCorpusWords, closestSpelling, markMissed, matchSpelling, pickRound } from '../src/utils/corpusSpelling'
+import { buildCorpusWords, markMissed } from '../src/utils/corpusSpelling'
+import { diffSpelling, matchSpelling } from '../src/utils/spellPractice'
+import { corpusCards } from '../src/utils/studyDeck'
 
 const words = buildCorpusWords(corpusData as any)
 const byWord = (w: string) => words.find(x => x.word === w)!
+const card = (w: string) => corpusCards(corpusData as any).find(x => x.word === w)!
 
 describe('corpus words and checking', () => {
   it('reads all three chapters with the same ids as the self-test cards', () => {
@@ -24,7 +27,7 @@ describe('corpus words and checking', () => {
   })
 
   it('british and American spellings both count; case and spaces are ignored', () => {
-    const w = byWord('aluminium')
+    const w = card('aluminium')
     expect(matchSpelling('Aluminium ', w)).toBe('aluminium')
     expect(matchSpelling('aluminum', w)).toBe('aluminum')
     expect(matchSpelling('aluminim', w)).toBeNull()
@@ -40,13 +43,6 @@ describe('corpus words and checking', () => {
     expect(marked('Rythm', 'rhythm')).toBe('r[h]ythm')
     expect(marked('', 'cat')).toBe('[c][a][t]')
     // 对照最接近的写法：写成美式少个 u 时对照 aluminum
-    expect(closestSpelling('aluminm', byWord('aluminium'))).toBe('aluminum')
-  })
-
-  it('a round is a shuffled subset of the chosen words', () => {
-    const round = pickRound(words, 10)
-    expect(round).toHaveLength(10)
-    expect(new Set(round.map(w => w.id)).size).toBe(10)
-    expect(pickRound(words.slice(0, 3))).toHaveLength(3)
+    expect(diffSpelling('aluminm', card('aluminium')).map(c => c.char).join('')).toBe('aluminum')
   })
 })
