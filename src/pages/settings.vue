@@ -394,7 +394,7 @@ async function onDetect() {
       ← 返回
     </button>
     <h2 class="mb-6 text-xl font-bold dark:text-white">
-      ⚙️ 设置
+      设置
     </h2>
 
     <section

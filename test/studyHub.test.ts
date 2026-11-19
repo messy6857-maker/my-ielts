@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { defineComponent, h } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import TheHeader from '../src/components/TheHeader.vue'
 import { useAuth } from '../src/composables/useAuth'
@@ -218,22 +219,56 @@ describe('雅思考试', () => {
       'src/pages/writing/index.vue',
       'src/pages/speaking/index.vue',
       'src/pages/grammar/index.vue',
-      'src/components/ExamTabs.vue',
       'src/pages/ielts/guide.vue',
     ])
       expect(source(p)).toContain('<StudyBack to="/ielts" label="雅思考试" />')
     for (const p of ['src/pages/mistakes.vue', 'src/pages/stats.vue'])
       expect(source(p)).toContain('<StudyBack to="/" label="首页" />')
     for (const p of ['src/pages/mock/listening-test.vue', 'src/pages/mock/reading-test.vue'])
-      expect(source(p)).toContain('<ExamTabs group="mock" />')
+      expect(source(p)).toContain('<SectionTabs group="mock" />')
     for (const p of ['src/pages/mock/history.vue', 'src/pages/grading/history.vue'])
-      expect(source(p)).toContain('<ExamTabs group="records" />')
+      expect(source(p)).toContain('<SectionTabs group="records" />')
+  })
+})
+
+describe('section tabs', () => {
+  it('mock tests and records go back to 雅思考试 with their own tabs', async () => {
+    const Section = (await import('../src/components/SectionTabs.vue')).default
+    for (const [group, path, labels] of [
+      [
+        'mock',
+        '/mock/reading-test',
+        ['听力模考', '阅读模考'],
+      ],
+      [
+        'records',
+        '/grading/history',
+        ['模考记录', '批改记录'],
+      ],
+    ] as const) {
+      const w = await mountAt(defineComponent({
+        render: () => h(Section, { group }),
+      }), path)
+      expect(w.find('[data-back]').attributes('href')).toBe('/ielts')
+      expect(w.find('[data-exam-tabs]').exists()).toBe(true)
+      expect(w.findAll('[data-exam-tabs] a:not([data-back])').map((a: any) => [
+        a.text(),
+        a.classes().includes('bg-blue-600'),
+      ])).toEqual([
+        [labels[0], false],
+        [labels[1], true],
+      ])
+      w.unmount()
+    }
   })
 })
 
 describe('背单词 → 查单词表', () => {
   it('every word table is switched in one place, which goes back to 背单词', async () => {
-    const Tabs = (await import('../src/components/WordTableTabs.vue')).default
+    const Section = (await import('../src/components/SectionTabs.vue')).default
+    const Tabs = defineComponent({
+      render: () => h(Section, { group: 'words' }),
+    })
     for (const path of [
       '/vocabulary',
       '/reading',
@@ -254,10 +289,11 @@ describe('背单词 → 查单词表', () => {
       w.unmount()
     }
     const source = (p: string) => readFileSync(p, 'utf8')
-    expect(source('src/pages/reading/index.vue')).toContain('<WordTableTabs />')
-    expect(source('src/pages/vocabulary/index.vue')).toContain('<WordTableTabs v-else />')
-    expect(source('src/pages/listening.vue')).toContain('<WordTableTabs v-if="isWordTable" />')
-    expect(source('src/pages/listening/index.vue')).toContain('/ielts/guide?part=listening')
+    expect(source('src/pages/reading/index.vue')).toContain('<SectionTabs group="words" />')
+    expect(source('src/pages/vocabulary/index.vue')).toContain('<SectionTabs v-else group="words" />')
+    expect(source('src/pages/listening.vue')).toContain('<SectionTabs v-if="isWordTable" group="words" />')
+    expect(source('src/main.ts')).toContain('redirect: \'/ielts/guide?part=listening\'')
+    expect(source('src/main.ts')).toContain('{ path: \'/ielts/practice\', redirect: \'/study/spell?source=listening179&mode=synonym\' }')
   })
 })
 

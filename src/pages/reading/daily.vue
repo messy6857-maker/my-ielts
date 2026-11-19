@@ -693,7 +693,7 @@ function paragraphs(passage: string): string[] {
   <div class="mx-auto max-w-3xl px-4 pt-6 2xl:px-0">
     <div class="mb-6 flex items-center justify-between">
       <h2 class="text-2xl text-gray-900 font-bold dark:text-white">
-        📅 每日阅读
+        每日阅读
       </h2>
     </div>
 

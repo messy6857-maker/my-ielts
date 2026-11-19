@@ -1,3 +1,4 @@
+import type { RouteRecordRaw } from 'vue-router'
 import routes from 'virtual:generated-pages'
 import { createApp } from 'vue'
 import { createRouter, createWebHashHistory } from 'vue-router'
@@ -12,7 +13,17 @@ const router = createRouter({
   // 改成 Hash 模式
   history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
-    ...routes,
+    // 旧地址的跳转都写在这里。/listening 原来是听力基本概念，已搬到“雅思考试 → 做题方法”
+    ...routes.map(r => r.path === '/listening'
+      ? {
+          ...r,
+          children: [
+            { path: '', redirect: '/ielts/guide?part=listening' },
+            ...(r.children ?? []),
+          ],
+        } as RouteRecordRaw
+      : r),
+    { path: '/ielts/practice', redirect: '/study/spell?source=listening179&mode=synonym' },
     // 各词库的卡片自测已合并到“学新词”，旧地址跳过去
     // 词汇表的单词自测：到期复习去“复习到期的词”，其余去“学新词”
     {

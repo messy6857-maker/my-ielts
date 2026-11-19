@@ -225,7 +225,6 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
     assert.ok((await page.locator('a[href="#/study"]').first().getAttribute('class')).split(/\s+/).includes('text-primary-700'))
     // 返回键回到上一级：选择页
     await page.getByRole('button', { name: /返回选择/ }).first().click()
-    await page.getByRole('button', { name: '退出', exact: true }).click()
     await page.locator('[data-setup]').waitFor()
   }
   // 学到什么程度：选“会拼写”，看完词条把词遮住拼一遍
@@ -242,7 +241,6 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.getByRole('button', { name: '下一个', exact: true }).click()
   await page.locator('[data-card] [data-word]').waitFor()
   await page.getByRole('button', { name: /返回选择/ }).first().click()
-  await page.getByRole('button', { name: '退出', exact: true }).click()
   await page.locator('[data-practice="recognize"]').click()
   await page.locator('[data-deck-choice="corpus"]').click()
   // 选择页的返回键回到背单词；再进学新词，默认还是上次的词库
@@ -280,7 +278,6 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.locator('[data-card] [data-word]').waitFor()
   // 返回选择页：少了一个到期的词；再返回背单词
   await page.getByRole('button', { name: /返回选择/ }).first().click()
-  await page.getByRole('button', { name: '退出', exact: true }).click()
   await page.locator('[data-setup]').waitFor()
   await page.getByText('选中的词库一共 3 个到期').waitFor()
   await page.locator('a[data-back][href="#/study"]').click()
@@ -355,7 +352,7 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
     assert.ok(!navTexts.includes(label), label)
   // 每日阅读：导航一步进去，导航里亮的是每日阅读
   await page.locator('header a[href="#/reading/daily"]').first().click()
-  await page.getByText('📅 每日阅读').waitFor({ timeout: 20000 })
+  await page.getByRole('heading', { name: '每日阅读' }).waitFor({ timeout: 20000 })
   assert.ok((await page.locator('a[href="#/reading/daily"]').first().getAttribute('class')).split(/\s+/).includes('text-primary-700'))
   // 没亮的入口是灰字（hover 时才变色）
   assert.ok((await page.locator('a[href="#/ielts"]').first().getAttribute('class')).split(/\s+/).includes('text-gray-700'))
@@ -388,6 +385,12 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.locator('[data-today-mistakes]').click()
   await page.locator('a[data-back][href="#/"]').click()
   await page.locator('[data-home-entry="/stats"]').waitFor()
+  // 旧地址跳转：听力首页 → 听力做题方法；/ielts/practice → 练拼写的听力 179 同义替换
+  await page.goto(`${BASE}#/listening`)
+  await page.waitForURL(/ielts\/guide\?part=listening/)
+  await page.getByText('Section 1').first().waitFor()
+  await page.goto(`${BASE}#/ielts/practice`)
+  await page.locator('[data-mode="synonym"][aria-pressed="true"]').waitFor({ timeout: 30000 })
   // 背单词 → 查单词表：四张单词表在一处切换，导航亮的是背单词，返回背单词
   await page.goto(`${BASE}#/study`)
   await page.locator('[data-more] a[href="#/vocabulary"]').click()
@@ -435,7 +438,6 @@ await step('背单词：从导航进入，各词库的自测都能打开，返�
   await page.getByRole('button', { name: '不认识', exact: true }).click()
   await page.locator('[data-study]').waitFor()
   await page.getByRole('button', { name: /返回选择/ }).first().click()
-  await page.getByRole('button', { name: '退出', exact: true }).click()
   // 学过的词到期后出现在复习里
   await page.goto(`${BASE}#/study/review`)
   await page.locator('[data-review-deck="custom"]:checked').waitFor({ timeout: 30000 })
@@ -465,6 +467,9 @@ await step('单词地牢：从背单词进入，选章节开局，一路作答�
   await page.locator('[data-entry="game"]').click()
   await page.getByRole('button', { name: '进入地牢' }).waitFor({ timeout: 20000 })
   assert.ok(await page.getByRole('button', { name: '进入地牢' }).isDisabled())
+  // 章节默认收起，先展开
+  if (!(await page.locator('details[data-chapters]').getAttribute('open') !== null))
+    await page.locator('details[data-chapters] summary').click()
   await page.locator('button[data-chapter]').first().click()
   await page.getByRole('button', { name: '进入地牢' }).click()
   await page.getByText('房间 1 / 5').waitFor()

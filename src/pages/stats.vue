@@ -181,7 +181,7 @@ const last14Checkin = computed(() => {
         <StudyBack to="/" label="首页" />
       </div>
       <h1 class="mb-2 text-2xl text-gray-900 font-bold dark:text-white">
-        📊 学习数据统计
+        学习统计
       </h1>
       <p class="mb-6 text-sm text-gray-500 dark:text-gray-400">
         {{ currentUser ? `当前账号：${currentUser}` : "游客模式" }} ·

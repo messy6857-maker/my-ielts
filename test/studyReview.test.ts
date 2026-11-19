@@ -170,7 +170,6 @@ describe('复习到期的词: choose first, all word lists together', () => {
     await start(w)
     await button(w, '认识').trigger('click')
     await w.findAll('button').find((b: any) => b.text().includes('返回选择'))!.trigger('click')
-    await button(w, '退出').trigger('click')
     await settle()
     expect(w.find('[data-setup]').exists()).toBe(true)
     expect(w.find('[data-preview]').text()).toContain('这一轮复习 1 个')

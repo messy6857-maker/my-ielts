@@ -9,7 +9,7 @@ const isWordTable = computed(() => ['/listening/keyword', '/listening/corpus'].i
     <div
       class="mb-4 border border-gray-200 rounded-lg bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-800 sm:p-6"
     >
-      <WordTableTabs v-if="isWordTable" />
+      <SectionTabs v-if="isWordTable" group="words" />
       <div v-else class="mb-4">
         <StudyBack to="/ielts" label="雅思考试" />
       </div>

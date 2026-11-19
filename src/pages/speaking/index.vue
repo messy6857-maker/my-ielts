@@ -103,31 +103,24 @@ function tabBtn(t: Tab) {
       <StudyBack to="/ielts" label="雅思考试" />
     </div>
     <h2 class="mb-1 text-xl font-bold dark:text-white">
-      🎙 口语
+      口语
     </h2>
     <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
       Part 1 日常问答 · Part 2 个人陈述（1 分钟准备 + 2 分钟陈述）· Part 3
       深入讨论
     </p>
 
-    <div
+    <p
       v-if="!hasAISettings()"
-      class="mb-4 border border-amber-300 rounded-xl bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200"
+      class="mb-4 text-xs text-amber-700 dark:text-amber-300"
       role="status"
+      title="录音后无法一键 AI 评分；未配置时仍可用每题下方的「本地自评清单」按 4 项标准打分"
     >
-      <p class="font-medium">
-        尚未配置 AI 口语评分
-      </p>
-      <p class="mt-1 text-xs opacity-90">
-        录音后无法一键 AI 评分。请先到设置填写 OpenAI 兼容的 API 地址、密钥与模型；未配置时仍可使用下方「本地自评清单」按雅思口语 4 项标准打分。
-      </p>
-      <router-link
-        to="/settings"
-        class="mt-2 inline-block text-sm text-blue-700 font-medium underline dark:text-blue-300"
-      >
+      尚未配置 AI 口语评分，录音后可用本地自评清单打分。
+      <router-link to="/settings" class="underline">
         去设置配置 AI →
       </router-link>
-    </div>
+    </p>
     <div
       v-else-if="currentUser"
       class="mb-4 border border-green-200 rounded-xl bg-green-50 p-3 text-xs text-green-800 dark:border-green-900 dark:bg-green-950/20 dark:text-green-300"

@@ -392,19 +392,9 @@ function deckLabel(card: StudyCard) {
     : name
 }
 
-// 退出：先显示这次学了多久
-const showExitModal = ref(false)
-const sessionTotal = ref(0)
+// 退出：直接回上一级（学习时长已经记下，顶上的计时一直可见）。自评和进度每点一次就已保存
 function handleBack() {
-  sessionTotal.value += timer.pause()
-  showExitModal.value = true
-}
-function cancelExit() {
-  showExitModal.value = false
-  timer.resume()
-}
-function confirmExit() {
-  showExitModal.value = false
+  timer.pause()
   if (props.backLabel)
     emit('exit')
   else goBack()
@@ -422,7 +412,6 @@ watch(currentUser, () => {
   reviewCount.value = 0
   dueCount.value = 0
   newCount.value = 0
-  sessionTotal.value = 0
 }, { flush: 'sync' })
 onMounted(() => {
   if (props.ready)
@@ -718,29 +707,6 @@ defineExpose({ restart })
                 下一个
               </button>
             </template>
-          </div>
-        </div>
-      </div>
-
-      <!-- 退出结算弹窗 -->
-      <div v-if="showExitModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click.self="cancelExit">
-        <div class="max-w-sm w-full rounded-2xl bg-white p-6 text-center shadow-xl dark:bg-gray-800">
-          <h3 class="mb-3 text-lg text-gray-900 font-bold dark:text-white">
-            本次学习结束
-          </h3>
-          <p class="mb-2 text-3xl text-blue-600 font-black dark:text-blue-400">
-            {{ formatDuration(sessionTotal) }}
-          </p>
-          <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
-            今日累计 {{ formatDuration(timer.dailySeconds.value) }}
-          </p>
-          <div class="flex gap-3">
-            <button class="flex-1 border border-gray-300 rounded-xl py-2.5 text-sm text-gray-600 font-bold dark:border-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700" @click="cancelExit">
-              继续学习
-            </button>
-            <button class="flex-1 rounded-xl bg-blue-600 py-2.5 text-sm text-white font-bold hover:bg-blue-700" @click="confirmExit">
-              退出
-            </button>
           </div>
         </div>
       </div>

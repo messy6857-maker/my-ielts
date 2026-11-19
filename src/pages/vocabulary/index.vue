@@ -483,7 +483,7 @@ function copyAllError() {
     <div v-if="fromSpell" class="mb-3">
       <StudyBack to="/study/spell" label="练拼写" />
     </div>
-    <WordTableTabs v-else />
+    <SectionTabs v-else group="words" />
     <p
       v-if="mediaError"
       role="alert"

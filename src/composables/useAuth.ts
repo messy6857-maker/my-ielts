@@ -116,9 +116,6 @@ export function readJson<T>(key: string, fallback: T): T {
 export function writeJson(key: string, value: unknown) {
   return saveValue(key, value)
 }
-export function removeJson(key: string) {
-  return saveValue(key, undefined, true)
-}
 // 游客数据迁移：游客 key（myielts_<base>，无 u_）→ 账号 key（myielts_u_<user>_<base>），
 // 仅当目标 key 不存在时拷贝；游客 key 保留不删。必须在 currentUser 被赋值之前调用，
 // 让各 store 的 watch 随后读到迁移后的数据。

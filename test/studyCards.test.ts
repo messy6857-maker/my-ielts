@@ -225,7 +225,6 @@ describe('学新词 starts only after you choose, and every screen can go back',
   it('the card screen goes back to the choice screen, where another list can be picked', async () => {
     const { w } = await mountLearn('deck=reading538')
     await w.findAll('button').find((b: any) => b.text().includes('返回选择'))!.trigger('click')
-    await button(w, '退出').trigger('click')
     await settle()
     expect(w.find('[data-setup]').exists()).toBe(true)
     await w.find('[data-deck-choice="listening179"]').trigger('click')
