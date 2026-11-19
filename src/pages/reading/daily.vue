@@ -305,7 +305,7 @@ function speak(word: string) {
   }
 }
 
-// 点词查义 / 选中翻译：单词旁边的浮动翻译卡片（在 useWordLookupPopup 里）
+// 点词查义 / 选中翻译：单词旁边的浮动翻译卡片（卡片本身在 useWordLookupPopup 里）
 const {
   translatePopup,
   translatePopupEl,
@@ -313,32 +313,119 @@ const {
   addPopupWord,
   closeTranslatePopup,
   runAITranslate,
-  onPassageClick,
-  // 下面三个页面里不直接用，测试要直接调用
-  /* eslint-disable unused-imports/no-unused-vars */
   openWordPopup,
   openSelectionPopup,
   wordAtPoint,
-  /* eslint-enable unused-imports/no-unused-vars */
+  cancelPendingLookup,
 } = useWordLookupPopup({
   phoneticOf,
   addWord: entry => wordList.add({ ...entry, synonyms: [] }),
-  notesForArticle: (key) => {
-    if (key === 'vocab')
-      return myVocabReading.value?.notes ?? []
-    if (key.startsWith('news-')) {
-      const idx = Number(key.slice(5))
-      return daily.value?.newsReadings[idx]?.notes ?? []
-    }
-    return []
-  },
-  resetOn: [selectedDate, currentUser],
 })
 
+function onPassageClick(e: MouseEvent, notes: WordNote[]) {
+  // 有选区时不处理点词（选区走翻译分支）
+  const sel = window.getSelection()
+  if (sel && !sel.isCollapsed)
+    return
+  const hit = wordAtPoint(e.clientX, e.clientY)
+  if (!hit)
+    return
+  openWordPopup(hit.word, notes, hit.rect)
+}
+
+/** 选区所在文章的注释（双击选词时也要先查文章注释）。 */
+function articleNotesForNode(node: Node | null): WordNote[] {
+  const el = node instanceof Element
+    ? node
+    : node?.parentElement
+  const container = el?.closest?.('[data-article]')
+  const key = container?.getAttribute('data-article') ?? ''
+  if (key === 'vocab')
+    return myVocabReading.value?.notes ?? []
+  if (key.startsWith('news-')) {
+    const idx = Number(key.slice(5))
+    return daily.value?.newsReadings[idx]?.notes ?? []
+  }
+  return []
+}
+
+let selectionTimer: ReturnType<typeof setTimeout> | null = null
+watch([selectedDate, currentUser], () => {
+  if (selectionTimer)
+    clearTimeout(selectionTimer)
+  selectionTimer = null
+  closeTranslatePopup()
+}, { flush: 'sync' })
+
+function onSelectionChange() {
+  if (selectionTimer)
+    clearTimeout(selectionTimer)
+  selectionTimer = setTimeout(() => {
+    const sel = window.getSelection()
+    if (!sel || sel.isCollapsed)
+      return
+    const text = sel.toString().trim()
+    if (text.length < 2 || text.length > 2000)
+      return
+    // 只处理正文选区（不含注释列表/题目）
+    const anchor = sel.anchorNode
+    if (!anchor)
+      return
+    const el = anchor instanceof Element
+      ? anchor
+      : anchor.parentElement
+    const passage = el?.closest('.passage-text')
+    const range = sel.rangeCount > 0
+      ? sel.getRangeAt(0)
+      : null
+    if (!passage || !range || !passage.contains(range.commonAncestorContainer))
+      return
+    const rect = range?.getBoundingClientRect()
+    if (!rect || (rect.width === 0 && rect.height === 0))
+      return
+    // 单词选区（双击）直接给释义，不用再点翻译
+    if (/^[A-Z]+(?:'[A-Z]+)?$/i.test(text)) {
+      openWordPopup(text, articleNotesForNode(anchor), rect)
+      return
+    }
+    openSelectionPopup(text, rect)
+  }, 400)
+}
+
+/** 点在卡片外就关掉（点在正文单词上时，onPassageClick 会紧接着打开新卡片）。 */
+function onDocumentClickCapture(e: MouseEvent) {
+  if (!translatePopup.value)
+    return
+  const el = translatePopupEl.value
+  if (el && el.contains(e.target as Node))
+    return
+  closeTranslatePopup()
+}
+/** 滚动后锚点单词移位，卡片跟着关掉（卡片内滚动不关）。 */
+function onWindowScroll(e: Event) {
+  if (!translatePopup.value)
+    return
+  const el = translatePopupEl.value
+  if (el && el.contains(e.target as Node))
+    return
+  closeTranslatePopup()
+}
+
 onMounted(() => {
+  document.addEventListener('selectionchange', onSelectionChange)
+  document.addEventListener('click', onDocumentClickCapture, true)
+  window.addEventListener('scroll', onWindowScroll, { capture: true, passive: true })
   // Item 6/L11：已登录进页时也迁一次（补迁上次游客时期留下的书签）；没有游客书签时是空操作。
   if (currentUser.value)
     migrateGuestPageBookmarks(guestId, currentUser.value)
+})
+onUnmounted(() => {
+  document.removeEventListener('selectionchange', onSelectionChange)
+  document.removeEventListener('click', onDocumentClickCapture, true)
+  window.removeEventListener('scroll', onWindowScroll, true)
+  if (selectionTimer)
+    clearTimeout(selectionTimer)
+  cancelPendingLookup()
 })
 
 function paragraphs(passage: string): string[] {

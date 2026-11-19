@@ -57,11 +57,8 @@ const {
   onTestChange,
   questionStatus,
   submit,
-  // 下面两个页面里不用，测试要直接读：套题有没有载入、计时器是否已停
-  /* eslint-disable unused-imports/no-unused-vars */
   testPair,
   examClock,
-  /* eslint-enable unused-imports/no-unused-vars */
 } = useMockExam({
   kind: 'reading',
   path: '/mock/reading-test',
@@ -95,6 +92,9 @@ const {
     selPopup.value = null
   },
 })
+
+// 页面里用不到，对外可读：测试靠它们检查套题是否已载入、计时器是否已停
+defineExpose({ testPair, examClock })
 
 const { goBack } = useGoBack('/ielts')
 // 考试中点返回先确认未交卷；开始屏/已交卷直接返回

@@ -527,16 +527,13 @@ for (const kind of ['reading', 'listening']) {
     await page.getByRole('button', { name: '▶ 开始测试' }).click({ timeout: 30000 })
     const submitButton = page.getByRole('button', { name: '交卷', exact: true })
     await submitButton.waitFor()
-    // 答一题：有填空就填，没有就选第一个选项
-    const blank = page.locator('input[type="text"]:visible:not([maxlength])').first()
-    let filled = ''
-    if (await blank.count()) {
-      filled = 'hello'
-      await blank.fill(filled)
-    }
-    else {
-      await page.locator('input[type="radio"]:visible, input[type="checkbox"]:visible').first().check()
-    }
+    // 答一题：找到第一道填空题（不在第一部分就切到后面的部分）
+    const blank = page.locator('input[placeholder="输入答案"]:visible').first()
+    const tabs = page.locator('button').filter({ hasText: /^\s*(Passage|Part) \d/ })
+    for (let i = 0; i < await tabs.count() && !(await blank.count()); i++)
+      await tabs.nth(i).click()
+    const filled = 'hello'
+    await blank.fill(filled)
     // 刷新：草稿还在，接着做，答案还在
     await sleep(1500)
     await page.reload()
@@ -544,10 +541,8 @@ for (const kind of ['reading', 'listening']) {
     await resume.waitFor({ timeout: 30000 })
     await resume.click()
     await submitButton.waitFor()
-    if (filled)
-      assert.equal(await page.locator('input[type="text"]:visible:not([maxlength])').first().inputValue(), filled)
-    else
-      assert.equal(await page.locator('input[type="radio"]:checked, input[type="checkbox"]:checked').count() > 0, true)
+    // 刷新后回到上次停留的那一部分，填的答案还在
+    assert.equal(await page.locator('input[placeholder="输入答案"]:visible').first().inputValue(), filled)
     // 没交卷就点导航离开：先问；选继续作答就留在本页
     await page.locator('header a[href="#/"]').first().click()
     await page.getByRole('button', { name: '继续作答' }).click()
@@ -592,7 +587,17 @@ await step('每日阅读点词出释义卡片；精听点一句能播放，切�
   assert.ok(point)
   await page.mouse.click(point.x, point.y)
   const card = page.locator('[role="dialog"][aria-label="翻译"]')
-  await card.waitFor({ timeout: 10000 })
+  try {
+    await card.waitFor({ timeout: 10000 })
+  }
+  catch (e) {
+    const where = await page.evaluate(({ x, y }) => {
+      const el = document.elementFromPoint(x, y)
+      return `${el?.tagName}.${el?.className} "${el?.textContent?.slice(0, 40)}"`
+    }, point)
+    await page.screenshot({ path: 'shots/e2e-daily.png' }).catch(() => {})
+    throw new Error(`点词没出卡片，点在 ${JSON.stringify(point)} ${where}: ${e.message}`)
+  }
   // 点卡片外面关掉
   await page.mouse.click(5, 300)
   await card.waitFor({ state: 'detached', timeout: 5000 })

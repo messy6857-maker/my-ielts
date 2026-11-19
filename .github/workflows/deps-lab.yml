@@ -39,6 +39,7 @@ jobs:
           cd $RUNNER_TEMP/e2e && npm init -y > /dev/null && npm i playwright@1 > /dev/null 2>&1
           npx playwright install --with-deps chromium > /dev/null 2>&1
           for i in $(seq 1 30); do curl -sf http://localhost:4173/ > /dev/null && break; sleep 1; done
+          mkdir -p shots
           node e2e-browser.mjs http://localhost:4173/ 2>&1 | tee $RUNNER_TEMP/e2e.log
         continue-on-error: true
       - name: audit

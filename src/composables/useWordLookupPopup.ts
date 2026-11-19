@@ -1,12 +1,11 @@
-import type { WatchSource } from 'vue'
-import { nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { nextTick, reactive, ref, watch } from 'vue'
 import { lookupVocabularyMeaning, lookupVocabularyWord } from '../pages/vocabulary/loadVocabulary'
 import { translateWithAI } from './useAISettings'
 
-// 读文章时的点词查义 / 选中翻译：点正文里的单词，在单词旁边弹出释义卡片
-// （先查文章自带的生词注释，再查本站词库，最后走 AI）；选中一段话可以翻译成中文。
-// 卡片里可以把词加进“我的词表”。不绑定某一类文章，以后别的阅读页面也能用。
-// 页面需要：正文容器加 class="passage-text"，每篇文章外层加 data-article="<key>"。
+// 读文章时的查词卡片：点中的单词在旁边弹出释义（先查文章自带的生词注释，再查本站词库，
+// 最后走 AI）；选中的一段话可以翻译成中文；卡片里可以把词加进“我的词表”。
+// 只管卡片本身，不绑定某一类文章：什么时候打开（点词、选中文字）、点哪里关掉由页面决定，
+// 以后别的阅读页面也能用。
 
 export interface LookupNote {
   word: string
@@ -36,10 +35,6 @@ export function useWordLookupPopup(options: {
   phoneticOf: (word: string) => string
   /** 把查到的词加进词表 */
   addWord: (entry: { word: string, meaning: string, pos: string }) => Promise<unknown>
-  /** data-article 为 key 的那篇文章的生词注释 */
-  notesForArticle: (key: string) => LookupNote[]
-  /** 这些值一变（换日期、换账号）就关掉卡片 */
-  resetOn: WatchSource[]
 }) {
   const translatePopup = ref<TranslatePopupState | null>(null)
   /** 查词卡片里的词：词库里有就用词库的原形（travelled → travel），没有就用点的这个词 */
@@ -284,103 +279,11 @@ export function useWordLookupPopup(options: {
     return { word, rect }
   }
 
-  function onPassageClick(e: MouseEvent, notes: LookupNote[]) {
-    // 有选区时不处理点词（选区走翻译分支）
-    const sel = window.getSelection()
-    if (sel && !sel.isCollapsed)
-      return
-    const hit = wordAtPoint(e.clientX, e.clientY)
-    if (!hit)
-      return
-    openWordPopup(hit.word, notes, hit.rect)
-  }
-
-  /** 选区所在文章的注释（双击选词时也要先查文章注释）。 */
-  function articleNotesForNode(node: Node | null): LookupNote[] {
-    const el = node instanceof Element
-      ? node
-      : node?.parentElement
-    const container = el?.closest?.('[data-article]')
-    const key = container?.getAttribute('data-article') ?? ''
-    return options.notesForArticle(key)
-  }
-
-  let selectionTimer: ReturnType<typeof setTimeout> | null = null
-  watch(options.resetOn, () => {
-    if (selectionTimer)
-      clearTimeout(selectionTimer)
-    selectionTimer = null
-    closeTranslatePopup()
-  }, { flush: 'sync' })
-
-  function onSelectionChange() {
-    if (selectionTimer)
-      clearTimeout(selectionTimer)
-    selectionTimer = setTimeout(() => {
-      const sel = window.getSelection()
-      if (!sel || sel.isCollapsed)
-        return
-      const text = sel.toString().trim()
-      if (text.length < 2 || text.length > 2000)
-        return
-      // 只处理正文选区（不含注释列表/题目）
-      const anchor = sel.anchorNode
-      if (!anchor)
-        return
-      const el = anchor instanceof Element
-        ? anchor
-        : anchor.parentElement
-      const passage = el?.closest('.passage-text')
-      const range = sel.rangeCount > 0
-        ? sel.getRangeAt(0)
-        : null
-      if (!passage || !range || !passage.contains(range.commonAncestorContainer))
-        return
-      const rect = range?.getBoundingClientRect()
-      if (!rect || (rect.width === 0 && rect.height === 0))
-        return
-      // 单词选区（双击）直接给释义，不用再点翻译
-      if (/^[A-Z]+(?:'[A-Z]+)?$/i.test(text)) {
-        openWordPopup(text, articleNotesForNode(anchor), rect)
-        return
-      }
-      openSelectionPopup(text, rect)
-    }, 400)
-  }
-
-  /** 点在卡片外就关掉（点在正文单词上时，onPassageClick 会紧接着打开新卡片）。 */
-  function onDocumentClickCapture(e: MouseEvent) {
-    if (!translatePopup.value)
-      return
-    const el = translatePopupEl.value
-    if (el && el.contains(e.target as Node))
-      return
-    closeTranslatePopup()
-  }
-  /** 滚动后锚点单词移位，卡片跟着关掉（卡片内滚动不关）。 */
-  function onWindowScroll(e: Event) {
-    if (!translatePopup.value)
-      return
-    const el = translatePopupEl.value
-    if (el && el.contains(e.target as Node))
-      return
-    closeTranslatePopup()
-  }
-
-  onMounted(() => {
-    document.addEventListener('selectionchange', onSelectionChange)
-    document.addEventListener('click', onDocumentClickCapture, true)
-    window.addEventListener('scroll', onWindowScroll, { capture: true, passive: true })
-  })
-  onUnmounted(() => {
-    document.removeEventListener('selectionchange', onSelectionChange)
-    document.removeEventListener('click', onDocumentClickCapture, true)
-    window.removeEventListener('scroll', onWindowScroll, true)
-    if (selectionTimer)
-      clearTimeout(selectionTimer)
+  /** 离开页面时：作废还在路上的查词 / 翻译 */
+  function cancelPendingLookup() {
     translateSeq++
     translateAbort?.abort()
-  })
+  }
 
   return {
     translatePopup,
@@ -392,6 +295,6 @@ export function useWordLookupPopup(options: {
     openWordPopup,
     openSelectionPopup,
     wordAtPoint,
-    onPassageClick,
+    cancelPendingLookup,
   }
 }
