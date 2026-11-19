@@ -181,10 +181,10 @@ describe('「＋ 书签」按钮（文章未加载时禁用，L1）', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/', component: PageBookmark },
+        { path: '/:p(.*)*', component: PageBookmark },
       ],
     })
-    await router.push('/')
+    await router.push('/grammar')
     await router.isReady()
     return mount(PageBookmark, {
       props,
@@ -193,6 +193,16 @@ describe('「＋ 书签」按钮（文章未加载时禁用，L1）', () => {
       },
     })
   }
+
+  it('入口页、选择页不显示书签按钮（那里已经加过书签的照常显示）', async () => {
+    const router = createRouter({ history: createMemoryHistory(), routes: [{ path: '/:p(.*)*', component: PageBookmark }] })
+    for (const path of ['/', '/study', '/study/learn', '/ielts']) {
+      await router.push(path)
+      const w = mount(PageBookmark, { global: { plugins: [router] } })
+      expect(w.find('[aria-label="增加书签"]').exists()).toBe(false)
+      w.unmount()
+    }
+  })
 
   it('addDisabled 时按钮禁用', async () => {
     const w = await mountBookmark({ addDisabled: true })
@@ -212,10 +222,10 @@ describe('回到顶部按钮（与书签同一列右下角）', () => {
     const router = createRouter({
       history: createMemoryHistory(),
       routes: [
-        { path: '/', component: PageBookmark },
+        { path: '/:p(.*)*', component: PageBookmark },
       ],
     })
-    await router.push('/')
+    await router.push('/grammar')
     await router.isReady()
     const w = mount(PageBookmark, {
       global: {
@@ -257,7 +267,7 @@ describe('回到顶部按钮（与书签同一列右下角）', () => {
     const wrapper = await mountBookmark()
     setScrollY(800)
     await wrapper.vm.$nextTick()
-    addPageBookmark('/', 1200)
+    addPageBookmark('/grammar', 1200)
     await wrapper.vm.$nextTick()
     const buttons = wrapper.findAll('button')
     const last = buttons[buttons.length - 1]
