@@ -88,6 +88,8 @@ declare global {
   const formatClock: typeof import('./src/composables/useStudyTimer').formatClock
   const formatDate: typeof import('./src/composables/useStudyData').formatDate
   const formatDuration: typeof import('./src/composables/useStudyTimer').formatDuration
+  const formatEssayDate: typeof import('./src/composables/useWritingTask').formatEssayDate
+  const formatEssayDuration: typeof import('./src/composables/useWritingTask').formatEssayDuration
   const formatRecordingClock: typeof import('./src/composables/useRecorder').formatRecordingClock
   const getAISettings: typeof import('./src/composables/useAISettings').getAISettings
   const getAttempts: typeof import('./src/composables/useStats').getAttempts
@@ -463,6 +465,7 @@ declare global {
   const useWindowSize: typeof import('@vueuse/core').useWindowSize
   const useWordLookupPopup: typeof import('./src/composables/useWordLookupPopup').useWordLookupPopup
   const useWordSchedule: typeof import('./src/composables/useSpacedRepetition').useWordSchedule
+  const useWritingTask: typeof import('./src/composables/useWritingTask').useWritingTask
   const watch: typeof import('vue').watch
   const watchArray: typeof import('@vueuse/core').watchArray
   const watchAtMost: typeof import('@vueuse/core').watchAtMost
@@ -546,6 +549,9 @@ declare global {
   // @ts-ignore
   export type { LookupNote, TranslatePopupState } from './src/composables/useWordLookupPopup'
   import('./src/composables/useWordLookupPopup')
+  // @ts-ignore
+  export type { SavedEssay, WritingTaskOptions } from './src/composables/useWritingTask'
+  import('./src/composables/useWritingTask')
 }
 
 // for vue template auto import
@@ -633,6 +639,8 @@ declare module 'vue' {
     readonly formatClock: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatClock']>
     readonly formatDate: UnwrapRef<typeof import('./src/composables/useStudyData')['formatDate']>
     readonly formatDuration: UnwrapRef<typeof import('./src/composables/useStudyTimer')['formatDuration']>
+    readonly formatEssayDate: UnwrapRef<typeof import('./src/composables/useWritingTask')['formatEssayDate']>
+    readonly formatEssayDuration: UnwrapRef<typeof import('./src/composables/useWritingTask')['formatEssayDuration']>
     readonly formatRecordingClock: UnwrapRef<typeof import('./src/composables/useRecorder')['formatRecordingClock']>
     readonly getAISettings: UnwrapRef<typeof import('./src/composables/useAISettings')['getAISettings']>
     readonly getAttempts: UnwrapRef<typeof import('./src/composables/useStats')['getAttempts']>
@@ -1004,6 +1012,7 @@ declare module 'vue' {
     readonly useWindowSize: UnwrapRef<typeof import('@vueuse/core')['useWindowSize']>
     readonly useWordLookupPopup: UnwrapRef<typeof import('./src/composables/useWordLookupPopup')['useWordLookupPopup']>
     readonly useWordSchedule: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['useWordSchedule']>
+    readonly useWritingTask: UnwrapRef<typeof import('./src/composables/useWritingTask')['useWritingTask']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
     readonly watchArray: UnwrapRef<typeof import('@vueuse/core')['watchArray']>
     readonly watchAtMost: UnwrapRef<typeof import('@vueuse/core')['watchAtMost']>
