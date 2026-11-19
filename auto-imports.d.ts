@@ -321,6 +321,7 @@ declare global {
   const useDocumentVisibility: typeof import('@vueuse/core').useDocumentVisibility
   const useDraggable: typeof import('@vueuse/core').useDraggable
   const useDropZone: typeof import('@vueuse/core').useDropZone
+  const useDungeonSetup: typeof import('./src/composables/useDungeonSetup').useDungeonSetup
   const useElementBounding: typeof import('@vueuse/core').useElementBounding
   const useElementByPoint: typeof import('@vueuse/core').useElementByPoint
   const useElementHover: typeof import('@vueuse/core').useElementHover
@@ -364,6 +365,7 @@ declare global {
   const useMemoize: typeof import('@vueuse/core').useMemoize
   const useMemory: typeof import('@vueuse/core').useMemory
   const useMistakes: typeof import('./src/composables/useStudyData').useMistakes
+  const useMockExam: typeof import('./src/composables/useMockExam').useMockExam
   const useMockMistakeSave: typeof import('./src/composables/useMockMistakeSave').useMockMistakeSave
   const useModel: typeof import('vue').useModel
   const useMounted: typeof import('@vueuse/core').useMounted
@@ -408,6 +410,7 @@ declare global {
   const useScriptTag: typeof import('@vueuse/core').useScriptTag
   const useScroll: typeof import('@vueuse/core').useScroll
   const useScrollLock: typeof import('@vueuse/core').useScrollLock
+  const useSentencePlayback: typeof import('./src/composables/useSentencePlayback').useSentencePlayback
   const useSessionStorage: typeof import('@vueuse/core').useSessionStorage
   const useShare: typeof import('@vueuse/core').useShare
   const useSlots: typeof import('vue').useSlots
@@ -458,6 +461,7 @@ declare global {
   const useWindowFocus: typeof import('@vueuse/core').useWindowFocus
   const useWindowScroll: typeof import('@vueuse/core').useWindowScroll
   const useWindowSize: typeof import('@vueuse/core').useWindowSize
+  const useWordLookupPopup: typeof import('./src/composables/useWordLookupPopup').useWordLookupPopup
   const useWordSchedule: typeof import('./src/composables/useSpacedRepetition').useWordSchedule
   const watch: typeof import('vue').watch
   const watchArray: typeof import('@vueuse/core').watchArray
@@ -498,11 +502,17 @@ declare global {
   export type { DialogResult, DialogOptions, DialogRequest } from './src/composables/useDialog'
   import('./src/composables/useDialog')
   // @ts-ignore
+  export type { ModeBest, Best, DailyResult } from './src/composables/useDungeonSetup'
+  import('./src/composables/useDungeonSetup')
+  // @ts-ignore
   export type { ExamDraft } from './src/composables/useExamRecovery'
   import('./src/composables/useExamRecovery')
   // @ts-ignore
   export type { GradingRecord } from './src/composables/useGradingHistory'
   import('./src/composables/useGradingHistory')
+  // @ts-ignore
+  export type { MockExamOptions } from './src/composables/useMockExam'
+  import('./src/composables/useMockExam')
   // @ts-ignore
   export type { MockRecord } from './src/composables/useMockHistory'
   import('./src/composables/useMockHistory')
@@ -533,6 +543,9 @@ declare global {
   // @ts-ignore
   export type { WordInfo } from './src/composables/useWordInfo'
   import('./src/composables/useWordInfo')
+  // @ts-ignore
+  export type { LookupNote, TranslatePopupState } from './src/composables/useWordLookupPopup'
+  import('./src/composables/useWordLookupPopup')
 }
 
 // for vue template auto import
@@ -849,6 +862,7 @@ declare module 'vue' {
     readonly useDocumentVisibility: UnwrapRef<typeof import('@vueuse/core')['useDocumentVisibility']>
     readonly useDraggable: UnwrapRef<typeof import('@vueuse/core')['useDraggable']>
     readonly useDropZone: UnwrapRef<typeof import('@vueuse/core')['useDropZone']>
+    readonly useDungeonSetup: UnwrapRef<typeof import('./src/composables/useDungeonSetup')['useDungeonSetup']>
     readonly useElementBounding: UnwrapRef<typeof import('@vueuse/core')['useElementBounding']>
     readonly useElementByPoint: UnwrapRef<typeof import('@vueuse/core')['useElementByPoint']>
     readonly useElementHover: UnwrapRef<typeof import('@vueuse/core')['useElementHover']>
@@ -892,6 +906,7 @@ declare module 'vue' {
     readonly useMemoize: UnwrapRef<typeof import('@vueuse/core')['useMemoize']>
     readonly useMemory: UnwrapRef<typeof import('@vueuse/core')['useMemory']>
     readonly useMistakes: UnwrapRef<typeof import('./src/composables/useStudyData')['useMistakes']>
+    readonly useMockExam: UnwrapRef<typeof import('./src/composables/useMockExam')['useMockExam']>
     readonly useMockMistakeSave: UnwrapRef<typeof import('./src/composables/useMockMistakeSave')['useMockMistakeSave']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useMounted: UnwrapRef<typeof import('@vueuse/core')['useMounted']>
@@ -936,6 +951,7 @@ declare module 'vue' {
     readonly useScriptTag: UnwrapRef<typeof import('@vueuse/core')['useScriptTag']>
     readonly useScroll: UnwrapRef<typeof import('@vueuse/core')['useScroll']>
     readonly useScrollLock: UnwrapRef<typeof import('@vueuse/core')['useScrollLock']>
+    readonly useSentencePlayback: UnwrapRef<typeof import('./src/composables/useSentencePlayback')['useSentencePlayback']>
     readonly useSessionStorage: UnwrapRef<typeof import('@vueuse/core')['useSessionStorage']>
     readonly useShare: UnwrapRef<typeof import('@vueuse/core')['useShare']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
@@ -986,6 +1002,7 @@ declare module 'vue' {
     readonly useWindowFocus: UnwrapRef<typeof import('@vueuse/core')['useWindowFocus']>
     readonly useWindowScroll: UnwrapRef<typeof import('@vueuse/core')['useWindowScroll']>
     readonly useWindowSize: UnwrapRef<typeof import('@vueuse/core')['useWindowSize']>
+    readonly useWordLookupPopup: UnwrapRef<typeof import('./src/composables/useWordLookupPopup')['useWordLookupPopup']>
     readonly useWordSchedule: UnwrapRef<typeof import('./src/composables/useSpacedRepetition')['useWordSchedule']>
     readonly watch: UnwrapRef<typeof import('vue')['watch']>
     readonly watchArray: UnwrapRef<typeof import('@vueuse/core')['watchArray']>

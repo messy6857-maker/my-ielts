@@ -13,6 +13,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms))
 const results = []
 
 async function step(name, fn) {
+  // ONLY=正则：只跑名字匹配的步骤（对照旧版本时用）
+  if (process.env.ONLY && !new RegExp(process.env.ONLY).test(name))
+    return
   const started = Date.now()
   try {
     await fn()
@@ -513,6 +516,114 @@ await step('单词地牢：从背单词进入，选章节开局，一路作答�
   await page.locator('button[data-mode="endless"]').click()
   await page.getByRole('button', { name: '进入地牢' }).click()
   await page.getByText('第 1 层 · 房间 1 / 5').waitFor()
+  assert.deepEqual(errors, [])
+  await ctx.close()
+})
+
+for (const kind of ['reading', 'listening']) {
+  await step(`${kind === 'reading' ? '阅读' : '听力'}模考：开始、作答、刷新后接着做、离开时确认、交卷看成绩`, async () => {
+    const ctx = await launched.newContext({ viewport: { width: 1280, height: 900 } })
+    const page = await ctx.newPage()
+    const errors = []
+    page.on('pageerror', e => errors.push(e.message))
+    await page.goto(`${BASE}#/mock/${kind}-test?test=cam21-test1`)
+    await page.getByRole('button', { name: '▶ 开始测试' }).click({ timeout: 30000 })
+    const submitButton = page.getByRole('button', { name: '交卷', exact: true })
+    await submitButton.waitFor()
+    // 答一题：找到第一道填空题（不在第一部分就切到后面的部分）
+    const blank = page.locator('input[placeholder="输入答案"]:visible').first()
+    const tabs = page.locator('button').filter({ hasText: /^\s*(Passage|Part) \d/ })
+    for (let i = 0; i < await tabs.count() && !(await blank.count()); i++)
+      await tabs.nth(i).click()
+    const filled = 'hello'
+    await blank.fill(filled)
+    // 刷新：草稿还在（刷新后要先选一份草稿，这是原有的设计），接着做，答案还在
+    await sleep(1500)
+    await page.reload()
+    const drafts = page.locator('select[aria-label="选择独立作答草稿"]')
+    await drafts.waitFor({ timeout: 30000 })
+    await drafts.selectOption({ index: 1 })
+    const resume = page.getByRole('button', { name: /继续所选作答/ })
+    try {
+      await resume.waitFor({ timeout: 30000 })
+    }
+    catch (e) {
+      await page.screenshot({ path: `shots/e2e-${kind}-resume.png`, fullPage: true }).catch(() => {})
+      const buttons = await page.locator('button:visible').allInnerTexts()
+      const keys = await page.evaluate(() => Object.keys(localStorage).filter(k => k.includes('mock')).concat(Object.keys(sessionStorage)))
+      throw new Error(`刷新后没有“继续所选作答”。按钮：${JSON.stringify(buttons.slice(0, 12))} 存储：${JSON.stringify(keys)} ${e.message}`)
+    }
+    await resume.click()
+    await submitButton.waitFor()
+    // 刷新后回到上次停留的那一部分，填的答案还在
+    assert.equal(await page.locator('input[placeholder="输入答案"]:visible').first().inputValue(), filled)
+    // 没交卷就点导航离开：先问；选继续作答就留在本页
+    await page.locator('header a[href="#/"]').first().click()
+    await page.getByRole('button', { name: '继续作答' }).click()
+    assert.ok(page.url().includes(`/mock/${kind}-test`))
+    await submitButton.click()
+    await page.getByText(/答对 \d+ \/ \d+ 分/).waitFor()
+    await page.getByText('预估 Band').waitFor()
+    assert.equal(await submitButton.count(), 0)
+    // 交卷后成绩进了记录
+    assert.ok(await page.evaluate(() => Object.keys(localStorage).some(k => k.includes('mock'))))
+    assert.deepEqual(errors, [])
+    await ctx.close()
+  })
+}
+
+await step('每日阅读点词出释义卡片；精听点一句能播放，切换不报错', async () => {
+  const ctx = await launched.newContext({ viewport: { width: 1280, height: 900 } })
+  const page = await ctx.newPage()
+  const errors = []
+  page.on('pageerror', e => errors.push(e.message))
+  await page.goto(`${BASE}#/reading/daily`)
+  const passage = page.locator('.passage-text').first()
+  await passage.waitFor({ timeout: 30000 })
+  // 找到正文里第一个单词，滚到屏幕中间（顶部有固定导航栏），点下去
+  const point = await passage.evaluate((el) => {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT)
+    let node = walker.nextNode()
+    while (node) {
+      const m = /[A-Z]{3,}/i.exec(node.textContent ?? '')
+      if (m) {
+        const r = document.createRange()
+        r.setStart(node, m.index + 1)
+        r.setEnd(node, m.index + 2)
+        node.parentElement.scrollIntoView({ block: 'center' })
+        const b = r.getBoundingClientRect()
+        return { x: b.left + b.width / 2, y: b.top + b.height / 2 }
+      }
+      node = walker.nextNode()
+    }
+    return null
+  })
+  assert.ok(point)
+  // 等滚动事件过去（滚动会关掉卡片），再点
+  await page.waitForTimeout(600)
+  await page.mouse.click(point.x, point.y)
+  const card = page.locator('[role="dialog"][aria-label="翻译"]')
+  try {
+    await card.waitFor({ timeout: 10000 })
+  }
+  catch (e) {
+    const where = await page.evaluate(({ x, y }) => {
+      const el = document.elementFromPoint(x, y)
+      return `${el?.tagName}.${el?.className} "${el?.textContent?.slice(0, 40)}"`
+    }, point)
+    await page.screenshot({ path: 'shots/e2e-daily.png' }).catch(() => {})
+    throw new Error(`点词没出卡片，点在 ${JSON.stringify(point)} ${where}: ${e.message}`)
+  }
+  // 点卡片外面关掉
+  await page.mouse.click(5, 300)
+  await card.waitFor({ state: 'detached', timeout: 5000 })
+  // 精听：点一句播放，再换一个 Part
+  await page.goto(`${BASE}#/listening/intensive`)
+  await page.getByRole('button', { name: /查看原文对照/ }).click({ timeout: 30000 })
+  const play = page.locator('button[title="播放原音"], button[title="系统朗读（暂无原音时间）"]').first()
+  await play.waitFor({ timeout: 30000 })
+  await play.click()
+  await page.waitForTimeout(800)
   assert.deepEqual(errors, [])
   await ctx.close()
 })
