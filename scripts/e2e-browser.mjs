@@ -537,9 +537,12 @@ for (const kind of ['reading', 'listening']) {
       await tabs.nth(i).click()
     const filled = 'hello'
     await blank.fill(filled)
-    // 刷新：只有这一份草稿，已经自动选上，直接点继续，答案还在
+    // 刷新：草稿还在（刷新后要先选一份草稿，防止两个页签同时接着做同一份），接着做，答案还在
     await sleep(1500)
     await page.reload()
+    const drafts = page.locator('select[aria-label="选择独立作答草稿"]')
+    await drafts.waitFor({ timeout: 30000 })
+    await drafts.selectOption({ index: 1 })
     const resume = page.getByRole('button', { name: /继续所选作答/ })
     try {
       await resume.waitFor({ timeout: 30000 })
