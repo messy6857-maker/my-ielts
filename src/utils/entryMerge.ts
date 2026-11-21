@@ -2,7 +2,7 @@ import type { Envelope } from './storage'
 import { mergeLegacy } from './legacyMerge'
 import { mergeDeletionEntries } from './retention'
 import { mergeWriters } from './statsArchive'
-import { compareStamp } from './storage'
+import { compareStamp, compareWriter } from './storage'
 
 /** Identical merge rules for cloud replies and manual restores. */
 export function mergeEntry(
@@ -80,7 +80,7 @@ export function mergeEntry(
       )
       cuts.sort(
         (a, b) =>
-          a[0] - b[0] || a[1].localeCompare(b[1]) || a[2].localeCompare(b[2]),
+          a[0] - b[0] || compareWriter(a[1], b[1]) || a[2].localeCompare(b[2]),
       )
       if (cuts.length) {
         return {

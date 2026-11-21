@@ -11,7 +11,14 @@ function decodeId(encoded) {
     : ''
 }
 function cmp(a, b) {
-  return a[0] - b[0] || String(a[1] || '').localeCompare(String(b[1] || ''))
+  // 码元顺序，与 storage.ts compareWriter 一致（localeCompare 随设备语言变化）
+  const x = String(a[1] || '')
+  const y = String(b[1] || '')
+  return a[0] - b[0] || (x < y
+    ? -1
+    : x > y
+      ? 1
+      : 0)
 }
 function bucketOf(id) {
   let hash = 2166136261

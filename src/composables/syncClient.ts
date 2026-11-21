@@ -682,6 +682,12 @@ export function apiPush(
           ? send(entries.slice(middle))
           : left
       }
+      // 单条仍 413：标记为过大并跳过（由 handleRejectedKeys 隔离），
+      // 否则这一条会让此后每次上传都整体失败。
+      if (reply.status === 413 && entries.length === 1) {
+        result.rejected!.push({ key: entries[0][0], reason: 'entry-too-large' })
+        return { ok: true, status: 200 }
+      }
       if (sessionOwnerChanged(username))
         return { ok: false, status: 401, message: '账号会话已变化，未应用旧账号响应' }
       if (reply.ok) {

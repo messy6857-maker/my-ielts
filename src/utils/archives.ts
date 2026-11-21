@@ -3,6 +3,7 @@ import {
   accountKey,
   batchStorage,
   compareStamp,
+  compareWriter,
   envelope,
   readValue,
   saveValue,
@@ -20,7 +21,7 @@ export function pastCutoff(key: string, e: Envelope, cutoff?: ArchiveCutoff) {
   return (
     !!cutoff
     && (e.stamp[0] - cutoff[0]
-      || e.stamp[1].localeCompare(cutoff[1])
+      || compareWriter(e.stamp[1], cutoff[1])
       || key.localeCompare(cutoff[2])) <= 0
   )
 }

@@ -201,8 +201,19 @@ export function isEnvelope(value: unknown): value is Envelope {
     && typeof e.stamp[1] === 'string'
   )
 }
+/**
+ * 写入者 ID 按码元顺序比较，不用 localeCompare：后者随设备语言变化
+ * （如丹麦语把 "aa" 视为 "å" 排在 z 之后），会让不同设备对同一对戳判出不同胜者。
+ */
+export function compareWriter(a: string, b: string) {
+  return a < b
+    ? -1
+    : a > b
+      ? 1
+      : 0
+}
 export function compareStamp(a: Envelope, b: Envelope) {
-  return a.stamp[0] - b.stamp[0] || a.stamp[1].localeCompare(b.stamp[1])
+  return a.stamp[0] - b.stamp[0] || compareWriter(a.stamp[1], b.stamp[1])
 }
 export function envelope(raw: string): Envelope {
   const value: unknown = JSON.parse(raw)

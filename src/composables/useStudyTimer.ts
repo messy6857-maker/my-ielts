@@ -125,6 +125,11 @@ export function legacyTimerSeconds(
   // Original counters remain available in exports; the untraceable overlap is not counted twice.
   return Math.max(single, devices)
 }
+/**
+ * 两次计时之间的间隔超过此值，视为电脑睡眠或页面被浏览器冻结：
+ * 空档不计入学习时间（睡眠时不一定会触发 visibilitychange）。
+ */
+export const TIMER_GAP_MS = 60_000
 export function useStudyTimer() {
   const { currentUser } = useAuth()
   const goal = useDailyStudyGoal()
@@ -138,6 +143,13 @@ export function useStudyTimer() {
   let autoPaused = false
   let interval: ReturnType<typeof setInterval> | undefined
   let ticks = 0
+  let lastTickAt = 0
+  /** 计时段的有效终点：遇到睡眠空档时只算到最后一次正常计时。 */
+  function activeEnd(now = Date.now()) {
+    return now - lastTickAt > TIMER_GAP_MS
+      ? lastTickAt
+      : now
+  }
   // 上次 load 的结果：计时中每秒只在内存里累加，不再每秒扫描整个 localStorage
   let loadedTotal = 0
   let loadedAt = 0
@@ -193,7 +205,7 @@ export function useStudyTimer() {
         date,
         device,
         start: Math.max(startAt, midnight.getTime()),
-        end: Date.now(),
+        end: activeEnd(),
       })
     }
     let total = legacyTimerSeconds(parts, nsKey('study_time_v1', user), date)
@@ -229,7 +241,16 @@ export function useStudyTimer() {
     loadedDay = date
   }
   function tick() {
-    elapsed.value = Math.floor((Date.now() - startAt) / 1000)
+    const now = Date.now()
+    if (now - lastTickAt > TIMER_GAP_MS) {
+      // 睡眠/冻结后醒来：上一段只记到最后一次正常计时，从现在起另开一段
+      persist(lastTickAt)
+      session = crypto.randomUUID()
+      startAt = now
+      ticks = 0
+    }
+    lastTickAt = now
+    elapsed.value = Math.floor((now - startAt) / 1000)
     if (++ticks % 10 === 0) {
       persist()
     }
@@ -274,6 +295,7 @@ export function useStudyTimer() {
     }
     session = crypto.randomUUID()
     startAt = Date.now()
+    lastTickAt = startAt
     elapsed.value = 0
     running.value = true
     ticks = 0
@@ -282,12 +304,13 @@ export function useStudyTimer() {
   function pause() {
     if (!running.value)
       return 0
-    const sec = Math.floor((Date.now() - startAt) / 1000)
+    const end = activeEnd()
+    const sec = Math.floor((end - startAt) / 1000)
     running.value = false
     clearInterval(interval)
     interval = undefined
     if (sec > 0)
-      persist()
+      persist(end)
     elapsed.value = 0
     return sec
   }
