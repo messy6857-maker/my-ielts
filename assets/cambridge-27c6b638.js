@@ -1,1 +1,0 @@
-import{cam18Writing as r}from"./cam18-7098d536.js";import{cam19Writing as i}from"./cam19-31cb0959.js";import{cam20Writing as m}from"./cam20-2f18dd51.js";import{cam21Writing as o}from"./cam21-9022b8c4.js";const W=[...o,...m,...i,...r];export{W as CAMBRIDGE_WRITING};
