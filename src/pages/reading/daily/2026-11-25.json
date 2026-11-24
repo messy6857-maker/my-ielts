@@ -1,0 +1,327 @@
+{
+  "date": "2026-11-25",
+  "newsReadings": [
+    {
+      "title": "Eight Years in Transit: BepiColombo's Arrival at Mercury",
+      "source": "European Space Agency (ESA), 23 November 2026",
+      "passage": "On 21 November 2026, after a voyage of more than eight years and some nine billion kilometres, the European-Japanese spacecraft BepiColombo finally slipped into orbit around Mercury, the smallest and least explored of the Solar System's rocky planets. The European Space Agency (ESA) confirmed two days later that the spacecraft was safe in a stable orbit, marking the culmination of one of the most technically demanding interplanetary missions ever attempted. For scientists who have waited nearly two decades since the mission was first approved, the arrival opens a new chapter in the study of a world that has long resisted close examination.\n\nMercury is, in many respects, an anomaly. Although it is the closest planet to the Sun, its surface is not uniformly scorched: craters near its poles lie in permanent shadow, and radar observations from Earth have long suggested that water ice survives inside them, preserved in darkness at temperatures far below freezing. The planet also possesses a magnetic field, a feature that is surprising for a body of its size, since such fields are generally associated with the churning liquid iron cores of much larger planets. Moreover, Mercury's core occupies an unusually large proportion of its interior — roughly 85 per cent of the planet's radius — a structure that no existing theory of planetary formation explains convincingly. Some researchers argue that a colossal impact early in the Solar System's history stripped away much of the planet's outer rocky shell; others contend that the young Sun's intense heat vaporised the lighter material before it could accumulate.\n\nReaching Mercury, however, has proved far harder than reaching far more distant destinations such as Jupiter or Saturn. A spacecraft travelling towards the Sun gains speed relentlessly under the pull of solar gravity, and must shed that energy if it is to be captured into orbit rather than swept past its target. BepiColombo therefore followed a deliberately indirect route, completing one flyby of Earth, two of Venus and six of Mercury itself, each encounter using the planet's gravity as a brake to bleed off velocity. The manoeuvre demanded extraordinary precision: a small error at any stage would have compounded over millions of kilometres. Even the final approach required a sequence of thruster firings on 21 November to slow the spacecraft just enough for Mercury's comparatively weak gravity to seize hold of it.\n\nThe spacecraft that achieved this feat is, in fact, two orbiters travelling together. ESA's Mercury Planetary Orbiter will map the surface in unprecedented detail, charting its chemical composition and searching for the geological traces of the violent events that shaped it. The Japan Aerospace Exploration Agency's Mercury Magnetospheric Orbiter, known as Mio, will study the planet's magnetic environment and its interaction with the solar wind, the stream of charged particles flowing constantly outward from the Sun. Once the two craft separate into their own orbits, they will observe the same planet from complementary perspectives, allowing scientists to connect surface processes with the space environment above them.\n\nThe scientific stakes are considerable. Because Mercury formed so close to the Sun, its history preserves evidence about the conditions in the innermost Solar System that no other planet can offer. Data on the composition of its surface may reveal which materials were available when the rocky planets were assembling, while measurements of its magnetic field could clarify how planetary dynamos — the mechanisms that generate such fields — operate under extreme conditions. The search for water ice in the polar craters also carries implications far beyond Mercury itself: if ice can survive indefinitely in shadowed craters on the hottest planet, similar deposits may be widespread on airless bodies throughout the Solar System, including the Moon, where they could one day support human exploration.\n\nFor ESA, the arrival is also a vindication of persistence. BepiColombo was launched in October 2018, and its long cruise was extended by a thruster problem that forced engineers to redesign parts of the trajectory while the spacecraft was already in flight. That the mission reached its destination at all testifies to the adaptability of the teams in Darmstadt and Sagamihara, who kept a spacecraft built in the early 2010s functioning through conditions far harsher than any encountered in Earth orbit. The science phase, expected to last at least a year, will now determine whether Mercury finally yields the answers that have eluded astronomers since the first telescopes were turned towards it.",
+      "notes": [
+        {
+          "word": "culmination",
+          "pos": "n.",
+          "meaning": "顶点；终点；高潮"
+        },
+        {
+          "word": "anomaly",
+          "pos": "n.",
+          "meaning": "异常；反常现象"
+        },
+        {
+          "word": "scorched",
+          "pos": "adj.",
+          "meaning": "灼焦的；烤焦的"
+        },
+        {
+          "word": "crater",
+          "pos": "n.",
+          "meaning": "环形山；火山口"
+        },
+        {
+          "word": "churning",
+          "pos": "adj.",
+          "meaning": "翻腾的；搅动的"
+        },
+        {
+          "word": "colossal",
+          "pos": "adj.",
+          "meaning": "巨大的；庞大的"
+        },
+        {
+          "word": "vaporise",
+          "pos": "v.",
+          "meaning": "（使）汽化；蒸发"
+        },
+        {
+          "word": "relentlessly",
+          "pos": "adv.",
+          "meaning": "无情地；持续不断地"
+        },
+        {
+          "word": "manoeuvre",
+          "pos": "n.",
+          "meaning": "机动；策略；演习"
+        },
+        {
+          "word": "bleed off",
+          "pos": "phr. v.",
+          "meaning": "逐渐消耗掉；释放掉"
+        },
+        {
+          "word": "complementary",
+          "pos": "adj.",
+          "meaning": "互补的；相辅相成的"
+        },
+        {
+          "word": "magnetospheric",
+          "pos": "adj.",
+          "meaning": "磁层的"
+        },
+        {
+          "word": "dynamo",
+          "pos": "n.",
+          "meaning": "发电机；磁流体发电机效应"
+        },
+        {
+          "word": "vindication",
+          "pos": "n.",
+          "meaning": "证实；证明无罪"
+        },
+        {
+          "word": "eluded",
+          "pos": "v.",
+          "meaning": "使困惑；逃避；难倒"
+        }
+      ],
+      "questions": [
+        {
+          "q": "According to the passage, why is BepiColombo's arrival considered a major achievement?",
+          "options": [
+            "It is the first spacecraft ever to leave the Solar System.",
+            "It completed one of the most technically demanding interplanetary missions ever attempted.",
+            "It travelled further than any spacecraft in history.",
+            "It was the fastest mission ever flown to another planet."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What is surprising about Mercury's magnetic field?",
+          "options": [
+            "It is stronger than Earth's magnetic field.",
+            "It reverses direction every few years.",
+            "Such fields are usually associated with much larger planets.",
+            "It was only discovered after BepiColombo arrived."
+          ],
+          "answer": 2
+        },
+        {
+          "q": "The passage suggests that Mercury's oversized core may be explained by",
+          "options": [
+            "a giant impact that removed much of its rocky outer layer.",
+            "the gradual cooling of the planet over billions of years.",
+            "the accumulation of material from the solar wind.",
+            "a collision with Venus early in its history."
+          ],
+          "answer": 0
+        },
+        {
+          "q": "Why did BepiColombo take an indirect route to Mercury?",
+          "options": [
+            "To avoid the intense heat of the Sun.",
+            "To use planetary gravity to reduce its speed.",
+            "To photograph Venus and Earth on the way.",
+            "To save fuel by travelling a shorter distance."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What will the Mercury Planetary Orbiter primarily do?",
+          "options": [
+            "Study the solar wind in detail.",
+            "Map Mercury's surface and analyse its composition.",
+            "Search for signs of life on Mercury.",
+            "Communicate with the orbiter Mio."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "BepiColombo's journey to Mercury took less than five years.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The discovery of water ice on Mercury would have no relevance to the exploration of the Moon.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Engineers had to alter parts of BepiColombo's trajectory during the flight because of a thruster problem.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        }
+      ]
+    },
+    {
+      "title": "A Proof Nobody Can Read: AI and the Riemann Hypothesis",
+      "source": "Science magazine, 20 November 2026",
+      "passage": "In November 2026, a mathematician working at the artificial intelligence company Anthropic announced what may prove to be one of the most consequential claims in the history of mathematics: a proof of the Riemann hypothesis, a problem that has resisted solution for 166 years. Levent Alpoge reported that, with the assistance of AI systems, he had constructed a proof whose full text runs to 17 million lines of code and reportedly compiles successfully — yet whose underlying reasoning, if written out as a conventional mathematical explanation, would exceed 250,000 pages. The announcement, reported by Science magazine on 20 November, has ignited a debate that extends far beyond mathematics, raising profound questions about what it means to prove something when no human being can read the proof.\n\nThe Riemann hypothesis concerns the distribution of prime numbers — the indivisible integers, such as 2, 3, 5 and 7, that serve as the building blocks of all other numbers. In 1859, the German mathematician Bernhard Riemann proposed a precise conjecture about the location of the so-called zeros of a particular mathematical function, the zeta function. If true, the hypothesis would reveal a hidden order governing how primes are scattered along the number line, with implications for fields ranging from cryptography, which secures much of modern digital communication, to theoretical physics. It is one of the seven Millennium Prize Problems identified by the Clay Mathematics Institute, each carrying a reward of one million dollars, and it is widely regarded as the most important unsolved problem in pure mathematics.\n\nAlpoge's approach differs radically from the methods traditionally employed by mathematicians. Rather than constructing a proof step by step through human reasoning, he used AI systems to search through an enormous space of possible arguments, assembling a chain of logical deductions far too long and intricate for any individual to follow. The 17 million lines of code constitute a formal proof: a sequence of statements, each justified by explicit rules, that a computer can verify mechanically. In principle, such a proof can be checked without understanding it, much as a machine can confirm that a vast jigsaw puzzle is complete without appreciating the picture it forms.\n\nIt is precisely this feature that has divided the mathematical community. Some researchers welcome the result as a demonstration of what AI-assisted reasoning can accomplish, arguing that the history of mathematics is one of steadily expanding tools, from the abacus to the computer, and that machine-generated proofs are the next inevitable step. Others are deeply uneasy. A proof, in the traditional view, is not merely a certificate of truth; it is an explanation, a piece of reasoning that other mathematicians can absorb, adapt and build upon. A 250,000-page argument that no human can comprehend may establish that the Riemann hypothesis is true, yet leave mathematicians no wiser about why it is true. As one critic observed, mathematics risks becoming a discipline in which answers are delivered but understanding is not.\n\nThe episode also raises practical questions about verification. A formal proof of this scale cannot be checked by hand, so confidence in the result depends entirely on the reliability of the software that checks it and on the correctness of the formal system in which it is written. A subtle error in either could, in theory, allow a flawed argument to pass as valid. Alpoge has also reported advances on other celebrated problems, including the Euler and Navier-Stokes equations that describe the flow of fluids such as air and water, which suggests that his methods may be broadly applicable rather than tailored to a single problem — but it also means that the mathematical world may soon face a series of claims that can only be assessed by machine.\n\nWhether Alpoge's proof ultimately survives scrutiny remains to be seen. Independent verification will take time, and mathematicians are likely to spend months, if not years, probing the formal argument for weaknesses. If it holds, the achievement will transform not only number theory but also the practice of mathematics itself, forcing the discipline to reconsider the relationship between proof and understanding. If it fails, it will still stand as a landmark in the debate over artificial intelligence, demonstrating both the extraordinary power of machine reasoning and the limits of a proof that nobody can read.",
+      "notes": [
+        {
+          "word": "consequential",
+          "pos": "adj.",
+          "meaning": "意义重大的；有后果的"
+        },
+        {
+          "word": "conjecture",
+          "pos": "n.",
+          "meaning": "猜想；推测"
+        },
+        {
+          "word": "indivisible",
+          "pos": "adj.",
+          "meaning": "不可分割的；不可分的"
+        },
+        {
+          "word": "zeta function",
+          "pos": "n.",
+          "meaning": "ζ函数；黎曼ζ函数"
+        },
+        {
+          "word": "cryptography",
+          "pos": "n.",
+          "meaning": "密码学"
+        },
+        {
+          "word": "radically",
+          "pos": "adv.",
+          "meaning": "根本上；彻底地"
+        },
+        {
+          "word": "deduction",
+          "pos": "n.",
+          "meaning": "推论；演绎"
+        },
+        {
+          "word": "intricate",
+          "pos": "adj.",
+          "meaning": "错综复杂的；精细的"
+        },
+        {
+          "word": "mechanically",
+          "pos": "adv.",
+          "meaning": "机械地；自动地"
+        },
+        {
+          "word": "jigsaw puzzle",
+          "pos": "n.",
+          "meaning": "拼图游戏"
+        },
+        {
+          "word": "absorb",
+          "pos": "v.",
+          "meaning": "吸收；理解"
+        },
+        {
+          "word": "scrutiny",
+          "pos": "n.",
+          "meaning": "细查；仔细审查"
+        },
+        {
+          "word": "flawed",
+          "pos": "adj.",
+          "meaning": "有缺陷的；有瑕疵的"
+        },
+        {
+          "word": "tailored",
+          "pos": "adj.",
+          "meaning": "量身定制的；特制的"
+        },
+        {
+          "word": "landmark",
+          "pos": "n.",
+          "meaning": "里程碑；划时代的事件"
+        }
+      ],
+      "questions": [
+        {
+          "q": "According to the passage, what makes Alpoge's claimed proof of the Riemann hypothesis unusual?",
+          "options": [
+            "It was produced entirely without the use of computers.",
+            "It is so long that no human can read the full explanation.",
+            "It was rejected immediately by Science magazine.",
+            "It relies on a mathematical method from the 19th century."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The Riemann hypothesis, if proved true, would help explain",
+          "options": [
+            "how the Solar System formed.",
+            "the hidden order in the distribution of prime numbers.",
+            "why some numbers cannot be divided evenly.",
+            "the origin of the zeta function."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What is the main concern of mathematicians who are uneasy about the proof?",
+          "options": [
+            "The proof may contain errors that computers cannot detect.",
+            "A proof should provide understanding, not merely establish truth.",
+            "The Clay Mathematics Institute may refuse to pay the prize.",
+            "AI systems should not be allowed to work on pure mathematics."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Why does confidence in the proof depend on software?",
+          "options": [
+            "The proof is too long to be checked by hand.",
+            "The proof was written in a programming language no mathematician knows.",
+            "The proof exists only as a computer program.",
+            "The software that wrote the proof has never been tested."
+          ],
+          "answer": 0
+        },
+        {
+          "q": "What does the passage suggest about Alpoge's methods?",
+          "options": [
+            "They were designed only for the Riemann hypothesis.",
+            "They may also apply to other famous mathematical problems.",
+            "They have already been used to solve the Navier-Stokes equations.",
+            "They are based on traditional step-by-step human reasoning."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The Riemann hypothesis has remained unsolved for more than 150 years.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The Clay Mathematics Institute has already awarded Alpoge the one-million-dollar prize.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 2
+        },
+        {
+          "q": "All mathematicians agree that machine-generated proofs represent the inevitable future of the discipline.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        }
+      ]
+    }
+  ]
+}
