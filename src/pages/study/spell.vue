@@ -5,12 +5,16 @@ import type { DeckId, StudyCard } from '../../utils/studyDeck'
 import type { WordList } from '../../utils/wordLists'
 import { resolveAudioUrl } from '../../composables/useAudio'
 import { useAudioGroup } from '../../composables/useAudioGroup'
+import { usePersistentBool } from '../../composables/usePersistentBool'
 import { nsKey, useMistakes } from '../../composables/useStudyData'
 import { useStudyDeck } from '../../composables/useStudyDeck'
+import { useTypingSound } from '../../composables/useTypingSound'
 import { loadDeckCards, loadWordLists } from '../../utils/loadStudyCards'
+import { addMasteredWord, masteredWordId, readMasteredWords, removeMasteredWord, withoutMastered } from '../../utils/masteredWords'
 import {
   CORPUS_CHAPTERS,
   diffSpelling,
+  liveLetters,
   matchSpelling,
   missingSynonyms,
   mistakenCards,
@@ -21,7 +25,7 @@ import {
   todayCards,
   typedWrong,
 } from '../../utils/spellPractice'
-import { readRecords, readValue, saveRecord, saveValue } from '../../utils/storage'
+import { readRecords, readValue, saveRecord, saveValue, storageRevision } from '../../utils/storage'
 import { audioPath } from '../../utils/studyDeck'
 import { entryCard } from '../../utils/wordLists'
 import { listVocabularyChapters } from '../vocabulary/loadVocabulary'
@@ -134,7 +138,7 @@ const now = ref(Date.now())
 const allCards = computed(() => cards.value
   ? SPELL_DECKS.flatMap(d => cards.value![d])
   : [])
-const pools = computed<Record<SpellSource, StudyCard[]>>(() => {
+const rawPools = computed<Record<SpellSource, StudyCard[]>>(() => {
   const all = cards.value
   if (!all) {
     return {
@@ -155,7 +159,25 @@ const pools = computed<Record<SpellSource, StudyCard[]>>(() => {
     custom: (wordLists.value.find(l => l.id === settings.value.list)?.words ?? []).map(entryCard),
   }
 })
+// 标成“已掌握”的词出题时跳过（按单词记，各个词库都跳过）
+const masteredWords = computed(() => {
+  void storageRevision.value
+  return readMasteredWords(currentUser.value)
+})
+const pools = computed(() => Object.fromEntries(
+  Object.entries(rawPools.value).map(([id, list]) => [
+    id,
+    withoutMastered(list, masteredWords.value),
+  ]),
+) as Record<SpellSource, StudyCard[]>)
 const pool = computed(() => pools.value[settings.value.source])
+const skippedMastered = computed(() => rawPools.value[settings.value.source].length - pool.value.length)
+function unmaster(id: string) {
+  removeMasteredWord(currentUser.value, id)
+}
+// 打字音效、边打边显示对错：设备级开关
+const { enabled: soundOn, play: playSound } = useTypingSound()
+const liveFeedback = usePersistentBool('myielts_spell_live_feedback_v1', true)
 // 带同义替换只有听力 179 能练
 const modes = computed(() => SPELL_MODES.filter(m => m.id !== 'synonym' || settings.value.source === 'listening179'))
 watch(() => settings.value.source, (source) => {
@@ -190,6 +212,8 @@ const index = ref(0)
 /** 本轮的词数（不含重考） */
 const roundSize = ref(0)
 const firstTry = ref(0)
+/** 本轮标成已掌握的词 */
+const masteredThisRound = ref<StudyCard[]>([])
 /** 本轮拼错过的词（按顺序，不重复） */
 const missed = ref<StudyCard[]>([])
 const retried = new Set<string>()
@@ -204,10 +228,18 @@ const inputEl = ref<HTMLInputElement | null>(null)
 const nextButton = ref<HTMLButtonElement | null>(null)
 const synonymEl = ref<HTMLInputElement | null>(null)
 let typingHadError = false
+let lastInputLength = 0
 let advanceTimer: ReturnType<typeof setTimeout> | null = null
 
 const current = computed<StudyCard | undefined>(() => queue.value[index.value])
 const isRetry = computed(() => index.value >= roundSize.value)
+// 听写、看义拼写：边打边标对错（只标打出来的字母，不透露长度）
+const live = computed(() => {
+  const c = current.value
+  return c && mode.value !== 'typing' && liveFeedback.value && result.value === null
+    ? liveLetters(input.value, c)
+    : []
+})
 const hint = computed(() => {
   const c = current.value
   if (!c)
@@ -242,6 +274,7 @@ async function enter() {
   lostSynonyms.value = []
   hintShown.value = false
   typingHadError = false
+  lastInputLength = 0
   await nextTick()
   inputEl.value?.focus()
   play()
@@ -255,6 +288,7 @@ function begin(words: StudyCard[]) {
   index.value = 0
   firstTry.value = 0
   missed.value = []
+  masteredThisRound.value = []
   retried.clear()
   stage.value = 'playing'
   enter()
@@ -313,11 +347,13 @@ function submit() {
     diff.value = diffSpelling(input.value, c)
   if (hit && !lost.length) {
     result.value = 'right'
+    playSound('done')
     if (!isRetry.value && !missed.value.includes(c))
       firstTry.value++
   }
   else {
     result.value = 'wrong'
+    playSound('wrong')
     recordMiss(c)
     // 本轮最后再考一次（每个词只重考一次）
     if (!retried.has(c.key)) {
@@ -354,6 +390,7 @@ function onTyping() {
     typingHadError = true
   if (!matchSpelling(input.value, c))
     return
+  playSound('done')
   const owner = currentUser.value
   advanceTimer = setTimeout(() => {
     advanceTimer = null
@@ -367,6 +404,76 @@ function onTyping() {
       setProgress('typing', index.value + 1, roundSize.value)
     next()
   }, 200)
+}
+// 每打一个字母响一下；能看出对错的练法（跟打、开了边打边显示对错）打错时换成错误音
+function onInput() {
+  const c = current.value
+  if (c && result.value === null && input.value.length > lastInputLength) {
+    const showsErrors = mode.value === 'typing' || liveFeedback.value
+    const letters = mode.value === 'typing'
+      ? liveLetters(input.value, {
+          word: c.word,
+          spellings: [c.word],
+        })
+      : liveLetters(input.value, c)
+    playSound(showsErrors && letters.at(-1)?.ok === false
+      ? 'wrong'
+      : 'key')
+  }
+  lastInputLength = input.value.length
+  onTyping()
+}
+function showHint() {
+  if (result.value === null && mode.value !== 'typing')
+    hintShown.value = true
+}
+// 不会：直接看答案，算没拼对（本轮最后再考一次）；跟打里就是跳过这个词
+function giveUp() {
+  const c = current.value
+  if (!c || stage.value !== 'playing' || result.value !== null || advanceTimer)
+    return
+  recordMiss(c)
+  if (mode.value === 'typing') {
+    next()
+    return
+  }
+  matched.value = null
+  diff.value = diffSpelling(input.value, c)
+  lostSynonyms.value = mode.value === 'synonym'
+    ? missingSynonyms(synonymInput.value, c)
+    : []
+  result.value = 'wrong'
+  playSound('wrong')
+  if (!retried.has(c.key)) {
+    retried.add(c.key)
+    queue.value = [...queue.value, c]
+  }
+  nextTick(() => nextButton.value?.focus())
+}
+// 标为已掌握：以后出题跳过；本轮后面（包括重考）也不再出这个词
+function markMastered() {
+  const c = current.value
+  if (!c || stage.value !== 'playing' || advanceTimer)
+    return
+  if (!addMasteredWord(currentUser.value, c))
+    return
+  if (!masteredThisRound.value.includes(c))
+    masteredThisRound.value.push(c)
+  const id = masteredWordId(c)
+  const start = index.value + 1
+  let removedFromRound = 0
+  const rest = queue.value.slice(start).filter((x, k) => {
+    const drop = masteredWordId(x) === id
+    if (drop && start + k < roundSize.value)
+      removedFromRound++
+    return !drop
+  })
+  queue.value = [
+    ...queue.value.slice(0, start),
+    ...rest,
+  ]
+  roundSize.value -= removedFromRound
+  next()
 }
 function typedState(i: number): 'todo' | 'ok' | 'bad' {
   const typed = input.value[i]
@@ -382,8 +489,26 @@ function backToSetup() {
   now.value = Date.now()
   stage.value = 'setup'
 }
+// 快捷键：Tab 重播发音（光标在输入框里时）、Alt+H 提示、Alt+S 不会/跳过、Alt+M 标为已掌握、回车 下一个。
+// Alt 组合按物理键位（event.code）判断：Mac 上 Option+字母会变成特殊字符。
 function onKeydown(event: KeyboardEvent) {
-  if (stage.value === 'playing' && result.value !== null && event.key === 'Enter' && !event.repeat) {
+  if (stage.value !== 'playing' || event.isComposing)
+    return
+  const inField = event.target === inputEl.value || event.target === synonymEl.value
+  if (event.key === 'Tab' && inField && !event.ctrlKey && !event.altKey && !event.metaKey) {
+    event.preventDefault()
+    play()
+    return
+  }
+  if (event.altKey && !event.ctrlKey && !event.metaKey && !event.repeat) {
+    const action = ({ KeyH: showHint, KeyS: giveUp, KeyM: markMastered } as Record<string, () => void>)[event.code]
+    if (action) {
+      event.preventDefault()
+      action()
+      return
+    }
+  }
+  if (result.value !== null && event.key === 'Enter' && !event.repeat) {
     event.preventDefault()
     next()
   }
@@ -536,9 +661,39 @@ const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.lab
               >
             </div>
 
+            <div class="mb-2 text-sm text-gray-700 font-bold dark:text-gray-200">
+              练习设置
+            </div>
+            <div class="mb-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-gray-700 dark:text-gray-200" data-options>
+              <label class="flex cursor-pointer items-center gap-2">
+                <input v-model="soundOn" type="checkbox" data-sound-toggle>
+                打字音效
+              </label>
+              <label class="flex cursor-pointer items-center gap-2">
+                <input v-model="liveFeedback" type="checkbox" data-live-toggle>
+                边打边显示对错（听写、看义拼写）
+              </label>
+            </div>
+
             <p class="mb-4 text-sm text-gray-600 dark:text-gray-300" data-preview>
               {{ pool.length ? `${sourceLabel}一共 ${pool.length} 个词，这一轮练 ${roundCount} 个。` : `${sourceLabel}里现在没有词。` }}
+              <template v-if="skippedMastered">
+                已跳过 {{ skippedMastered }} 个已掌握的词。
+              </template>
             </p>
+            <details v-if="masteredWords.length" class="mb-4 text-sm" data-mastered-list>
+              <summary class="cursor-pointer text-gray-600 dark:text-gray-300">
+                已掌握 {{ masteredWords.length }} 个词（练习时跳过，只存在这台设备上）
+              </summary>
+              <ul class="mt-2 flex flex-wrap gap-2">
+                <li v-for="w in masteredWords" :key="w" class="flex items-center gap-1 border border-gray-200 rounded-full px-3 py-1 dark:border-gray-600">
+                  {{ w }}
+                  <button type="button" class="text-xs text-blue-600 underline dark:text-blue-400" :data-unmaster="w" :aria-label="`撤销已掌握：${w}`" @click="unmaster(w)">
+                    撤销
+                  </button>
+                </li>
+              </ul>
+            </details>
             <button
               data-start
               class="rounded-lg bg-blue-600 px-8 py-2.5 text-white font-bold hover:bg-blue-700 disabled:opacity-50"
@@ -595,9 +750,16 @@ const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.lab
               spellcheck="false"
               :disabled="result !== null"
               class="block w-full border border-gray-300 rounded-lg bg-white p-3 text-center text-xl dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              @input="onTyping"
+              @input="onInput"
               @keydown.enter="toSynonyms"
             >
+            <p v-if="live.length" class="mt-2 min-h-7 text-center text-lg tracking-wide font-mono" data-live aria-hidden="true">
+              <span
+                v-for="(l, i) in live"
+                :key="i"
+                :class="l.ok ? 'text-green-600' : 'text-red-600 underline'"
+              >{{ l.char }}</span>
+            </p>
             <input
               v-if="mode === 'synonym'"
               ref="synonymEl"
@@ -612,7 +774,7 @@ const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.lab
               class="mt-3 block w-full border border-gray-300 rounded-lg bg-white p-3 text-center dark:border-gray-600 dark:bg-gray-700 dark:text-white"
             >
             <div v-if="result === null && mode !== 'typing'" class="mt-4 flex items-center justify-between gap-3">
-              <button type="button" class="text-sm text-gray-500 underline dark:text-gray-400" @click="hintShown = true">
+              <button type="button" class="text-sm text-gray-500 underline dark:text-gray-400" title="Alt+H" @click="showHint">
                 提示
               </button>
               <button type="submit" class="rounded-lg bg-blue-600 px-6 py-2 text-white font-bold disabled:opacity-50" :disabled="!input.trim()">
@@ -649,6 +811,31 @@ const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.lab
             </button>
             <span class="ml-2 text-xs text-gray-400">回车</span>
           </div>
+
+          <div class="mt-5 flex flex-wrap items-center justify-center gap-2 border-t border-gray-100 pt-4 text-sm dark:border-gray-700" data-actions>
+            <button
+              v-if="result === null"
+              type="button"
+              data-give-up
+              title="Alt+S"
+              class="border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 dark:border-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+              @click="giveUp"
+            >
+              {{ mode === 'typing' ? '跳过这个词' : '不会，看答案' }}
+            </button>
+            <button
+              type="button"
+              data-master
+              title="Alt+M"
+              class="border border-gray-300 rounded-lg px-3 py-1.5 text-gray-600 dark:border-gray-600 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+              @click="markMastered"
+            >
+              已掌握，以后不练
+            </button>
+          </div>
+          <p class="mt-3 hidden text-center text-xs text-gray-400 sm:block" data-shortcuts>
+            快捷键：Tab 重播发音 · Alt(⌥)+H 提示 · Alt+S {{ mode === 'typing' ? '跳过' : '看答案' }} · Alt+M 已掌握 · 回车 核对/下一个
+          </p>
         </div>
       </template>
 
@@ -669,6 +856,9 @@ const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.lab
           </h4>
           <p class="mt-2">
             {{ roundSize }} 个词，一次就对 {{ firstTry }} 个
+          </p>
+          <p v-if="masteredThisRound.length" class="mt-1 text-sm text-gray-600 dark:text-gray-300" data-mastered-count>
+            另有 {{ masteredThisRound.length }} 个词标成了已掌握，以后练习会跳过
           </p>
           <div v-if="missed.length" class="mx-auto mt-4 max-w-md text-left text-sm">
             <p class="mb-1 text-gray-600 dark:text-gray-300">

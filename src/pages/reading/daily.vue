@@ -712,6 +712,20 @@ function paragraphs(passage: string): string[] {
             <p v-if="art.source" class="mb-3 text-xs text-gray-400">
               来源：{{ art.source }}
             </p>
+            <p class="mb-3 flex flex-wrap gap-2 text-sm" :data-typing-links="ai">
+              <RouterLink
+                :to="{ path: '/reading/typing', query: { date: selectedDate, a: String(ai) } }"
+                class="border border-blue-200 rounded-lg px-3 py-1 text-blue-700 dark:border-blue-800 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-900/30"
+              >
+                ⌨ 逐句跟打
+              </RouterLink>
+              <RouterLink
+                :to="{ path: '/reading/typing', query: { date: selectedDate, a: String(ai), mode: 'dictation' } }"
+                class="border border-blue-200 rounded-lg px-3 py-1 text-blue-700 dark:border-blue-800 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-900/30"
+              >
+                ✍ 逐句默写
+              </RouterLink>
+            </p>
             <p class="mb-3 text-xs text-gray-400 dark:text-gray-500">
               💡 点单词查中文意思，选中一句话可以翻译
             </p>

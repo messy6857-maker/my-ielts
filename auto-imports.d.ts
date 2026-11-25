@@ -24,6 +24,8 @@ declare global {
   const PROGRESS_MODULE_LABEL: typeof import('./src/composables/useStudyData').PROGRESS_MODULE_LABEL
   const REJECTED_REASON_LABELS: typeof import('./src/composables/syncClient').REJECTED_REASON_LABELS
   const SYNC_PENDING_KEY: typeof import('./src/composables/syncClient').SYNC_PENDING_KEY
+  const TIMER_GAP_MS: typeof import('./src/composables/useStudyTimer').TIMER_GAP_MS
+  const TYPING_SOUND_KEY: typeof import('./src/composables/useTypingSound').TYPING_SOUND_KEY
   const accountNotice: typeof import('./src/composables/useAuth').accountNotice
   const accountNotices: typeof import('./src/composables/useAuth').accountNotices
   const addPageBookmark: typeof import('./src/composables/usePageBookmark').addPageBookmark
@@ -448,6 +450,7 @@ declare global {
   const useToString: typeof import('@vueuse/core').useToString
   const useToggle: typeof import('@vueuse/core').useToggle
   const useTransition: typeof import('@vueuse/core').useTransition
+  const useTypingSound: typeof import('./src/composables/useTypingSound').useTypingSound
   const useUrlSearchParams: typeof import('@vueuse/core').useUrlSearchParams
   const useUserMedia: typeof import('@vueuse/core').useUserMedia
   const useVModel: typeof import('@vueuse/core').useVModel
@@ -575,6 +578,8 @@ declare module 'vue' {
     readonly PROGRESS_MODULE_LABEL: UnwrapRef<typeof import('./src/composables/useStudyData')['PROGRESS_MODULE_LABEL']>
     readonly REJECTED_REASON_LABELS: UnwrapRef<typeof import('./src/composables/syncClient')['REJECTED_REASON_LABELS']>
     readonly SYNC_PENDING_KEY: UnwrapRef<typeof import('./src/composables/syncClient')['SYNC_PENDING_KEY']>
+    readonly TIMER_GAP_MS: UnwrapRef<typeof import('./src/composables/useStudyTimer')['TIMER_GAP_MS']>
+    readonly TYPING_SOUND_KEY: UnwrapRef<typeof import('./src/composables/useTypingSound')['TYPING_SOUND_KEY']>
     readonly accountNotice: UnwrapRef<typeof import('./src/composables/useAuth')['accountNotice']>
     readonly accountNotices: UnwrapRef<typeof import('./src/composables/useAuth')['accountNotices']>
     readonly addPageBookmark: UnwrapRef<typeof import('./src/composables/usePageBookmark')['addPageBookmark']>
@@ -995,6 +1000,7 @@ declare module 'vue' {
     readonly useToString: UnwrapRef<typeof import('@vueuse/core')['useToString']>
     readonly useToggle: UnwrapRef<typeof import('@vueuse/core')['useToggle']>
     readonly useTransition: UnwrapRef<typeof import('@vueuse/core')['useTransition']>
+    readonly useTypingSound: UnwrapRef<typeof import('./src/composables/useTypingSound')['useTypingSound']>
     readonly useUrlSearchParams: UnwrapRef<typeof import('@vueuse/core')['useUrlSearchParams']>
     readonly useUserMedia: UnwrapRef<typeof import('@vueuse/core')['useUserMedia']>
     readonly useVModel: UnwrapRef<typeof import('@vueuse/core')['useVModel']>

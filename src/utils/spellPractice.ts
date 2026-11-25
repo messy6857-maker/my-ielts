@@ -71,6 +71,34 @@ export function typedWrong(input: string, card: StudyCard): boolean {
   return false
 }
 
+/**
+ * 边打边显示对错（听写、看义拼写用）：只标已经打出来的字母，不透露还剩几个。
+ * 有多种写法时，和前缀对得最多的那个写法比；不分大小写。
+ */
+export function liveLetters(input: string, card: Pick<StudyCard, 'spellings' | 'word'>): Array<{ char: string, ok: boolean }> {
+  const typed = input.toLowerCase()
+  const prefixLength = (s: string) => {
+    const target = s.toLowerCase()
+    let n = 0
+    while (n < typed.length && typed[n] === target[n])
+      n++
+    return n
+  }
+  let best = card.word
+  let bestLength = -1
+  for (const s of card.spellings.length
+    ? card.spellings
+    : [card.word]) {
+    const n = prefixLength(s)
+    if (n > bestLength) {
+      best = s
+      bestLength = n
+    }
+  }
+  const target = best.toLowerCase()
+  return [...input].map((char, i) => ({ char, ok: typed[i] === target[i] }))
+}
+
 export interface SpellMistake {
   module: 'vocabulary' | 'typing' | 'listening' | 'corpus' | 'wordlist'
   entry: { key: string, title: string, detail: string, hint?: string }
