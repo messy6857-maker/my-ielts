@@ -1,0 +1,1 @@
+import{B as e,k as t}from"./runtime-core.esm-bundler-BaT_QEjx.js";function n(n,r=!1){let i=e(r);try{let e=localStorage.getItem(n);e!==null&&(i.value=e===`1`)}catch{}return t(i,e=>{try{localStorage.setItem(n,e?`1`:`0`)}catch{}}),i}export{n as t};
