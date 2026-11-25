@@ -29,6 +29,7 @@ import { readRecords, readValue, saveRecord, saveValue, storageRevision } from '
 import { audioPath } from '../../utils/studyDeck'
 import { entryCard } from '../../utils/wordLists'
 import { listVocabularyChapters } from '../vocabulary/loadVocabulary'
+import { ensureWordPhonetics, phonetic } from '../vocabulary/vocabExtras'
 
 // 练拼写：进来先选词从哪里来、用哪种练法、一轮多少个，点“开始”才出题。
 // 一次一个词，所有练法共用一套判分；拼错记到原来的错题分组，本轮最后再考一次。
@@ -232,6 +233,13 @@ let lastInputLength = 0
 let advanceTimer: ReturnType<typeof setTimeout> | null = null
 
 const current = computed<StudyCard | undefined>(() => queue.value[index.value])
+ensureWordPhonetics()
+/** 音标：跟打时一直显示，听写、看义拼写在核对后才显示（音标会透露拼法） */
+const currentPhonetic = computed(() => {
+  if (!current.value)
+    return ''
+  return (matched.value && phonetic(matched.value)) || phonetic(current.value.word)
+})
 const isRetry = computed(() => index.value >= roundSize.value)
 // 听写、看义拼写：边打边标对错（只标打出来的字母，不透露长度）
 const live = computed(() => {
@@ -734,6 +742,9 @@ const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.lab
               <i class="i-ph-speaker-high-bold block text-2xl" />
             </button>
           </div>
+          <p v-if="mode === 'typing' && currentPhonetic" class="mb-3 text-center text-lg text-gray-400" style="font-family: times" data-phonetic>
+            {{ currentPhonetic }}
+          </p>
           <p v-if="mode !== 'dictation' || result !== null" class="mb-4 text-center" data-meaning>
             <span v-if="current.pos" class="mr-2 text-sm text-gray-400 italic" style="font-family: times">{{ current.pos }}</span>
             <span class="text-lg">{{ current.meaning }}</span>
@@ -795,6 +806,9 @@ const modeLabel = computed(() => SPELL_MODES.find(m => m.id === mode.value)!.lab
             </p>
             <p v-else class="text-2xl font-black" data-diff>
               <span v-for="(c, i) in diff" :key="i" :class="c.ok ? '' : 'text-red-600 underline'">{{ c.char }}</span>
+            </p>
+            <p v-if="mode !== 'typing' && currentPhonetic" class="mt-1 text-lg text-gray-400" style="font-family: times" data-phonetic>
+              {{ currentPhonetic }}
             </p>
             <p v-if="current.spellings.length > 1" class="mt-1 text-sm text-gray-500 dark:text-gray-400">
               都算对：{{ current.spellings.join(' / ') }}

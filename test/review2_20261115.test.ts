@@ -86,6 +86,11 @@ async function show(Page: any, path: string, withDialog = false) {
   wrappers.push(root)
   await flushPromises()
   const state = ((root.findComponent(Page) as any).vm as any).$.setupState
+  // 套题是按需 import 的，机器慢时一轮 flushPromises 还没加载完：等到加载结束
+  for (let i = 0; i < 100 && (state.loading === true || state.testPair === null); i++) {
+    await new Promise(resolve => setTimeout(resolve, 20))
+    await flushPromises()
+  }
   return { root, state, router }
 }
 

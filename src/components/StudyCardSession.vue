@@ -561,7 +561,7 @@ defineExpose({ restart })
               <i class="i-ph-speaker-high-bold block text-2xl" />
             </button>
           </div>
-          <p v-if="current.deck === 'vocabulary' && phonetic(current.word)" class="mb-2 text-lg text-gray-400" style="font-family: times">
+          <p v-if="phonetic(current.word)" data-phonetic class="mb-2 text-lg text-gray-400" style="font-family: times">
             {{ phonetic(current.word) }}
           </p>
           <p v-if="showDeck" class="text-xs text-gray-400" data-deck-label>
@@ -606,7 +606,7 @@ defineExpose({ restart })
               <i class="i-ph-speaker-high-bold block text-xl" />
             </button>
           </div>
-          <p v-if="studying.deck === 'vocabulary' && phonetic(studying.word)" class="mb-4 text-center text-lg text-gray-400" style="font-family: times">
+          <p v-if="!wordHidden && phonetic(studying.word)" data-phonetic class="mb-4 text-center text-lg text-gray-400" style="font-family: times">
             {{ phonetic(studying.word) }}
           </p>
           <p v-if="showDeck" class="mb-2 text-center text-xs text-gray-400">
