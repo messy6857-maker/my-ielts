@@ -1,0 +1,295 @@
+{
+  "date": "2026-11-28",
+  "newsReadings": [
+    {
+      "title": "When the Hacker Is an Algorithm: Switzerland Confirms the First AI-Agent Cyberattacks",
+      "source": "Swiss Federal Office for Cybersecurity (BACS), 24 November 2026; Reuters, 26 November 2026",
+      "passage": "In recent days, Switzerland became the first country to confirm what cybersecurity experts had long warned was coming: cyberattacks carried out not by human hackers sitting at keyboards, but by autonomous AI agents. The Swiss Federal Office for Cybersecurity (BACS) announced on 24 November 2026 that it had received its first reports of such attacks against organisations in Switzerland, including operators of critical infrastructure. In the five confirmed cases, the attackers deployed what the agency calls \"Agentic Offensive Frameworks\" - software agents that independently search for vulnerabilities, select suitable attack tools, evaluate the results, and plan and execute the next steps of an intrusion, all with minimal human direction.\n\nThe figures are stark. In four of the five cases, the use of AI agents led to the successful compromise of the victims' IT systems. Three of the five attacks targeted operators of critical infrastructure - providers of electricity, drinking water and telecommunications, according to Swiss public broadcaster SRF - spanning at least two sectors, while private companies were also among the victims. Florian Schutz, director of the National Cyber Security Centre, confirmed the tally in an interview on 26 November, while stressing that no major disruption to services had been reported. Neither the victims nor those behind the attacks have been identified, and the agency has not said which tools were used in the Swiss incidents.\n\nWhat makes the cases significant is not only their number but their speed. According to BACS, AI agents greatly increase the pace of common attack methods: an agent can enumerate hosts, try credentials, read the error messages it receives and adjust its approach within seconds, a cycle that would take a human operator far longer. The agency also noted that the number of AI agents freely accessible on the internet - it named ARTEX and CyberStrikeAI as examples of such tools - has almost doubled since October 2026. These frameworks are dual-use: the same capabilities that allow a security team to test its own defences can be turned against any organisation with an exposed system.\n\nThe Swiss cases did not emerge in isolation. Italy's computer emergency response team, CSIRT Italia, has reported large-scale campaigns using autonomous AI agents, and security researchers have documented a rapid spread of such tools across online forums. The attackers in the Swiss cases exploited familiar weaknesses - weak passwords, known software flaws that had not been patched, and systems unnecessarily exposed to the internet - rather than any novel technique. The novelty lay in the automation: tasks that once required skill, patience and time could be delegated to software that works continuously and learns from each failed attempt.\n\nBACS has described the development as a clear shift in the cyber threat landscape and anticipates an increase in the number of rapid and successful cyberattacks. Its recommendations are correspondingly urgent: companies should minimise the number of systems accessible from the internet, restrict access through geo-blocking and IP allow lists, enforce multi-factor authentication, and install critical security updates on internet-facing systems within 24 hours of release - a window far shorter than the three days the US government currently demands of its own federal agencies. The context underlines the scale of the challenge: in the first half of 2026 alone, the office logged 27,128 voluntary reports of cyber incidents and 200 mandatory notifications from critical infrastructure operators.\n\nThe broader question raised by the Swiss cases is how defenders should respond when the attacker no longer sleeps. Traditional security models assume that intrusions unfold over days or weeks, giving analysts time to detect, investigate and respond. An AI agent compresses that timeline to minutes, and it can pursue many targets simultaneously. Some analysts argue that the answer is to fight automation with automation - deploying defensive AI that can patch, isolate and deceive at machine speed. Others caution that such an arms race favours the side with fewer constraints, and that the most reliable defences remain unglamorous: fewer exposed systems, stronger passwords, prompt patching and well-rehearsed incident plans. What is no longer in doubt, the Swiss experience suggests, is that the era in which cyberattacks were a purely human activity has ended.",
+      "notes": [
+        {
+          "word": "autonomous",
+          "pos": "adj.",
+          "meaning": "自主的；自动的"
+        },
+        {
+          "word": "vulnerability",
+          "pos": "n.",
+          "meaning": "弱点；漏洞"
+        },
+        {
+          "word": "intrusion",
+          "pos": "n.",
+          "meaning": "入侵；闯入"
+        },
+        {
+          "word": "stark",
+          "pos": "adj.",
+          "meaning": "严酷的；鲜明的"
+        },
+        {
+          "word": "compromise",
+          "pos": "v.",
+          "meaning": "攻破；危及（系统安全）"
+        },
+        {
+          "word": "enumerate",
+          "pos": "v.",
+          "meaning": "列举；枚举"
+        },
+        {
+          "word": "dual-use",
+          "pos": "adj.",
+          "meaning": "军民两用的；双重用途的"
+        },
+        {
+          "word": "delegate",
+          "pos": "v.",
+          "meaning": "委派；托付"
+        },
+        {
+          "word": "landscape",
+          "pos": "n.",
+          "meaning": "形势；局面"
+        },
+        {
+          "word": "anticipate",
+          "pos": "v.",
+          "meaning": "预期；预料"
+        },
+        {
+          "word": "minimise",
+          "pos": "v.",
+          "meaning": "使最小化；尽量减少"
+        },
+        {
+          "word": "enforce",
+          "pos": "v.",
+          "meaning": "执行；强制实施"
+        },
+        {
+          "word": "authentication",
+          "pos": "n.",
+          "meaning": "身份验证；认证"
+        },
+        {
+          "word": "unglamorous",
+          "pos": "adj.",
+          "meaning": "不起眼的；平凡的"
+        }
+      ],
+      "questions": [
+        {
+          "q": "According to BACS, how many of the five confirmed AI-agent attacks resulted in the victims' systems being compromised?",
+          "options": [
+            "None of them.",
+            "Two of them.",
+            "Three of them.",
+            "Four of them."
+          ],
+          "answer": 3
+        },
+        {
+          "q": "What does the term 'Agentic Offensive Frameworks' refer to in the passage?",
+          "options": [
+            "Firewalls that use AI to block intrusions.",
+            "AI agents that independently find weaknesses, choose tools, assess results and plan attacks.",
+            "Government regulations governing the use of AI in cybersecurity.",
+            "Databases that store information about known computer viruses."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Why does the passage describe these AI frameworks as 'dual-use'?",
+          "options": [
+            "They can be used both to test defences and to attack systems.",
+            "They work on two different operating systems.",
+            "They are operated jointly by two countries.",
+            "They combine human hackers with automated tools."
+          ],
+          "answer": 0
+        },
+        {
+          "q": "The Swiss authorities have identified the people behind the five attacks.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The attacks caused major disruption to electricity and water supplies in Switzerland.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "ARTEX and CyberStrikeAI were confirmed as the tools used in the Swiss attacks.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "BACS recommends installing critical security updates within 24 hours of their release.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        }
+      ]
+    },
+    {
+      "title": "A Summit That Failed — and a Threshold Crossed: COP31 and Six Days Above 2°C",
+      "source": "Carbon Brief, 27 November 2026; The Guardian",
+      "passage": "The 31st UN climate summit, COP31, ended late on Sunday 22 November in Antalya with what many delegates described as a failure. After two weeks of negotiation, countries could not reach a major new deal to tackle climate change, divided above all by two familiar questions: how fast to move away from fossil fuels, and who should pay for the transition. The proposed \"Antalya pact\", intended as the summit's centrepiece, collapsed amid finger-pointing, with some newspapers blaming oil-rich nations for blocking progress and others pointing to Europe's reluctance to provide more climate finance.\n\nThe outcome was not a complete failure. Delegates did agree on a new mechanism to support \"just transitions\" - helping workers and communities dependent on fossil-fuel industries move to cleaner livelihoods - and on additional support for countries struck by climate disasters. Yet the failure to agree a cover decision, the overarching text that gives a summit its political direction, left many observers dismayed. In the aftermath, Euronews reported that the European Commission was drawing up plans to overhaul the UN climate summit process itself, amid fears that the current negotiating system risks becoming ineffective because a single country can block agreement.\n\nAs the talks faltered, the climate itself delivered a stark reminder of the stakes. In a front-page story, The Guardian reported that, for the first time, global temperatures had risen more than 2C above pre-industrial levels for six consecutive days. The 2C figure is not an arbitrary number: under the 2015 Paris Agreement, countries pledged to hold warming well below 2C and to pursue efforts to limit it to 1.5C. A six-day breach does not mean the Paris target has been broken - the agreement is judged on long-term averages, not single weeks - but scientists say it offers a glimpse of a world in which such exceedances become routine rather than exceptional.\n\nThe week's other developments illustrated both the pressures and the possibilities of climate action. India announced a $1.6 billion economic assistance package to help Nepal rebuild areas devastated by flash floods in September. In Europe, the EU and the UK agreed a landmark package linking their respective carbon markets and committed to further talks on the UK rejoining the EU's electricity market - a step that could make clean power cheaper on both sides of the Channel. At the same time, a government report revealed that Australia is off track for both its 2030 and 2035 climate targets and will need to more than quadruple the pace of emission cuts.\n\nDomestic politics continued to complicate the picture. In Britain, nearly 100 Labour MPs, including at least four frontbenchers, wrote to the prime minister opposing the Rosebank oilfield, one of the largest undeveloped oilfields in the North Sea. The UK Health Security Agency, meanwhile, reported that the number of heat-related deaths in England this summer had exceeded the previous record high of 2,985 set in 2022 - a sombre statistic that connects abstract temperature records to lives lost in homes, hospitals and care homes during heatwaves.\n\nTaken together, the events of the week capture the central tension of climate policy: the gap between what the science demands and what the politics can deliver. The physics of warming is indifferent to negotiation; each fraction of a degree brings more extreme heat, heavier rainfall and higher seas. Yet the institutions built to manage that problem require consensus among nearly 200 countries with profoundly different interests, resources and vulnerabilities. The six days above 2C will pass into the record books, but the question COP31 leaves behind is whether the summit system itself can still produce agreements equal to the scale of the crisis - or whether, as the European Commission's review suggests, the process needs to be rebuilt before the next threshold is crossed.",
+      "notes": [
+        {
+          "word": "summit",
+          "pos": "n.",
+          "meaning": "峰会；首脑会议"
+        },
+        {
+          "word": "centrepiece",
+          "pos": "n.",
+          "meaning": "核心；最重要的部分"
+        },
+        {
+          "word": "reluctance",
+          "pos": "n.",
+          "meaning": "不情愿；勉强"
+        },
+        {
+          "word": "overarching",
+          "pos": "adj.",
+          "meaning": "总体的；首要的"
+        },
+        {
+          "word": "dismayed",
+          "pos": "adj.",
+          "meaning": "沮丧的；失望的"
+        },
+        {
+          "word": "overhaul",
+          "pos": "v.",
+          "meaning": "全面改革；彻底检修"
+        },
+        {
+          "word": "stark",
+          "pos": "adj.",
+          "meaning": "严酷的；鲜明的"
+        },
+        {
+          "word": "arbitrary",
+          "pos": "adj.",
+          "meaning": "任意的；武断的"
+        },
+        {
+          "word": "pledge",
+          "pos": "v.",
+          "meaning": "承诺；保证"
+        },
+        {
+          "word": "exceedance",
+          "pos": "n.",
+          "meaning": "超出；超标"
+        },
+        {
+          "word": "routine",
+          "pos": "adj.",
+          "meaning": "常规的；例行的"
+        },
+        {
+          "word": "exceptional",
+          "pos": "adj.",
+          "meaning": "例外的；异常的"
+        },
+        {
+          "word": "quadruple",
+          "pos": "v.",
+          "meaning": "使成四倍"
+        },
+        {
+          "word": "sombre",
+          "pos": "adj.",
+          "meaning": "严峻的；令人忧虑的"
+        }
+      ],
+      "questions": [
+        {
+          "q": "What was the main reason COP31 failed to reach a major new deal?",
+          "options": [
+            "Too few countries attended the summit.",
+            "Disagreements over fossil fuels and climate finance.",
+            "The summit ran out of time because of a power cut.",
+            "The host country refused to publish a final text."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "What did COP31 manage to agree on, according to the passage?",
+          "options": [
+            "A complete ban on new oilfields.",
+            "A just-transition mechanism and support for countries hit by climate disasters.",
+            "A new global carbon tax.",
+            "The abolition of the UN climate summit process."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Why does the passage say that the six-day breach does not mean the Paris target has been broken?",
+          "options": [
+            "The temperature rise was measured with faulty instruments.",
+            "The Paris Agreement is judged on long-term averages, not single weeks.",
+            "The 2C figure applies only to land temperatures.",
+            "The Guardian's report was later withdrawn."
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The 'Antalya pact' was adopted as the centrepiece of the summit.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Australia is on track to meet both its 2030 and 2035 climate targets.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "Heat-related deaths in England this summer were lower than the previous record set in 2022.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 1
+        },
+        {
+          "q": "The EU and the UK agreed to link their carbon markets.",
+          "options": [
+            "True",
+            "False",
+            "Not Given"
+          ],
+          "answer": 0
+        }
+      ]
+    }
+  ]
+}
